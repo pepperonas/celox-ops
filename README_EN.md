@@ -53,14 +53,21 @@ Business-management web app for freelancers and IT consultants. Manages customer
 
 ### AI Usage Tracking (Token Tracker Integration)
 - Integration with [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) via secure Share API
+- **Multi-project linking** — multiple Token Tracker projects per customer, data automatically merged across projects
+- **Labels stored at link time** — project labels captured when linked, no extra API calls needed
 - **Period filter** — 7/30/90 days, all time, or custom date range
 - **KPI cards**: cost, active work time, code lines written, AI requests
 - **Charts** (Chart.js): daily work intensity, cumulative cost trend, code development
 - **Sessions table**: date, active duration, AI model, requests, code lines, cost
-- **Active time tracking** — measures real working time (not session duration) based on message intervals with 5-min gap threshold
+- **Active time tracking** — measures real working time (not session duration) based on message intervals with 5-min gap threshold; intervals between consecutive AI interactions are summed, gaps > 5 minutes counted as inactive
 - **CSV export** and **HTML report** generation for sending to clients
 - Customer-friendly labels — "Arbeitssitzungen" instead of "Sessions", "Codezeilen" instead of "Tokens"
 - AI usage report can be **attached to invoice PDFs** as a second page
+
+### Leads (Vorgemerkt)
+- Track potential clients and websites for outreach
+- Simple list with URL (required), name, company, email, phone, notes, and status workflow (Neu → Kontaktiert → Interessiert → Abgelehnt)
+- Full-text search across all fields
 
 ### Dashboard
 - Revenue current month and year
@@ -168,6 +175,10 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/token-tracker/projects` | Projects from Token Tracker |
 | `GET/POST` | `/api/token-tracker/shares` | Manage share tokens |
 | `DELETE` | `/api/token-tracker/shares/{id}` | Revoke share |
+| `GET` | `/api/leads` | Lead list (search, status filter, pagination) |
+| `POST` | `/api/leads` | Create lead |
+| `PUT` | `/api/leads/{id}` | Update lead |
+| `DELETE` | `/api/leads/{id}` | Delete lead |
 | `GET` | `/api/health` | Health check |
 
 Interactive API docs at `/docs` (Swagger UI).
@@ -324,6 +335,8 @@ OPS/
 │       ├── database.py         # SQLAlchemy engine + async session
 │       ├── auth.py             # JWT login, token validation
 │       ├── models/             # SQLAlchemy 2.0 Mapped models
+│       │   ├── ...
+│       │   └── lead.py         # Lead model
 │       ├── schemas/            # Pydantic v2 request/response schemas
 │       ├── routers/            # API endpoints (all paginated)
 │       │   ├── customers.py    # CRUD + search + reference check
@@ -331,6 +344,7 @@ OPS/
 │       │   ├── contracts.py    # CRUD + status/type filter
 │       │   ├── invoices.py     # CRUD + PDF + status + quick invoice
 │       │   ├── dashboard.py    # Aggregated KPIs
+│       │   ├── leads.py         # Lead CRUD + search + status filter
 │       │   └── token_tracker.py # Token Tracker share API proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
@@ -357,7 +371,8 @@ OPS/
 │       │   ├── customers/      # List, form, detail
 │       │   ├── orders/         # List, form, detail
 │       │   ├── contracts/      # List, form, detail
-│       │   └── invoices/       # List, form, detail
+│       │   ├── invoices/       # List, form, detail
+│       │   └── leads/         # List, form
 │       └── utils/
 │           ├── formatters.ts   # Date (DD.MM.YYYY), currency (1.234,56 EUR)
 │           └── validators.ts
@@ -377,6 +392,17 @@ CO-2026-0001
 │  └──────── Calendar year
 └─────────── Configurable prefix
 ```
+
+---
+
+## Database Optimization
+
+- PostgreSQL indexes on all foreign keys (customer_id on orders/contracts/invoices)
+- Status indexes for filtered queries
+- Partial index for open invoices (dashboard performance)
+- Composite index on customer name+company for search
+- Connection pooling: pool_size=5, max_overflow=10, pre_ping enabled, 5-min recycle
+- Token Tracker aggregator cached with 5-min TTL (eliminates repeated full-table scans)
 
 ---
 

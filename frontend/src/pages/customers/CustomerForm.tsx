@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
-import axios from 'axios'
 import { getCustomer, createCustomer, updateCustomer } from '../../api/customers'
 import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../../api/tokenTracker'
 import type { CustomerCreate } from '../../types'
+
+interface LinkedProject {
+  url: string
+  label: string
+}
 
 const emptyForm: CustomerCreate = {
   name: '',
@@ -28,7 +32,6 @@ export default function CustomerForm() {
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [projectSearch, setProjectSearch] = useState('')
   const [linkingProject, setLinkingProject] = useState(false)
-  const [urlLabels, setUrlLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (id) {
@@ -47,21 +50,6 @@ export default function CustomerForm() {
     }
   }, [id])
 
-  // Fetch labels for linked URLs
-  useEffect(() => {
-    const urls = (() => {
-      const val = form.token_tracker_url
-      if (!val) return []
-      try { const p = JSON.parse(val); return Array.isArray(p) ? p : [val] } catch { return [val] }
-    })()
-    urls.forEach(url => {
-      if (urlLabels[url]) return
-      axios.get(url).then(res => {
-        setUrlLabels(prev => ({ ...prev, [url]: res.data?.label || '' }))
-      }).catch(() => {})
-    })
-  }, [form.token_tracker_url])
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
@@ -78,33 +66,44 @@ export default function CustomerForm() {
     }
   }
 
-  // Parse existing URLs from JSON array or single string
-  const getLinkedUrls = (): string[] => {
+  // Parse stored value into LinkedProject array
+  // Supports: "", "url", '["url1","url2"]', '[{"url":"...","label":"..."},...]'
+  const getLinkedProjects = (): LinkedProject[] => {
     const val = form.token_tracker_url
     if (!val) return []
     try {
       const parsed = JSON.parse(val)
-      return Array.isArray(parsed) ? parsed : [val]
+      if (!Array.isArray(parsed)) return [{ url: val, label: '' }]
+      return parsed.map((item: string | LinkedProject) =>
+        typeof item === 'string' ? { url: item, label: '' } : item
+      )
     } catch {
-      return [val]
+      return [{ url: val, label: '' }]
     }
   }
 
-  const setLinkedUrls = (urls: string[]) => {
-    if (urls.length === 0) setForm({ ...form, token_tracker_url: '' })
-    else if (urls.length === 1) setForm({ ...form, token_tracker_url: urls[0] })
-    else setForm({ ...form, token_tracker_url: JSON.stringify(urls) })
+  const setLinkedProjects = (projects: LinkedProject[]) => {
+    if (projects.length === 0) setForm({ ...form, token_tracker_url: '' })
+    else setForm({ ...form, token_tracker_url: JSON.stringify(projects) })
+  }
+
+  // For TokenUsage component: extract just URLs
+  const getUrlsForTracker = (): string => {
+    const projects = getLinkedProjects()
+    if (projects.length === 0) return ''
+    if (projects.length === 1) return projects[0].url
+    return JSON.stringify(projects.map(p => p.url))
   }
 
   const handleLinkProject = async (project: TrackerProject) => {
     setLinkingProject(true)
     try {
-      const label = form.company || form.name || 'Kundenprojekt'
-      const share = await createTrackerShare(project.name, `${label} — ${project.name}`)
+      const customerLabel = form.company || form.name || 'Kundenprojekt'
+      const share = await createTrackerShare(project.name, `${customerLabel} — ${project.name}`)
       if (share.public_url) {
-        const current = getLinkedUrls()
-        if (!current.includes(share.public_url)) {
-          setLinkedUrls([...current, share.public_url])
+        const current = getLinkedProjects()
+        if (!current.some(p => p.url === share.public_url)) {
+          setLinkedProjects([...current, { url: share.public_url, label: project.name }])
         }
         toast.success(`Projekt "${project.name}" verknüpft.`)
       }
@@ -115,8 +114,8 @@ export default function CustomerForm() {
     setLinkingProject(false)
   }
 
-  const handleRemoveUrl = (url: string) => {
-    setLinkedUrls(getLinkedUrls().filter(u => u !== url))
+  const handleRemoveProject = (url: string) => {
+    setLinkedProjects(getLinkedProjects().filter(p => p.url !== url))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,6 +140,7 @@ export default function CustomerForm() {
   const filteredProjects = projects.filter(p =>
     p.name.toLowerCase().includes(projectSearch.toLowerCase())
   )
+  const linkedProjects = getLinkedProjects()
 
   return (
     <div className="max-w-2xl">
@@ -173,30 +173,27 @@ export default function CustomerForm() {
               Projekt verknüpfen
             </button>
           </div>
-          {getLinkedUrls().length > 0 ? (
+          {linkedProjects.length > 0 ? (
             <div className="space-y-1.5">
-              {getLinkedUrls().map((url, i) => {
-                const label = urlLabels[url]
-                return (
-                  <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border rounded-lg px-3 py-2">
-                    <span className="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
-                    <div className="flex-1 min-w-0">
-                      {label && <span className="text-sm text-text block truncate">{label}</span>}
-                      <span className="text-[11px] text-text-muted font-mono block truncate">{url.replace(/https?:\/\//, '')}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveUrl(url)}
-                      className="text-text-muted hover:text-danger transition-colors p-0.5"
-                      title="Verknüpfung entfernen"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+              {linkedProjects.map((proj, i) => (
+                <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border rounded-lg px-3 py-2">
+                  <span className="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
+                  <div className="flex-1 min-w-0">
+                    {proj.label && <span className="text-sm text-text block truncate">{proj.label}</span>}
+                    <span className="text-[11px] text-text-muted font-mono block truncate">{proj.url.replace(/https?:\/\//, '')}</span>
                   </div>
-                )
-              })}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveProject(proj.url)}
+                    className="text-text-muted hover:text-danger transition-colors p-0.5"
+                    title="Verknüpfung entfernen"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-xs text-text-muted">Kein Projekt verknüpft. Klicke "Projekt verknüpfen" um KI-Nutzungsdaten zuzuweisen.</p>

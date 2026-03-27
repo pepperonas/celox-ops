@@ -52,15 +52,22 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
 
 ### KI-Nutzungstracking (Token Tracker Integration)
-- Integration mit [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) ueber sichere Share-API
+- Integration mit [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) über sichere Share-API
+- **Multi-Projekt-Verknüpfung** — mehrere Token Tracker Projekte pro Kunde, Daten werden automatisch projektübergreifend zusammengeführt
+- **Labels bei Verknüpfung gespeichert** — Projektlabels werden beim Verknüpfen erfasst, keine zusätzlichen API-Aufrufe nötig
 - **Zeitraumfilter** — 7/30/90 Tage, gesamter Zeitraum oder benutzerdefiniert
 - **KPI-Karten**: Kosten, aktive Arbeitszeit, geschriebene Codezeilen, KI-Anfragen
 - **Diagramme** (Chart.js): tägliche Arbeitsintensität, kumulativer Kostentrend, Code-Entwicklung
 - **Sitzungstabelle**: Datum, aktive Dauer, KI-Modell, Anfragen, Codezeilen, Kosten
-- **Aktive Zeiterfassung** — misst echte Arbeitszeit (nicht Sitzungsdauer) basierend auf Nachrichtenintervallen mit 5-Minuten-Lücken-Schwellwert
+- **Aktive Zeiterfassung** — misst echte Arbeitszeit (nicht Sitzungsdauer) basierend auf Nachrichtenintervallen mit 5-Minuten-Lücken-Schwellwert; Intervalle zwischen aufeinanderfolgenden KI-Interaktionen werden summiert, Lücken > 5 Minuten zählen als inaktiv
 - **CSV-Export** und **HTML-Bericht** zur Weitergabe an Kunden
 - Kundenfreundliche Bezeichnungen — "Arbeitssitzungen" statt "Sessions", "Codezeilen" statt "Tokens"
 - KI-Nutzungsbericht kann als zweite Seite an **Rechnungs-PDFs angehängt** werden
+
+### Leads (Vorgemerkt)
+- Potenzielle Kunden und Websites für Akquise vormerken
+- Einfache Liste mit URL (Pflicht), Name, Firma, E-Mail, Telefon, Notizen und Status-Workflow (Neu → Kontaktiert → Interessiert → Abgelehnt)
+- Volltextsuche über alle Felder
 
 ### Dashboard
 - Umsatz aktueller Monat und Jahr
@@ -168,6 +175,10 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |
 | `GET/POST` | `/api/token-tracker/shares` | Share-Tokens verwalten |
 | `DELETE` | `/api/token-tracker/shares/{id}` | Share widerrufen |
+| `GET` | `/api/leads` | Lead-Liste (Suche, Status-Filter, Paginierung) |
+| `POST` | `/api/leads` | Lead anlegen |
+| `PUT` | `/api/leads/{id}` | Lead aktualisieren |
+| `DELETE` | `/api/leads/{id}` | Lead löschen |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Docs unter `/docs` (Swagger UI).
@@ -328,6 +339,8 @@ celox-ops/
 │       ├── database.py         # SQLAlchemy Engine + Async Session
 │       ├── auth.py             # JWT-Login, Token-Validierung
 │       ├── models/             # SQLAlchemy 2.0 Mapped Models
+│       │   ├── ...
+│       │   └── lead.py         # Lead-Modell
 │       ├── schemas/            # Pydantic v2 Request/Response Schemas
 │       ├── routers/            # API-Endpunkte (alle paginiert)
 │       │   ├── customers.py    # CRUD + Suche + Referenzprüfung
@@ -335,6 +348,7 @@ celox-ops/
 │       │   ├── contracts.py    # CRUD + Status/Typ-Filter
 │       │   ├── invoices.py     # CRUD + PDF + Status + Schnellrechnung
 │       │   ├── dashboard.py    # Aggregierte KPIs
+│       │   ├── leads.py         # Lead-CRUD + Suche + Status-Filter
 │       │   └── token_tracker.py # Token Tracker Share-API-Proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
@@ -361,7 +375,8 @@ celox-ops/
 │       │   ├── customers/      # Liste, Formular, Detail
 │       │   ├── orders/         # Liste, Formular, Detail
 │       │   ├── contracts/      # Liste, Formular, Detail
-│       │   └── invoices/       # Liste, Formular, Detail
+│       │   ├── invoices/       # Liste, Formular, Detail
+│       │   └── leads/         # Liste, Formular
 │       └── utils/
 │           ├── formatters.ts   # Datum (DD.MM.YYYY), Währung (1.234,56 EUR)
 │           └── validators.ts
@@ -381,6 +396,17 @@ CO-2026-0001
 │  └──────── Kalenderjahr
 └─────────── Konfigurierbares Präfix
 ```
+
+---
+
+## Datenbankoptimierung
+
+- PostgreSQL-Indizes auf allen Fremdschlüsseln (customer_id auf orders/contracts/invoices)
+- Status-Indizes für gefilterte Abfragen
+- Partial Index für offene Rechnungen (Dashboard-Performance)
+- Composite Index auf Kundenname+Firma für Suche
+- Connection Pooling: pool_size=5, max_overflow=10, pre_ping aktiviert, 5-Min-Recycle
+- Token Tracker Aggregator mit 5-Min-TTL gecacht (eliminiert wiederholte Full-Table-Scans)
 
 ---
 

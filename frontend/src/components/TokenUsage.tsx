@@ -105,11 +105,12 @@ export default function TokenUsage({ trackerUrl }: Props) {
     setLoading(true)
     setError(false)
 
-    // Parse URLs — supports single URL string or JSON array
+    // Parse URLs — supports: single URL, ["url1","url2"], [{"url":"...","label":"..."},...]
     let urls: string[]
     try {
       const parsed = JSON.parse(trackerUrl)
-      urls = Array.isArray(parsed) ? parsed : [trackerUrl]
+      if (!Array.isArray(parsed)) { urls = [trackerUrl] }
+      else { urls = parsed.map((item: string | { url: string }) => typeof item === 'string' ? item : item.url) }
     } catch {
       urls = [trackerUrl]
     }
