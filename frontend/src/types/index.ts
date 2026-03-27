@@ -26,6 +26,7 @@ export interface TokenTrackerData {
     lines_removed: number
     lines_written: number
     total_duration_min: number
+    total_active_min: number
     first_activity: string | null
     last_activity: string | null
     models_used: { name: string; messages: number; cost: number }[]
@@ -50,6 +51,7 @@ export interface TokenTrackerData {
     output_tokens: number
     cost: number
     duration_min: number
+    active_min: number
     model: string
     lines_added: number
     lines_removed: number

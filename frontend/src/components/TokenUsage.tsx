@@ -193,9 +193,9 @@ export default function TokenUsage({ trackerUrl }: Props) {
     <div class="kpi-sub">$${s.total_cost.toFixed(2)} USD</div>
   </div>
   <div class="kpi">
-    <div class="kpi-label">Arbeitssitzungen</div>
-    <div class="kpi-value green">${s.total_sessions}</div>
-    <div class="kpi-sub">${formatDuration(s.total_duration_min)} Gesamtdauer</div>
+    <div class="kpi-label">Aktive Arbeitszeit</div>
+    <div class="kpi-value green">${formatDuration(s.total_active_min)}</div>
+    <div class="kpi-sub">${s.total_sessions} Sitzungen</div>
   </div>
   <div class="kpi">
     <div class="kpi-label">Codezeilen</div>
@@ -225,7 +225,7 @@ ${data.sessions.length > 0 ? `
   <tbody>
     ${data.sessions.map(ss => `<tr>
       <td>${ss.start ? new Date(ss.start).toLocaleDateString('de-DE') : '-'}</td>
-      <td>${formatDuration(ss.duration_min)}</td>
+      <td>${formatDuration(ss.active_min)} aktiv</td>
       <td>${ss.model || '-'}</td>
       <td class="right mono">${ss.messages}</td>
       <td class="right mono"><span class="green">+${ss.lines_added}</span>${ss.lines_removed > 0 ? ` <span style="color:#d73a49">−${ss.lines_removed}</span>` : ''}</td>
@@ -257,7 +257,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
   <div>
     <div class="summary-item"><span class="summary-label">Erster Einsatz</span><span class="summary-value">${s.first_activity ? new Date(s.first_activity).toLocaleDateString('de-DE') : '–'}</span></div>
     <div class="summary-item"><span class="summary-label">Letzter Einsatz</span><span class="summary-value">${s.last_activity ? new Date(s.last_activity).toLocaleDateString('de-DE') : '–'}</span></div>
-    <div class="summary-item"><span class="summary-label">Gesamtdauer</span><span class="summary-value">${formatDuration(s.total_duration_min)}</span></div>
+    <div class="summary-item"><span class="summary-label">Aktive Arbeitszeit</span><span class="summary-value">${formatDuration(s.total_active_min)}</span></div>
   </div>
   <div>
     <div class="summary-item"><span class="summary-label">KI-Anfragen</span><span class="summary-value">${s.total_messages.toLocaleString('de-DE')}</span></div>
@@ -361,9 +361,9 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
           <p className="text-xs text-text-muted mt-1">${s.total_cost.toFixed(2)} USD</p>
         </div>
         <div className="bg-surface border border-border rounded-[12px] p-5">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Arbeitssitzungen</p>
-          <p className="text-[28px] font-bold tabular-nums text-success">{s.total_sessions}</p>
-          <p className="text-xs text-text-muted mt-1">{formatDuration(s.total_duration_min)} Gesamtdauer</p>
+          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Aktive Arbeitszeit</p>
+          <p className="text-[28px] font-bold tabular-nums text-success">{formatDuration(s.total_active_min)}</p>
+          <p className="text-xs text-text-muted mt-1">{s.total_sessions} Sitzungen</p>
         </div>
         <div className="bg-surface border border-border rounded-[12px] p-5">
           <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Codezeilen geschrieben</p>
@@ -532,7 +532,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
                 {data.sessions.map((session, i) => (
                   <tr key={i} className="border-b border-border hover:bg-surface-2 transition-colors">
                     <td className="py-2.5 px-3 text-[13px] text-text">{formatDate(session.start)}</td>
-                    <td className="py-2.5 px-3 text-[13px] text-text-muted">{formatDuration(session.duration_min)}</td>
+                    <td className="py-2.5 px-3 text-[13px] text-text">{formatDuration(session.active_min)} <span className="text-text-muted text-xs">aktiv</span></td>
                     <td className="py-2.5 px-3 text-[13px] text-text-muted">{session.model}</td>
                     <td className="py-2.5 px-3 text-[13px] text-text tabular-nums text-right">{session.messages}</td>
                     <td className="py-2.5 px-3 text-[13px] tabular-nums text-right">
@@ -580,8 +580,8 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
               <span className="text-text">{s.last_activity ? formatDate(s.last_activity) : '–'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-border">
-              <span className="text-text-muted">Gesamtdauer</span>
-              <span className="text-text">{formatDuration(s.total_duration_min)}</span>
+              <span className="text-text-muted">Aktive Arbeitszeit</span>
+              <span className="text-text">{formatDuration(s.total_active_min)}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-border">
               <span className="text-text-muted">KI-Anfragen gesamt</span>
