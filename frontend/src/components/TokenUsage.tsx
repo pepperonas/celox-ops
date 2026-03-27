@@ -120,6 +120,7 @@ export default function TokenUsage({ trackerUrl }: Props) {
 
   const s = data.summary
   const costEur = s.total_cost * 0.92 // USD to EUR approximation
+  const projectSlug = (data.label || 'projekt').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/-+$/, '')
 
   const exportHTML = () => {
     const label = data.label || 'Projekt'
@@ -276,7 +277,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ki-nutzungsbericht-${from || 'gesamt'}-${to || 'heute'}.html`
+    a.download = `ki-nutzungsbericht-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.html`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -295,7 +296,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ki-nutzung-${from || 'gesamt'}-${to || 'heute'}.csv`
+    a.download = `ki-nutzung-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
