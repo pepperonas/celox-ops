@@ -44,7 +44,7 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/pepperonas/OPS.git
+git clone https://github.com/pepperonas/celox-ops.git
 cd OPS
 cp .env.example .env    # configure passwords, JWT_SECRET, business details
 docker compose up -d --build
@@ -74,7 +74,7 @@ Combines with [Claude Token Tracker](https://github.com/pepperonas/claude-token-
 
 ## Links
 
-- **GitHub**: [github.com/pepperonas/OPS](https://github.com/pepperonas/OPS)
+- **GitHub**: [github.com/pepperonas/celox-ops](https://github.com/pepperonas/celox-ops)
 - **Token Tracker**: [github.com/pepperonas/claude-token-tracker](https://github.com/pepperonas/claude-token-tracker)
 - **Author**: [Martin Pfeffer](https://celox.io)
 

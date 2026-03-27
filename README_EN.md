@@ -183,7 +183,7 @@ Interactive API docs at `/docs` (Swagger UI).
 ### Installation
 
 ```bash
-git clone https://github.com/pepperonas/OPS.git
+git clone https://github.com/pepperonas/celox-ops.git
 cd OPS
 
 # Configure environment
