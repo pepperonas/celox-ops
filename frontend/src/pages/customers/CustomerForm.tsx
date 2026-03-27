@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
+import axios from 'axios'
 import { getCustomer, createCustomer, updateCustomer } from '../../api/customers'
 import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../../api/tokenTracker'
 import type { CustomerCreate } from '../../types'
@@ -27,6 +28,7 @@ export default function CustomerForm() {
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [projectSearch, setProjectSearch] = useState('')
   const [linkingProject, setLinkingProject] = useState(false)
+  const [urlLabels, setUrlLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (id) {
@@ -44,6 +46,21 @@ export default function CustomerForm() {
       )
     }
   }, [id])
+
+  // Fetch labels for linked URLs
+  useEffect(() => {
+    const urls = (() => {
+      const val = form.token_tracker_url
+      if (!val) return []
+      try { const p = JSON.parse(val); return Array.isArray(p) ? p : [val] } catch { return [val] }
+    })()
+    urls.forEach(url => {
+      if (urlLabels[url]) return
+      axios.get(url).then(res => {
+        setUrlLabels(prev => ({ ...prev, [url]: res.data?.label || '' }))
+      }).catch(() => {})
+    })
+  }, [form.token_tracker_url])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -159,12 +176,14 @@ export default function CustomerForm() {
           {getLinkedUrls().length > 0 ? (
             <div className="space-y-1.5">
               {getLinkedUrls().map((url, i) => {
-                // Extract project name from URL (last part of share token path)
-                const shortUrl = url.replace(/.*\/api\/public\/share\//, '').slice(0, 12) + '...'
+                const label = urlLabels[url]
                 return (
                   <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border rounded-lg px-3 py-2">
                     <span className="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
-                    <span className="text-xs text-text-muted font-mono flex-1 truncate">{url.replace(/https?:\/\//, '')}</span>
+                    <div className="flex-1 min-w-0">
+                      {label && <span className="text-sm text-text block truncate">{label}</span>}
+                      <span className="text-[11px] text-text-muted font-mono block truncate">{url.replace(/https?:\/\//, '')}</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveUrl(url)}
