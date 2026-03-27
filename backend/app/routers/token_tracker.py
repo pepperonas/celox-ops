@@ -31,7 +31,7 @@ async def list_projects() -> list:
     """Verfügbare Projekte im Token Tracker."""
     if not settings.TOKEN_TRACKER_BASE_URL:
         raise HTTPException(status_code=503, detail="Token Tracker nicht konfiguriert")
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.get(_tracker_url("/api/shares/projects"), headers=_tracker_headers())
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail="Token Tracker Fehler")
