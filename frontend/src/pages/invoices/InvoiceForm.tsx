@@ -145,14 +145,16 @@ export default function InvoiceForm() {
 
   return (
     <div className="max-w-4xl">
-      <h2 className="text-2xl font-bold text-gray-100 mb-6">
-        {isEdit ? 'Rechnung bearbeiten' : 'Neue Rechnung'}
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">
+          {isEdit ? 'Rechnung bearbeiten' : 'Neue Rechnung'}
+        </h2>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <div className="card space-y-4">
-          <h3 className="text-lg font-semibold text-gray-200">Allgemein</h3>
+        <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Allgemein</h3>
 
           <FormField
             label="Kunde"
@@ -165,7 +167,7 @@ export default function InvoiceForm() {
               value: c.id,
               label: c.company ? `${c.name} (${c.company})` : c.name,
             }))}
-            placeholder="Kunde waehlen..."
+            placeholder="Kunde wählen..."
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -200,7 +202,7 @@ export default function InvoiceForm() {
               onChange={handleChange}
             />
             <FormField
-              label="Faelligkeitsdatum"
+              label="Fälligkeitsdatum"
               name="due_date"
               type="date"
               value={form.due_date || ''}
@@ -210,17 +212,17 @@ export default function InvoiceForm() {
         </div>
 
         {/* Positions */}
-        <div className="card">
+        <div className="bg-surface border border-border rounded-[12px] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-200">Positionen</h3>
+            <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Positionen</h3>
             <button type="button" onClick={addPosition} className="btn-secondary text-sm">
-              Position hinzufuegen
+              Position hinzufügen
             </button>
           </div>
 
           <div className="space-y-3">
             {/* Header */}
-            <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-semibold text-gray-400 uppercase px-1">
+            <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-semibold text-text-muted uppercase tracking-wider px-1">
               <div className="col-span-4">Beschreibung</div>
               <div className="col-span-2">Menge</div>
               <div className="col-span-2">Einheit</div>
@@ -230,9 +232,9 @@ export default function InvoiceForm() {
             </div>
 
             {form.positions.map((pos, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-800/30 rounded-lg p-2 md:p-0 md:bg-transparent">
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-surface-2 rounded-lg p-2 md:p-0 md:bg-transparent">
                 <div className="md:col-span-4">
-                  <label className="md:hidden text-xs text-gray-500 mb-1 block">Beschreibung</label>
+                  <label className="md:hidden text-xs text-text-muted mb-1 block">Beschreibung</label>
                   <input
                     type="text"
                     value={pos.beschreibung}
@@ -242,7 +244,7 @@ export default function InvoiceForm() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="md:hidden text-xs text-gray-500 mb-1 block">Menge</label>
+                  <label className="md:hidden text-xs text-text-muted mb-1 block">Menge</label>
                   <input
                     type="number"
                     value={pos.menge}
@@ -253,7 +255,7 @@ export default function InvoiceForm() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="md:hidden text-xs text-gray-500 mb-1 block">Einheit</label>
+                  <label className="md:hidden text-xs text-text-muted mb-1 block">Einheit</label>
                   <input
                     type="text"
                     value={pos.einheit}
@@ -263,7 +265,7 @@ export default function InvoiceForm() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="md:hidden text-xs text-gray-500 mb-1 block">Einzelpreis</label>
+                  <label className="md:hidden text-xs text-text-muted mb-1 block">Einzelpreis</label>
                   <input
                     type="number"
                     value={pos.einzelpreis}
@@ -274,8 +276,8 @@ export default function InvoiceForm() {
                   />
                 </div>
                 <div className="md:col-span-1 flex items-center">
-                  <label className="md:hidden text-xs text-gray-500 mb-1 block mr-2">Gesamt</label>
-                  <span className="text-sm text-gray-300 py-2">
+                  <label className="md:hidden text-xs text-text-muted mb-1 block mr-2">Gesamt</label>
+                  <span className="text-sm text-text py-2">
                     {formatCurrency(pos.menge * pos.einzelpreis)}
                   </span>
                 </div>
@@ -284,7 +286,7 @@ export default function InvoiceForm() {
                     type="button"
                     onClick={() => removePosition(idx)}
                     disabled={form.positions.length <= 1}
-                    className="p-1.5 text-gray-500 hover:text-red-400 disabled:opacity-30 transition-colors"
+                    className="p-1.5 text-text-muted hover:text-danger disabled:opacity-30 transition-colors"
                     title="Position entfernen"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,9 +299,9 @@ export default function InvoiceForm() {
           </div>
 
           {/* Totals */}
-          <div className="mt-6 pt-4 border-t border-gray-800">
+          <div className="mt-6 pt-4 border-t border-border">
             <div className="flex items-center gap-3 mb-4">
-              <label className="text-sm text-gray-300">USt.-Satz (%):</label>
+              <label className="text-xs uppercase tracking-wider text-text-muted">USt.-Satz (%):</label>
               <input
                 type="number"
                 name="tax_rate"
@@ -313,23 +315,23 @@ export default function InvoiceForm() {
 
             <div className="flex flex-col items-end gap-1">
               <div className="flex justify-between w-60">
-                <span className="text-sm text-gray-400">Netto:</span>
-                <span className="text-sm text-gray-200 font-medium">{formatCurrency(netto)}</span>
+                <span className="text-sm text-text-muted">Netto:</span>
+                <span className="text-sm text-text font-medium tabular-nums">{formatCurrency(netto)}</span>
               </div>
               <div className="flex justify-between w-60">
-                <span className="text-sm text-gray-400">USt. ({taxRate}%):</span>
-                <span className="text-sm text-gray-200 font-medium">{formatCurrency(taxAmount)}</span>
+                <span className="text-sm text-text-muted">USt. ({taxRate}%):</span>
+                <span className="text-sm text-text font-medium tabular-nums">{formatCurrency(taxAmount)}</span>
               </div>
-              <div className="flex justify-between w-60 pt-2 border-t border-gray-700">
-                <span className="text-sm font-semibold text-gray-200">Brutto:</span>
-                <span className="text-sm font-bold text-celox-400">{formatCurrency(brutto)}</span>
+              <div className="flex justify-between w-60 pt-2 border-t border-border">
+                <span className="text-sm font-semibold text-text">Brutto:</span>
+                <span className="text-sm font-bold text-accent tabular-nums">{formatCurrency(brutto)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Notes */}
-        <div className="card">
+        <div className="bg-surface border border-border rounded-[12px] p-5">
           <FormField
             label="Notizen"
             name="notes"

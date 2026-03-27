@@ -21,54 +21,52 @@ export default function Dashboard() {
           label: 'Umsatz (Monat)',
           value: formatCurrency(stats.revenue_month),
           sub: `Jahr: ${formatCurrency(stats.revenue_year)}`,
-          color: 'text-celox-400',
-          bg: 'bg-celox-500/10 border-celox-500/20',
+          valueColor: 'text-accent',
+        },
+        {
+          label: 'Umsatz (Jahr)',
+          value: formatCurrency(stats.revenue_year),
+          sub: `Monat: ${formatCurrency(stats.revenue_month)}`,
+          valueColor: 'text-success',
         },
         {
           label: 'Offene Rechnungen',
           value: String(stats.open_invoices_count),
           sub: formatCurrency(stats.open_invoices_sum),
-          color: 'text-blue-400',
-          bg: 'bg-blue-500/10 border-blue-500/20',
+          valueColor: stats.overdue_invoices_count > 0 ? 'text-danger' : 'text-warning',
         },
         {
-          label: 'Ueberfaellige Rechnungen',
-          value: String(stats.overdue_invoices_count),
-          sub: formatCurrency(stats.overdue_invoices_sum),
-          color: 'text-red-400',
-          bg: 'bg-red-500/10 border-red-500/20',
-        },
-        {
-          label: 'Aktive Vertraege',
+          label: 'Aktive Verträge',
           value: String(stats.active_contracts_count),
           sub: `${formatCurrency(stats.active_contracts_monthly_sum)} / Monat`,
-          color: 'text-green-400',
-          bg: 'bg-green-500/10 border-green-500/20',
+          valueColor: 'text-purple',
         },
       ]
     : []
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-100 mb-6">Dashboard</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">Dashboard</h2>
+      </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="card animate-pulse">
-              <div className="h-4 bg-gray-800 rounded w-1/2 mb-3" />
-              <div className="h-8 bg-gray-800 rounded w-2/3 mb-2" />
-              <div className="h-3 bg-gray-800 rounded w-1/3" />
+            <div key={i} className="bg-surface border border-border rounded-[12px] p-5 animate-pulse">
+              <div className="h-3 bg-surface-2 rounded w-1/2 mb-3" />
+              <div className="h-7 bg-surface-2 rounded w-2/3 mb-2" />
+              <div className="h-3 bg-surface-2 rounded w-1/3" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {cards.map((card) => (
-            <div key={card.label} className={`rounded-xl border p-6 ${card.bg}`}>
-              <p className="text-sm font-medium text-gray-400 mb-1">{card.label}</p>
-              <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-              <p className="text-sm text-gray-500 mt-1">{card.sub}</p>
+            <div key={card.label} className="bg-surface border border-border rounded-[12px] p-5">
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">{card.label}</p>
+              <p className={`text-[28px] font-bold tabular-nums ${card.valueColor}`}>{card.value}</p>
+              <p className="text-xs text-text-muted mt-1">{card.sub}</p>
             </div>
           ))}
         </div>

@@ -1,7 +1,8 @@
+import math
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -18,22 +19,27 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[OrderResponse])
+@router.get("")
 async def list_orders(
     customer_id: uuid.UUID | None = Query(None),
     order_status: OrderStatus | None = Query(None, alias="status"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
-) -> list[OrderResponse]:
+) -> dict:
     query = select(Order).options(joinedload(Order.customer))
+    count_query = select(func.count()).select_from(Order)
 
     if customer_id:
         query = query.where(Order.customer_id == customer_id)
+        count_query = count_query.where(Order.customer_id == customer_id)
     if order_status:
         query = query.where(Order.status == order_status)
+        count_query = count_query.where(Order.status == order_status)
+
+    total = (await db.execute(count_query)).scalar_one()
 
     sort_column = getattr(Order, sort_by, Order.created_at)
     if sort_dir == "asc":
@@ -41,7 +47,7 @@ async def list_orders(
     else:
         query = query.order_by(sort_column.desc())
 
-    query = query.offset(skip).limit(limit)
+    query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     orders = result.scalars().unique().all()
 
@@ -50,7 +56,14 @@ async def list_orders(
         resp = OrderResponse.model_validate(order)
         resp.customer_name = order.customer.name if order.customer else ""
         responses.append(resp)
-    return responses
+
+    return {
+        "items": responses,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total > 0 else 1,
+    }
 
 
 @router.get("/{order_id}", response_model=OrderDetail)

@@ -7,21 +7,21 @@ export default function Toast() {
       toastOptions={{
         duration: 4000,
         style: {
-          background: '#1f2937',
-          color: '#f3f4f6',
-          border: '1px solid #374151',
-          borderRadius: '0.75rem',
+          background: '#161b22',
+          color: '#e6edf3',
+          border: '1px solid #30363d',
+          borderRadius: '12px',
         },
         success: {
           iconTheme: {
-            primary: '#00b4d8',
-            secondary: '#f3f4f6',
+            primary: '#3fb950',
+            secondary: '#e6edf3',
           },
         },
         error: {
           iconTheme: {
-            primary: '#ef4444',
-            secondary: '#f3f4f6',
+            primary: '#f85149',
+            secondary: '#e6edf3',
           },
         },
       }}

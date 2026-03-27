@@ -82,11 +82,13 @@ export default function OrderForm() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold text-gray-100 mb-6">
-        {isEdit ? 'Auftrag bearbeiten' : 'Neuer Auftrag'}
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">
+          {isEdit ? 'Auftrag bearbeiten' : 'Neuer Auftrag'}
+        </h2>
+      </div>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
         <FormField
           label="Kunde"
           name="customer_id"
@@ -98,7 +100,7 @@ export default function OrderForm() {
             value: c.id,
             label: c.company ? `${c.name} (${c.company})` : c.name,
           }))}
-          placeholder="Kunde waehlen..."
+          placeholder="Kunde wählen..."
         />
         <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
         <FormField

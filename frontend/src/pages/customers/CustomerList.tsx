@@ -46,14 +46,14 @@ export default function CustomerList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-100">Kunden</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">Kunden</h2>
         <button onClick={() => navigate('/kunden/neu')} className="btn-primary">
           Neuer Kunde
         </button>
       </div>
 
-      <div className="mb-4">
+      <div className="flex gap-3 items-center mb-4">
         <input
           type="text"
           placeholder="Kunden suchen..."
@@ -67,7 +67,7 @@ export default function CustomerList() {
       </div>
 
       {loading ? (
-        <div className="text-gray-500 py-12 text-center">Laden...</div>
+        <div className="text-text-muted py-12 text-center">Laden...</div>
       ) : (
         <DataTable
           columns={columns}

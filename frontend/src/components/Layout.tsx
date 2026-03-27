@@ -23,7 +23,7 @@ const navItems = [
   },
   {
     to: '/auftraege',
-    label: 'Auftraege',
+    label: 'Aufträge',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -32,7 +32,7 @@ const navItems = [
   },
   {
     to: '/vertraege',
-    label: 'Vertraege',
+    label: 'Verträge',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -61,23 +61,23 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-bg">
       {/* Sidebar */}
       <aside
         className={`${
           collapsed ? 'w-16' : 'w-60'
-        } flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200`}
+        } flex-shrink-0 bg-surface border-r border-border flex flex-col transition-all duration-200`}
       >
         {/* Logo / Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           {!collapsed && (
-            <span className="text-lg font-bold text-celox-400 tracking-tight">
+            <span className="text-lg font-semibold text-accent tracking-tight">
               celox ops
             </span>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition-colors"
+            className="p-1.5 rounded-[6px] hover:bg-surface-2 text-text-muted hover:text-text transition-all duration-150"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {collapsed ? (
@@ -97,10 +97,10 @@ export default function Layout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-100 ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-celox-500/15 text-celox-400'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                    ? 'bg-[#58a6ff15] text-accent border-l-2 border-accent'
+                    : 'text-text-muted hover:text-text hover:bg-surface-2'
                 } ${collapsed ? 'justify-center' : ''}`
               }
             >
@@ -114,13 +114,13 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 flex-shrink-0 bg-gray-900/50 border-b border-gray-800 flex items-center justify-between px-6 backdrop-blur-sm">
-          <h1 className="text-sm font-medium text-gray-400">
+        <header className="h-16 flex-shrink-0 bg-surface border-b border-border flex items-center justify-between px-6">
+          <h1 className="text-sm font-medium text-text-muted">
             Verwaltung
           </h1>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            className="btn-secondary flex items-center gap-2 text-xs py-1.5 px-3"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

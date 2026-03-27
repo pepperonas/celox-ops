@@ -9,7 +9,7 @@ import type { Contract } from '../../types'
 const statusOptions = [
   { value: '', label: 'Alle Status' },
   { value: 'aktiv', label: 'Aktiv' },
-  { value: 'gekuendigt', label: 'Gekuendigt' },
+  { value: 'gekuendigt', label: 'Gekündigt' },
   { value: 'ausgelaufen', label: 'Ausgelaufen' },
 ]
 
@@ -80,14 +80,14 @@ export default function ContractList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-100">Vertraege</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">Verträge</h2>
         <button onClick={() => navigate('/vertraege/neu')} className="btn-primary">
           Neuer Vertrag
         </button>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 items-center mb-4">
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -119,7 +119,7 @@ export default function ContractList() {
       </div>
 
       {loading ? (
-        <div className="text-gray-500 py-12 text-center">Laden...</div>
+        <div className="text-text-muted py-12 text-center">Laden...</div>
       ) : (
         <DataTable
           columns={columns}

@@ -1,8 +1,9 @@
+import math
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -28,22 +29,27 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[InvoiceResponse])
+@router.get("")
 async def list_invoices(
     customer_id: uuid.UUID | None = Query(None),
     invoice_status: InvoiceStatus | None = Query(None, alias="status"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
-) -> list[InvoiceResponse]:
+) -> dict:
     query = select(Invoice).options(joinedload(Invoice.customer))
+    count_query = select(func.count()).select_from(Invoice)
 
     if customer_id:
         query = query.where(Invoice.customer_id == customer_id)
+        count_query = count_query.where(Invoice.customer_id == customer_id)
     if invoice_status:
         query = query.where(Invoice.status == invoice_status)
+        count_query = count_query.where(Invoice.status == invoice_status)
+
+    total = (await db.execute(count_query)).scalar_one()
 
     sort_column = getattr(Invoice, sort_by, Invoice.created_at)
     if sort_dir == "asc":
@@ -51,7 +57,7 @@ async def list_invoices(
     else:
         query = query.order_by(sort_column.desc())
 
-    query = query.offset(skip).limit(limit)
+    query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     invoices = result.scalars().unique().all()
 
@@ -60,7 +66,14 @@ async def list_invoices(
         resp = InvoiceResponse.model_validate(inv)
         resp.customer_name = inv.customer.name if inv.customer else ""
         responses.append(resp)
-    return responses
+
+    return {
+        "items": responses,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total > 0 else 1,
+    }
 
 
 @router.get("/{invoice_id}", response_model=InvoiceDetail)
@@ -266,6 +279,6 @@ async def delete_invoice(
     if invoice.status != InvoiceStatus.entwurf:
         raise HTTPException(
             status_code=400,
-            detail="Nur Rechnungen im Status 'Entwurf' koennen geloescht werden",
+            detail="Nur Rechnungen im Status 'Entwurf' können gelöscht werden",
         )
     await db.delete(invoice)

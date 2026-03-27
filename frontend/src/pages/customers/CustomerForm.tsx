@@ -63,11 +63,13 @@ export default function CustomerForm() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold text-gray-100 mb-6">
-        {isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">
+          {isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}
+        </h2>
+      </div>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Name" name="name" value={form.name || ''} onChange={handleChange} required />
           <FormField label="Firma" name="company" value={form.company || ''} onChange={handleChange} />

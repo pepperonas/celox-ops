@@ -110,7 +110,7 @@ export function useCrud<T, C, U>(apiFns: CrudApi<T, C, U>) {
         }))
         return true
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Fehler beim Loeschen.')
+        setError(err instanceof Error ? err.message : 'Fehler beim Löschen.')
         return false
       }
     },

@@ -45,7 +45,7 @@ def verify_token(token: str) -> dict:
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token ungueltig oder abgelaufen",
+            detail="Token ungültig oder abgelaufen",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -56,7 +56,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     if username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token ungueltig",
+            detail="Token ungültig",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return username

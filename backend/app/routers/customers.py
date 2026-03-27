@@ -1,3 +1,4 @@
+import math
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,24 +25,29 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[CustomerResponse])
+@router.get("")
 async def list_customers(
     search: str | None = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
-) -> list[CustomerResponse]:
+) -> dict:
     query = select(Customer)
+    count_query = select(func.count()).select_from(Customer)
 
     if search:
         search_filter = f"%{search}%"
-        query = query.where(
+        condition = (
             Customer.name.ilike(search_filter)
             | Customer.email.ilike(search_filter)
             | Customer.company.ilike(search_filter)
         )
+        query = query.where(condition)
+        count_query = count_query.where(condition)
+
+    total = (await db.execute(count_query)).scalar_one()
 
     sort_column = getattr(Customer, sort_by, Customer.created_at)
     if sort_dir == "asc":
@@ -49,10 +55,17 @@ async def list_customers(
     else:
         query = query.order_by(sort_column.desc())
 
-    query = query.offset(skip).limit(limit)
+    query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     customers = result.scalars().all()
-    return [CustomerResponse.model_validate(c) for c in customers]
+
+    return {
+        "items": [CustomerResponse.model_validate(c) for c in customers],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total > 0 else 1,
+    }
 
 
 @router.get("/{customer_id}", response_model=CustomerDetail)
@@ -131,7 +144,7 @@ async def delete_customer(
     if orders_count.scalar_one() > 0:
         raise HTTPException(
             status_code=400,
-            detail="Kunde hat zugehoerige Auftraege und kann nicht geloescht werden",
+            detail="Kunde hat zugehörige Aufträge und kann nicht gelöscht werden",
         )
 
     contracts_count = await db.execute(
@@ -140,7 +153,7 @@ async def delete_customer(
     if contracts_count.scalar_one() > 0:
         raise HTTPException(
             status_code=400,
-            detail="Kunde hat zugehoerige Vertraege und kann nicht geloescht werden",
+            detail="Kunde hat zugehörige Verträge und kann nicht gelöscht werden",
         )
 
     invoices_count = await db.execute(
@@ -149,7 +162,7 @@ async def delete_customer(
     if invoices_count.scalar_one() > 0:
         raise HTTPException(
             status_code=400,
-            detail="Kunde hat zugehoerige Rechnungen und kann nicht geloescht werden",
+            detail="Kunde hat zugehörige Rechnungen und kann nicht gelöscht werden",
         )
 
     await db.delete(customer)

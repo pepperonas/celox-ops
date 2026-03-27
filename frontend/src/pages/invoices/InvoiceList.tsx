@@ -11,7 +11,7 @@ const statusOptions = [
   { value: 'entwurf', label: 'Entwurf' },
   { value: 'gestellt', label: 'Gestellt' },
   { value: 'bezahlt', label: 'Bezahlt' },
-  { value: 'ueberfaellig', label: 'Ueberfaellig' },
+  { value: 'ueberfaellig', label: 'Überfällig' },
   { value: 'storniert', label: 'Storniert' },
 ]
 
@@ -68,14 +68,14 @@ export default function InvoiceList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-100">Rechnungen</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">Rechnungen</h2>
         <button onClick={() => navigate('/rechnungen/neu')} className="btn-primary">
           Neue Rechnung
         </button>
       </div>
 
-      <div className="mb-4">
+      <div className="flex gap-3 items-center mb-4">
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -93,7 +93,7 @@ export default function InvoiceList() {
       </div>
 
       {loading ? (
-        <div className="text-gray-500 py-12 text-center">Laden...</div>
+        <div className="text-text-muted py-12 text-center">Laden...</div>
       ) : (
         <DataTable
           columns={columns}

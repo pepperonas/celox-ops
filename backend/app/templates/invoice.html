@@ -199,7 +199,7 @@
             <td>{{ invoice.invoice_date.strftime('%d.%m.%Y') }}</td>
         </tr>
         <tr>
-            <td class="label">Faellig bis:</td>
+            <td class="label">Fällig bis:</td>
             <td>{{ invoice.due_date.strftime('%d.%m.%Y') }}</td>
         </tr>
         {% if settings.BUSINESS_TAX_ID %}
@@ -258,7 +258,7 @@
 
     {% if kleinunternehmer %}
     <div class="kleinunternehmer-note">
-        Gemaess &sect; 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).
+        Gemäß &sect; 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).
     </div>
     {% endif %}
 

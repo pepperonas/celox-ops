@@ -15,7 +15,7 @@ const typeOptions = [
 
 const statusOptions = [
   { value: 'aktiv', label: 'Aktiv' },
-  { value: 'gekuendigt', label: 'Gekuendigt' },
+  { value: 'gekuendigt', label: 'Gekündigt' },
   { value: 'ausgelaufen', label: 'Ausgelaufen' },
 ]
 
@@ -95,11 +95,13 @@ export default function ContractForm() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold text-gray-100 mb-6">
-        {isEdit ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold text-text">
+          {isEdit ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}
+        </h2>
+      </div>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
         <FormField
           label="Kunde"
           name="customer_id"
@@ -111,7 +113,7 @@ export default function ContractForm() {
             value: c.id,
             label: c.company ? `${c.name} (${c.company})` : c.name,
           }))}
-          placeholder="Kunde waehlen..."
+          placeholder="Kunde wählen..."
         />
         <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
         <FormField
@@ -166,14 +168,14 @@ export default function ContractForm() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Automatische Verlaengerung"
+            label="Automatische Verlängerung"
             name="auto_renew"
             type="checkbox"
             value={form.auto_renew ?? true}
             onChange={handleChange}
           />
           <FormField
-            label="Kuendigungsfrist (Tage)"
+            label="Kündigungsfrist (Tage)"
             name="notice_period_days"
             type="number"
             value={form.notice_period_days || 30}

@@ -52,23 +52,23 @@ export default function DataTable<T extends { id: string }>({
     : data
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-800">
+    <div className="bg-surface border border-border rounded-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-900/80 border-b border-gray-800">
+            <tr className="border-b border-border">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider ${
-                    col.sortable !== false ? 'cursor-pointer hover:text-gray-200 select-none' : ''
+                  className={`px-3 py-2.5 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider ${
+                    col.sortable !== false ? 'cursor-pointer hover:text-text select-none' : ''
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     {col.label}
                     {sortKey === col.key && (
-                      <span className="text-celox-400">
+                      <span className="text-accent">
                         {sortDir === 'asc' ? '\u25B2' : '\u25BC'}
                       </span>
                     )}
@@ -77,31 +77,29 @@ export default function DataTable<T extends { id: string }>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/50">
+          <tbody>
             {sortedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-4 py-12 text-center text-gray-500"
+                  className="px-3 py-12 text-center text-text-muted text-[13px]"
                 >
-                  Keine Eintraege vorhanden.
+                  Keine Einträge vorhanden.
                 </td>
               </tr>
             ) : (
-              sortedData.map((item, idx) => (
+              sortedData.map((item) => (
                 <tr
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
-                  className={`${
-                    idx % 2 === 0 ? 'bg-gray-950' : 'bg-gray-900/30'
-                  } ${
+                  className={`border-b border-border transition-all duration-150 ${
                     onRowClick
-                      ? 'cursor-pointer hover:bg-gray-800/60 transition-colors duration-100'
+                      ? 'cursor-pointer hover:bg-surface-2'
                       : ''
                   }`}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-sm text-gray-300">
+                    <td key={col.key} className="px-3 py-2.5 text-[13px] text-text">
                       {col.render
                         ? col.render(item)
                         : String((item as Record<string, unknown>)[col.key] ?? '')}
@@ -115,17 +113,17 @@ export default function DataTable<T extends { id: string }>({
       </div>
 
       {totalPages > 1 && onPageChange && (
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-900/50 border-t border-gray-800">
-          <span className="text-sm text-gray-400">
-            {total} Eintraege gesamt
+        <div className="flex items-center justify-between px-3 py-2.5 border-t border-border">
+          <span className="text-xs text-text-muted">
+            {total} Einträge gesamt
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
-              className="px-3 py-1.5 text-sm rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-2.5 py-1 text-xs rounded-[6px] border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
             >
-              Zurueck
+              Zurück
             </button>
             {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
               let pageNum: number
@@ -142,10 +140,10 @@ export default function DataTable<T extends { id: string }>({
                 <button
                   key={pageNum}
                   onClick={() => onPageChange(pageNum)}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  className={`px-2.5 py-1 text-xs rounded-[6px] transition-all duration-150 ${
                     pageNum === page
-                      ? 'bg-celox-500 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'bg-accent text-white'
+                      : 'border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text'
                   }`}
                 >
                   {pageNum}
@@ -155,7 +153,7 @@ export default function DataTable<T extends { id: string }>({
             <button
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 text-sm rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-2.5 py-1 text-xs rounded-[6px] border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
             >
               Weiter
             </button>

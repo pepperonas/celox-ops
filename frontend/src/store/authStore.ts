@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token: access_token, isAuthenticated: true, loading: false })
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Bitte pruefen Sie Ihre Zugangsdaten.'
+        err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.'
       set({ error: message, loading: false })
       throw err
     }

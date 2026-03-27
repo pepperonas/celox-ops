@@ -1,7 +1,8 @@
+import math
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -23,25 +24,31 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[ContractResponse])
+@router.get("")
 async def list_contracts(
     customer_id: uuid.UUID | None = Query(None),
     contract_status: ContractStatus | None = Query(None, alias="status"),
     contract_type: ContractType | None = Query(None, alias="type"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
-) -> list[ContractResponse]:
+) -> dict:
     query = select(Contract).options(joinedload(Contract.customer))
+    count_query = select(func.count()).select_from(Contract)
 
     if customer_id:
         query = query.where(Contract.customer_id == customer_id)
+        count_query = count_query.where(Contract.customer_id == customer_id)
     if contract_status:
         query = query.where(Contract.status == contract_status)
+        count_query = count_query.where(Contract.status == contract_status)
     if contract_type:
         query = query.where(Contract.type == contract_type)
+        count_query = count_query.where(Contract.type == contract_type)
+
+    total = (await db.execute(count_query)).scalar_one()
 
     sort_column = getattr(Contract, sort_by, Contract.created_at)
     if sort_dir == "asc":
@@ -49,7 +56,7 @@ async def list_contracts(
     else:
         query = query.order_by(sort_column.desc())
 
-    query = query.offset(skip).limit(limit)
+    query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     contracts = result.scalars().unique().all()
 
@@ -58,7 +65,14 @@ async def list_contracts(
         resp = ContractResponse.model_validate(contract)
         resp.customer_name = contract.customer.name if contract.customer else ""
         responses.append(resp)
-    return responses
+
+    return {
+        "items": responses,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total > 0 else 1,
+    }
 
 
 @router.get("/{contract_id}", response_model=ContractDetail)

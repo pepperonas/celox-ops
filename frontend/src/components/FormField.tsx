@@ -44,22 +44,22 @@ export default function FormField({
           checked={value as boolean}
           onChange={onChange}
           disabled={disabled}
-          className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-celox-500 focus:ring-celox-500 focus:ring-offset-gray-900"
+          className="w-4 h-4 rounded-[6px] border-border bg-surface text-accent focus:ring-accent focus:ring-offset-bg"
         />
-        <label htmlFor={id} className="text-sm font-medium text-gray-300">
+        <label htmlFor={id} className="text-xs uppercase tracking-wider text-text-muted">
           {label}
-          {required && <span className="text-red-400 ml-1">*</span>}
+          {required && <span className="text-danger ml-1">*</span>}
         </label>
-        {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+        {error && <p className="text-xs text-danger mt-1">{error}</p>}
       </div>
     )
   }
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1.5">
+      <label htmlFor={id} className="block text-xs uppercase tracking-wider text-text-muted mb-2">
         {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
+        {required && <span className="text-danger ml-1">*</span>}
       </label>
 
       {type === 'select' ? (
@@ -71,7 +71,7 @@ export default function FormField({
           disabled={disabled}
           className="input-field"
         >
-          <option value="">{placeholder || 'Bitte waehlen...'}</option>
+          <option value="">{placeholder || 'Bitte wählen...'}</option>
           {options?.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -105,7 +105,7 @@ export default function FormField({
         />
       )}
 
-      {error && <p className="text-red-400 text-xs mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   )
 }

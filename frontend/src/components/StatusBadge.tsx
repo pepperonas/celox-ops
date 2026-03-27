@@ -1,24 +1,24 @@
 const statusColors: Record<string, string> = {
   // Order statuses
-  angebot: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  beauftragt: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  in_arbeit: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  abgeschlossen: 'bg-green-500/20 text-green-400 border-green-500/30',
-  storniert: 'bg-red-500/20 text-red-400 border-red-500/30',
+  angebot: 'bg-[#d2992233] text-warning border border-[#d2992240]',
+  beauftragt: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
+  in_arbeit: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  abgeschlossen: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
+  storniert: 'bg-[#f8514933] text-danger border border-[#f8514940]',
   // Contract statuses
-  aktiv: 'bg-green-500/20 text-green-400 border-green-500/30',
-  gekuendigt: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  ausgelaufen: 'bg-red-500/20 text-red-400 border-red-500/30',
+  aktiv: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
+  gekuendigt: 'bg-[#d2992233] text-warning border border-[#d2992240]',
+  ausgelaufen: 'bg-[#f8514933] text-danger border border-[#f8514940]',
   // Invoice statuses
-  entwurf: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  gestellt: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  bezahlt: 'bg-green-500/20 text-green-400 border-green-500/30',
-  ueberfaellig: 'bg-red-500/20 text-red-400 border-red-500/30',
+  entwurf: 'bg-surface-2 text-text-muted border border-border',
+  gestellt: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
+  bezahlt: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
+  ueberfaellig: 'bg-[#f8514933] text-danger border border-[#f8514940]',
   // Contract types
-  hosting: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  wartung: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  support: 'bg-green-500/20 text-green-400 border-green-500/30',
-  sonstige: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  hosting: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
+  wartung: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  support: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
+  sonstige: 'bg-surface-2 text-text-muted border border-border',
 }
 
 const statusLabels: Record<string, string> = {
@@ -28,12 +28,12 @@ const statusLabels: Record<string, string> = {
   abgeschlossen: 'Abgeschlossen',
   storniert: 'Storniert',
   aktiv: 'Aktiv',
-  gekuendigt: 'Gekuendigt',
+  gekuendigt: 'Gekündigt',
   ausgelaufen: 'Ausgelaufen',
   entwurf: 'Entwurf',
   gestellt: 'Gestellt',
   bezahlt: 'Bezahlt',
-  ueberfaellig: 'Ueberfaellig',
+  ueberfaellig: 'Überfällig',
   hosting: 'Hosting',
   wartung: 'Wartung',
   support: 'Support',
@@ -45,12 +45,12 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const colorClass = statusColors[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+  const colorClass = statusColors[status] || 'bg-surface-2 text-text-muted border border-border'
   const label = statusLabels[status] || status
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${colorClass}`}
     >
       {label}
     </span>
