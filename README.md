@@ -9,6 +9,7 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![WeasyPrint](https://img.shields.io/badge/WeasyPrint-PDF-E44D26)](https://weasyprint.org/)
+[![Chart.js](https://img.shields.io/badge/Chart.js-Diagramme-FF6384?logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
 [![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00)](https://www.sqlalchemy.org/)
@@ -35,6 +36,8 @@ Live unter **[ops.celox.io](https://ops.celox.io)**.
 
 ### Kundenverwaltung
 - Stammdaten (Name, Firma, E-Mail, Telefon, Adresse)
+- Website-Feld (klickbar)
+- Token Tracker Integration für KI-Nutzungstransparenz
 - Übersicht verknüpfter Aufträge, Verträge und Rechnungen pro Kunde
 - Suchfunktion über alle Felder
 - Löschschutz bei bestehenden Referenzen
@@ -59,12 +62,31 @@ Live unter **[ops.celox.io](https://ops.celox.io)**.
 - Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Überfällig/Storniert)
 - Optionale Verknüpfung mit Aufträgen oder Verträgen
 
+### Schnellrechnung
+- One-Click-Erstellung direkt aus der Kundendetailansicht
+- Einzelposition mit Beschreibung und Betrag
+- Automatische Rechnungsnummer (CO-YYYY-NNNN)
+- Zahlungsziel 14 Tage ab Erstelldatum
+- Sofortige Weiterleitung zur erstellten Rechnung
+
 ### PDF-Generierung
 - Professionelle A4-Rechnungs-PDFs mit celox.io Branding
 - Generiert via **WeasyPrint** mit Jinja2-Templates
 - Enthält: Absender, Empfänger, Positionstabelle, Summenblock, Bankverbindung
 - **Kleinunternehmerregelung** — Konfigurierbar via `.env`, setzt USt auf 0% und zeigt §19-Hinweis
 - PDF-Download direkt aus der App
+
+### KI-Nutzung (Token Tracker Integration)
+- Verknüpfung mit dem Claude Token Tracker via Share-Token-API
+- Zeitraumfilter (7/30/90 Tage, Gesamt, benutzerdefiniert)
+- KPI-Karten: Kosten, Arbeitssitzungen, Codezeilen, KI-Anfragen
+- Diagramme: Arbeitsintensität pro Tag, Kostenverlauf, Code-Entwicklung
+- Sessions-Tabelle mit Datum, Dauer, Modell, Kosten
+- Kundenfreundliche Darstellung — verständlich für Fachfremde
+
+### Einstellungen
+- Token Tracker Verbindungsstatus (Anzeige ob Verbindung aktiv)
+- Konfigurationsanleitung für die Token Tracker Anbindung
 
 ### Dashboard
 - Umsatz aktueller Monat und Jahr (Summe bezahlter Rechnungen)
@@ -90,6 +112,7 @@ Live unter **[ops.celox.io](https://ops.celox.io)**.
 | **Bundler** | Vite 6 | Schneller Build + HMR für Entwicklung |
 | **State** | Zustand | Leichtgewichtiges Auth-State-Management |
 | **HTTP** | Axios | API-Client mit JWT-Interceptor |
+| **Diagramme** | Chart.js + react-chartjs-2 | Interaktive Diagramme für Token Tracker |
 | **Backend** | Python 3.12, FastAPI | Async REST-API mit automatischer OpenAPI-Doku |
 | **Validierung** | Pydantic v2 | Request/Response-Schemas mit Typ-Sicherheit |
 | **ORM** | SQLAlchemy 2.0 (async) | Async-Datenbankzugriff mit Mapped-Typen |
@@ -114,11 +137,11 @@ Live unter **[ops.celox.io](https://ops.celox.io)**.
 │ phone        │     │ amount       │     │ monthly_amt  │
 │ company      │     │ hourly_rate  │     │ auto_renew   │
 │ address      │     │ start_date   │     │ notice_days  │
-│ notes        │     │ end_date     │     │ status       │
-└──────────────┘     └──────┬───────┘     └──────┬───────┘
-                            │                     │
-                            ▼                     ▼
-                     ┌──────────────┐
+│ website      │     │ end_date     │     │ status       │
+│ token_tracker│     └──────┬───────┘     └──────┬───────┘
+│  _url        │            │                     │
+│ notes        │            ▼                     ▼
+└──────────────┘     ┌──────────────┐
                      │   invoices   │
                      │──────────────│
                      │ customer_id  │
@@ -156,12 +179,17 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `POST/PUT/DELETE` | `/api/contracts/{id}` | CRUD für Verträge |
 | `GET` | `/api/invoices` | Rechnungsliste (Filter: Status, Kunde) |
 | `POST` | `/api/invoices` | Rechnung erstellen (auto Rechnungsnr.) |
+| `POST` | `/api/invoices/quick` | Schnellrechnung erstellen |
 | `PUT` | `/api/invoices/{id}` | Rechnung aktualisieren |
 | `PUT` | `/api/invoices/{id}/status` | Status ändern |
 | `POST` | `/api/invoices/{id}/generate-pdf` | PDF generieren |
 | `GET` | `/api/invoices/{id}/pdf` | PDF herunterladen |
 | `DELETE` | `/api/invoices/{id}` | Löschen (nur Entwürfe) |
 | `GET` | `/api/dashboard/stats` | Dashboard-KPIs |
+| `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |
+| `GET` | `/api/token-tracker/shares` | Share-Tokens auflisten |
+| `POST` | `/api/token-tracker/shares` | Share-Token erstellen |
+| `DELETE` | `/api/token-tracker/shares/{id}` | Share löschen |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Dokumentation unter `/docs` (Swagger UI).
@@ -229,6 +257,37 @@ docker compose up -d --build
 
 ---
 
+## Token Tracker Integration
+
+celox ops kann mit dem Claude Token Tracker verbunden werden, um Kunden transparente Einblicke in die KI-Nutzung ihrer Projekte zu geben.
+
+### Verbindung
+
+Die Anbindung erfolgt über die Share-Token-API des Token Trackers. celox ops agiert als Admin-Client und erstellt projektspezifische Share-Tokens, über die Kunden eine schreibgeschützte Ansicht ihrer KI-Nutzungsdaten erhalten.
+
+### Einrichtung
+
+1. **Token Tracker Einstellungen** — Share API Key in der Token Tracker Admin-Oberfläche kopieren
+2. **In celox ops `.env` eintragen** — `TOKEN_TRACKER_BASE_URL` und `TOKEN_TRACKER_ADMIN_KEY` setzen
+3. **Kunde bearbeiten** — In der Kundendetailansicht das gewünschte Projekt verknüpfen
+
+### Sicherheit
+
+- Share-Tokens sind 192-bit kryptographisch zufällig generiert
+- Rate Limiting auf der Token Tracker API
+- CORS-Einschränkungen verhindern unbefugten Zugriff
+- Keine Enumeration möglich — Tokens sind nicht erratbar
+
+### Angezeigte Daten
+
+Kunden sehen über die Token Tracker Integration:
+- Kosten und Nutzungsstatistiken ihres Projekts
+- Arbeitssitzungen mit Datum, Dauer und verwendetem Modell
+- Code-Entwicklung (hinzugefügte/entfernte Zeilen)
+- Diagramme zu Arbeitsintensität und Kostenverlauf
+
+---
+
 ## Konfiguration (.env)
 
 | Variable | Beschreibung | Beispiel |
@@ -246,6 +305,8 @@ docker compose up -d --build
 | `BUSINESS_BANK_*` | Bankverbindung (IBAN, BIC, Name) | für Rechnungs-PDF |
 | `KLEINUNTERNEHMER` | §19 UStG aktiv | `true` / `false` |
 | `PDF_STORAGE_PATH` | Speicherpfad für PDFs | `/data/invoices` |
+| `TOKEN_TRACKER_BASE_URL` | URL des Token Trackers | `https://tokens.celox.io` |
+| `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key vom Token Tracker | `sk-...` |
 
 ---
 
@@ -284,7 +345,8 @@ celox-ops/
 │       │   ├── orders.py       # CRUD + Status/Kunde-Filter
 │       │   ├── contracts.py    # CRUD + Status/Typ-Filter
 │       │   ├── invoices.py     # CRUD + PDF + Statusänderung
-│       │   └── dashboard.py    # Aggregierte KPIs
+│       │   ├── dashboard.py    # Aggregierte KPIs
+│       │   └── token_tracker.py # Token Tracker Share-API Proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
 │       │   └── pdf_service.py      # WeasyPrint + Jinja2
@@ -308,7 +370,8 @@ celox-ops/
 │       │   ├── customers.ts
 │       │   ├── orders.ts
 │       │   ├── contracts.ts
-│       │   └── invoices.ts
+│       │   ├── invoices.ts
+│       │   └── tokenTracker.ts # Token Tracker API-Funktionen
 │       ├── hooks/
 │       │   ├── useAuth.ts
 │       │   └── useCrud.ts      # Generischer CRUD-Hook
@@ -319,10 +382,12 @@ celox-ops/
 │       │   ├── FormField.tsx   # Wiederverwendbarer Formular-Baustein
 │       │   ├── DeleteDialog.tsx
 │       │   ├── Toast.tsx
+│       │   ├── TokenUsage.tsx  # KI-Nutzungsansicht (Diagramme, KPIs)
 │       │   └── ProtectedRoute.tsx
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
+│       │   ├── Settings.tsx    # Einstellungen (Token Tracker Config)
 │       │   ├── customers/      # Liste, Formular, Detail
 │       │   ├── orders/         # Liste, Formular, Detail
 │       │   ├── contracts/      # Liste, Formular, Detail
