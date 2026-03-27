@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.vite/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+*.pdf
+/data/
+/backend/data/
+pgdata/

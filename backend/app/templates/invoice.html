@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 2.5cm;
+        }
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+        .header-left {
+            flex: 1;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .logo {
+            max-height: 60px;
+            margin-bottom: 10px;
+        }
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+        .company-details {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 5px;
+        }
+        .sender-line {
+            font-size: 7pt;
+            color: #999;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 2px;
+            margin-bottom: 10px;
+        }
+        .recipient {
+            margin-bottom: 30px;
+            min-height: 100px;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        .meta-table td {
+            padding: 3px 0;
+        }
+        .meta-table .label {
+            font-weight: bold;
+            width: 150px;
+            color: #555;
+        }
+        h1 {
+            font-size: 16pt;
+            color: #1a1a2e;
+            margin: 20px 0 15px 0;
+        }
+        .intro {
+            margin-bottom: 20px;
+        }
+        table.positions {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table.positions thead th {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        table.positions thead th:last-child,
+        table.positions thead th:nth-child(3),
+        table.positions thead th:nth-child(5),
+        table.positions thead th:nth-child(6) {
+            text-align: right;
+        }
+        table.positions tbody td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 9pt;
+        }
+        table.positions tbody td:last-child,
+        table.positions tbody td:nth-child(3),
+        table.positions tbody td:nth-child(5),
+        table.positions tbody td:nth-child(6) {
+            text-align: right;
+        }
+        table.positions tbody tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        .totals {
+            width: 300px;
+            margin-left: auto;
+            margin-bottom: 30px;
+        }
+        .totals table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals td {
+            padding: 5px 10px;
+        }
+        .totals .label {
+            text-align: left;
+        }
+        .totals .value {
+            text-align: right;
+            font-weight: bold;
+        }
+        .totals .total-row {
+            border-top: 2px solid #1a1a2e;
+            font-size: 12pt;
+            color: #1a1a2e;
+        }
+        .kleinunternehmer-note {
+            font-size: 8pt;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .notes {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            font-size: 9pt;
+        }
+        .payment-info {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .payment-info h3 {
+            font-size: 10pt;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .payment-info table td {
+            padding: 2px 10px 2px 0;
+            font-size: 9pt;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 7pt;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ settings.BUSINESS_NAME }}</div>
+            <div class="company-details">
+                {{ settings.BUSINESS_OWNER }}<br>
+                {{ settings.BUSINESS_ADDRESS }}<br>
+                {{ settings.BUSINESS_EMAIL }}
+                {% if settings.BUSINESS_WEB %} | {{ settings.BUSINESS_WEB }}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="sender-line">
+        {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_ADDRESS }}
+    </div>
+
+    <div class="recipient">
+        {% if customer.company %}<strong>{{ customer.company }}</strong><br>{% endif %}
+        {{ customer.name }}<br>
+        {% if customer.address %}{{ customer.address | replace('\n', '<br>') }}{% endif %}
+    </div>
+
+    <table class="meta-table">
+        <tr>
+            <td class="label">Rechnungsnummer:</td>
+            <td>{{ invoice.invoice_number }}</td>
+        </tr>
+        <tr>
+            <td class="label">Rechnungsdatum:</td>
+            <td>{{ invoice.invoice_date.strftime('%d.%m.%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="label">Faellig bis:</td>
+            <td>{{ invoice.due_date.strftime('%d.%m.%Y') }}</td>
+        </tr>
+        {% if settings.BUSINESS_TAX_ID %}
+        <tr>
+            <td class="label">USt-IdNr.:</td>
+            <td>{{ settings.BUSINESS_TAX_ID }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <h1>{{ invoice.title }}</h1>
+
+    <table class="positions">
+        <thead>
+            <tr>
+                <th>Pos.</th>
+                <th>Beschreibung</th>
+                <th>Menge</th>
+                <th>Einheit</th>
+                <th>Einzelpreis</th>
+                <th>Gesamt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pos in positions %}
+            <tr>
+                <td>{{ pos.position if pos.position is defined else loop.index }}</td>
+                <td>{{ pos.beschreibung }}</td>
+                <td>{{ "%.2f"|format(pos.menge|float) }}</td>
+                <td>{{ pos.einheit if pos.einheit is defined else 'Stk' }}</td>
+                <td>{{ "%.2f"|format(pos.einzelpreis|float) }} &euro;</td>
+                <td>{{ "%.2f"|format(pos.gesamt|float) }} &euro;</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td class="label">Nettobetrag:</td>
+                <td class="value">{{ "%.2f"|format(invoice.subtotal|float) }} &euro;</td>
+            </tr>
+            {% if not kleinunternehmer %}
+            <tr>
+                <td class="label">MwSt. ({{ "%.0f"|format(invoice.tax_rate|float) }}%):</td>
+                <td class="value">{{ "%.2f"|format(invoice.tax_amount|float) }} &euro;</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td class="label">Gesamtbetrag:</td>
+                <td class="value">{{ "%.2f"|format(invoice.total|float) }} &euro;</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if kleinunternehmer %}
+    <div class="kleinunternehmer-note">
+        Gemaess &sect; 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).
+    </div>
+    {% endif %}
+
+    {% if invoice.notes %}
+    <div class="notes">
+        <strong>Hinweis:</strong> {{ invoice.notes }}
+    </div>
+    {% endif %}
+
+    <div class="payment-info">
+        <h3>Bankverbindung</h3>
+        <table>
+            <tr>
+                <td><strong>Bank:</strong></td>
+                <td>{{ settings.BUSINESS_BANK_NAME }}</td>
+            </tr>
+            <tr>
+                <td><strong>IBAN:</strong></td>
+                <td>{{ settings.BUSINESS_BANK_IBAN }}</td>
+            </tr>
+            <tr>
+                <td><strong>BIC:</strong></td>
+                <td>{{ settings.BUSINESS_BANK_BIC }}</td>
+            </tr>
+            <tr>
+                <td><strong>Verwendungszweck:</strong></td>
+                <td>{{ invoice.invoice_number }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
+        {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
+    </div>
+</body>
+</html>
