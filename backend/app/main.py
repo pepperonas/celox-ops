@@ -38,6 +38,7 @@ from app.routers.orders import router as orders_router  # noqa: E402
 from app.routers.contracts import router as contracts_router  # noqa: E402
 from app.routers.invoices import router as invoices_router  # noqa: E402
 from app.routers.dashboard import router as dashboard_router  # noqa: E402
+from app.routers.token_tracker import router as token_tracker_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -45,6 +46,7 @@ app.include_router(orders_router)
 app.include_router(contracts_router)
 app.include_router(invoices_router)
 app.include_router(dashboard_router)
+app.include_router(token_tracker_router)
 
 
 @app.get("/api/health")

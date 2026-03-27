@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import { getCustomer, createCustomer, updateCustomer } from '../../api/customers'
+import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../../api/tokenTracker'
 import type { CustomerCreate } from '../../types'
 
 const emptyForm: CustomerCreate = {
@@ -22,6 +23,10 @@ export default function CustomerForm() {
   const isEdit = Boolean(id)
   const [form, setForm] = useState<CustomerCreate>(emptyForm)
   const [loading, setLoading] = useState(false)
+  const [projects, setProjects] = useState<TrackerProject[]>([])
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
+  const [projectSearch, setProjectSearch] = useState('')
+  const [linkingProject, setLinkingProject] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -46,6 +51,32 @@ export default function CustomerForm() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const handleOpenProjectPicker = async () => {
+    try {
+      const p = await getTrackerProjects()
+      setProjects(p)
+      setShowProjectPicker(true)
+    } catch {
+      toast.error('Token Tracker nicht erreichbar.')
+    }
+  }
+
+  const handleLinkProject = async (project: TrackerProject) => {
+    setLinkingProject(true)
+    try {
+      const label = form.company || form.name || 'Kundenprojekt'
+      const share = await createTrackerShare(project.name, `${label} — ${project.name}`)
+      if (share.public_url) {
+        setForm({ ...form, token_tracker_url: share.public_url })
+        toast.success('Token Tracker verknüpft.')
+      }
+      setShowProjectPicker(false)
+    } catch {
+      toast.error('Fehler beim Erstellen des Share-Tokens.')
+    }
+    setLinkingProject(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -65,6 +96,10 @@ export default function CustomerForm() {
     setLoading(false)
   }
 
+  const filteredProjects = projects.filter(p =>
+    p.name.toLowerCase().includes(projectSearch.toLowerCase())
+  )
+
   return (
     <div className="max-w-2xl">
       <div className="flex justify-between items-center mb-6">
@@ -83,7 +118,40 @@ export default function CustomerForm() {
           <FormField label="Telefon" name="phone" type="tel" value={form.phone || ''} onChange={handleChange} />
         </div>
         <FormField label="Website" name="website" value={form.website || ''} onChange={handleChange} placeholder="https://example.de" />
-        <FormField label="Token Tracker URL" name="token_tracker_url" value={form.token_tracker_url || ''} onChange={handleChange} placeholder="https://tracker.example.com/api/public/share/..." />
+
+        {/* Token Tracker */}
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">KI-Nutzung (Token Tracker)</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              name="token_tracker_url"
+              value={form.token_tracker_url || ''}
+              onChange={handleChange}
+              placeholder="Wird automatisch gesetzt..."
+              className="flex-1"
+              readOnly
+            />
+            <button
+              type="button"
+              onClick={handleOpenProjectPicker}
+              className="btn-secondary whitespace-nowrap"
+            >
+              Projekt verknüpfen
+            </button>
+            {form.token_tracker_url && (
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, token_tracker_url: '' })}
+                className="btn-danger"
+                title="Verknüpfung entfernen"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
         <FormField label="Adresse" name="address" value={form.address || ''} onChange={handleChange} />
         <FormField label="Notizen" name="notes" type="textarea" value={form.notes || ''} onChange={handleChange} />
 
@@ -96,6 +164,48 @@ export default function CustomerForm() {
           </button>
         </div>
       </form>
+
+      {/* Project Picker Modal */}
+      {showProjectPicker && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowProjectPicker(false)}>
+          <div className="bg-surface border border-border rounded-[16px] p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-text mb-1">Projekt verknüpfen</h3>
+            <p className="text-text-muted text-sm mb-4">Wähle ein Projekt aus dem Token Tracker aus.</p>
+            <input
+              type="text"
+              placeholder="Projekte filtern..."
+              value={projectSearch}
+              onChange={(e) => setProjectSearch(e.target.value)}
+              className="w-full mb-3"
+              autoFocus
+            />
+            <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
+              {filteredProjects.length === 0 ? (
+                <p className="text-text-muted text-sm py-4 text-center">Keine Projekte gefunden.</p>
+              ) : (
+                filteredProjects.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => handleLinkProject(p)}
+                    disabled={linkingProject}
+                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-2 transition-colors flex justify-between items-center group"
+                  >
+                    <div>
+                      <span className="text-sm text-text group-hover:text-accent transition-colors">{p.name}</span>
+                      <span className="text-xs text-text-muted ml-2">{p.messages} Nachrichten</span>
+                    </div>
+                    <span className="text-xs text-text-muted">{p.sessions} Sessions</span>
+                  </button>
+                ))
+              )}
+            </div>
+            <div className="flex justify-end pt-4 mt-3 border-t border-border">
+              <button type="button" onClick={() => setShowProjectPicker(false)} className="btn-secondary">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
