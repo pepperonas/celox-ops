@@ -7,9 +7,9 @@ import { getContracts } from '../../api/contracts'
 import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import TokenUsage from '../../components/TokenUsage'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import type { Customer, Order, Contract, Invoice, TokenTrackerData } from '../../types'
-import axios from 'axios'
+import type { Customer, Order, Contract, Invoice } from '../../types'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -19,8 +19,6 @@ export default function CustomerDetail() {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [activeTab, setActiveTab] = useState<'auftraege' | 'vertraege' | 'rechnungen' | 'tokens'>('auftraege')
-  const [tokenData, setTokenData] = useState<TokenTrackerData | null>(null)
-  const [tokenLoading, setTokenLoading] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [showQuickInvoice, setShowQuickInvoice] = useState(false)
   const [quickForm, setQuickForm] = useState({ beschreibung: '', menge: '1', einheit: 'pauschal', einzelpreis: '', notes: '' })
@@ -34,15 +32,6 @@ export default function CustomerDetail() {
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
   }, [id])
 
-  // Fetch token tracker data when customer has a tracker URL and tab is active
-  useEffect(() => {
-    if (!customer?.token_tracker_url || activeTab !== 'tokens') return
-    setTokenLoading(true)
-    axios.get<TokenTrackerData>(customer.token_tracker_url)
-      .then(res => setTokenData(res.data))
-      .catch(() => setTokenData(null))
-      .finally(() => setTokenLoading(false))
-  }, [customer?.token_tracker_url, activeTab])
 
   const handleDelete = async () => {
     try {
@@ -277,71 +266,7 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'tokens' && customer.token_tracker_url && (
-        <div>
-          {tokenLoading ? (
-            <div className="text-text-muted py-12 text-center">KI-Nutzungsdaten werden geladen...</div>
-          ) : tokenData ? (
-            <div>
-              {tokenData.label && (
-                <p className="text-text-muted text-sm mb-4">{tokenData.label}</p>
-              )}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Input Tokens</p>
-                  <p className="text-[28px] font-bold tabular-nums text-accent">{tokenData.summary.total_input_tokens.toLocaleString('de-DE')}</p>
-                </div>
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Output Tokens</p>
-                  <p className="text-[28px] font-bold tabular-nums text-success">{tokenData.summary.total_output_tokens.toLocaleString('de-DE')}</p>
-                </div>
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Nachrichten</p>
-                  <p className="text-[28px] font-bold tabular-nums text-purple">{tokenData.summary.total_messages.toLocaleString('de-DE')}</p>
-                </div>
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Sessions</p>
-                  <p className="text-[28px] font-bold tabular-nums text-warning">{tokenData.summary.total_sessions.toLocaleString('de-DE')}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Zeilen geschrieben</p>
-                  <p className="text-xl font-bold tabular-nums text-text">{tokenData.summary.lines_written.toLocaleString('de-DE')}</p>
-                </div>
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Zeilen hinzugefügt</p>
-                  <p className="text-xl font-bold tabular-nums text-success">{tokenData.summary.lines_added.toLocaleString('de-DE')}</p>
-                </div>
-                <div className="bg-surface border border-border rounded-[12px] p-5">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Zeilen entfernt</p>
-                  <p className="text-xl font-bold tabular-nums text-danger">{tokenData.summary.lines_removed.toLocaleString('de-DE')}</p>
-                </div>
-              </div>
-              {tokenData.summary.models_used.length > 0 && (
-                <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-                  <p className="text-xs uppercase tracking-wider text-text-muted mb-3">Verwendete KI-Modelle</p>
-                  <div className="flex flex-wrap gap-2">
-                    {tokenData.summary.models_used.filter(m => m.name !== 'System' && m.name !== 'Unknown').map((m) => (
-                      <span key={m.name} className="px-3 py-1.5 bg-surface-2 border border-border rounded-md text-sm text-text">
-                        {m.name} <span className="text-text-muted">({m.messages})</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-4 text-xs text-text-muted">
-                {tokenData.summary.first_activity && (
-                  <span>Erste Aktivität: {formatDate(tokenData.summary.first_activity)}</span>
-                )}
-                {tokenData.summary.last_activity && (
-                  <span>Letzte Aktivität: {formatDate(tokenData.summary.last_activity)}</span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="text-text-muted py-12 text-center">KI-Nutzungsdaten konnten nicht geladen werden.</div>
-          )}
-        </div>
+        <TokenUsage trackerUrl={customer.token_tracker_url} />
       )}
 
       <DeleteDialog

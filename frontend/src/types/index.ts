@@ -13,21 +13,48 @@ export interface Customer {
 }
 
 export interface TokenTrackerData {
-  project: string
   label: string
+  period: { from: string | null; to: string | null }
   summary: {
     total_input_tokens: number
     total_output_tokens: number
     total_cache_read_tokens: number
     total_messages: number
     total_sessions: number
+    total_cost: number
     lines_added: number
     lines_removed: number
     lines_written: number
+    total_duration_min: number
     first_activity: string | null
     last_activity: string | null
-    models_used: { name: string; messages: number }[]
+    models_used: { name: string; messages: number; cost: number }[]
+    tools: { name: string; calls: number }[]
   }
+  daily: {
+    date: string
+    input_tokens: number
+    output_tokens: number
+    cache_read_tokens: number
+    messages: number
+    cost: number
+    lines_added: number
+    lines_removed: number
+    lines_written: number
+  }[]
+  sessions: {
+    start: string
+    end: string
+    messages: number
+    input_tokens: number
+    output_tokens: number
+    cost: number
+    duration_min: number
+    model: string
+    lines_added: number
+    lines_removed: number
+    lines_written: number
+  }[]
 }
 
 export interface CustomerDetail extends Customer {
