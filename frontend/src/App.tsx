@@ -18,6 +18,8 @@ import ContractDetail from './pages/contracts/ContractDetail'
 import InvoiceList from './pages/invoices/InvoiceList'
 import InvoiceForm from './pages/invoices/InvoiceForm'
 import InvoiceDetail from './pages/invoices/InvoiceDetail'
+import LeadList from './pages/leads/LeadList'
+import LeadForm from './pages/leads/LeadForm'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -56,6 +58,9 @@ export default function App() {
           <Route path="/rechnungen/neu" element={<InvoiceForm />} />
           <Route path="/rechnungen/:id" element={<InvoiceDetail />} />
           <Route path="/rechnungen/:id/bearbeiten" element={<InvoiceForm />} />
+          <Route path="/vorgemerkt" element={<LeadList />} />
+          <Route path="/vorgemerkt/neu" element={<LeadForm />} />
+          <Route path="/vorgemerkt/:id/bearbeiten" element={<LeadForm />} />
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>

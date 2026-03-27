@@ -14,6 +14,11 @@ const statusColors: Record<string, string> = {
   gestellt: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
   bezahlt: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
   ueberfaellig: 'bg-[#f8514933] text-danger border border-[#f8514940]',
+  // Lead statuses
+  neu: 'bg-[#d2992233] text-warning border border-[#d2992240]',
+  kontaktiert: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
+  interessiert: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  abgelehnt: 'bg-[#f8514933] text-danger border border-[#f8514940]',
   // Contract types
   hosting: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
   wartung: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
@@ -34,6 +39,10 @@ const statusLabels: Record<string, string> = {
   gestellt: 'Gestellt',
   bezahlt: 'Bezahlt',
   ueberfaellig: 'Überfällig',
+  neu: 'Neu',
+  kontaktiert: 'Kontaktiert',
+  interessiert: 'Interessiert',
+  abgelehnt: 'Abgelehnt',
   hosting: 'Hosting',
   wartung: 'Wartung',
   support: 'Support',

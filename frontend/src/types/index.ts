@@ -203,6 +203,33 @@ export interface InvoiceCreate {
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}
 
+export type LeadStatus = 'neu' | 'kontaktiert' | 'interessiert' | 'abgelehnt'
+
+export interface Lead {
+  id: string
+  url: string
+  name: string
+  company: string
+  email: string
+  phone: string
+  notes: string
+  status: LeadStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface LeadCreate {
+  url: string
+  name?: string
+  company?: string
+  email?: string
+  phone?: string
+  notes?: string
+  status?: LeadStatus
+}
+
+export interface LeadUpdate extends Partial<LeadCreate> {}
+
 export interface DashboardStats {
   revenue_month: number
   revenue_year: number
