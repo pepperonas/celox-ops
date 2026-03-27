@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/screenshot.png" alt="celox ops" width="1024">
+</p>
+
 # celox ops
 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
