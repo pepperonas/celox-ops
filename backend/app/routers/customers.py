@@ -43,6 +43,7 @@ async def list_customers(
             Customer.name.ilike(search_filter)
             | Customer.email.ilike(search_filter)
             | Customer.company.ilike(search_filter)
+            | Customer.website.ilike(search_filter)
         )
         query = query.where(condition)
         count_query = count_query.where(condition)

@@ -18,6 +18,7 @@ from app.schemas.invoice import (
     InvoiceResponse,
     InvoiceStatusUpdate,
     InvoiceUpdate,
+    QuickInvoiceCreate,
 )
 from app.services.invoice_service import calculate_invoice_totals, generate_invoice_number
 from app.services.pdf_service import generate_invoice_pdf
@@ -265,6 +266,67 @@ async def download_pdf(
         media_type="application/pdf",
         filename=f"{invoice.invoice_number}.pdf",
     )
+
+
+@router.post("/quick", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
+async def quick_invoice(
+    data: QuickInvoiceCreate,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Schnellrechnung: Eine Position, keine Auftrags-/Vertragsverknüpfung."""
+    cust = await db.execute(
+        select(Customer).where(Customer.id == data.customer_id)
+    )
+    customer = cust.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    invoice_number = await generate_invoice_number(db)
+
+    from datetime import date, timedelta
+    from decimal import Decimal
+
+    gesamt = data.menge * data.einzelpreis
+    positions_json = [{
+        "position": 1,
+        "beschreibung": data.beschreibung,
+        "menge": str(data.menge),
+        "einheit": data.einheit,
+        "einzelpreis": str(data.einzelpreis),
+        "gesamt": str(gesamt),
+    }]
+
+    subtotal = gesamt
+    if settings.KLEINUNTERNEHMER:
+        tax_amount = Decimal("0")
+        tax_rate = Decimal("0")
+    else:
+        tax_rate = Decimal("19.00")
+        tax_amount = subtotal * tax_rate / Decimal("100")
+    total = subtotal + tax_amount
+
+    today = date.today()
+    invoice = Invoice(
+        customer_id=data.customer_id,
+        invoice_number=invoice_number,
+        title=data.beschreibung,
+        positions=positions_json,
+        subtotal=subtotal,
+        tax_rate=tax_rate,
+        tax_amount=tax_amount,
+        total=total,
+        invoice_date=today,
+        due_date=today + timedelta(days=14),
+        notes=data.notes,
+        status=InvoiceStatus.entwurf,
+    )
+    db.add(invoice)
+    await db.flush()
+    await db.refresh(invoice)
+
+    resp = InvoiceResponse.model_validate(invoice)
+    resp.customer_name = customer.name
+    return resp
 
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)

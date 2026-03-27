@@ -5,6 +5,7 @@ export interface Customer {
   phone: string
   company: string
   address: string
+  website: string
   notes: string
   created_at: string
   updated_at: string
@@ -22,6 +23,16 @@ export interface CustomerCreate {
   phone?: string
   company?: string
   address?: string
+  website?: string
+  notes?: string
+}
+
+export interface QuickInvoiceCreate {
+  customer_id: string
+  beschreibung: string
+  menge: number
+  einheit: string
+  einzelpreis: number
   notes?: string
 }
 

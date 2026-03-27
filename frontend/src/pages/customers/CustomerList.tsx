@@ -33,8 +33,14 @@ export default function CustomerList() {
     () => [
       { key: 'name', label: 'Name' },
       { key: 'company', label: 'Firma' },
+      {
+        key: 'website',
+        label: 'Website',
+        render: (c) => c.website ? (
+          <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover" onClick={(e) => e.stopPropagation()}>{c.website.replace(/^https?:\/\//, '')}</a>
+        ) : null,
+      },
       { key: 'email', label: 'E-Mail' },
-      { key: 'phone', label: 'Telefon' },
       {
         key: 'created_at',
         label: 'Erstellt am',

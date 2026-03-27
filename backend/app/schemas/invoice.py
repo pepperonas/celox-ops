@@ -74,3 +74,12 @@ class InvoiceDetail(InvoiceResponse):
 
 class InvoiceStatusUpdate(BaseModel):
     status: InvoiceStatus
+
+
+class QuickInvoiceCreate(BaseModel):
+    customer_id: uuid.UUID
+    beschreibung: str
+    menge: Decimal = Decimal("1")
+    einheit: str = "pauschal"
+    einzelpreis: Decimal
+    notes: str | None = None

@@ -11,6 +11,7 @@ const emptyForm: CustomerCreate = {
   email: '',
   phone: '',
   address: '',
+  website: '',
   notes: '',
 }
 
@@ -30,6 +31,7 @@ export default function CustomerForm() {
           email: c.email,
           phone: c.phone,
           address: c.address,
+          website: c.website,
           notes: c.notes,
         }),
       )
@@ -78,6 +80,7 @@ export default function CustomerForm() {
           <FormField label="E-Mail" name="email" type="email" value={form.email || ''} onChange={handleChange} />
           <FormField label="Telefon" name="phone" type="tel" value={form.phone || ''} onChange={handleChange} />
         </div>
+        <FormField label="Website" name="website" value={form.website || ''} onChange={handleChange} placeholder="https://example.de" />
         <FormField label="Adresse" name="address" value={form.address || ''} onChange={handleChange} />
         <FormField label="Notizen" name="notes" type="textarea" value={form.notes || ''} onChange={handleChange} />
 

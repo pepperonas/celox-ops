@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { getCustomer, deleteCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
-import { getInvoices } from '../../api/invoices'
+import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import { formatDate, formatCurrency } from '../../utils/formatters'
@@ -19,6 +19,9 @@ export default function CustomerDetail() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [activeTab, setActiveTab] = useState<'auftraege' | 'vertraege' | 'rechnungen'>('auftraege')
   const [showDelete, setShowDelete] = useState(false)
+  const [showQuickInvoice, setShowQuickInvoice] = useState(false)
+  const [quickForm, setQuickForm] = useState({ beschreibung: '', menge: '1', einheit: 'pauschal', einzelpreis: '', notes: '' })
+  const [quickLoading, setQuickLoading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -36,6 +39,30 @@ export default function CustomerDetail() {
     } catch {
       toast.error('Fehler beim Löschen.')
     }
+  }
+
+  const handleQuickInvoice = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!id) return
+    setQuickLoading(true)
+    try {
+      const inv = await createQuickInvoice({
+        customer_id: id,
+        beschreibung: quickForm.beschreibung,
+        menge: parseFloat(quickForm.menge) || 1,
+        einheit: quickForm.einheit,
+        einzelpreis: parseFloat(quickForm.einzelpreis) || 0,
+        notes: quickForm.notes || undefined,
+      })
+      toast.success(`Schnellrechnung ${inv.invoice_number} erstellt.`)
+      setShowQuickInvoice(false)
+      setQuickForm({ beschreibung: '', menge: '1', einheit: 'pauschal', einzelpreis: '', notes: '' })
+      getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
+      navigate(`/rechnungen/${inv.id}`)
+    } catch {
+      toast.error('Fehler beim Erstellen der Schnellrechnung.')
+    }
+    setQuickLoading(false)
   }
 
   if (!customer) {
@@ -60,6 +87,9 @@ export default function CustomerDetail() {
           <h2 className="text-lg font-semibold text-text">{customer.name}</h2>
         </div>
         <div className="flex gap-3">
+          <button onClick={() => setShowQuickInvoice(true)} className="btn-primary">
+            Schnellrechnung
+          </button>
           <button onClick={() => navigate(`/kunden/${id}/bearbeiten`)} className="btn-secondary">
             Bearbeiten
           </button>
@@ -88,6 +118,12 @@ export default function CustomerDetail() {
             <div>
               <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Telefon</p>
               <p className="text-text">{customer.phone}</p>
+            </div>
+          )}
+          {customer.website && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Website</p>
+              <a href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors">{customer.website}</a>
             </div>
           )}
           {customer.address && (
@@ -233,6 +269,89 @@ export default function CustomerDetail() {
         title="Kunde löschen"
         message={`Möchten Sie den Kunden "${customer.name}" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`}
       />
+
+      {/* Schnellrechnung Modal */}
+      {showQuickInvoice && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowQuickInvoice(false)}>
+          <div className="bg-surface border border-border rounded-[16px] p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-text mb-1">Schnellrechnung</h3>
+            <p className="text-text-muted text-sm mb-6">Für {customer.name} — ohne Auftrag/Vertrag</p>
+            <form onSubmit={handleQuickInvoice} className="space-y-4">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Beschreibung *</label>
+                <input
+                  type="text"
+                  value={quickForm.beschreibung}
+                  onChange={(e) => setQuickForm({ ...quickForm, beschreibung: e.target.value })}
+                  placeholder="z.B. Sicherheitscheck Website"
+                  className="w-full"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Menge</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    value={quickForm.menge}
+                    onChange={(e) => setQuickForm({ ...quickForm, menge: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Einheit</label>
+                  <select
+                    value={quickForm.einheit}
+                    onChange={(e) => setQuickForm({ ...quickForm, einheit: e.target.value })}
+                    className="w-full"
+                  >
+                    <option value="pauschal">pauschal</option>
+                    <option value="Stunden">Stunden</option>
+                    <option value="Stück">Stück</option>
+                    <option value="Monat">Monat</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Einzelpreis (€) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={quickForm.einzelpreis}
+                    onChange={(e) => setQuickForm({ ...quickForm, einzelpreis: e.target.value })}
+                    placeholder="0,00"
+                    className="w-full"
+                    required
+                  />
+                </div>
+              </div>
+              {quickForm.einzelpreis && (
+                <div className="text-right text-sm text-text-muted">
+                  Gesamt: <span className="text-accent font-semibold">{formatCurrency((parseFloat(quickForm.menge) || 1) * (parseFloat(quickForm.einzelpreis) || 0))}</span>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Notiz (optional)</label>
+                <input
+                  type="text"
+                  value={quickForm.notes}
+                  onChange={(e) => setQuickForm({ ...quickForm, notes: e.target.value })}
+                  placeholder="z.B. Telefonisch beauftragt"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowQuickInvoice(false)} className="btn-secondary">Abbrechen</button>
+                <button type="submit" disabled={quickLoading} className="btn-primary">
+                  {quickLoading ? 'Erstellen...' : 'Rechnung erstellen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

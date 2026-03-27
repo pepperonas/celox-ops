@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Invoice, InvoiceCreate, InvoiceUpdate, InvoiceStatus, PaginatedResponse } from '../types'
+import type { Invoice, InvoiceCreate, InvoiceUpdate, InvoiceStatus, QuickInvoiceCreate, PaginatedResponse } from '../types'
 
 export async function getInvoices(params?: {
   page?: number
@@ -40,6 +40,11 @@ export async function downloadPdf(id: string): Promise<Blob> {
   const response = await api.get(`/invoices/${id}/pdf`, {
     responseType: 'blob',
   })
+  return response.data
+}
+
+export async function createQuickInvoice(data: QuickInvoiceCreate): Promise<Invoice> {
+  const response = await api.post('/invoices/quick', data)
   return response.data
 }
 
