@@ -121,6 +121,166 @@ export default function TokenUsage({ trackerUrl }: Props) {
   const s = data.summary
   const costEur = s.total_cost * 0.92 // USD to EUR approximation
 
+  const exportHTML = () => {
+    const label = data.label || 'Projekt'
+    const periodLabel = from && to ? `${from} bis ${to}` : from ? `ab ${from}` : to ? `bis ${to}` : 'Gesamter Zeitraum'
+    const models = s.models_used.filter(m => m.name !== 'System' && m.name !== 'Unknown')
+
+    const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KI-Nutzungsbericht — ${label}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 16px; margin: 32px 0 12px; color: #1a1a2e; border-bottom: 2px solid #e8e8e8; padding-bottom: 6px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 3px solid #58a6ff; padding-bottom: 16px; }
+  .brand { font-size: 18px; font-weight: 700; color: #58a6ff; }
+  .brand-sub { font-size: 11px; color: #999; }
+  .date { font-size: 12px; color: #999; text-align: right; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .kpi { background: #f8f9fa; border: 1px solid #e8e8e8; border-radius: 8px; padding: 16px; }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 4px; }
+  .kpi-value { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi-sub { font-size: 11px; color: #999; margin-top: 2px; }
+  .blue { color: #58a6ff; } .green { color: #22863a; } .purple { color: #8957e5; } .orange { color: #d29922; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; border-bottom: 2px solid #e8e8e8; padding: 8px 10px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+  tr:hover td { background: #f8f9fa; }
+  .right { text-align: right; }
+  .mono { font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; background: #f0f4ff; color: #58a6ff; border: 1px solid #d0e0ff; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin: 2px; }
+  .models { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .summary-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+  .summary-label { color: #666; }
+  .summary-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .intro { background: #f8f9fa; border: 1px solid #e8e8e8; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; color: #666; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e8e8e8; font-size: 11px; color: #999; text-align: center; }
+  @media print { body { padding: 20px; } .kpis { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 600px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand">celox.io</div>
+    <div class="brand-sub">IT-Consulting</div>
+  </div>
+  <div class="date">Erstellt am ${new Date().toLocaleDateString('de-DE')}</div>
+</div>
+
+<h1>KI-Nutzungsbericht</h1>
+<div class="subtitle">${label} — Zeitraum: ${periodLabel}</div>
+
+<div class="intro">
+  Dieser Bericht dokumentiert die KI-gestützte Entwicklungsarbeit an Ihrem Projekt.
+  Jede Arbeitssitzung wird automatisch protokolliert — inklusive geschriebener Codezeilen,
+  Dauer und eingesetzter KI-Modelle.
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">KI-Kosten</div>
+    <div class="kpi-value blue">${formatCurrency(costEur)}</div>
+    <div class="kpi-sub">$${s.total_cost.toFixed(2)} USD</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Arbeitssitzungen</div>
+    <div class="kpi-value green">${s.total_sessions}</div>
+    <div class="kpi-sub">${formatDuration(s.total_duration_min)} Gesamtdauer</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Codezeilen</div>
+    <div class="kpi-value purple">${s.lines_written.toLocaleString('de-DE')}</div>
+    <div class="kpi-sub">+${s.lines_added.toLocaleString('de-DE')} / −${s.lines_removed.toLocaleString('de-DE')}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">KI-Anfragen</div>
+    <div class="kpi-value orange">${s.total_messages.toLocaleString('de-DE')}</div>
+    <div class="kpi-sub">Einzelne Interaktionen</div>
+  </div>
+</div>
+
+${models.length > 0 ? `
+<h2>Eingesetzte KI-Modelle</h2>
+<div class="models">
+  ${models.map(m => `<span class="badge">${m.name} (${m.messages} Anfragen, $${m.cost.toFixed(2)})</span>`).join('')}
+</div>
+` : ''}
+
+${data.sessions.length > 0 ? `
+<h2>Arbeitssitzungen</h2>
+<table>
+  <thead>
+    <tr><th>Datum</th><th>Dauer</th><th>KI-Modell</th><th class="right">Anfragen</th><th class="right">Codezeilen</th><th class="right">Kosten</th></tr>
+  </thead>
+  <tbody>
+    ${data.sessions.map(ss => `<tr>
+      <td>${ss.start ? new Date(ss.start).toLocaleDateString('de-DE') : '-'}</td>
+      <td>${formatDuration(ss.duration_min)}</td>
+      <td>${ss.model || '-'}</td>
+      <td class="right mono">${ss.messages}</td>
+      <td class="right mono"><span class="green">+${ss.lines_added}</span>${ss.lines_removed > 0 ? ` <span style="color:#d73a49">−${ss.lines_removed}</span>` : ''}</td>
+      <td class="right mono">$${ss.cost.toFixed(2)}</td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+` : ''}
+
+${data.daily.filter(d => d.messages > 0).length > 0 ? `
+<h2>Tagesübersicht</h2>
+<table>
+  <thead>
+    <tr><th>Datum</th><th class="right">KI-Anfragen</th><th class="right">Codezeilen</th><th class="right">Kosten</th></tr>
+  </thead>
+  <tbody>
+    ${data.daily.filter(d => d.messages > 0).map(d => `<tr>
+      <td>${new Date(d.date).toLocaleDateString('de-DE')}</td>
+      <td class="right mono">${d.messages}</td>
+      <td class="right mono">${d.lines_written}</td>
+      <td class="right mono">$${d.cost.toFixed(2)}</td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+` : ''}
+
+<h2>Zusammenfassung</h2>
+<div class="summary-grid">
+  <div>
+    <div class="summary-item"><span class="summary-label">Erster Einsatz</span><span class="summary-value">${s.first_activity ? new Date(s.first_activity).toLocaleDateString('de-DE') : '–'}</span></div>
+    <div class="summary-item"><span class="summary-label">Letzter Einsatz</span><span class="summary-value">${s.last_activity ? new Date(s.last_activity).toLocaleDateString('de-DE') : '–'}</span></div>
+    <div class="summary-item"><span class="summary-label">Gesamtdauer</span><span class="summary-value">${formatDuration(s.total_duration_min)}</span></div>
+  </div>
+  <div>
+    <div class="summary-item"><span class="summary-label">KI-Anfragen</span><span class="summary-value">${s.total_messages.toLocaleString('de-DE')}</span></div>
+    <div class="summary-item"><span class="summary-label">Input-Tokens</span><span class="summary-value">${formatTokens(s.total_input_tokens)}</span></div>
+    <div class="summary-item"><span class="summary-label">Output-Tokens</span><span class="summary-value">${formatTokens(s.total_output_tokens)}</span></div>
+  </div>
+</div>
+
+<div class="footer">
+  celox.io — IT-Consulting | Martin Pfeffer | Generiert aus dem celox.io Token Tracker
+</div>
+
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ki-nutzungsbericht-${from || 'gesamt'}-${to || 'heute'}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const exportCSV = () => {
     const header = 'Datum;KI-Anfragen;Codezeilen geschrieben;Zeilen hinzugefügt;Zeilen entfernt;Kosten (USD)\n'
     const rows = data.daily.map(d =>
@@ -174,7 +334,10 @@ export default function TokenUsage({ trackerUrl }: Props) {
             <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="!py-1 !px-2 !text-xs" />
           </div>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <button onClick={exportHTML} className="btn-primary !text-xs !py-1.5 !px-3">
+            HTML Bericht
+          </button>
           <button onClick={exportCSV} className="btn-secondary !text-xs !py-1.5 !px-3">
             CSV Export
           </button>
