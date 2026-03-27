@@ -9,123 +9,112 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![WeasyPrint](https://img.shields.io/badge/WeasyPrint-PDF-E44D26)](https://weasyprint.org/)
-[![Chart.js](https://img.shields.io/badge/Chart.js-Diagramme-FF6384?logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
+[![Chart.js](https://img.shields.io/badge/Chart.js-4-FF6384?logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
 [![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00)](https://www.sqlalchemy.org/)
 [![Alembic](https://img.shields.io/badge/Alembic-Migrations-6BA81E)](https://alembic.sqlalchemy.org/)
 [![Nginx](https://img.shields.io/badge/Nginx-Reverse_Proxy-009639?logo=nginx&logoColor=white)](https://nginx.org/)
-[![License](https://img.shields.io/badge/License-Private-red)](#)
-[![Status](https://img.shields.io/badge/Status-Production-brightgreen)](#)
+[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
 [![Platform](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.linux.org/)
-[![Ruff](https://img.shields.io/badge/Linter-Ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![Zustand](https://img.shields.io/badge/Zustand-State-443E38)](https://zustand-demo.pmnd.rs/)
 [![Axios](https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white)](https://axios-http.com/)
 
 ---
 
-**Business-Management-Webapp für [celox.io](https://celox.io) IT-Consulting.**
-
-Verwaltet Kunden, Aufträge, Verträge und Rechnungen mit professioneller PDF-Generierung. Single-User-Anwendung mit JWT-Authentifizierung. Gesamte UI auf Deutsch.
-
-Live unter **[ops.celox.io](https://ops.celox.io)**.
+Business-Management-Webapp for freelancers and IT consultants. Manages customers, orders, contracts, and invoices with professional PDF generation, AI usage tracking, and a German-language UI. Single-user application with JWT authentication.
 
 ---
 
 ## Features
 
-### Kundenverwaltung
-- Stammdaten (Name, Firma, E-Mail, Telefon, Adresse)
-- Website-Feld (klickbar)
-- Token Tracker Integration für KI-Nutzungstransparenz
-- Übersicht verknüpfter Aufträge, Verträge und Rechnungen pro Kunde
-- Suchfunktion über alle Felder
-- Löschschutz bei bestehenden Referenzen
+### Customer Management
+- Master data (name, company, email, phone, address, website)
+- Overview of linked orders, contracts, and invoices per customer
+- Full-text search across all fields
+- Deletion protection when references exist
 
-### Auftragsverwaltung
-- Status-Workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (oder Storniert)
-- Farbcodierte Status-Badges
-- Verknüpfung mit Kunden und Rechnungen
-- Optionale Felder für Betrag, Stundensatz und Zeitraum
+### Order Management
+- Status workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (or Storniert)
+- Color-coded status badges
+- Optional fields for amount, hourly rate, and time period
 
-### Vertragsverwaltung
-- Vertragstypen: Hosting, Wartung, Support, Sonstige
-- Automatische Verlängerung mit konfigurierbarer Kündigungsfrist
-- Statusverwaltung: Aktiv, Gekündigt, Ausgelaufen
-- Monatliche Betragserfassung
+### Contract Management
+- Contract types: Hosting, Wartung (Maintenance), Support, Sonstige (Other)
+- Auto-renewal with configurable notice period
+- Monthly amount tracking
 
-### Rechnungen
-- **Automatische Rechnungsnummern** im Format `CO-YYYY-NNNN` (fortlaufend pro Kalenderjahr)
-- **Dynamische Positionstabelle** — Zeilen hinzufügen/entfernen mit Live-Berechnung
-- Jede Position: Beschreibung, Menge, Einheit, Einzelpreis → automatische Gesamtberechnung
-- Netto/USt/Brutto wird live berechnet
-- Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Überfällig/Storniert)
-- Optionale Verknüpfung mit Aufträgen oder Verträgen
+### Invoices
+- **Auto-generated invoice numbers** in format `CO-YYYY-NNNN` (sequential per year)
+- **Dynamic line items** — add/remove rows with live calculation
+- Net/VAT/gross calculated automatically
+- Status workflow: Entwurf → Gestellt → Bezahlt (or Ueberfaellig/Storniert)
+- Optional link to orders or contracts
+- **Kleinunternehmerregelung** (small business tax exemption) — configurable, affects calculation and PDF text
 
-### Schnellrechnung
-- One-Click-Erstellung direkt aus der Kundendetailansicht
-- Einzelposition mit Beschreibung und Betrag
-- Automatische Rechnungsnummer (CO-YYYY-NNNN)
-- Zahlungsziel 14 Tage ab Erstelldatum
-- Sofortige Weiterleitung zur erstellten Rechnung
+### Quick Invoices
+- One-click creation from customer detail page
+- Single line item with description and amount
+- Auto invoice number, 14-day payment term
 
-### PDF-Generierung
-- Professionelle A4-Rechnungs-PDFs mit celox.io Branding
-- Generiert via **WeasyPrint** mit Jinja2-Templates
-- Enthält: Absender, Empfänger, Positionstabelle, Summenblock, Bankverbindung
-- **Kleinunternehmerregelung** — Konfigurierbar via `.env`, setzt USt auf 0% und zeigt §19-Hinweis
-- PDF-Download direkt aus der App
+### PDF Generation
+- Professional A4 invoice PDFs with customizable branding
+- Generated via **WeasyPrint** with Jinja2 templates
+- Includes: sender, recipient, line items, totals, bank details, tax info
+- Optional **AI usage report** attachment with selectable date range
 
-### KI-Nutzung (Token Tracker Integration)
-- Verknüpfung mit dem Claude Token Tracker via Share-Token-API
-- Zeitraumfilter (7/30/90 Tage, Gesamt, benutzerdefiniert)
-- KPI-Karten: Kosten, Arbeitssitzungen, Codezeilen, KI-Anfragen
-- Diagramme: Arbeitsintensität pro Tag, Kostenverlauf, Code-Entwicklung
-- Sessions-Tabelle mit Datum, Dauer, Modell, Kosten
-- Kundenfreundliche Darstellung — verständlich für Fachfremde
-
-### Einstellungen
-- Token Tracker Verbindungsstatus (Anzeige ob Verbindung aktiv)
-- Konfigurationsanleitung für die Token Tracker Anbindung
+### AI Usage Tracking (Token Tracker Integration)
+- Integration with [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) via secure Share API
+- **Period filter** — 7/30/90 days, all time, or custom date range
+- **KPI cards**: cost, active work time, code lines written, AI requests
+- **Charts** (Chart.js): daily work intensity, cumulative cost trend, code development
+- **Sessions table**: date, active duration, AI model, requests, code lines, cost
+- **Active time tracking** — measures real working time (not session duration) based on message intervals with 5-min gap threshold
+- **CSV export** and **HTML report** generation for sending to clients
+- Customer-friendly labels — "Arbeitssitzungen" instead of "Sessions", "Codezeilen" instead of "Tokens"
+- AI usage report can be **attached to invoice PDFs** as a second page
 
 ### Dashboard
-- Umsatz aktueller Monat und Jahr (Summe bezahlter Rechnungen)
-- Offene Rechnungen (Anzahl + Gesamtsumme)
-- Überfällige Rechnungen (rot hervorgehoben)
-- Aktive Verträge (Anzahl + monatliche Summe)
-- KPI-Karten mit farbcodierten Werten
+- Revenue current month and year
+- Open invoices (count + total)
+- Overdue invoices (highlighted)
+- Active contracts (count + monthly sum)
+
+### Settings
+- Token Tracker connection status
+- Configuration guide for Token Tracker integration
 
 ### Design
-- **GitHub-inspiriertes Dark Theme** mit professioneller Farbgebung
-- Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
-- Responsive Layout mit kollabierbarer Sidebar
-- Konsistente Status-Badges, Tabellen und Formular-Komponenten
-- Tabular-Nums für Zahlen, Uppercase-Labels, dezente Hover-Effekte
+- **GitHub-inspired dark theme**
+- Color palette: `#0d1117` (background), `#161b22` (surfaces), `#58a6ff` (accent)
+- Responsive layout with collapsible sidebar
+- Consistent status badges, tables, and form components
+- Tab state persisted in URL hash across page refreshes
 
 ---
 
 ## Tech Stack
 
-| Schicht | Technologie | Zweck |
-|---------|------------|-------|
-| **Frontend** | React 18, TypeScript, TailwindCSS | SPA mit typsicheren Komponenten |
-| **Bundler** | Vite 6 | Schneller Build + HMR für Entwicklung |
-| **State** | Zustand | Leichtgewichtiges Auth-State-Management |
-| **HTTP** | Axios | API-Client mit JWT-Interceptor |
-| **Diagramme** | Chart.js + react-chartjs-2 | Interaktive Diagramme für Token Tracker |
-| **Backend** | Python 3.12, FastAPI | Async REST-API mit automatischer OpenAPI-Doku |
-| **Validierung** | Pydantic v2 | Request/Response-Schemas mit Typ-Sicherheit |
-| **ORM** | SQLAlchemy 2.0 (async) | Async-Datenbankzugriff mit Mapped-Typen |
-| **Datenbank** | PostgreSQL 16 | Relationale Datenspeicherung via asyncpg |
-| **Migration** | Alembic | Datenbank-Schemaversionierung |
-| **PDF** | WeasyPrint + Jinja2 | HTML-zu-PDF-Konvertierung für Rechnungen |
-| **Auth** | JWT (python-jose + passlib) | Token-basierte Authentifizierung mit bcrypt |
-| **Infra** | Docker Compose | Multi-Container-Orchestrierung |
-| **Proxy** | Nginx | Reverse Proxy + SSL Termination |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React 18, TypeScript, TailwindCSS | SPA with typed components |
+| **Bundler** | Vite 6 | Fast build + HMR |
+| **State** | Zustand | Lightweight auth state |
+| **HTTP** | Axios | API client with JWT interceptor |
+| **Charts** | Chart.js + react-chartjs-2 | Interactive AI usage charts |
+| **Backend** | Python 3.12, FastAPI | Async REST API with OpenAPI docs |
+| **Validation** | Pydantic v2 | Request/response schemas |
+| **ORM** | SQLAlchemy 2.0 (async) | Async database access |
+| **Database** | PostgreSQL 16 | Relational storage via asyncpg |
+| **Migrations** | Alembic | Schema versioning |
+| **PDF** | WeasyPrint + Jinja2 | HTML-to-PDF invoice generation |
+| **Auth** | JWT (python-jose + passlib) | Token-based auth with bcrypt |
+| **Infra** | Docker Compose | Multi-container orchestration |
+| **Proxy** | Nginx | Reverse proxy + static files |
 
 ---
 
-## Datenmodell
+## Data Model
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -155,86 +144,80 @@ Live unter **[ops.celox.io](https://ops.celox.io)**.
                      │ total        │
                      │ status       │
                      │ pdf_path     │
+                     │ token_usage_ │
+                     │  from / to   │
                      └──────────────┘
 ```
 
 ---
 
-## API-Übersicht
+## API Overview
 
-Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
+All endpoints under `/api/`, protected via JWT Bearer Token.
 
-| Methode | Endpunkt | Beschreibung |
-|---------|----------|-------------|
-| `POST` | `/api/auth/login` | Login (OAuth2 Formular → JWT) |
-| `GET` | `/api/auth/me` | Aktueller Benutzer |
-| `GET` | `/api/customers` | Kundenliste (Suche, Paginierung, Sortierung) |
-| `GET` | `/api/customers/{id}` | Kundendetail mit Referenz-Zähler |
-| `POST` | `/api/customers` | Kunde erstellen |
-| `PUT` | `/api/customers/{id}` | Kunde aktualisieren |
-| `DELETE` | `/api/customers/{id}` | Kunde löschen (mit Referenzprüfung) |
-| `GET` | `/api/orders` | Auftragsliste (Filter: Status, Kunde) |
-| `POST/PUT/DELETE` | `/api/orders/{id}` | CRUD für Aufträge |
-| `GET` | `/api/contracts` | Vertragsliste (Filter: Status, Typ) |
-| `POST/PUT/DELETE` | `/api/contracts/{id}` | CRUD für Verträge |
-| `GET` | `/api/invoices` | Rechnungsliste (Filter: Status, Kunde) |
-| `POST` | `/api/invoices` | Rechnung erstellen (auto Rechnungsnr.) |
-| `POST` | `/api/invoices/quick` | Schnellrechnung erstellen |
-| `PUT` | `/api/invoices/{id}` | Rechnung aktualisieren |
-| `PUT` | `/api/invoices/{id}/status` | Status ändern |
-| `POST` | `/api/invoices/{id}/generate-pdf` | PDF generieren |
-| `GET` | `/api/invoices/{id}/pdf` | PDF herunterladen |
-| `DELETE` | `/api/invoices/{id}` | Löschen (nur Entwürfe) |
-| `GET` | `/api/dashboard/stats` | Dashboard-KPIs |
-| `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |
-| `GET` | `/api/token-tracker/shares` | Share-Tokens auflisten |
-| `POST` | `/api/token-tracker/shares` | Share-Token erstellen |
-| `DELETE` | `/api/token-tracker/shares/{id}` | Share löschen |
-| `GET` | `/api/health` | Health Check |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | Login (OAuth2 form → JWT) |
+| `GET` | `/api/auth/me` | Current user |
+| `GET` | `/api/customers` | Customer list (search, pagination, sorting) |
+| `GET` | `/api/customers/{id}` | Customer detail with reference counts |
+| `POST` | `/api/customers` | Create customer |
+| `PUT` | `/api/customers/{id}` | Update customer |
+| `DELETE` | `/api/customers/{id}` | Delete customer (with reference check) |
+| `GET` | `/api/orders` | Order list (filter: status, customer) |
+| `POST/PUT/DELETE` | `/api/orders/{id}` | CRUD for orders |
+| `GET` | `/api/contracts` | Contract list (filter: status, type) |
+| `POST/PUT/DELETE` | `/api/contracts/{id}` | CRUD for contracts |
+| `GET` | `/api/invoices` | Invoice list (filter: status, customer) |
+| `POST` | `/api/invoices` | Create invoice (auto number) |
+| `POST` | `/api/invoices/quick` | Quick invoice (single position) |
+| `PUT` | `/api/invoices/{id}` | Update invoice |
+| `PUT` | `/api/invoices/{id}/status` | Change status |
+| `POST` | `/api/invoices/{id}/generate-pdf` | Generate PDF |
+| `GET` | `/api/invoices/{id}/pdf` | Download PDF |
+| `DELETE` | `/api/invoices/{id}` | Delete (drafts only) |
+| `GET` | `/api/dashboard/stats` | Dashboard KPIs |
+| `GET` | `/api/token-tracker/projects` | Projects from Token Tracker |
+| `GET/POST` | `/api/token-tracker/shares` | Manage share tokens |
+| `DELETE` | `/api/token-tracker/shares/{id}` | Revoke share |
+| `GET` | `/api/health` | Health check |
 
-Interaktive API-Dokumentation unter `/docs` (Swagger UI).
+Interactive API docs at `/docs` (Swagger UI).
 
 ---
 
-## Quickstart
+## Quick Start
 
-### Voraussetzungen
+### Prerequisites
 - Docker & Docker Compose
 - Git
 
 ### Installation
 
 ```bash
-# Repository klonen
 git clone https://github.com/pepperonas/celox-ops.git
 cd celox-ops
 
-# Umgebungsvariablen konfigurieren
+# Configure environment
 cp .env.example .env
-# .env bearbeiten: Passwörter, JWT_SECRET, Geschäftsdaten anpassen
+# Edit .env: set passwords, JWT_SECRET, business details
+# Generate password hash:
+#   python3 -c "from passlib.hash import bcrypt; print(bcrypt.hash('your-password'))"
+# Escape $ as $$ in .env for Docker Compose
 
-# Starten
+# Start
 docker compose up -d --build
 
-# App unter http://localhost:8090 erreichbar
+# App available at http://localhost:8090
 ```
 
-### Passwort-Hash generieren
-
-```bash
-python3 -c "from passlib.hash import bcrypt; print(bcrypt.hash('dein-passwort'))"
-# Ergebnis in .env als ADMIN_PASSWORD_HASH eintragen ($ mit $$ escapen für Docker Compose)
-```
-
----
-
-## Development
+### Development
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --build
 
-# Backend:  http://localhost:8000 (mit Auto-Reload)
-# Frontend: http://localhost:5173 (mit Vite HMR)
+# Backend:  http://localhost:8000 (auto-reload)
+# Frontend: http://localhost:5173 (Vite HMR)
 # API Docs: http://localhost:8000/docs
 # DB:       localhost:5433 (PostgreSQL)
 ```
@@ -243,15 +226,13 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Deployment
 
-Gehostet unter **https://ops.celox.io** auf Hostinger KVM 4 VPS (Ubuntu 24.04).
+Designed for deployment behind a reverse proxy with SSL termination (e.g., Nginx + Let's Encrypt).
 
-- **Port**: 8090 (Docker) → Nginx Reverse Proxy auf dem Host
-- **SSL**: Let's Encrypt via Certbot (automatische Erneuerung)
-- **Daten-Persistenz**: Docker Volumes für PostgreSQL und PDF-Storage
+- **Port**: 8090 (Docker) — proxy to your domain
+- **Data persistence**: Docker volumes for PostgreSQL and PDF storage
+- **SSL**: Configure on your host reverse proxy
 
 ```bash
-# Auf dem VPS
-cd /opt/celox-ops
 docker compose up -d --build
 ```
 
@@ -259,172 +240,146 @@ docker compose up -d --build
 
 ## Token Tracker Integration
 
-celox ops kann mit dem Claude Token Tracker verbunden werden, um Kunden transparente Einblicke in die KI-Nutzung ihrer Projekte zu geben.
+celox ops integrates with the [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) to provide customers with transparent insights into AI-assisted development work.
 
-### Verbindung
+### How It Works
 
-Die Anbindung erfolgt über die Share-Token-API des Token Trackers. celox ops agiert als Admin-Client und erstellt projektspezifische Share-Tokens, über die Kunden eine schreibgeschützte Ansicht ihrer KI-Nutzungsdaten erhalten.
+1. The Token Tracker monitors Claude Code usage and stores per-project metrics (tokens, cost, code lines, sessions)
+2. celox ops connects via a secure Share Admin Key
+3. Per customer, a share token is generated for their specific project
+4. The customer detail page shows an interactive AI usage dashboard
+5. Reports can be exported as CSV/HTML or attached to invoice PDFs
 
-### Einrichtung
+### Setup
 
-1. **Token Tracker Einstellungen** — Share API Key in der Token Tracker Admin-Oberfläche kopieren
-2. **In celox ops `.env` eintragen** — `TOKEN_TRACKER_BASE_URL` und `TOKEN_TRACKER_ADMIN_KEY` setzen
-3. **Kunde bearbeiten** — In der Kundendetailansicht das gewünschte Projekt verknüpfen
+1. **Token Tracker**: Go to Settings → Share API → copy the Admin Key
+2. **celox ops `.env`**: Set `TOKEN_TRACKER_BASE_URL` and `TOKEN_TRACKER_ADMIN_KEY`
+3. **Link project**: Customer → Edit → "Projekt verknüpfen" → select project
 
-### Sicherheit
+### Security
 
-- Share-Tokens sind 192-bit kryptographisch zufällig generiert
-- Rate Limiting auf der Token Tracker API
-- CORS-Einschränkungen verhindern unbefugten Zugriff
-- Keine Enumeration möglich — Tokens sind nicht erratbar
+- Share tokens: 192-bit cryptographically random (48-char hex)
+- Admin key: 256-bit, required for share management
+- Public endpoint rate-limited (30 req/min per IP)
+- CORS restricted to configured origins
+- No project enumeration possible
+- Optional expiry on share tokens
+- No internal paths or identifiers exposed
 
-### Angezeigte Daten
+### Active Time Tracking
 
-Kunden sehen über die Token Tracker Integration:
-- Kosten und Nutzungsstatistiken ihres Projekts
-- Arbeitssitzungen mit Datum, Dauer und verwendetem Modell
-- Code-Entwicklung (hinzugefügte/entfernte Zeilen)
-- Diagramme zu Arbeitsintensität und Kostenverlauf
-
----
-
-## Konfiguration (.env)
-
-| Variable | Beschreibung | Beispiel |
-|----------|-------------|---------|
-| `POSTGRES_USER` | Datenbankbenutzer | `celoxops` |
-| `POSTGRES_PASSWORD` | Datenbankpasswort | `sicheres-passwort` |
-| `DATABASE_URL` | Async DB-Verbindungsstring | `postgresql+asyncpg://...` |
-| `JWT_SECRET` | Geheimschlüssel für Token-Signierung | `zufällig-generiert` |
-| `ADMIN_USERNAME` | Login-Benutzername | `martin` |
-| `ADMIN_PASSWORD_HASH` | bcrypt-Hash des Passworts | `$$2b$$12$$...` |
-| `BUSINESS_NAME` | Firmenname für PDFs | `celox.io — IT-Consulting` |
-| `BUSINESS_OWNER` | Inhaber | `Martin Pfeffer` |
-| `BUSINESS_ADDRESS` | Geschäftsadresse | `Straße, PLZ Ort` |
-| `BUSINESS_TAX_ID` | USt-IdNr. | `DE...` |
-| `BUSINESS_BANK_*` | Bankverbindung (IBAN, BIC, Name) | für Rechnungs-PDF |
-| `KLEINUNTERNEHMER` | §19 UStG aktiv | `true` / `false` |
-| `PDF_STORAGE_PATH` | Speicherpfad für PDFs | `/data/invoices` |
-| `TOKEN_TRACKER_BASE_URL` | URL des Token Trackers | `https://tokens.celox.io` |
-| `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key vom Token Tracker | `sk-...` |
+Active working time is calculated from message timestamps: intervals between consecutive AI interactions are summed, with gaps > 5 minutes counted as inactive. This gives realistic work time (e.g., "5h 15min" instead of "194h session duration").
 
 ---
 
-## Projektstruktur
+## Configuration (.env)
+
+| Variable | Description | Example |
+|----------|------------|---------|
+| `POSTGRES_USER` | Database user | `celoxops` |
+| `POSTGRES_PASSWORD` | Database password | `secure-password` |
+| `DATABASE_URL` | Async connection string | `postgresql+asyncpg://...` |
+| `JWT_SECRET` | Token signing key | (random, 48+ chars) |
+| `ADMIN_USERNAME` | Login username | `admin` |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash of password | `$$2b$$12$$...` |
+| `BUSINESS_NAME` | Company name (PDFs) | `Your Company` |
+| `BUSINESS_OWNER` | Owner name (PDFs) | `Your Name` |
+| `BUSINESS_ADDRESS` | Address (PDFs) | `Street, ZIP City` |
+| `BUSINESS_EMAIL` | Email (PDFs) | `info@example.com` |
+| `BUSINESS_TAX_ID` | VAT ID | `DE...` |
+| `BUSINESS_BANK_*` | Bank details (IBAN, BIC) | for invoice PDF |
+| `KLEINUNTERNEHMER` | Small business exemption | `true` / `false` |
+| `PDF_STORAGE_PATH` | PDF storage path | `/data/invoices` |
+| `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
+| `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
+
+**Security notes:**
+- Never commit `.env` — it is in `.gitignore`
+- Generate strong values for `JWT_SECRET` and `POSTGRES_PASSWORD`
+- The `ADMIN_PASSWORD_HASH` must be a bcrypt hash (escape `$` as `$$`)
+- `TOKEN_TRACKER_ADMIN_KEY` is only needed if using the Token Tracker integration
+
+---
+
+## Project Structure
 
 ```
 celox-ops/
-├── docker-compose.yml          # Produktion: db, backend, frontend, nginx
-├── docker-compose.dev.yml      # Entwicklung mit Hot-Reload
-├── .env.example                # Vorlage für Umgebungsvariablen
+├── docker-compose.yml          # Production: db, backend, frontend, nginx
+├── docker-compose.dev.yml      # Development with hot-reload
+├── .env.example                # Environment variable template
 │
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── alembic.ini
-│   ├── alembic/                # Datenbank-Migrationen
-│   │   ├── env.py
-│   │   └── versions/
+│   ├── alembic/                # Database migrations
 │   └── app/
-│       ├── main.py             # FastAPI-App, CORS, Lifespan
-│       ├── config.py           # Pydantic Settings (env-basiert)
-│       ├── database.py         # SQLAlchemy Engine + async Session
-│       ├── auth.py             # JWT-Login, Token-Validierung
-│       ├── models/             # SQLAlchemy 2.0 Mapped Models
-│       │   ├── customer.py     # + Base (DeclarativeBase)
-│       │   ├── order.py        # OrderStatus Enum
-│       │   ├── contract.py     # ContractType + ContractStatus Enums
-│       │   └── invoice.py      # InvoiceStatus Enum, JSONB Positionen
-│       ├── schemas/            # Pydantic v2 Request/Response Schemas
-│       │   ├── customer.py     # Base, Create, Update, Response, Detail
-│       │   ├── order.py
-│       │   ├── contract.py
-│       │   └── invoice.py      # + InvoicePosition, InvoiceStatusUpdate
-│       ├── routers/            # API-Endpunkte (alle mit Paginierung)
-│       │   ├── customers.py    # CRUD + Suche + Referenzprüfung
-│       │   ├── orders.py       # CRUD + Status/Kunde-Filter
-│       │   ├── contracts.py    # CRUD + Status/Typ-Filter
-│       │   ├── invoices.py     # CRUD + PDF + Statusänderung
-│       │   ├── dashboard.py    # Aggregierte KPIs
-│       │   └── token_tracker.py # Token Tracker Share-API Proxy
+│       ├── main.py             # FastAPI app, CORS, lifespan
+│       ├── config.py           # Pydantic Settings (env-based)
+│       ├── database.py         # SQLAlchemy engine + async session
+│       ├── auth.py             # JWT login, token validation
+│       ├── models/             # SQLAlchemy 2.0 Mapped models
+│       ├── schemas/            # Pydantic v2 request/response schemas
+│       ├── routers/            # API endpoints (all paginated)
+│       │   ├── customers.py    # CRUD + search + reference check
+│       │   ├── orders.py       # CRUD + status/customer filter
+│       │   ├── contracts.py    # CRUD + status/type filter
+│       │   ├── invoices.py     # CRUD + PDF + status + quick invoice
+│       │   ├── dashboard.py    # Aggregated KPIs
+│       │   └── token_tracker.py # Token Tracker share API proxy
 │       ├── services/
-│       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
-│       │   └── pdf_service.py      # WeasyPrint + Jinja2
+│       │   ├── invoice_service.py  # Invoice number + calculation
+│       │   └── pdf_service.py      # WeasyPrint + Jinja2 + AI report
 │       └── templates/
-│           └── invoice.html    # A4 Rechnungs-PDF-Template
+│           └── invoice.html    # A4 invoice PDF template
 │
 ├── frontend/
-│   ├── Dockerfile              # Multi-Stage: Build → Nginx
+│   ├── Dockerfile              # Multi-stage: build → Nginx
 │   ├── package.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.ts      # Custom Theme (Dark, GitHub-Stil)
+│   ├── tailwind.config.ts      # Custom dark theme
 │   └── src/
-│       ├── main.tsx            # React-Einstiegspunkt
-│       ├── index.css           # Globale Styles + CSS-Variablen
-│       ├── App.tsx             # Routing (react-router-dom v7)
-│       ├── types/index.ts      # TypeScript-Interfaces
-│       ├── store/authStore.ts  # Zustand Auth-State
-│       ├── api/                # Axios API-Client + CRUD-Funktionen
-│       │   ├── client.ts       # JWT-Interceptor, 401-Redirect
-│       │   ├── customers.ts
-│       │   ├── orders.ts
-│       │   ├── contracts.ts
-│       │   ├── invoices.ts
-│       │   └── tokenTracker.ts # Token Tracker API-Funktionen
-│       ├── hooks/
-│       │   ├── useAuth.ts
-│       │   └── useCrud.ts      # Generischer CRUD-Hook
+│       ├── App.tsx             # Routing
+│       ├── api/                # Axios API client + CRUD functions
 │       ├── components/
-│       │   ├── Layout.tsx      # Sidebar + Header + Content
-│       │   ├── DataTable.tsx   # Sortierbar, paginiert
-│       │   ├── StatusBadge.tsx # Farbcodierte Badges
-│       │   ├── FormField.tsx   # Wiederverwendbarer Formular-Baustein
-│       │   ├── DeleteDialog.tsx
-│       │   ├── Toast.tsx
-│       │   ├── TokenUsage.tsx  # KI-Nutzungsansicht (Diagramme, KPIs)
-│       │   └── ProtectedRoute.tsx
+│       │   ├── Layout.tsx      # Sidebar + header
+│       │   ├── DataTable.tsx   # Sortable, paginated
+│       │   ├── TokenUsage.tsx  # AI usage dashboard (charts, KPIs, export)
+│       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
-│       │   ├── Settings.tsx    # Einstellungen (Token Tracker Config)
-│       │   ├── customers/      # Liste, Formular, Detail
-│       │   ├── orders/         # Liste, Formular, Detail
-│       │   ├── contracts/      # Liste, Formular, Detail
-│       │   └── invoices/       # Liste, Formular, Detail
+│       │   ├── Settings.tsx
+│       │   ├── customers/      # List, form, detail
+│       │   ├── orders/         # List, form, detail
+│       │   ├── contracts/      # List, form, detail
+│       │   └── invoices/       # List, form, detail
 │       └── utils/
-│           ├── formatters.ts   # Datum (DD.MM.YYYY), Währung (1.234,56 €)
+│           ├── formatters.ts   # Date (DD.MM.YYYY), currency (1.234,56 EUR)
 │           └── validators.ts
 │
 └── nginx/
-    └── default.conf            # /api → Backend, / → Frontend
+    └── default.conf            # /api → backend, / → frontend
 ```
 
 ---
 
-## Rechnungsnummer-Format
+## Invoice Number Format
 
 ```
 CO-2026-0001
 │  │     │
-│  │     └── Fortlaufende Nummer (zero-padded, pro Jahr)
-│  └──────── Kalenderjahr
-└─────────── celox ops Präfix
+│  │     └── Sequential number (zero-padded, per year)
+│  └──────── Calendar year
+└─────────── Configurable prefix
 ```
 
-Die nächste freie Nummer wird automatisch ermittelt (höchste bestehende Nummer des Jahres + 1).
+---
+
+## License
+
+MIT
 
 ---
 
-## Formatierung
-
-| Typ | Format | Beispiel |
-|-----|--------|---------|
-| Datum | DD.MM.YYYY | 27.03.2026 |
-| Datum + Zeit | DD.MM.YYYY HH:mm | 27.03.2026 14:30 |
-| Währung | deutsches EUR-Format | 1.234,56 € |
-| Dezimaltrenner | Komma (Anzeige), Punkt (DB) | 19,00% / 19.00 |
-
----
-
-*© 2026 Martin Pfeffer | [celox.io](https://celox.io)*
+*Built by [Martin Pfeffer](https://celox.io)*
