@@ -1,28 +1,28 @@
 export interface Customer {
-  id: number
+  id: string
   name: string
-  firma: string
   email: string
-  telefon: string
-  adresse: string
-  plz: string
-  ort: string
-  land: string
-  notizen: string
+  phone: string
+  company: string
+  address: string
+  notes: string
   created_at: string
   updated_at: string
 }
 
+export interface CustomerDetail extends Customer {
+  orders_count: number
+  contracts_count: number
+  invoices_count: number
+}
+
 export interface CustomerCreate {
   name: string
-  firma?: string
   email?: string
-  telefon?: string
-  adresse?: string
-  plz?: string
-  ort?: string
-  land?: string
-  notizen?: string
+  phone?: string
+  company?: string
+  address?: string
+  notes?: string
 }
 
 export interface CustomerUpdate extends Partial<CustomerCreate> {}
@@ -30,31 +30,29 @@ export interface CustomerUpdate extends Partial<CustomerCreate> {}
 export type OrderStatus = 'angebot' | 'beauftragt' | 'in_arbeit' | 'abgeschlossen' | 'storniert'
 
 export interface Order {
-  id: number
-  customer_id: number
+  id: string
+  customer_id: string
   customer_name?: string
-  titel: string
-  beschreibung: string
+  title: string
+  description: string
   status: OrderStatus
-  betrag: number
-  stundensatz: number
-  start_datum: string
-  end_datum: string
-  notizen: string
+  amount: number
+  hourly_rate: number
+  start_date: string
+  end_date: string
   created_at: string
   updated_at: string
 }
 
 export interface OrderCreate {
-  customer_id: number
-  titel: string
-  beschreibung?: string
+  customer_id: string
+  title: string
+  description?: string
   status?: OrderStatus
-  betrag?: number
-  stundensatz?: number
-  start_datum?: string
-  end_datum?: string
-  notizen?: string
+  amount?: number
+  hourly_rate?: number
+  start_date?: string
+  end_date?: string
 }
 
 export interface OrderUpdate extends Partial<OrderCreate> {}
@@ -63,35 +61,33 @@ export type ContractType = 'hosting' | 'wartung' | 'support' | 'sonstige'
 export type ContractStatus = 'aktiv' | 'gekuendigt' | 'ausgelaufen'
 
 export interface Contract {
-  id: number
-  customer_id: number
+  id: string
+  customer_id: string
   customer_name?: string
-  titel: string
-  beschreibung: string
-  typ: ContractType
+  title: string
+  type: ContractType
+  description: string
+  monthly_amount: number
+  start_date: string
+  end_date: string
+  auto_renew: boolean
+  notice_period_days: number
   status: ContractStatus
-  monatlicher_betrag: number
-  start_datum: string
-  end_datum: string
-  auto_verlaengerung: boolean
-  kuendigungsfrist_tage: number
-  notizen: string
   created_at: string
   updated_at: string
 }
 
 export interface ContractCreate {
-  customer_id: number
-  titel: string
-  beschreibung?: string
-  typ: ContractType
+  customer_id: string
+  title: string
+  description?: string
+  type: ContractType
   status?: ContractStatus
-  monatlicher_betrag?: number
-  start_datum?: string
-  end_datum?: string
-  auto_verlaengerung?: boolean
-  kuendigungsfrist_tage?: number
-  notizen?: string
+  monthly_amount?: number
+  start_date?: string
+  end_date?: string
+  auto_renew?: boolean
+  notice_period_days?: number
 }
 
 export interface ContractUpdate extends Partial<ContractCreate> {}
@@ -99,7 +95,7 @@ export interface ContractUpdate extends Partial<ContractCreate> {}
 export type InvoiceStatus = 'entwurf' | 'gestellt' | 'bezahlt' | 'ueberfaellig' | 'storniert'
 
 export interface InvoicePosition {
-  id?: number
+  position: number
   beschreibung: string
   menge: number
   einheit: string
@@ -108,53 +104,50 @@ export interface InvoicePosition {
 }
 
 export interface Invoice {
-  id: number
-  customer_id: number
+  id: string
+  customer_id: string
   customer_name?: string
-  order_id: number | null
-  contract_id: number | null
-  rechnungsnummer: string
-  titel: string
+  order_id: string | null
+  contract_id: string | null
+  invoice_number: string
+  title: string
   status: InvoiceStatus
-  positionen: InvoicePosition[]
-  netto_betrag: number
-  ust_satz: number
-  ust_betrag: number
-  brutto_betrag: number
-  kleinunternehmer: boolean
-  rechnungsdatum: string
-  faelligkeitsdatum: string
-  bezahlt_am: string | null
-  notizen: string
-  pdf_pfad: string | null
+  positions: InvoicePosition[]
+  subtotal: number
+  tax_rate: number
+  tax_amount: number
+  total: number
+  invoice_date: string
+  due_date: string
+  pdf_path: string | null
+  notes: string
   created_at: string
   updated_at: string
 }
 
 export interface InvoiceCreate {
-  customer_id: number
-  order_id?: number | null
-  contract_id?: number | null
-  titel: string
-  status?: InvoiceStatus
-  positionen: InvoicePosition[]
-  kleinunternehmer?: boolean
-  rechnungsdatum?: string
-  faelligkeitsdatum?: string
-  notizen?: string
+  customer_id: string
+  order_id?: string | null
+  contract_id?: string | null
+  title: string
+  positions: InvoicePosition[]
+  tax_rate?: number
+  invoice_date?: string
+  due_date?: string
+  notes?: string
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}
 
 export interface DashboardStats {
-  umsatz_monat: number
-  umsatz_jahr: number
-  offene_rechnungen_anzahl: number
-  offene_rechnungen_summe: number
-  ueberfaellige_rechnungen_anzahl: number
-  ueberfaellige_rechnungen_summe: number
-  aktive_vertraege_anzahl: number
-  aktive_vertraege_monatlich: number
+  revenue_month: number
+  revenue_year: number
+  open_invoices_count: number
+  open_invoices_sum: number
+  overdue_invoices_count: number
+  overdue_invoices_sum: number
+  active_contracts_count: number
+  active_contracts_monthly_sum: number
 }
 
 export interface AuthResponse {

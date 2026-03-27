@@ -32,9 +32,9 @@ export default function CustomerList() {
   const columns: Column<Customer>[] = useMemo(
     () => [
       { key: 'name', label: 'Name' },
-      { key: 'firma', label: 'Firma' },
+      { key: 'company', label: 'Firma' },
       { key: 'email', label: 'E-Mail' },
-      { key: 'telefon', label: 'Telefon' },
+      { key: 'phone', label: 'Telefon' },
       {
         key: 'created_at',
         label: 'Erstellt am',

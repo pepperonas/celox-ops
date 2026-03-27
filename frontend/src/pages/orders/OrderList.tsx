@@ -46,7 +46,7 @@ export default function OrderList() {
 
   const columns: Column<Order>[] = useMemo(
     () => [
-      { key: 'titel', label: 'Titel' },
+      { key: 'title', label: 'Titel' },
       { key: 'customer_name', label: 'Kunde' },
       {
         key: 'status',
@@ -54,15 +54,15 @@ export default function OrderList() {
         render: (o) => <StatusBadge status={o.status} />,
       },
       {
-        key: 'betrag',
+        key: 'amount',
         label: 'Betrag',
-        render: (o) => formatCurrency(o.betrag),
+        render: (o) => formatCurrency(o.amount),
       },
       {
-        key: 'start_datum',
+        key: 'start_date',
         label: 'Zeitraum',
         render: (o) =>
-          `${formatDate(o.start_datum)} - ${formatDate(o.end_datum)}`,
+          `${formatDate(o.start_date)} - ${formatDate(o.end_date)}`,
       },
     ],
     [],

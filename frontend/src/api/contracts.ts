@@ -6,13 +6,14 @@ export async function getContracts(params?: {
   page_size?: number
   search?: string
   status?: string
-  typ?: string
+  type?: string
+  customer_id?: string
 }): Promise<PaginatedResponse<Contract>> {
   const response = await api.get('/contracts', { params })
   return response.data
 }
 
-export async function getContract(id: number): Promise<Contract> {
+export async function getContract(id: string): Promise<Contract> {
   const response = await api.get(`/contracts/${id}`)
   return response.data
 }
@@ -22,11 +23,11 @@ export async function createContract(data: ContractCreate): Promise<Contract> {
   return response.data
 }
 
-export async function updateContract(id: number, data: ContractUpdate): Promise<Contract> {
+export async function updateContract(id: string, data: ContractUpdate): Promise<Contract> {
   const response = await api.put(`/contracts/${id}`, data)
   return response.data
 }
 
-export async function deleteContract(id: number): Promise<void> {
+export async function deleteContract(id: string): Promise<void> {
   await api.delete(`/contracts/${id}`)
 }

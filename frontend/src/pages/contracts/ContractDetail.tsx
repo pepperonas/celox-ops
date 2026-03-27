@@ -17,13 +17,13 @@ export default function ContractDetail() {
 
   useEffect(() => {
     if (!id) return
-    getContract(Number(id)).then(setContract)
-    getInvoices({ customer_id: Number(id) }).then((r) => setInvoices(r.items)).catch(() => {})
+    getContract(id).then(setContract)
+    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch(() => {})
   }, [id])
 
   const handleDelete = async () => {
     try {
-      await deleteContract(Number(id))
+      await deleteContract(id!)
       toast.success('Vertrag geloescht.')
       navigate('/vertraege')
     } catch {
@@ -44,9 +44,9 @@ export default function ContractDetail() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-2xl font-bold text-gray-100">{contract.titel}</h2>
+          <h2 className="text-2xl font-bold text-gray-100">{contract.title}</h2>
           <StatusBadge status={contract.status} />
-          <StatusBadge status={contract.typ} />
+          <StatusBadge status={contract.type} />
         </div>
         <div className="flex gap-3">
           <button onClick={() => navigate(`/vertraege/${id}/bearbeiten`)} className="btn-secondary">
@@ -68,35 +68,29 @@ export default function ContractDetail() {
           )}
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Monatlicher Betrag</p>
-            <p className="text-gray-200">{formatCurrency(contract.monatlicher_betrag)}</p>
+            <p className="text-gray-200">{formatCurrency(contract.monthly_amount)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Startdatum</p>
-            <p className="text-gray-200">{formatDate(contract.start_datum)}</p>
+            <p className="text-gray-200">{formatDate(contract.start_date)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Enddatum</p>
-            <p className="text-gray-200">{formatDate(contract.end_datum)}</p>
+            <p className="text-gray-200">{formatDate(contract.end_date)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Auto-Verlaengerung</p>
-            <p className="text-gray-200">{contract.auto_verlaengerung ? 'Ja' : 'Nein'}</p>
+            <p className="text-gray-200">{contract.auto_renew ? 'Ja' : 'Nein'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Kuendigungsfrist</p>
-            <p className="text-gray-200">{contract.kuendigungsfrist_tage} Tage</p>
+            <p className="text-gray-200">{contract.notice_period_days} Tage</p>
           </div>
         </div>
-        {contract.beschreibung && (
+        {contract.description && (
           <div className="mt-4 pt-4 border-t border-gray-800">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Beschreibung</p>
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{contract.beschreibung}</p>
-          </div>
-        )}
-        {contract.notizen && (
-          <div className="mt-4 pt-4 border-t border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notizen</p>
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{contract.notizen}</p>
+            <p className="text-gray-300 text-sm whitespace-pre-wrap">{contract.description}</p>
           </div>
         )}
       </div>
@@ -122,10 +116,10 @@ export default function ContractDetail() {
                   onClick={() => navigate(`/rechnungen/${inv.id}`)}
                   className="hover:bg-gray-800/60 cursor-pointer"
                 >
-                  <td className="px-4 py-3 text-sm text-gray-300">{inv.rechnungsnummer}</td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{inv.titel}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{inv.invoice_number}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{inv.title}</td>
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.brutto_betrag)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.total)}</td>
                 </tr>
               ))
             )}
@@ -138,7 +132,7 @@ export default function ContractDetail() {
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Vertrag loeschen"
-        message={`Moechten Sie den Vertrag "${contract.titel}" wirklich loeschen?`}
+        message={`Moechten Sie den Vertrag "${contract.title}" wirklich loeschen?`}
       />
     </div>
   )

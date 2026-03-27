@@ -22,16 +22,15 @@ export default function CustomerDetail() {
 
   useEffect(() => {
     if (!id) return
-    const numId = Number(id)
-    getCustomer(numId).then(setCustomer)
-    getOrders({ customer_id: numId }).then((r) => setOrders(r.items))
-    getContracts({ customer_id: numId }).then((r) => setContracts(r.items))
-    getInvoices({ customer_id: numId }).then((r) => setInvoices(r.items))
+    getCustomer(id).then(setCustomer)
+    getOrders({ customer_id: id }).then((r) => setOrders(r.items))
+    getContracts({ customer_id: id }).then((r) => setContracts(r.items))
+    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
   }, [id])
 
   const handleDelete = async () => {
     try {
-      await deleteCustomer(Number(id))
+      await deleteCustomer(id!)
       toast.success('Kunde geloescht.')
       navigate('/kunden')
     } catch {
@@ -73,10 +72,10 @@ export default function CustomerDetail() {
       {/* Info Card */}
       <div className="card mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customer.firma && (
+          {customer.company && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Firma</p>
-              <p className="text-gray-200">{customer.firma}</p>
+              <p className="text-gray-200">{customer.company}</p>
             </div>
           )}
           {customer.email && (
@@ -85,21 +84,16 @@ export default function CustomerDetail() {
               <p className="text-gray-200">{customer.email}</p>
             </div>
           )}
-          {customer.telefon && (
+          {customer.phone && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Telefon</p>
-              <p className="text-gray-200">{customer.telefon}</p>
+              <p className="text-gray-200">{customer.phone}</p>
             </div>
           )}
-          {customer.adresse && (
+          {customer.address && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Adresse</p>
-              <p className="text-gray-200">
-                {customer.adresse}
-                {customer.plz || customer.ort
-                  ? `, ${customer.plz} ${customer.ort}`
-                  : ''}
-              </p>
+              <p className="text-gray-200">{customer.address}</p>
             </div>
           )}
           <div>
@@ -107,10 +101,10 @@ export default function CustomerDetail() {
             <p className="text-gray-200">{formatDate(customer.created_at)}</p>
           </div>
         </div>
-        {customer.notizen && (
+        {customer.notes && (
           <div className="mt-4 pt-4 border-t border-gray-800">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notizen</p>
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{customer.notizen}</p>
+            <p className="text-gray-300 text-sm whitespace-pre-wrap">{customer.notes}</p>
           </div>
         )}
       </div>
@@ -154,10 +148,10 @@ export default function CustomerDetail() {
                     onClick={() => navigate(`/auftraege/${o.id}`)}
                     className="hover:bg-gray-800/60 cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-300">{o.titel}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{o.title}</td>
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(o.betrag)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{formatDate(o.start_datum)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(o.amount)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">{formatDate(o.start_date)}</td>
                   </tr>
                 ))
               )}
@@ -187,10 +181,10 @@ export default function CustomerDetail() {
                     onClick={() => navigate(`/vertraege/${c.id}`)}
                     className="hover:bg-gray-800/60 cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-300">{c.titel}</td>
-                    <td className="px-4 py-3"><StatusBadge status={c.typ} /></td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{c.title}</td>
+                    <td className="px-4 py-3"><StatusBadge status={c.type} /></td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(c.monatlicher_betrag)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(c.monthly_amount)}</td>
                   </tr>
                 ))
               )}
@@ -220,10 +214,10 @@ export default function CustomerDetail() {
                     onClick={() => navigate(`/rechnungen/${inv.id}`)}
                     className="hover:bg-gray-800/60 cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-300">{inv.rechnungsnummer}</td>
-                    <td className="px-4 py-3 text-sm text-gray-300">{inv.titel}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{inv.title}</td>
                     <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.brutto_betrag)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.total)}</td>
                   </tr>
                 ))
               )}

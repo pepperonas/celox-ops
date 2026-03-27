@@ -20,17 +20,16 @@ const statusOptions = [
 ]
 
 const emptyForm: ContractCreate = {
-  customer_id: 0,
-  titel: '',
-  beschreibung: '',
-  typ: 'hosting',
+  customer_id: '',
+  title: '',
+  description: '',
+  type: 'hosting',
   status: 'aktiv',
-  monatlicher_betrag: 0,
-  start_datum: '',
-  end_datum: '',
-  auto_verlaengerung: true,
-  kuendigungsfrist_tage: 30,
-  notizen: '',
+  monthly_amount: 0,
+  start_date: '',
+  end_date: '',
+  auto_renew: true,
+  notice_period_days: 30,
 }
 
 export default function ContractForm() {
@@ -44,19 +43,18 @@ export default function ContractForm() {
   useEffect(() => {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
     if (id) {
-      getContract(Number(id)).then((c) =>
+      getContract(id).then((c) =>
         setForm({
           customer_id: c.customer_id,
-          titel: c.titel,
-          beschreibung: c.beschreibung,
-          typ: c.typ,
+          title: c.title,
+          description: c.description,
+          type: c.type,
           status: c.status,
-          monatlicher_betrag: c.monatlicher_betrag,
-          start_datum: c.start_datum?.split('T')[0] || '',
-          end_datum: c.end_datum?.split('T')[0] || '',
-          auto_verlaengerung: c.auto_verlaengerung,
-          kuendigungsfrist_tage: c.kuendigungsfrist_tage,
-          notizen: c.notizen,
+          monthly_amount: c.monthly_amount,
+          start_date: c.start_date?.split('T')[0] || '',
+          end_date: c.end_date?.split('T')[0] || '',
+          auto_renew: c.auto_renew,
+          notice_period_days: c.notice_period_days,
         }),
       )
     }
@@ -81,7 +79,7 @@ export default function ContractForm() {
     setLoading(true)
     try {
       if (isEdit) {
-        await updateContract(Number(id), form)
+        await updateContract(id!, form)
         toast.success('Vertrag aktualisiert.')
         navigate(`/vertraege/${id}`)
       } else {
@@ -111,24 +109,24 @@ export default function ContractForm() {
           required
           options={customers.map((c) => ({
             value: c.id,
-            label: c.firma ? `${c.name} (${c.firma})` : c.name,
+            label: c.company ? `${c.name} (${c.company})` : c.name,
           }))}
           placeholder="Kunde waehlen..."
         />
-        <FormField label="Titel" name="titel" value={form.titel} onChange={handleChange} required />
+        <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
         <FormField
           label="Beschreibung"
-          name="beschreibung"
+          name="description"
           type="textarea"
-          value={form.beschreibung || ''}
+          value={form.description || ''}
           onChange={handleChange}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Typ"
-            name="typ"
+            name="type"
             type="select"
-            value={form.typ}
+            value={form.type}
             onChange={handleChange}
             options={typeOptions}
           />
@@ -143,9 +141,9 @@ export default function ContractForm() {
         </div>
         <FormField
           label="Monatlicher Betrag"
-          name="monatlicher_betrag"
+          name="monthly_amount"
           type="number"
-          value={form.monatlicher_betrag || 0}
+          value={form.monthly_amount || 0}
           onChange={handleChange}
           step="0.01"
           min={0}
@@ -153,43 +151,36 @@ export default function ContractForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Startdatum"
-            name="start_datum"
+            name="start_date"
             type="date"
-            value={form.start_datum || ''}
+            value={form.start_date || ''}
             onChange={handleChange}
           />
           <FormField
             label="Enddatum"
-            name="end_datum"
+            name="end_date"
             type="date"
-            value={form.end_datum || ''}
+            value={form.end_date || ''}
             onChange={handleChange}
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Automatische Verlaengerung"
-            name="auto_verlaengerung"
+            name="auto_renew"
             type="checkbox"
-            value={form.auto_verlaengerung ?? true}
+            value={form.auto_renew ?? true}
             onChange={handleChange}
           />
           <FormField
             label="Kuendigungsfrist (Tage)"
-            name="kuendigungsfrist_tage"
+            name="notice_period_days"
             type="number"
-            value={form.kuendigungsfrist_tage || 30}
+            value={form.notice_period_days || 30}
             onChange={handleChange}
             min={0}
           />
         </div>
-        <FormField
-          label="Notizen"
-          name="notizen"
-          type="textarea"
-          value={form.notizen || ''}
-          onChange={handleChange}
-        />
 
         <div className="flex justify-end gap-3 pt-4">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">

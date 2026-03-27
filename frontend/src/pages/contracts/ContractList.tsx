@@ -36,7 +36,7 @@ export default function ContractList() {
       const res = await getContracts({
         page,
         status: statusFilter || undefined,
-        typ: typeFilter || undefined,
+        type: typeFilter || undefined,
       })
       setContracts(res.items)
       setTotal(res.total)
@@ -52,17 +52,17 @@ export default function ContractList() {
 
   const columns: Column<Contract>[] = useMemo(
     () => [
-      { key: 'titel', label: 'Titel' },
+      { key: 'title', label: 'Titel' },
       { key: 'customer_name', label: 'Kunde' },
       {
-        key: 'typ',
+        key: 'type',
         label: 'Typ',
-        render: (c) => <StatusBadge status={c.typ} />,
+        render: (c) => <StatusBadge status={c.type} />,
       },
       {
-        key: 'monatlicher_betrag',
+        key: 'monthly_amount',
         label: 'Monatl. Betrag',
-        render: (c) => formatCurrency(c.monatlicher_betrag),
+        render: (c) => formatCurrency(c.monthly_amount),
       },
       {
         key: 'status',
@@ -70,9 +70,9 @@ export default function ContractList() {
         render: (c) => <StatusBadge status={c.status} />,
       },
       {
-        key: 'end_datum',
+        key: 'end_date',
         label: 'Enddatum',
-        render: (c) => formatDate(c.end_datum),
+        render: (c) => formatDate(c.end_date),
       },
     ],
     [],

@@ -22,12 +22,12 @@ export default function InvoiceDetail() {
 
   useEffect(() => {
     if (!id) return
-    getInvoice(Number(id)).then(setInvoice)
+    getInvoice(id).then(setInvoice)
   }, [id])
 
   const handleDelete = async () => {
     try {
-      await deleteInvoice(Number(id))
+      await deleteInvoice(id!)
       toast.success('Rechnung geloescht.')
       navigate('/rechnungen')
     } catch {
@@ -38,10 +38,10 @@ export default function InvoiceDetail() {
   const handleGeneratePdf = async () => {
     setPdfLoading(true)
     try {
-      await generatePdf(Number(id))
+      await generatePdf(id!)
       toast.success('PDF wurde generiert.')
-      // Reload invoice to get pdf_pfad
-      const updated = await getInvoice(Number(id))
+      // Reload invoice to get pdf_path
+      const updated = await getInvoice(id!)
       setInvoice(updated)
     } catch {
       toast.error('Fehler beim Generieren der PDF.')
@@ -51,11 +51,11 @@ export default function InvoiceDetail() {
 
   const handleDownloadPdf = async () => {
     try {
-      const blob = await downloadPdf(Number(id))
+      const blob = await downloadPdf(id!)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${invoice?.rechnungsnummer || 'rechnung'}.pdf`
+      a.download = `${invoice?.invoice_number || 'rechnung'}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -65,7 +65,7 @@ export default function InvoiceDetail() {
 
   const handleStatusChange = async (newStatus: 'gestellt' | 'bezahlt') => {
     try {
-      const updated = await updateInvoiceStatus(Number(id), newStatus)
+      const updated = await updateInvoiceStatus(id!, newStatus)
       setInvoice(updated)
       toast.success(
         newStatus === 'gestellt'
@@ -91,8 +91,8 @@ export default function InvoiceDetail() {
             </svg>
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-gray-100">{invoice.rechnungsnummer}</h2>
-            <p className="text-sm text-gray-400">{invoice.titel}</p>
+            <h2 className="text-2xl font-bold text-gray-100">{invoice.invoice_number}</h2>
+            <p className="text-sm text-gray-400">{invoice.title}</p>
           </div>
           <StatusBadge status={invoice.status} />
         </div>
@@ -104,7 +104,7 @@ export default function InvoiceDetail() {
           >
             {pdfLoading ? 'Generiert...' : 'PDF generieren'}
           </button>
-          {invoice.pdf_pfad && (
+          {invoice.pdf_path && (
             <button onClick={handleDownloadPdf} className="btn-secondary text-sm">
               PDF herunterladen
             </button>
@@ -152,24 +152,13 @@ export default function InvoiceDetail() {
           )}
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Rechnungsdatum</p>
-            <p className="text-gray-200">{formatDate(invoice.rechnungsdatum)}</p>
+            <p className="text-gray-200">{formatDate(invoice.invoice_date)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Faelligkeitsdatum</p>
-            <p className="text-gray-200">{formatDate(invoice.faelligkeitsdatum)}</p>
+            <p className="text-gray-200">{formatDate(invoice.due_date)}</p>
           </div>
-          {invoice.bezahlt_am && (
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Bezahlt am</p>
-              <p className="text-gray-200">{formatDate(invoice.bezahlt_am)}</p>
-            </div>
-          )}
         </div>
-        {invoice.kleinunternehmer && (
-          <p className="text-xs text-yellow-400/80 mt-3">
-            Kleinunternehmerregelung gemaess § 19 UStG - keine Umsatzsteuer ausgewiesen.
-          </p>
-        )}
       </div>
 
       {/* Positions Table */}
@@ -187,7 +176,7 @@ export default function InvoiceDetail() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
-              {invoice.positionen.map((pos, idx) => (
+              {invoice.positions.map((pos, idx) => (
                 <tr key={idx}>
                   <td className="px-4 py-3 text-sm text-gray-300">{pos.beschreibung}</td>
                   <td className="px-4 py-3 text-sm text-gray-300 text-right">{pos.menge}</td>
@@ -204,24 +193,24 @@ export default function InvoiceDetail() {
         <div className="mt-4 pt-4 border-t border-gray-700 flex flex-col items-end gap-1">
           <div className="flex justify-between w-64">
             <span className="text-sm text-gray-400">Netto:</span>
-            <span className="text-sm text-gray-200">{formatCurrency(invoice.netto_betrag)}</span>
+            <span className="text-sm text-gray-200">{formatCurrency(invoice.subtotal)}</span>
           </div>
           <div className="flex justify-between w-64">
-            <span className="text-sm text-gray-400">USt. ({invoice.ust_satz}%):</span>
-            <span className="text-sm text-gray-200">{formatCurrency(invoice.ust_betrag)}</span>
+            <span className="text-sm text-gray-400">USt. ({invoice.tax_rate}%):</span>
+            <span className="text-sm text-gray-200">{formatCurrency(invoice.tax_amount)}</span>
           </div>
           <div className="flex justify-between w-64 pt-2 border-t border-gray-700">
             <span className="font-semibold text-gray-200">Brutto:</span>
-            <span className="font-bold text-celox-400 text-lg">{formatCurrency(invoice.brutto_betrag)}</span>
+            <span className="font-bold text-celox-400 text-lg">{formatCurrency(invoice.total)}</span>
           </div>
         </div>
       </div>
 
       {/* Notes */}
-      {invoice.notizen && (
+      {invoice.notes && (
         <div className="card mb-6">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notizen</p>
-          <p className="text-gray-300 text-sm whitespace-pre-wrap">{invoice.notizen}</p>
+          <p className="text-gray-300 text-sm whitespace-pre-wrap">{invoice.notes}</p>
         </div>
       )}
 
@@ -230,7 +219,7 @@ export default function InvoiceDetail() {
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Rechnung loeschen"
-        message={`Moechten Sie die Rechnung "${invoice.rechnungsnummer}" wirklich loeschen? Dies ist nur fuer Entwuerfe moeglich.`}
+        message={`Moechten Sie die Rechnung "${invoice.invoice_number}" wirklich loeschen? Dies ist nur fuer Entwuerfe moeglich.`}
       />
     </div>
   )

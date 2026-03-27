@@ -6,13 +6,13 @@ export async function getInvoices(params?: {
   page_size?: number
   search?: string
   status?: string
-  customer_id?: number
+  customer_id?: string
 }): Promise<PaginatedResponse<Invoice>> {
   const response = await api.get('/invoices', { params })
   return response.data
 }
 
-export async function getInvoice(id: number): Promise<Invoice> {
+export async function getInvoice(id: string): Promise<Invoice> {
   const response = await api.get(`/invoices/${id}`)
   return response.data
 }
@@ -22,21 +22,21 @@ export async function createInvoice(data: InvoiceCreate): Promise<Invoice> {
   return response.data
 }
 
-export async function updateInvoice(id: number, data: InvoiceUpdate): Promise<Invoice> {
+export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<Invoice> {
   const response = await api.put(`/invoices/${id}`, data)
   return response.data
 }
 
-export async function deleteInvoice(id: number): Promise<void> {
+export async function deleteInvoice(id: string): Promise<void> {
   await api.delete(`/invoices/${id}`)
 }
 
-export async function generatePdf(id: number): Promise<{ pdf_pfad: string }> {
+export async function generatePdf(id: string): Promise<{ pdf_path: string }> {
   const response = await api.post(`/invoices/${id}/pdf`)
   return response.data
 }
 
-export async function downloadPdf(id: number): Promise<Blob> {
+export async function downloadPdf(id: string): Promise<Blob> {
   const response = await api.get(`/invoices/${id}/pdf`, {
     responseType: 'blob',
   })
@@ -44,9 +44,9 @@ export async function downloadPdf(id: number): Promise<Blob> {
 }
 
 export async function updateInvoiceStatus(
-  id: number,
+  id: string,
   status: InvoiceStatus,
 ): Promise<Invoice> {
-  const response = await api.patch(`/invoices/${id}/status`, { status })
+  const response = await api.put(`/invoices/${id}/status`, { status })
   return response.data
 }

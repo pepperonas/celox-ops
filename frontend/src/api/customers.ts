@@ -10,7 +10,7 @@ export async function getCustomers(params?: {
   return response.data
 }
 
-export async function getCustomer(id: number): Promise<Customer> {
+export async function getCustomer(id: string): Promise<Customer> {
   const response = await api.get(`/customers/${id}`)
   return response.data
 }
@@ -20,11 +20,11 @@ export async function createCustomer(data: CustomerCreate): Promise<Customer> {
   return response.data
 }
 
-export async function updateCustomer(id: number, data: CustomerUpdate): Promise<Customer> {
+export async function updateCustomer(id: string, data: CustomerUpdate): Promise<Customer> {
   const response = await api.put(`/customers/${id}`, data)
   return response.data
 }
 
-export async function deleteCustomer(id: number): Promise<void> {
+export async function deleteCustomer(id: string): Promise<void> {
   await api.delete(`/customers/${id}`)
 }

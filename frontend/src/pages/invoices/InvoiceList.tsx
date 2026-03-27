@@ -44,13 +44,13 @@ export default function InvoiceList() {
 
   const columns: Column<Invoice>[] = useMemo(
     () => [
-      { key: 'rechnungsnummer', label: 'Rechnungsnr.' },
+      { key: 'invoice_number', label: 'Rechnungsnr.' },
       { key: 'customer_name', label: 'Kunde' },
-      { key: 'titel', label: 'Titel' },
+      { key: 'title', label: 'Titel' },
       {
-        key: 'brutto_betrag',
+        key: 'total',
         label: 'Betrag',
-        render: (inv) => formatCurrency(inv.brutto_betrag),
+        render: (inv) => formatCurrency(inv.total),
       },
       {
         key: 'status',
@@ -58,9 +58,9 @@ export default function InvoiceList() {
         render: (inv) => <StatusBadge status={inv.status} />,
       },
       {
-        key: 'rechnungsdatum',
+        key: 'invoice_date',
         label: 'Datum',
-        render: (inv) => formatDate(inv.rechnungsdatum),
+        render: (inv) => formatDate(inv.invoice_date),
       },
     ],
     [],

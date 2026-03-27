@@ -6,13 +6,13 @@ export async function getOrders(params?: {
   page_size?: number
   search?: string
   status?: string
-  customer_id?: number
+  customer_id?: string
 }): Promise<PaginatedResponse<Order>> {
   const response = await api.get('/orders', { params })
   return response.data
 }
 
-export async function getOrder(id: number): Promise<Order> {
+export async function getOrder(id: string): Promise<Order> {
   const response = await api.get(`/orders/${id}`)
   return response.data
 }
@@ -22,11 +22,11 @@ export async function createOrder(data: OrderCreate): Promise<Order> {
   return response.data
 }
 
-export async function updateOrder(id: number, data: OrderUpdate): Promise<Order> {
+export async function updateOrder(id: string, data: OrderUpdate): Promise<Order> {
   const response = await api.put(`/orders/${id}`, data)
   return response.data
 }
 
-export async function deleteOrder(id: number): Promise<void> {
+export async function deleteOrder(id: string): Promise<void> {
   await api.delete(`/orders/${id}`)
 }

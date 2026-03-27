@@ -17,13 +17,13 @@ export default function OrderDetail() {
 
   useEffect(() => {
     if (!id) return
-    getOrder(Number(id)).then(setOrder)
-    getInvoices({ customer_id: Number(id) }).then((r) => setInvoices(r.items)).catch(() => {})
+    getOrder(id).then(setOrder)
+    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch(() => {})
   }, [id])
 
   const handleDelete = async () => {
     try {
-      await deleteOrder(Number(id))
+      await deleteOrder(id!)
       toast.success('Auftrag geloescht.')
       navigate('/auftraege')
     } catch {
@@ -44,7 +44,7 @@ export default function OrderDetail() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-2xl font-bold text-gray-100">{order.titel}</h2>
+          <h2 className="text-2xl font-bold text-gray-100">{order.title}</h2>
           <StatusBadge status={order.status} />
         </div>
         <div className="flex gap-3">
@@ -67,37 +67,31 @@ export default function OrderDetail() {
           )}
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Betrag</p>
-            <p className="text-gray-200">{formatCurrency(order.betrag)}</p>
+            <p className="text-gray-200">{formatCurrency(order.amount)}</p>
           </div>
-          {order.stundensatz > 0 && (
+          {order.hourly_rate > 0 && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Stundensatz</p>
-              <p className="text-gray-200">{formatCurrency(order.stundensatz)}</p>
+              <p className="text-gray-200">{formatCurrency(order.hourly_rate)}</p>
             </div>
           )}
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Startdatum</p>
-            <p className="text-gray-200">{formatDate(order.start_datum)}</p>
+            <p className="text-gray-200">{formatDate(order.start_date)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Enddatum</p>
-            <p className="text-gray-200">{formatDate(order.end_datum)}</p>
+            <p className="text-gray-200">{formatDate(order.end_date)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Erstellt am</p>
             <p className="text-gray-200">{formatDate(order.created_at)}</p>
           </div>
         </div>
-        {order.beschreibung && (
+        {order.description && (
           <div className="mt-4 pt-4 border-t border-gray-800">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Beschreibung</p>
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{order.beschreibung}</p>
-          </div>
-        )}
-        {order.notizen && (
-          <div className="mt-4 pt-4 border-t border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Notizen</p>
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{order.notizen}</p>
+            <p className="text-gray-300 text-sm whitespace-pre-wrap">{order.description}</p>
           </div>
         )}
       </div>
@@ -124,10 +118,10 @@ export default function OrderDetail() {
                   onClick={() => navigate(`/rechnungen/${inv.id}`)}
                   className="hover:bg-gray-800/60 cursor-pointer"
                 >
-                  <td className="px-4 py-3 text-sm text-gray-300">{inv.rechnungsnummer}</td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{inv.titel}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{inv.invoice_number}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{inv.title}</td>
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.brutto_betrag)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{formatCurrency(inv.total)}</td>
                 </tr>
               ))
             )}
@@ -140,7 +134,7 @@ export default function OrderDetail() {
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Auftrag loeschen"
-        message={`Moechten Sie den Auftrag "${order.titel}" wirklich loeschen?`}
+        message={`Moechten Sie den Auftrag "${order.title}" wirklich loeschen?`}
       />
     </div>
   )

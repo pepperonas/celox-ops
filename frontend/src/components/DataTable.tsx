@@ -17,7 +17,7 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void
 }
 
-export default function DataTable<T extends { id: number }>({
+export default function DataTable<T extends { id: string }>({
   columns,
   data,
   onRowClick,

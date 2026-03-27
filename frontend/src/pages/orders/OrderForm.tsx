@@ -15,15 +15,14 @@ const statusOptions = [
 ]
 
 const emptyForm: OrderCreate = {
-  customer_id: 0,
-  titel: '',
-  beschreibung: '',
+  customer_id: '',
+  title: '',
+  description: '',
   status: 'angebot',
-  betrag: 0,
-  stundensatz: 0,
-  start_datum: '',
-  end_datum: '',
-  notizen: '',
+  amount: 0,
+  hourly_rate: 0,
+  start_date: '',
+  end_date: '',
 }
 
 export default function OrderForm() {
@@ -37,17 +36,16 @@ export default function OrderForm() {
   useEffect(() => {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
     if (id) {
-      getOrder(Number(id)).then((o) =>
+      getOrder(id).then((o) =>
         setForm({
           customer_id: o.customer_id,
-          titel: o.titel,
-          beschreibung: o.beschreibung,
+          title: o.title,
+          description: o.description,
           status: o.status,
-          betrag: o.betrag,
-          stundensatz: o.stundensatz,
-          start_datum: o.start_datum?.split('T')[0] || '',
-          end_datum: o.end_datum?.split('T')[0] || '',
-          notizen: o.notizen,
+          amount: o.amount,
+          hourly_rate: o.hourly_rate,
+          start_date: o.start_date?.split('T')[0] || '',
+          end_date: o.end_date?.split('T')[0] || '',
         }),
       )
     }
@@ -68,7 +66,7 @@ export default function OrderForm() {
     setLoading(true)
     try {
       if (isEdit) {
-        await updateOrder(Number(id), form)
+        await updateOrder(id!, form)
         toast.success('Auftrag aktualisiert.')
         navigate(`/auftraege/${id}`)
       } else {
@@ -98,16 +96,16 @@ export default function OrderForm() {
           required
           options={customers.map((c) => ({
             value: c.id,
-            label: c.firma ? `${c.name} (${c.firma})` : c.name,
+            label: c.company ? `${c.name} (${c.company})` : c.name,
           }))}
           placeholder="Kunde waehlen..."
         />
-        <FormField label="Titel" name="titel" value={form.titel} onChange={handleChange} required />
+        <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
         <FormField
           label="Beschreibung"
-          name="beschreibung"
+          name="description"
           type="textarea"
-          value={form.beschreibung || ''}
+          value={form.description || ''}
           onChange={handleChange}
         />
         <FormField
@@ -121,18 +119,18 @@ export default function OrderForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Betrag"
-            name="betrag"
+            name="amount"
             type="number"
-            value={form.betrag || 0}
+            value={form.amount || 0}
             onChange={handleChange}
             step="0.01"
             min={0}
           />
           <FormField
             label="Stundensatz"
-            name="stundensatz"
+            name="hourly_rate"
             type="number"
-            value={form.stundensatz || 0}
+            value={form.hourly_rate || 0}
             onChange={handleChange}
             step="0.01"
             min={0}
@@ -141,26 +139,19 @@ export default function OrderForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Startdatum"
-            name="start_datum"
+            name="start_date"
             type="date"
-            value={form.start_datum || ''}
+            value={form.start_date || ''}
             onChange={handleChange}
           />
           <FormField
             label="Enddatum"
-            name="end_datum"
+            name="end_date"
             type="date"
-            value={form.end_datum || ''}
+            value={form.end_date || ''}
             onChange={handleChange}
           />
         </div>
-        <FormField
-          label="Notizen"
-          name="notizen"
-          type="textarea"
-          value={form.notizen || ''}
-          onChange={handleChange}
-        />
 
         <div className="flex justify-end gap-3 pt-4">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">

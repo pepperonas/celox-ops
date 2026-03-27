@@ -3,10 +3,10 @@ import type { PaginatedResponse } from '../types'
 
 interface CrudApi<T, C, U> {
   getAll: (params?: Record<string, unknown>) => Promise<PaginatedResponse<T>>
-  getOne: (id: number) => Promise<T>
+  getOne: (id: string) => Promise<T>
   create: (data: C) => Promise<T>
-  update: (id: number, data: U) => Promise<T>
-  remove: (id: number) => Promise<void>
+  update: (id: string, data: U) => Promise<T>
+  remove: (id: string) => Promise<void>
 }
 
 interface CrudState<T> {
@@ -54,7 +54,7 @@ export function useCrud<T, C, U>(apiFns: CrudApi<T, C, U>) {
   )
 
   const fetchOne = useCallback(
-    async (id: number) => {
+    async (id: string) => {
       setLoading()
       try {
         const result = await apiFns.getOne(id)
@@ -84,7 +84,7 @@ export function useCrud<T, C, U>(apiFns: CrudApi<T, C, U>) {
   )
 
   const update = useCallback(
-    async (id: number, data: U) => {
+    async (id: string, data: U) => {
       setLoading()
       try {
         const result = await apiFns.update(id, data)
@@ -99,13 +99,13 @@ export function useCrud<T, C, U>(apiFns: CrudApi<T, C, U>) {
   )
 
   const remove = useCallback(
-    async (id: number) => {
+    async (id: string) => {
       setLoading()
       try {
         await apiFns.remove(id)
         setState((s) => ({
           ...s,
-          items: s.items.filter((item) => (item as { id: number }).id !== id),
+          items: s.items.filter((item) => (item as { id: string }).id !== id),
           loading: false,
         }))
         return true

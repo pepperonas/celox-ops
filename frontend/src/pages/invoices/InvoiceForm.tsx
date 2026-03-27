@@ -10,6 +10,7 @@ import { formatCurrency } from '../../utils/formatters'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract } from '../../types'
 
 const emptyPosition: InvoicePosition = {
+  position: 1,
   beschreibung: '',
   menge: 1,
   einheit: 'Stunden',
@@ -18,16 +19,15 @@ const emptyPosition: InvoicePosition = {
 }
 
 const emptyForm: InvoiceCreate = {
-  customer_id: 0,
+  customer_id: '',
   order_id: null,
   contract_id: null,
-  titel: '',
-  status: 'entwurf',
-  positionen: [{ ...emptyPosition }],
-  kleinunternehmer: false,
-  rechnungsdatum: new Date().toISOString().split('T')[0],
-  faelligkeitsdatum: '',
-  notizen: '',
+  title: '',
+  positions: [{ ...emptyPosition }],
+  tax_rate: 19,
+  invoice_date: new Date().toISOString().split('T')[0],
+  due_date: '',
+  notes: '',
 }
 
 export default function InvoiceForm() {
@@ -44,18 +44,17 @@ export default function InvoiceForm() {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
 
     if (id) {
-      getInvoice(Number(id)).then((inv) => {
+      getInvoice(id).then((inv) => {
         setForm({
           customer_id: inv.customer_id,
           order_id: inv.order_id,
           contract_id: inv.contract_id,
-          titel: inv.titel,
-          status: inv.status,
-          positionen: inv.positionen.length > 0 ? inv.positionen : [{ ...emptyPosition }],
-          kleinunternehmer: inv.kleinunternehmer,
-          rechnungsdatum: inv.rechnungsdatum?.split('T')[0] || '',
-          faelligkeitsdatum: inv.faelligkeitsdatum?.split('T')[0] || '',
-          notizen: inv.notizen,
+          title: inv.title,
+          positions: inv.positions.length > 0 ? inv.positions : [{ ...emptyPosition }],
+          tax_rate: inv.tax_rate,
+          invoice_date: inv.invoice_date?.split('T')[0] || '',
+          due_date: inv.due_date?.split('T')[0] || '',
+          notes: inv.notes,
         })
         // Load orders/contracts for this customer
         if (inv.customer_id) {
@@ -68,7 +67,7 @@ export default function InvoiceForm() {
 
   // Load orders/contracts when customer changes
   useEffect(() => {
-    if (form.customer_id && form.customer_id > 0) {
+    if (form.customer_id) {
       getOrders({ customer_id: form.customer_id, page_size: 1000 }).then((r) => setOrders(r.items))
       getContracts({ customer_id: form.customer_id, page_size: 1000 }).then((r) => setContracts(r.items))
     } else {
@@ -81,38 +80,39 @@ export default function InvoiceForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = e.target
-    if (type === 'checkbox') {
-      setForm({ ...form, [name]: (e.target as HTMLInputElement).checked })
-    } else if (name === 'customer_id' || name === 'order_id' || name === 'contract_id') {
-      const numVal = value ? parseInt(value) : null
-      setForm({ ...form, [name]: numVal || (name === 'customer_id' ? 0 : null) })
+    if (name === 'customer_id' || name === 'order_id' || name === 'contract_id') {
+      const strVal = value || null
+      setForm({ ...form, [name]: strVal || (name === 'customer_id' ? '' : null) })
+    } else if (type === 'number') {
+      setForm({ ...form, [name]: parseFloat(value) || 0 })
     } else {
       setForm({ ...form, [name]: value })
     }
   }
 
   const updatePosition = (index: number, field: keyof InvoicePosition, value: string | number) => {
-    const updated = [...form.positionen]
+    const updated = [...form.positions]
     const pos = { ...updated[index], [field]: value }
     pos.gesamt = pos.menge * pos.einzelpreis
     updated[index] = pos
-    setForm({ ...form, positionen: updated })
+    setForm({ ...form, positions: updated })
   }
 
   const addPosition = () => {
-    setForm({ ...form, positionen: [...form.positionen, { ...emptyPosition }] })
+    const nextPos = form.positions.length + 1
+    setForm({ ...form, positions: [...form.positions, { ...emptyPosition, position: nextPos }] })
   }
 
   const removePosition = (index: number) => {
-    if (form.positionen.length <= 1) return
-    const updated = form.positionen.filter((_, i) => i !== index)
-    setForm({ ...form, positionen: updated })
+    if (form.positions.length <= 1) return
+    const updated = form.positions.filter((_, i) => i !== index).map((p, i) => ({ ...p, position: i + 1 }))
+    setForm({ ...form, positions: updated })
   }
 
-  const netto = form.positionen.reduce((sum, p) => sum + p.menge * p.einzelpreis, 0)
-  const ustSatz = form.kleinunternehmer ? 0 : 19
-  const ustBetrag = netto * (ustSatz / 100)
-  const brutto = netto + ustBetrag
+  const netto = form.positions.reduce((sum, p) => sum + p.menge * p.einzelpreis, 0)
+  const taxRate = form.tax_rate || 0
+  const taxAmount = netto * (taxRate / 100)
+  const brutto = netto + taxAmount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,15 +120,16 @@ export default function InvoiceForm() {
 
     const payload: InvoiceCreate = {
       ...form,
-      positionen: form.positionen.map((p) => ({
+      positions: form.positions.map((p, i) => ({
         ...p,
+        position: i + 1,
         gesamt: p.menge * p.einzelpreis,
       })),
     }
 
     try {
       if (isEdit) {
-        await updateInvoice(Number(id), payload)
+        await updateInvoice(id!, payload)
         toast.success('Rechnung aktualisiert.')
         navigate(`/rechnungen/${id}`)
       } else {
@@ -162,7 +163,7 @@ export default function InvoiceForm() {
             required
             options={customers.map((c) => ({
               value: c.id,
-              label: c.firma ? `${c.name} (${c.firma})` : c.name,
+              label: c.company ? `${c.name} (${c.company})` : c.name,
             }))}
             placeholder="Kunde waehlen..."
           />
@@ -174,7 +175,7 @@ export default function InvoiceForm() {
               type="select"
               value={form.order_id || ''}
               onChange={handleChange}
-              options={orders.map((o) => ({ value: o.id, label: o.titel }))}
+              options={orders.map((o) => ({ value: o.id, label: o.title }))}
               placeholder="Kein Auftrag"
             />
             <FormField
@@ -183,26 +184,26 @@ export default function InvoiceForm() {
               type="select"
               value={form.contract_id || ''}
               onChange={handleChange}
-              options={contracts.map((c) => ({ value: c.id, label: c.titel }))}
+              options={contracts.map((c) => ({ value: c.id, label: c.title }))}
               placeholder="Kein Vertrag"
             />
           </div>
 
-          <FormField label="Titel" name="titel" value={form.titel} onChange={handleChange} required />
+          <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="Rechnungsdatum"
-              name="rechnungsdatum"
+              name="invoice_date"
               type="date"
-              value={form.rechnungsdatum || ''}
+              value={form.invoice_date || ''}
               onChange={handleChange}
             />
             <FormField
               label="Faelligkeitsdatum"
-              name="faelligkeitsdatum"
+              name="due_date"
               type="date"
-              value={form.faelligkeitsdatum || ''}
+              value={form.due_date || ''}
               onChange={handleChange}
             />
           </div>
@@ -228,7 +229,7 @@ export default function InvoiceForm() {
               <div className="col-span-1"></div>
             </div>
 
-            {form.positionen.map((pos, idx) => (
+            {form.positions.map((pos, idx) => (
               <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-800/30 rounded-lg p-2 md:p-0 md:bg-transparent">
                 <div className="md:col-span-4">
                   <label className="md:hidden text-xs text-gray-500 mb-1 block">Beschreibung</label>
@@ -282,7 +283,7 @@ export default function InvoiceForm() {
                   <button
                     type="button"
                     onClick={() => removePosition(idx)}
-                    disabled={form.positionen.length <= 1}
+                    disabled={form.positions.length <= 1}
                     className="p-1.5 text-gray-500 hover:text-red-400 disabled:opacity-30 transition-colors"
                     title="Position entfernen"
                   >
@@ -298,23 +299,17 @@ export default function InvoiceForm() {
           {/* Totals */}
           <div className="mt-6 pt-4 border-t border-gray-800">
             <div className="flex items-center gap-3 mb-4">
+              <label className="text-sm text-gray-300">USt.-Satz (%):</label>
               <input
-                type="checkbox"
-                id="kleinunternehmer"
-                name="kleinunternehmer"
-                checked={form.kleinunternehmer || false}
-                onChange={(e) => setForm({ ...form, kleinunternehmer: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-celox-500 focus:ring-celox-500"
+                type="number"
+                name="tax_rate"
+                value={form.tax_rate || 0}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                className="input-field w-24 text-sm"
               />
-              <label htmlFor="kleinunternehmer" className="text-sm text-gray-300">
-                Kleinunternehmerregelung (keine USt.)
-              </label>
             </div>
-            {form.kleinunternehmer && (
-              <p className="text-xs text-yellow-400/80 mb-4">
-                Gemaess § 19 UStG wird keine Umsatzsteuer berechnet.
-              </p>
-            )}
 
             <div className="flex flex-col items-end gap-1">
               <div className="flex justify-between w-60">
@@ -322,8 +317,8 @@ export default function InvoiceForm() {
                 <span className="text-sm text-gray-200 font-medium">{formatCurrency(netto)}</span>
               </div>
               <div className="flex justify-between w-60">
-                <span className="text-sm text-gray-400">USt. ({ustSatz}%):</span>
-                <span className="text-sm text-gray-200 font-medium">{formatCurrency(ustBetrag)}</span>
+                <span className="text-sm text-gray-400">USt. ({taxRate}%):</span>
+                <span className="text-sm text-gray-200 font-medium">{formatCurrency(taxAmount)}</span>
               </div>
               <div className="flex justify-between w-60 pt-2 border-t border-gray-700">
                 <span className="text-sm font-semibold text-gray-200">Brutto:</span>
@@ -337,9 +332,9 @@ export default function InvoiceForm() {
         <div className="card">
           <FormField
             label="Notizen"
-            name="notizen"
+            name="notes"
             type="textarea"
-            value={form.notizen || ''}
+            value={form.notes || ''}
             onChange={handleChange}
             placeholder="Optionale Anmerkungen zur Rechnung..."
           />
