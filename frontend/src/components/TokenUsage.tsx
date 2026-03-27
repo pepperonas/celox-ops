@@ -63,7 +63,7 @@ const CHART_OPTIONS = {
 type Period = '7d' | '30d' | '90d' | 'all' | 'custom'
 
 interface Props {
-  trackerUrl: string
+  trackerUrl: string // single URL or JSON array of URLs
 }
 
 function formatDateISO(d: Date): string {
@@ -104,13 +104,84 @@ export default function TokenUsage({ trackerUrl }: Props) {
     if (!trackerUrl) return
     setLoading(true)
     setError(false)
+
+    // Parse URLs — supports single URL string or JSON array
+    let urls: string[]
+    try {
+      const parsed = JSON.parse(trackerUrl)
+      urls = Array.isArray(parsed) ? parsed : [trackerUrl]
+    } catch {
+      urls = [trackerUrl]
+    }
+
     const params = new URLSearchParams()
     if (from) params.set('from', from)
     if (to) params.set('to', to)
-    const sep = trackerUrl.includes('?') ? '&' : '?'
-    const url = params.toString() ? `${trackerUrl}${sep}${params}` : trackerUrl
-    axios.get<TokenTrackerData>(url)
-      .then(res => setData(res.data))
+    const paramStr = params.toString()
+
+    Promise.all(
+      urls.map(u => {
+        const sep = u.includes('?') ? '&' : '?'
+        const url = paramStr ? `${u}${sep}${paramStr}` : u
+        return axios.get<TokenTrackerData>(url).then(r => r.data)
+      })
+    )
+      .then(results => {
+        if (results.length === 1) {
+          setData(results[0])
+        } else {
+          // Merge multiple project results
+          const merged = {
+            label: results.map(r => r.label).filter(Boolean).join(' + '),
+            period: results[0].period,
+            summary: {
+              total_input_tokens: results.reduce((s, r) => s + r.summary.total_input_tokens, 0),
+              total_output_tokens: results.reduce((s, r) => s + r.summary.total_output_tokens, 0),
+              total_cache_read_tokens: results.reduce((s, r) => s + r.summary.total_cache_read_tokens, 0),
+              total_cache_create_tokens: results.reduce((s, r) => s + (r.summary as any).total_cache_create_tokens || 0, 0),
+              total_messages: results.reduce((s, r) => s + r.summary.total_messages, 0),
+              total_sessions: results.reduce((s, r) => s + r.summary.total_sessions, 0),
+              total_cost: results.reduce((s, r) => s + r.summary.total_cost, 0),
+              lines_added: results.reduce((s, r) => s + r.summary.lines_added, 0),
+              lines_removed: results.reduce((s, r) => s + r.summary.lines_removed, 0),
+              lines_written: results.reduce((s, r) => s + r.summary.lines_written, 0),
+              total_duration_min: results.reduce((s, r) => s + r.summary.total_duration_min, 0),
+              total_active_min: results.reduce((s, r) => s + r.summary.total_active_min, 0),
+              first_activity: results.map(r => r.summary.first_activity).filter(Boolean).sort()[0] || null,
+              last_activity: results.map(r => r.summary.last_activity).filter(Boolean).sort().pop() || null,
+              models_used: Object.values(
+                results.flatMap(r => r.summary.models_used).reduce<Record<string, { name: string; messages: number; cost: number }>>((acc, m) => {
+                  if (!acc[m.name]) acc[m.name] = { ...m }
+                  else { acc[m.name].messages += m.messages; acc[m.name].cost += m.cost }
+                  return acc
+                }, {})
+              ),
+              tools: Object.values(
+                results.flatMap(r => r.summary.tools).reduce<Record<string, { name: string; calls: number }>>((acc, t) => {
+                  if (!acc[t.name]) acc[t.name] = { ...t }
+                  else acc[t.name].calls += t.calls
+                  return acc
+                }, {})
+              ),
+            },
+            daily: Object.values(
+              results.flatMap(r => r.daily).reduce<Record<string, TokenTrackerData['daily'][0]>>((acc, d) => {
+                if (!acc[d.date]) acc[d.date] = { ...d }
+                else {
+                  const a = acc[d.date]
+                  a.input_tokens += d.input_tokens; a.output_tokens += d.output_tokens
+                  a.cache_read_tokens += d.cache_read_tokens; a.messages += d.messages
+                  a.cost += d.cost; a.lines_added += d.lines_added
+                  a.lines_removed += d.lines_removed; a.lines_written += d.lines_written
+                }
+                return acc
+              }, {})
+            ).sort((a, b) => a.date.localeCompare(b.date)),
+            sessions: results.flatMap(r => r.sessions).sort((a, b) => (b.start || '').localeCompare(a.start || '')),
+          } as TokenTrackerData
+          setData(merged)
+        }
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [trackerUrl, from, to])

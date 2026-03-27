@@ -61,20 +61,45 @@ export default function CustomerForm() {
     }
   }
 
+  // Parse existing URLs from JSON array or single string
+  const getLinkedUrls = (): string[] => {
+    const val = form.token_tracker_url
+    if (!val) return []
+    try {
+      const parsed = JSON.parse(val)
+      return Array.isArray(parsed) ? parsed : [val]
+    } catch {
+      return [val]
+    }
+  }
+
+  const setLinkedUrls = (urls: string[]) => {
+    if (urls.length === 0) setForm({ ...form, token_tracker_url: '' })
+    else if (urls.length === 1) setForm({ ...form, token_tracker_url: urls[0] })
+    else setForm({ ...form, token_tracker_url: JSON.stringify(urls) })
+  }
+
   const handleLinkProject = async (project: TrackerProject) => {
     setLinkingProject(true)
     try {
       const label = form.company || form.name || 'Kundenprojekt'
       const share = await createTrackerShare(project.name, `${label} — ${project.name}`)
       if (share.public_url) {
-        setForm({ ...form, token_tracker_url: share.public_url })
-        toast.success('Token Tracker verknüpft.')
+        const current = getLinkedUrls()
+        if (!current.includes(share.public_url)) {
+          setLinkedUrls([...current, share.public_url])
+        }
+        toast.success(`Projekt "${project.name}" verknüpft.`)
       }
       setShowProjectPicker(false)
     } catch {
       toast.error('Fehler beim Erstellen des Share-Tokens.')
     }
     setLinkingProject(false)
+  }
+
+  const handleRemoveUrl = (url: string) => {
+    setLinkedUrls(getLinkedUrls().filter(u => u !== url))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,35 +146,42 @@ export default function CustomerForm() {
 
         {/* Token Tracker */}
         <div>
-          <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">KI-Nutzung (Token Tracker)</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              name="token_tracker_url"
-              value={form.token_tracker_url || ''}
-              onChange={handleChange}
-              placeholder="Wird automatisch gesetzt..."
-              className="flex-1"
-              readOnly
-            />
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs uppercase tracking-wider text-text-muted">KI-Nutzung (Token Tracker)</label>
             <button
               type="button"
               onClick={handleOpenProjectPicker}
-              className="btn-secondary whitespace-nowrap"
+              className="btn-secondary !text-xs !py-1 !px-3"
             >
               Projekt verknüpfen
             </button>
-            {form.token_tracker_url && (
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, token_tracker_url: '' })}
-                className="btn-danger"
-                title="Verknüpfung entfernen"
-              >
-                ✕
-              </button>
-            )}
           </div>
+          {getLinkedUrls().length > 0 ? (
+            <div className="space-y-1.5">
+              {getLinkedUrls().map((url, i) => {
+                // Extract project name from URL (last part of share token path)
+                const shortUrl = url.replace(/.*\/api\/public\/share\//, '').slice(0, 12) + '...'
+                return (
+                  <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border rounded-lg px-3 py-2">
+                    <span className="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
+                    <span className="text-xs text-text-muted font-mono flex-1 truncate">{url.replace(/https?:\/\//, '')}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveUrl(url)}
+                      className="text-text-muted hover:text-danger transition-colors p-0.5"
+                      title="Verknüpfung entfernen"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">Kein Projekt verknüpft. Klicke "Projekt verknüpfen" um KI-Nutzungsdaten zuzuweisen.</p>
+          )}
         </div>
 
         <FormField label="Adresse" name="address" value={form.address || ''} onChange={handleChange} />
