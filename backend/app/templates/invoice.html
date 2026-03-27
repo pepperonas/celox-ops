@@ -294,5 +294,118 @@
         {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
         {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
     </div>
+
+    {% if token_usage and token_usage.summary %}
+    <div style="page-break-before: always;"></div>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ settings.BUSINESS_NAME }}</div>
+            <div class="company-details">KI-Nutzungsbericht zu {{ invoice.invoice_number }}</div>
+        </div>
+    </div>
+
+    <h1 style="margin-top: 20px;">Anlage: KI-Nutzungsbericht</h1>
+    <p style="font-size: 9pt; color: #666; margin-bottom: 20px;">
+        Dieser Bericht zeigt die KI-gestützte Entwicklungsarbeit am Projekt
+        im Zeitraum {{ invoice.token_usage_from.strftime('%d.%m.%Y') }} bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') }}.
+    </p>
+
+    <table class="positions" style="margin-bottom: 25px;">
+        <thead>
+            <tr>
+                <th>Kennzahl</th>
+                <th style="text-align: right;">Wert</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Arbeitssitzungen</td>
+                <td style="text-align: right;">{{ token_usage.summary.total_sessions }}</td>
+            </tr>
+            <tr>
+                <td>KI-Anfragen gesamt</td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.total_messages) }}</td>
+            </tr>
+            <tr>
+                <td>Codezeilen geschrieben</td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_written) }}</td>
+            </tr>
+            <tr>
+                <td>Codezeilen hinzugefügt</td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_added) }}</td>
+            </tr>
+            <tr>
+                <td>Codezeilen entfernt</td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_removed) }}</td>
+            </tr>
+            <tr>
+                <td>KI-Kosten (API)</td>
+                <td style="text-align: right;">${{ "%.2f"|format(token_usage.summary.total_cost) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if token_usage.sessions %}
+    <h3 style="font-size: 11pt; color: #1a1a2e; margin-bottom: 10px;">Arbeitssitzungen</h3>
+    <table class="positions">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Modell</th>
+                <th style="text-align: right;">Anfragen</th>
+                <th style="text-align: right;">Codezeilen</th>
+                <th style="text-align: right;">Kosten</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in token_usage.sessions %}
+            <tr>
+                <td>{{ s.start[:10] if s.start else '-' }}</td>
+                <td>{{ s.model or '-' }}</td>
+                <td style="text-align: right;">{{ s.messages }}</td>
+                <td style="text-align: right;">+{{ s.lines_added }} / &minus;{{ s.lines_removed }}</td>
+                <td style="text-align: right;">${{ "%.2f"|format(s.cost) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if token_usage.daily %}
+    <h3 style="font-size: 11pt; color: #1a1a2e; margin: 20px 0 10px;">Tagesübersicht</h3>
+    <table class="positions">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th style="text-align: right;">Anfragen</th>
+                <th style="text-align: right;">Geschrieben</th>
+                <th style="text-align: right;">Kosten</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in token_usage.daily %}
+            {% if d.messages > 0 %}
+            <tr>
+                <td>{{ d.date }}</td>
+                <td style="text-align: right;">{{ d.messages }}</td>
+                <td style="text-align: right;">{{ d.lines_written }}</td>
+                <td style="text-align: right;">${{ "%.2f"|format(d.cost) }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <p style="font-size: 8pt; color: #999; margin-top: 20px; font-style: italic;">
+        Automatisch generiert aus dem celox.io Token Tracker. Die Daten werden über die
+        Claude Code CLI protokolliert und umfassen alle KI-gestützten Entwicklungsaktivitäten.
+    </p>
+
+    <div class="footer">
+        {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
+        {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
+    </div>
+    {% endif %}
 </body>
 </html>

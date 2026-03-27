@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { getCustomer, deleteCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
@@ -14,11 +14,22 @@ import type { Customer, Order, Contract, Invoice } from '../../types'
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [activeTab, setActiveTab] = useState<'auftraege' | 'vertraege' | 'rechnungen' | 'tokens'>('auftraege')
+
+  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'tokens'] as const
+  type TabKey = typeof validTabs[number]
+  const hashTab = location.hash.replace('#', '') as TabKey
+  const initialTab = validTabs.includes(hashTab) ? hashTab : 'auftraege'
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
+
+  const switchTab = useCallback((tab: TabKey) => {
+    setActiveTab(tab)
+    navigate(`#${tab}`, { replace: true })
+  }, [navigate])
   const [showDelete, setShowDelete] = useState(false)
   const [showQuickInvoice, setShowQuickInvoice] = useState(false)
   const [quickForm, setQuickForm] = useState({ beschreibung: '', menge: '1', einheit: 'pauschal', einzelpreis: '', notes: '' })
@@ -153,7 +164,7 @@ export default function CustomerDetail() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => switchTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.key
                 ? 'border-accent text-accent'

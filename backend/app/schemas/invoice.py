@@ -26,6 +26,8 @@ class InvoiceBase(BaseModel):
     invoice_date: date
     due_date: date
     notes: str | None = None
+    token_usage_from: date | None = None
+    token_usage_to: date | None = None
 
 
 class InvoiceCreate(InvoiceBase):
@@ -42,6 +44,8 @@ class InvoiceUpdate(BaseModel):
     invoice_date: date | None = None
     due_date: date | None = None
     notes: str | None = None
+    token_usage_from: date | None = None
+    token_usage_to: date | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -63,6 +67,8 @@ class InvoiceResponse(BaseModel):
     status: InvoiceStatus
     pdf_path: str | None = None
     notes: str | None = None
+    token_usage_from: date | None = None
+    token_usage_to: date | None = None
     customer_name: str = ""
     created_at: datetime
     updated_at: datetime

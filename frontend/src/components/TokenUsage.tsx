@@ -121,9 +121,28 @@ export default function TokenUsage({ trackerUrl }: Props) {
   const s = data.summary
   const costEur = s.total_cost * 0.92 // USD to EUR approximation
 
+  const exportCSV = () => {
+    const header = 'Datum;KI-Anfragen;Codezeilen geschrieben;Zeilen hinzugefügt;Zeilen entfernt;Kosten (USD)\n'
+    const rows = data.daily.map(d =>
+      `${d.date};${d.messages};${d.lines_written};${d.lines_added};${d.lines_removed};${d.cost.toFixed(2)}`
+    ).join('\n')
+    const sessHeader = '\n\nArbeitssitzungen\nDatum;Dauer (Min);Modell;Anfragen;Geschrieben;Hinzugefügt;Entfernt;Kosten (USD)\n'
+    const sessRows = data.sessions.map(ss =>
+      `${ss.start?.split('T')[0] || ''};${Math.round(ss.duration_min)};${ss.model};${ss.messages};${ss.lines_written};${ss.lines_added};${ss.lines_removed};${ss.cost.toFixed(2)}`
+    ).join('\n')
+    const bom = '\uFEFF'
+    const blob = new Blob([bom + header + rows + sessHeader + sessRows], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ki-nutzung-${from || 'gesamt'}-${to || 'heute'}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
-      {/* Period Filter */}
+      {/* Period Filter + Export */}
       <div className="flex flex-wrap items-center gap-2">
         {(['7d', '30d', '90d', 'all'] as Period[]).map((p) => (
           <button
@@ -155,6 +174,11 @@ export default function TokenUsage({ trackerUrl }: Props) {
             <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="!py-1 !px-2 !text-xs" />
           </div>
         )}
+        <div className="ml-auto">
+          <button onClick={exportCSV} className="btn-secondary !text-xs !py-1.5 !px-3">
+            CSV Export
+          </button>
+        </div>
       </div>
 
       {/* Explanatory Intro */}

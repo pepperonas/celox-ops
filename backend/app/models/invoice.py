@@ -61,6 +61,8 @@ class Invoice(Base):
     )
     pdf_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_usage_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    token_usage_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

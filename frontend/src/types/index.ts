@@ -179,6 +179,8 @@ export interface Invoice {
   due_date: string
   pdf_path: string | null
   notes: string
+  token_usage_from: string | null
+  token_usage_to: string | null
   created_at: string
   updated_at: string
 }
@@ -193,6 +195,8 @@ export interface InvoiceCreate {
   invoice_date?: string
   due_date?: string
   notes?: string
+  token_usage_from?: string | null
+  token_usage_to?: string | null
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}

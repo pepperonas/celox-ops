@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
-import { getCustomers } from '../../api/customers'
+import { getCustomers, getCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { formatCurrency } from '../../utils/formatters'
@@ -28,6 +28,8 @@ const emptyForm: InvoiceCreate = {
   invoice_date: new Date().toISOString().split('T')[0],
   due_date: '',
   notes: '',
+  token_usage_from: null,
+  token_usage_to: null,
 }
 
 export default function InvoiceForm() {
@@ -39,6 +41,8 @@ export default function InvoiceForm() {
   const [orders, setOrders] = useState<Order[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [loading, setLoading] = useState(false)
+  const [attachTokenUsage, setAttachTokenUsage] = useState(false)
+  const [selectedCustomerHasTracker, setSelectedCustomerHasTracker] = useState(false)
 
   useEffect(() => {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
@@ -65,14 +69,18 @@ export default function InvoiceForm() {
     }
   }, [id])
 
-  // Load orders/contracts when customer changes
+  // Load orders/contracts and check tracker when customer changes
   useEffect(() => {
     if (form.customer_id) {
       getOrders({ customer_id: form.customer_id, page_size: 1000 }).then((r) => setOrders(r.items))
       getContracts({ customer_id: form.customer_id, page_size: 1000 }).then((r) => setContracts(r.items))
+      getCustomer(form.customer_id).then((c) => {
+        setSelectedCustomerHasTracker(Boolean(c.token_tracker_url))
+      }).catch(() => setSelectedCustomerHasTracker(false))
     } else {
       setOrders([])
       setContracts([])
+      setSelectedCustomerHasTracker(false)
     }
   }, [form.customer_id])
 
@@ -341,6 +349,56 @@ export default function InvoiceForm() {
             placeholder="Optionale Anmerkungen zur Rechnung..."
           />
         </div>
+
+        {/* KI-Nutzungsbericht */}
+        {selectedCustomerHasTracker && (
+          <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="attach-token-usage"
+                checked={attachTokenUsage}
+                onChange={(e) => {
+                  setAttachTokenUsage(e.target.checked)
+                  if (!e.target.checked) {
+                    setForm({ ...form, token_usage_from: null, token_usage_to: null })
+                  }
+                }}
+                className="w-4 h-4 accent-[#58a6ff]"
+              />
+              <label htmlFor="attach-token-usage" className="text-sm font-semibold text-text cursor-pointer">
+                KI-Nutzungsbericht an Rechnung anhängen
+              </label>
+            </div>
+            {attachTokenUsage && (
+              <div>
+                <p className="text-xs text-text-muted mb-3">
+                  Der Bericht zeigt dem Kunden transparent, welche KI-gestützte Entwicklungsarbeit im gewählten Zeitraum stattfand.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
+                    <input
+                      type="date"
+                      value={form.token_usage_from || ''}
+                      onChange={(e) => setForm({ ...form, token_usage_from: e.target.value || null })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
+                    <input
+                      type="date"
+                      value={form.token_usage_to || ''}
+                      onChange={(e) => setForm({ ...form, token_usage_to: e.target.value || null })}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3">

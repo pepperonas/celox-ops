@@ -1,12 +1,35 @@
 import os
 from pathlib import Path
 
+import httpx
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from app.config import settings
 from app.models.customer import Customer
 from app.models.invoice import Invoice
+
+
+def _fetch_token_usage(customer: Customer, invoice: Invoice) -> dict | None:
+    """Fetch token usage data from tracker if invoice has date range and customer has tracker URL."""
+    if not invoice.token_usage_from or not invoice.token_usage_to:
+        return None
+    if not customer.token_tracker_url:
+        return None
+
+    try:
+        params = {
+            "from": invoice.token_usage_from.isoformat(),
+            "to": invoice.token_usage_to.isoformat(),
+        }
+        sep = "&" if "?" in customer.token_tracker_url else "?"
+        url = f"{customer.token_tracker_url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
+        resp = httpx.get(url, timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return None
 
 
 def generate_invoice_pdf(
@@ -19,12 +42,15 @@ def generate_invoice_pdf(
 
     positions = invoice.positions or []
 
+    token_usage = _fetch_token_usage(customer, invoice)
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
         positions=positions,
         settings=settings,
         kleinunternehmer=settings.KLEINUNTERNEHMER,
+        token_usage=token_usage,
     )
 
     os.makedirs(settings.PDF_STORAGE_PATH, exist_ok=True)
