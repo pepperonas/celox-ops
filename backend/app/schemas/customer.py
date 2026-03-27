@@ -11,6 +11,7 @@ class CustomerBase(BaseModel):
     company: str | None = None
     address: str | None = None
     website: str | None = None
+    token_tracker_url: str | None = None
     notes: str | None = None
 
 
@@ -25,6 +26,7 @@ class CustomerUpdate(BaseModel):
     company: str | None = None
     address: str | None = None
     website: str | None = None
+    token_tracker_url: str | None = None
     notes: str | None = None
 
 

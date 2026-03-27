@@ -6,9 +6,28 @@ export interface Customer {
   company: string
   address: string
   website: string
+  token_tracker_url: string
   notes: string
   created_at: string
   updated_at: string
+}
+
+export interface TokenTrackerData {
+  project: string
+  label: string
+  summary: {
+    total_input_tokens: number
+    total_output_tokens: number
+    total_cache_read_tokens: number
+    total_messages: number
+    total_sessions: number
+    lines_added: number
+    lines_removed: number
+    lines_written: number
+    first_activity: string | null
+    last_activity: string | null
+    models_used: { name: string; messages: number }[]
+  }
 }
 
 export interface CustomerDetail extends Customer {
@@ -24,6 +43,7 @@ export interface CustomerCreate {
   company?: string
   address?: string
   website?: string
+  token_tracker_url?: string
   notes?: string
 }
 
