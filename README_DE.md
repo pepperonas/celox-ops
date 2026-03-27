@@ -18,26 +18,26 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 
 ### Kundenverwaltung
 - Stammdaten (Name, Firma, E-Mail, Telefon, Adresse, Website)
-- Uebersicht verknuepfter Auftraege, Vertraege und Rechnungen pro Kunde
-- Volltextsuche ueber alle Felder
-- Loeschsschutz bei bestehenden Referenzen
+- Übersicht verknüpfter Aufträge, Verträge und Rechnungen pro Kunde
+- Volltextsuche über alle Felder
+- Löschschchutz bei bestehenden Referenzen
 
 ### Auftragsverwaltung
 - Status-Workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (oder Storniert)
 - Farbcodierte Status-Badges
-- Optionale Felder fuer Betrag, Stundensatz und Zeitraum
+- Optionale Felder für Betrag, Stundensatz und Zeitraum
 
 ### Vertragsverwaltung
 - Vertragstypen: Hosting, Wartung, Support, Sonstige
-- Automatische Verlaengerung mit konfigurierbarer Kuendigungsfrist
+- Automatische Verlängerung mit konfigurierbarer Kündigungsfrist
 - Monatliche Betragserfassung
 
 ### Rechnungen
 - **Automatisch generierte Rechnungsnummern** im Format `CO-YYYY-NNNN` (fortlaufend pro Jahr)
-- **Dynamische Positionen** — Zeilen hinzufuegen/entfernen mit Live-Berechnung
+- **Dynamische Positionen** — Zeilen hinzufügen/entfernen mit Live-Berechnung
 - Netto/MwSt./Brutto automatisch berechnet
-- Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Ueberfaellig/Storniert)
-- Optionale Verknuepfung mit Auftraegen oder Vertraegen
+- Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Überfällig/Storniert)
+- Optionale Verknüpfung mit Aufträgen oder Verträgen
 - **Kleinunternehmerregelung** — konfigurierbar, beeinflusst Berechnung und PDF-Text
 
 ### Schnellrechnungen
@@ -48,36 +48,36 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### PDF-Generierung
 - Professionelle A4-Rechnungs-PDFs mit anpassbarem Branding
 - Generiert mit **WeasyPrint** und Jinja2-Templates
-- Beinhaltet: Absender, Empfaenger, Positionen, Summen, Bankdaten, Steuerinfo
-- Optionaler **KI-Nutzungsbericht** als Anhang mit waehlbarem Zeitraum
+- Beinhaltet: Absender, Empfänger, Positionen, Summen, Bankdaten, Steuerinfo
+- Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
 
 ### KI-Nutzungstracking (Token Tracker Integration)
 - Integration mit [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) ueber sichere Share-API
 - **Zeitraumfilter** — 7/30/90 Tage, gesamter Zeitraum oder benutzerdefiniert
 - **KPI-Karten**: Kosten, aktive Arbeitszeit, geschriebene Codezeilen, KI-Anfragen
-- **Diagramme** (Chart.js): taegliche Arbeitsintensitaet, kumulativer Kostentrend, Code-Entwicklung
+- **Diagramme** (Chart.js): tägliche Arbeitsintensität, kumulativer Kostentrend, Code-Entwicklung
 - **Sitzungstabelle**: Datum, aktive Dauer, KI-Modell, Anfragen, Codezeilen, Kosten
-- **Aktive Zeiterfassung** — misst echte Arbeitszeit (nicht Sitzungsdauer) basierend auf Nachrichtenintervallen mit 5-Minuten-Luecken-Schwellwert
+- **Aktive Zeiterfassung** — misst echte Arbeitszeit (nicht Sitzungsdauer) basierend auf Nachrichtenintervallen mit 5-Minuten-Lücken-Schwellwert
 - **CSV-Export** und **HTML-Bericht** zur Weitergabe an Kunden
 - Kundenfreundliche Bezeichnungen — "Arbeitssitzungen" statt "Sessions", "Codezeilen" statt "Tokens"
-- KI-Nutzungsbericht kann als zweite Seite an **Rechnungs-PDFs angehaengt** werden
+- KI-Nutzungsbericht kann als zweite Seite an **Rechnungs-PDFs angehängt** werden
 
 ### Dashboard
 - Umsatz aktueller Monat und Jahr
 - Offene Rechnungen (Anzahl + Gesamtbetrag)
-- Ueberfaellige Rechnungen (hervorgehoben)
-- Aktive Vertraege (Anzahl + monatliche Summe)
+- Überfällige Rechnungen (hervorgehoben)
+- Aktive Verträge (Anzahl + monatliche Summe)
 
 ### Einstellungen
 - Token Tracker Verbindungsstatus
-- Konfigurationsanleitung fuer Token Tracker Integration
+- Konfigurationsanleitung für Token Tracker Integration
 
 ### Design
 - **GitHub-inspiriertes Dark Theme**
-- Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflaechen), `#58a6ff` (Akzent)
+- Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
 - Responsives Layout mit einklappbarer Seitenleiste
 - Einheitliche Status-Badges, Tabellen und Formular-Komponenten
-- Tab-Zustand in URL-Hash ueber Seitenaktualisierungen hinweg gespeichert
+- Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert
 
 ---
 
@@ -139,9 +139,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 
 ---
 
-## API-Uebersicht
+## API-Übersicht
 
-Alle Endpunkte unter `/api/`, geschuetzt via JWT Bearer Token.
+Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 
 | Methode | Endpunkt | Beschreibung |
 |---------|----------|-------------|
@@ -151,19 +151,19 @@ Alle Endpunkte unter `/api/`, geschuetzt via JWT Bearer Token.
 | `GET` | `/api/customers/{id}` | Kundendetail mit Referenzanzahl |
 | `POST` | `/api/customers` | Kunde anlegen |
 | `PUT` | `/api/customers/{id}` | Kunde aktualisieren |
-| `DELETE` | `/api/customers/{id}` | Kunde loeschen (mit Referenzpruefung) |
+| `DELETE` | `/api/customers/{id}` | Kunde löschen (mit Referenzprüfung) |
 | `GET` | `/api/orders` | Auftragsliste (Filter: Status, Kunde) |
-| `POST/PUT/DELETE` | `/api/orders/{id}` | CRUD fuer Auftraege |
+| `POST/PUT/DELETE` | `/api/orders/{id}` | CRUD für Aufträge |
 | `GET` | `/api/contracts` | Vertragsliste (Filter: Status, Typ) |
-| `POST/PUT/DELETE` | `/api/contracts/{id}` | CRUD fuer Vertraege |
+| `POST/PUT/DELETE` | `/api/contracts/{id}` | CRUD für Verträge |
 | `GET` | `/api/invoices` | Rechnungsliste (Filter: Status, Kunde) |
 | `POST` | `/api/invoices` | Rechnung erstellen (auto. Nummer) |
 | `POST` | `/api/invoices/quick` | Schnellrechnung (Einzelposition) |
 | `PUT` | `/api/invoices/{id}` | Rechnung aktualisieren |
-| `PUT` | `/api/invoices/{id}/status` | Status aendern |
+| `PUT` | `/api/invoices/{id}/status` | Status ändern |
 | `POST` | `/api/invoices/{id}/generate-pdf` | PDF generieren |
 | `GET` | `/api/invoices/{id}/pdf` | PDF herunterladen |
-| `DELETE` | `/api/invoices/{id}` | Loeschen (nur Entwuerfe) |
+| `DELETE` | `/api/invoices/{id}` | Löschen (nur Entwürfe) |
 | `GET` | `/api/dashboard/stats` | Dashboard-KPIs |
 | `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |
 | `GET/POST` | `/api/token-tracker/shares` | Share-Tokens verwalten |
@@ -184,14 +184,14 @@ Interaktive API-Docs unter `/docs` (Swagger UI).
 
 ```bash
 git clone https://github.com/pepperonas/celox-ops.git
-cd OPS
+cd celox-ops
 
 # Umgebung konfigurieren
 cp .env.example .env
-# .env bearbeiten: Passwoerter, JWT_SECRET, Geschaeftsdaten setzen
+# .env bearbeiten: Passwörter, JWT_SECRET, Geschäftsdaten setzen
 # Passwort-Hash generieren:
 #   python3 -c "from passlib.hash import bcrypt; print(bcrypt.hash('dein-passwort'))"
-# $ als $$ in .env fuer Docker Compose escapen
+# $ als $$ in .env für Docker Compose escapen
 
 # Starten
 docker compose up -d --build
@@ -214,10 +214,10 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Deployment
 
-Konzipiert fuer den Betrieb hinter einem Reverse Proxy mit SSL-Terminierung (z.B. Nginx + Let's Encrypt).
+Konzipiert für den Betrieb hinter einem Reverse Proxy mit SSL-Terminierung (z.B. Nginx + Let's Encrypt).
 
 - **Port**: 8090 (Docker) — Proxy auf eigene Domain
-- **Datenpersistenz**: Docker Volumes fuer PostgreSQL und PDF-Speicher
+- **Datenpersistenz**: Docker Volumes für PostgreSQL und PDF-Speicher
 - **SSL**: Auf dem Host-Reverse-Proxy konfigurieren
 
 ```bash
@@ -228,11 +228,11 @@ docker compose up -d --build
 
 ## Besser zusammen: Token Tracker Integration
 
-celox ops und der [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) bilden ein vollstaendiges Consulting-Toolkit. OPS uebernimmt die Geschaeftsseite (Kunden, Rechnungen, Vertraege), waehrend der Token Tracker die KI-Entwicklungsmetriken erfasst (Sitzungen, Tokens, Kosten, Code-Output).
+celox ops und der [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) bilden ein vollständiges Consulting-Toolkit. OPS uebernimmt die Geschäftsseite (Kunden, Rechnungen, Verträge), während der Token Tracker die KI-Entwicklungsmetriken erfasst (Sitzungen, Tokens, Kosten, Code-Output).
 
 ### Was diese Kombination einzigartig macht
 
-Als IT-Berater, der KI-gestuetzt entwickelt, stehen Sie vor einer besonderen Herausforderung: Wie dokumentieren Sie transparent, was die KI geleistet hat und was das gekostet hat? celox ops loest genau dieses Problem. Die Kombination aus Geschaeftsverwaltung und KI-Nutzungstracking schafft eine lueckenlose Kette von der Entwicklungsarbeit bis zur Rechnung — vollautomatisch und nachpruefbar.
+Als IT-Berater, der KI-gestützt entwickelt, stehen Sie vor einer besonderen Herausforderung: Wie dokumentieren Sie transparent, was die KI geleistet hat und was das gekostet hat? celox ops löst genau dieses Problem. Die Kombination aus Geschäftsverwaltung und KI-Nutzungstracking schafft eine lückenlose Kette von der Entwicklungsarbeit bis zur Rechnung — vollautomatisch und nachprüfbar.
 
 ### Datenfluss
 
@@ -240,43 +240,43 @@ Als IT-Berater, der KI-gestuetzt entwickelt, stehen Sie vor einer besonderen Her
 Claude Code → Token Tracker → Share API → celox ops → Kunden-Dashboard + Rechnungs-PDF
 ```
 
-1. **Claude Code** erzeugt Nutzungsdaten waehrend der KI-gestuetzten Entwicklung
+1. **Claude Code** erzeugt Nutzungsdaten während der KI-gestützten Entwicklung
 2. **Token Tracker** sammelt und speichert projektbezogene Metriken (Tokens, Kosten, Codezeilen, aktive Zeit)
 3. **Share API** bietet sicheren, token-basierten Zugriff auf Projektmetriken
 4. **celox ops** zieht Metriken in die Kundendetailseite und rendert interaktive Dashboards
-5. **Rechnungs-PDFs** koennen einen KI-Nutzungsbericht als Anhangsseite enthalten
+5. **Rechnungs-PDFs** können einen KI-Nutzungsbericht als Anhangsseite enthalten
 
-### Vorteile fuer den Berater
-- **Transparente Abrechnung** — jede Stunde KI-gestuetzter Arbeit ist mit nachpruefbaren Metriken dokumentiert
-- **Automatisiertes Reporting** — kein manuelles Zeittracking oder Berichtschreiben noetig
+### Vorteile für den Berater
+- **Transparente Abrechnung** — jede Stunde KI-gestützter Arbeit ist mit nachprüfbaren Metriken dokumentiert
+- **Automatisiertes Reporting** — kein manuelles Zeittracking oder Berichtschreiben nötig
 - **Kundenvertrauen** — Kunden sehen genau, was getan wurde, wie lange es gedauert hat und was es gekostet hat
 - **Ein-Klick-Rechnungsstellung** — professionelles PDF mit KI-Bericht in Sekunden generieren
 
-### Vorteile fuer den Kunden
-- **Nachpruefbare Arbeitsdokumentation** — sitzungsgenaue Details aller KI-gestuetzten Entwicklung
-- **Aktive Zeiterfassung** — echte Arbeitszeit basierend auf Interaktionsmustern, keine aufgeblaehten Sitzungsdauern
+### Vorteile für den Kunden
+- **Nachprüfbare Arbeitsdokumentation** — sitzungsgenaue Details aller KI-gestützten Entwicklung
+- **Aktive Zeiterfassung** — echte Arbeitszeit basierend auf Interaktionsmustern, keine aufgeblähten Sitzungsdauern
 - **Kostentransparenz** — KI-Kosten pro Sitzung, pro Tag und kumulative Trends einsehbar
-- **Exportierbare Berichte** — CSV- und HTML-Exporte fuer eigene Unterlagen
+- **Exportierbare Berichte** — CSV- und HTML-Exporte für eigene Unterlagen
 
 ### Einrichtung
 
 1. **Token Tracker**: Einstellungen → Share API → Admin Key kopieren
 2. **celox ops `.env`**: `TOKEN_TRACKER_BASE_URL` und `TOKEN_TRACKER_ADMIN_KEY` setzen
-3. **Projekt verknuepfen**: Kunde → Bearbeiten → "Projekt verknuepfen" → Projekt auswaehlen
+3. **Projekt verknüpfen**: Kunde → Bearbeiten → "Projekt verknüpfen" → Projekt auswählen
 
 ### Sicherheit
 
-- Share-Tokens: 192-Bit kryptographisch zufaellig (48-Zeichen-Hex)
-- Admin Key: 256-Bit, erforderlich fuer Share-Verwaltung
-- Oeffentlicher Endpunkt rate-limitiert (30 Req/Min pro IP)
-- CORS auf konfigurierte Origins beschraenkt
-- Keine Projekt-Enumeration moeglich
-- Optionales Ablaufdatum fuer Share-Tokens
+- Share-Tokens: 192-Bit kryptographisch zufällig (48-Zeichen-Hex)
+- Admin Key: 256-Bit, erforderlich für Share-Verwaltung
+- Öffentlicher Endpunkt rate-limitiert (30 Req/Min pro IP)
+- CORS auf konfigurierte Origins beschränkt
+- Keine Projekt-Enumeration möglich
+- Optionales Ablaufdatum für Share-Tokens
 - Keine internen Pfade oder Bezeichner exponiert
 
 ### Aktive Zeiterfassung
 
-Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zwischen aufeinanderfolgenden KI-Interaktionen werden summiert, wobei Luecken > 5 Minuten als inaktiv zaehlen. Das ergibt realistische Arbeitszeiten (z.B. "5h 15min" statt "194h Sitzungsdauer").
+Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zwischen aufeinanderfolgenden KI-Interaktionen werden summiert, wobei Lücken > 5 Minuten als inaktiv zaehlen. Das ergibt realistische Arbeitszeiten (z.B. "5h 15min" statt "194h Sitzungsdauer").
 
 ---
 
@@ -287,15 +287,15 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `POSTGRES_USER` | Datenbankbenutzer | `celoxops` |
 | `POSTGRES_PASSWORD` | Datenbankpasswort | `sicheres-passwort` |
 | `DATABASE_URL` | Asynchroner Connection String | `postgresql+asyncpg://...` |
-| `JWT_SECRET` | Token-Signierungsschluessel | (zufaellig, 48+ Zeichen) |
+| `JWT_SECRET` | Token-Signierungsschlüssel | (zufällig, 48+ Zeichen) |
 | `ADMIN_USERNAME` | Login-Benutzername | `admin` |
 | `ADMIN_PASSWORD_HASH` | bcrypt-Hash des Passworts | `$$2b$$12$$...` |
 | `BUSINESS_NAME` | Firmenname (PDFs) | `Ihre Firma` |
 | `BUSINESS_OWNER` | Inhabername (PDFs) | `Ihr Name` |
-| `BUSINESS_ADDRESS` | Adresse (PDFs) | `Strasse, PLZ Ort` |
+| `BUSINESS_ADDRESS` | Adresse (PDFs) | `Straße, PLZ Ort` |
 | `BUSINESS_EMAIL` | E-Mail (PDFs) | `info@beispiel.de` |
 | `BUSINESS_TAX_ID` | USt-IdNr. | `DE...` |
-| `BUSINESS_BANK_*` | Bankdaten (IBAN, BIC) | fuer Rechnungs-PDF |
+| `BUSINESS_BANK_*` | Bankdaten (IBAN, BIC) | für Rechnungs-PDF |
 | `KLEINUNTERNEHMER` | Kleinunternehmerregelung | `true` / `false` |
 | `PDF_STORAGE_PATH` | PDF-Speicherpfad | `/data/invoices` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
@@ -303,16 +303,16 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 
 **Sicherheitshinweise:**
 - `.env` niemals committen — ist in `.gitignore` eingetragen
-- Starke Werte fuer `JWT_SECRET` und `POSTGRES_PASSWORD` generieren
+- Starke Werte für `JWT_SECRET` und `POSTGRES_PASSWORD` generieren
 - `ADMIN_PASSWORD_HASH` muss ein bcrypt-Hash sein (`$` als `$$` escapen)
-- `TOKEN_TRACKER_ADMIN_KEY` wird nur bei Nutzung der Token Tracker Integration benoetigt
+- `TOKEN_TRACKER_ADMIN_KEY` wird nur bei Nutzung der Token Tracker Integration benötigt
 
 ---
 
 ## Projektstruktur
 
 ```
-OPS/
+celox-ops/
 ├── docker-compose.yml          # Produktion: DB, Backend, Frontend, Nginx
 ├── docker-compose.dev.yml      # Entwicklung mit Hot-Reload
 ├── .env.example                # Umgebungsvariablen-Vorlage
@@ -330,7 +330,7 @@ OPS/
 │       ├── models/             # SQLAlchemy 2.0 Mapped Models
 │       ├── schemas/            # Pydantic v2 Request/Response Schemas
 │       ├── routers/            # API-Endpunkte (alle paginiert)
-│       │   ├── customers.py    # CRUD + Suche + Referenzpruefung
+│       │   ├── customers.py    # CRUD + Suche + Referenzprüfung
 │       │   ├── orders.py       # CRUD + Status/Kunden-Filter
 │       │   ├── contracts.py    # CRUD + Status/Typ-Filter
 │       │   ├── invoices.py     # CRUD + PDF + Status + Schnellrechnung
@@ -363,7 +363,7 @@ OPS/
 │       │   ├── contracts/      # Liste, Formular, Detail
 │       │   └── invoices/       # Liste, Formular, Detail
 │       └── utils/
-│           ├── formatters.ts   # Datum (DD.MM.YYYY), Waehrung (1.234,56 EUR)
+│           ├── formatters.ts   # Datum (DD.MM.YYYY), Währung (1.234,56 EUR)
 │           └── validators.ts
 │
 └── nginx/
@@ -379,7 +379,7 @@ CO-2026-0001
 │  │     │
 │  │     └── Fortlaufende Nummer (nullgepolstert, pro Jahr)
 │  └──────── Kalenderjahr
-└─────────── Konfigurierbares Praefix
+└─────────── Konfigurierbares Präfix
 ```
 
 ---
