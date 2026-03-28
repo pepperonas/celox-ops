@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     LOGO_PATH: str = "/data/assets/logo.png"
 
     TOKEN_TRACKER_BASE_URL: str = ""
+    TOKEN_TRACKER_PUBLIC_URL: str = ""
     TOKEN_TRACKER_ADMIN_KEY: str = ""
 
     SMTP_HOST: str = ""

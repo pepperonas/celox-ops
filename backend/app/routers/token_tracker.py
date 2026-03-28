@@ -65,7 +65,8 @@ async def create_share(data: ShareCreate) -> dict:
         raise HTTPException(status_code=resp.status_code, detail="Token Tracker Fehler")
     share = resp.json()
     # Return full public URL
-    share["public_url"] = f"{settings.TOKEN_TRACKER_BASE_URL.replace('http://localhost:3007', 'https://tracker.celox.io')}/api/public/share/{share['id']}"
+    public_base = settings.TOKEN_TRACKER_PUBLIC_URL or settings.TOKEN_TRACKER_BASE_URL
+    share["public_url"] = f"{public_base}/api/public/share/{share['id']}"
     return share
 
 
