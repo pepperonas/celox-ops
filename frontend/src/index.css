@@ -56,6 +56,7 @@ input:-webkit-autofill:focus {
 
 @layer base {
   input, select, textarea {
+    width: 100%;
     background: #1c2128;
     border: 1px solid #30363d;
     color: #e6edf3;

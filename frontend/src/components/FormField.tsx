@@ -69,7 +69,7 @@ export default function FormField({
           value={value as string | number}
           onChange={onChange}
           disabled={disabled}
-          className="input-field"
+          className="w-full"
         >
           <option value="">{placeholder || 'Bitte wählen...'}</option>
           {options?.map((opt) => (
@@ -101,7 +101,7 @@ export default function FormField({
           required={required}
           step={step}
           min={min}
-          className="input-field"
+          className="w-full"
         />
       )}
 
