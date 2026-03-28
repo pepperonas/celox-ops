@@ -5,7 +5,14 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm 2.5cm;
+            margin: 2cm 2.5cm 3cm 2.5cm;
+            @bottom-center {
+                content: "{{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}{% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}";
+                font-size: 7pt;
+                color: #999;
+                border-top: 0.5pt solid #ddd;
+                padding-top: 5px;
+            }
         }
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -84,13 +91,21 @@
             color: #1a1a2e;
             margin-bottom: 8px;
         }
+        .payment-info table {
+            border-collapse: collapse;
+        }
         .payment-info table td {
-            padding: 2px 10px 2px 0;
+            padding: 3px 15px 3px 0;
             font-size: 9pt;
+            vertical-align: top;
+        }
+        .payment-info table td:first-child {
+            white-space: nowrap;
+            font-weight: bold;
+            width: 140px;
         }
         .footer {
-            position: fixed;
-            bottom: 0;
+            display: none;
             left: 0;
             right: 0;
             text-align: center;

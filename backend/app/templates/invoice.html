@@ -5,7 +5,14 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm 2.5cm;
+            margin: 2cm 2.5cm 3cm 2.5cm;
+            @bottom-center {
+                content: "{{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}{% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}";
+                font-size: 7pt;
+                color: #999;
+                border-top: 0.5pt solid #ddd;
+                padding-top: 5px;
+            }
         }
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -143,26 +150,32 @@
             margin-top: 30px;
             padding-top: 15px;
             border-top: 1px solid #ddd;
+            page-break-inside: avoid;
         }
         .payment-info h3 {
             font-size: 10pt;
             color: #1a1a2e;
             margin-bottom: 8px;
         }
+        .payment-info table {
+            border-collapse: collapse;
+        }
         .payment-info table td {
-            padding: 2px 10px 2px 0;
+            padding: 3px 15px 3px 0;
             font-size: 9pt;
+            vertical-align: top;
+        }
+        .payment-info table td:first-child {
+            white-space: nowrap;
+            font-weight: bold;
+            width: 140px;
+        }
+        .signature-block {
+            margin-top: 30px;
+            page-break-inside: avoid;
         }
         .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 7pt;
-            color: #999;
-            border-top: 1px solid #ddd;
-            padding-top: 5px;
+            display: none;
         }
     </style>
 </head>
@@ -269,9 +282,9 @@
     {% endif %}
 
     {% if signature_b64 %}
-    <div style="margin-top: 30px;">
+    <div class="signature-block">
         <p style="font-size: 9pt; color: #555; margin-bottom: 5px;">Mit freundlichen Grüßen</p>
-        <img src="data:image/png;base64,{{ signature_b64 }}" style="max-height: 60px; max-width: 200px;" alt="Unterschrift">
+        <img src="data:image/png;base64,{{ signature_b64 }}" style="max-height: 50px; max-width: 180px;" alt="Unterschrift">
         <p style="font-size: 9pt; color: #333; margin-top: 3px;">{{ settings.BUSINESS_OWNER }}</p>
     </div>
     {% endif %}
