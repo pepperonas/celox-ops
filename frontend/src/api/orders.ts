@@ -54,3 +54,9 @@ export async function downloadQuotePdf(id: string): Promise<void> {
   link.remove()
   window.URL.revokeObjectURL(url)
 }
+
+export async function viewQuotePdf(id: string): Promise<void> {
+  const response = await api.get(`/orders/${id}/quote-pdf`, { responseType: 'blob' })
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+  window.open(url, '_blank')
+}

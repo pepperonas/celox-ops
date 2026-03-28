@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getOrder, deleteOrder, generateQuotePdf, downloadQuotePdf, sendQuoteEmail } from '../../api/orders'
+import { getOrder, deleteOrder, generateQuotePdf, downloadQuotePdf, viewQuotePdf, sendQuoteEmail } from '../../api/orders'
 import { getInvoices } from '../../api/invoices'
 import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
@@ -52,6 +52,14 @@ export default function OrderDetail() {
     }
   }
 
+  const handleViewQuotePdf = async () => {
+    try {
+      await viewQuotePdf(id!)
+    } catch {
+      toast.error('Fehler beim Öffnen des Angebots-PDF.')
+    }
+  }
+
   const handleDelete = async () => {
     try {
       await deleteOrder(id!)
@@ -86,6 +94,9 @@ export default function OrderDetail() {
           )}
           {order.quote_pdf_path && (
             <>
+              <button onClick={handleViewQuotePdf} className="btn-primary">
+                Angebot PDF anzeigen
+              </button>
               <button onClick={handleDownloadQuotePdf} className="btn-secondary">
                 Angebot PDF herunterladen
               </button>

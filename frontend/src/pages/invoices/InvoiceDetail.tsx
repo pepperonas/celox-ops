@@ -80,6 +80,16 @@ export default function InvoiceDetail() {
     }
   }
 
+  const handleViewPdf = async () => {
+    try {
+      const blob = await downloadPdf(id!)
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    } catch {
+      toast.error('Fehler beim Öffnen der PDF.')
+    }
+  }
+
   const handleStatusChange = async (newStatus: 'gestellt' | 'bezahlt') => {
     try {
       const updated = await updateInvoiceStatus(id!, newStatus)
@@ -149,6 +159,16 @@ export default function InvoiceDetail() {
     }
   }
 
+  const handleViewReminderPdf = async () => {
+    try {
+      const blob = await downloadReminderPdf(id!)
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    } catch {
+      toast.error('Fehler beim Öffnen der Mahnungs-PDF.')
+    }
+  }
+
   if (!invoice) {
     return <div className="text-text-muted py-12 text-center">Laden...</div>
   }
@@ -189,6 +209,9 @@ export default function InvoiceDetail() {
           </button>
           {invoice.pdf_path && (
             <>
+              <button onClick={handleViewPdf} className="btn-primary text-sm">
+                PDF anzeigen
+              </button>
               <button onClick={handleDownloadPdf} className="btn-secondary text-sm">
                 PDF herunterladen
               </button>
@@ -233,6 +256,9 @@ export default function InvoiceDetail() {
           )}
           {invoice.reminder_pdf_path && (
             <>
+              <button onClick={handleViewReminderPdf} className="btn-primary text-sm">
+                Mahnungs-PDF anzeigen
+              </button>
               <button onClick={handleDownloadReminderPdf} className="btn-secondary text-sm">
                 Mahnungs-PDF herunterladen
               </button>
