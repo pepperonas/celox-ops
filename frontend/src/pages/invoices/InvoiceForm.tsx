@@ -27,7 +27,7 @@ const emptyForm: InvoiceCreate = {
   positions: [{ ...emptyPosition }],
   tax_rate: 19,
   invoice_date: new Date().toISOString().split('T')[0],
-  due_date: '',
+  due_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
   notes: '',
   token_usage_from: null,
   token_usage_to: null,
