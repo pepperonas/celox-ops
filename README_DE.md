@@ -50,6 +50,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Professionelle A4-Rechnungs-PDFs mit anpassbarem Branding
 - Generiert mit **WeasyPrint** und Jinja2-Templates
 - Beinhaltet: Absender, Empfänger, Positionen, Summen, Bankdaten, Steuerinfo
+- **Unterschrift** als eingebettetes Bild (Base64, konfigurierbarer Pfad)
+- **Zahlungsoptionen**: Banküberweisung (IBAN/BIC) und PayPal (konfigurierbar)
+- **Steuernummer** im Footer (gemäß § 14 Abs. 4 UStG)
 - Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
 
 ### KI-Nutzungstracking (Token Tracker Integration)
@@ -322,9 +325,11 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `BUSINESS_ADDRESS` | Adresse (PDFs) | `Straße, PLZ Ort` |
 | `BUSINESS_EMAIL` | E-Mail (PDFs) | `info@beispiel.de` |
 | `BUSINESS_TAX_ID` | USt-IdNr. | `DE...` |
-| `BUSINESS_BANK_*` | Bankdaten (IBAN, BIC) | für Rechnungs-PDF |
+| `BUSINESS_BANK_*` | Bankdaten (IBAN, BIC, Name) | für Rechnungs-PDF |
+| `BUSINESS_PAYPAL` | PayPal-Adresse (optional) | `du@example.com` |
 | `KLEINUNTERNEHMER` | Kleinunternehmerregelung | `true` / `false` |
 | `PDF_STORAGE_PATH` | PDF-Speicherpfad | `/data/invoices` |
+| `SIGNATURE_PATH` | Pfad zum Unterschrift-Bild (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-Zeichen-Hex) |
 

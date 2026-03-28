@@ -50,6 +50,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Professional A4 invoice PDFs with customizable branding
 - Generated via **WeasyPrint** with Jinja2 templates
 - Includes: sender, recipient, line items, totals, bank details, tax info
+- **Signature image** embedded (base64, configurable path)
+- **Payment options**: bank transfer (IBAN/BIC) and PayPal (configurable)
+- **Tax number** in footer (Steuernummer, as required by German tax law)
 - Optional **AI usage report** attachment with selectable date range
 
 ### AI Usage Tracking (Token Tracker Integration)
@@ -318,9 +321,11 @@ Active working time is calculated from message timestamps: intervals between con
 | `BUSINESS_ADDRESS` | Address (PDFs) | `Street, ZIP City` |
 | `BUSINESS_EMAIL` | Email (PDFs) | `info@example.com` |
 | `BUSINESS_TAX_ID` | VAT ID | `DE...` |
-| `BUSINESS_BANK_*` | Bank details (IBAN, BIC) | for invoice PDF |
+| `BUSINESS_BANK_*` | Bank details (IBAN, BIC, name) | for invoice PDF |
+| `BUSINESS_PAYPAL` | PayPal address (optional) | `you@example.com` |
 | `KLEINUNTERNEHMER` | Small business exemption | `true` / `false` |
 | `PDF_STORAGE_PATH` | PDF storage path | `/data/invoices` |
+| `SIGNATURE_PATH` | Signature image path (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
 
