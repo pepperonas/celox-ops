@@ -26,6 +26,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Status-Workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (oder Storniert)
 - Farbcodierte Status-Badges
 - Optionale Felder für Betrag, Stundensatz und Zeitraum
+- **Angebots-PDF** für Aufträge im Status 'Angebot' mit Positionstabelle und Gültigkeitsdatum
+- Optionale Positionstabelle mit dynamischen Zeilen
+- Angebots-PDFs herunterladen und per E-Mail versenden
 
 ### Vertragsverwaltung
 - Vertragstypen: Hosting, Wartung, Support, Sonstige
@@ -46,6 +49,27 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Einzelposition mit Beschreibung und Betrag
 - Automatische Rechnungsnummer, 14 Tage Zahlungsziel
 
+### Wiederkehrende Rechnungen
+- Automatische Entwurfserstellung aus aktiven Verträgen basierend auf Zahlungsturnus
+- Berechnet Fälligkeit aus Turnus + letztem Rechnungsdatum
+- Deutsche Periodenlabel (März 2026, Q1 2026, 1. Halbjahr 2026)
+- Ein-Klick-Generierung über die Aufgabenseite
+- Beträge aus Monatsbetrag × Turnus-Multiplikator
+
+### Mahnwesen
+- Dreistufiges Mahnsystem: Zahlungserinnerung → 1. Mahnung → Letzte Mahnung
+- Professionelle PDF-Vorlagen mit stufenabhängigem Text
+- Mahnstufen-Tracking auf jeder Rechnung
+- Mahnungs-PDFs generieren und herunterladen
+- Mahnungen direkt per E-Mail aus der App versenden
+
+### Zeiterfassung
+- Start/Stop-Timer mit Kundenzuordnung (in localStorage gespeichert)
+- Manuelle Zeiteinträge mit Datum, Stunden, Stundensatz, Beschreibung
+- Zusammenfassung pro Kunde: offene Stunden, Gesamtbetrag, nicht abgerechnete Einträge
+- Filter nach Kunde und Zeitraum
+- Erfassung abrechenbarer Stunden für Nicht-KI-Arbeit (Meetings, Anrufe, Konfiguration)
+
 ### PDF-Generierung
 - Professionelle A4-Rechnungs-PDFs mit anpassbarem Branding
 - Generiert mit **WeasyPrint** und Jinja2-Templates
@@ -54,6 +78,20 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Zahlungsoptionen**: Banküberweisung (IBAN/BIC) und PayPal (konfigurierbar)
 - **Steuernummer** im Footer (gemäß § 14 Abs. 4 UStG)
 - Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
+
+### E-Mail-Versand
+- Rechnungen, Angebote und Mahnungen direkt per SMTP versenden
+- Konfigurierbare SMTP-Einstellungen (Host, Port, TLS, Zugangsdaten)
+- Vorgefüllte Empfänger, Betreff und Nachrichtenvorlagen
+- Wiederverwendbarer E-Mail-Dialog mit bearbeitbaren Feldern
+- PDF wird automatisch angehängt
+
+### Kontakthistorie
+- Kunden-Timeline aller Interaktionen
+- Automatische Protokollierung: Rechnung erstellt, Mahnung gesendet, E-Mail versendet, Auftrag/Vertrag erstellt
+- Manuelle Einträge: Notizen, Anrufe, E-Mails, Meetings
+- Farbcodiert nach Typ mit relativen Zeitangaben
+- Neuer Tab auf der Kundendetailseite
 
 ### KI-Nutzungstracking (Token Tracker Integration)
 - Integration mit [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) über sichere Share-API
@@ -76,6 +114,20 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Score 0-100% mit farbcodiertem Fortschrittsbalken
 - Befunde gruppiert nach Kategorie mit Schweregrad
 - Gesprächsargumente-Panel für Akquise-Anrufe
+
+### Ausgaben
+- 10 Kategorien (Hosting, Domain, Software, Lizenz, Hardware, KI/API, Werbung, Büro, Reise, Sonstige)
+- Wiederkehrend-Kennzeichen
+- Zusammenfassungs-KPIs (Jahres-/Monatstotal, Top-Kategorie)
+
+### EÜR (Einnahmen-Überschuss-Rechnung)
+- Automatische Berechnung aus bezahlten Rechnungen (Einnahmen) minus Ausgaben
+- Jahresauswahl mit Monats- und Quartalsaufschlüsselung
+- Chart.js-Balkendiagramm: Einnahmen vs. Ausgaben pro Monat
+- Quartalskarten mit Einnahmen/Ausgaben/Gewinn
+- Monatliche Detailtabelle mit farbcodiertem Gewinn
+- Ausgabenaufschlüsselung nach Kategorie mit Fortschrittsbalken
+- CSV-Export für Steuerberater
 
 ### Dashboard
 - Umsatz aktueller Monat und Jahr
@@ -101,6 +153,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **GitHub-inspiriertes Dark Theme**
 - Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
 - Responsives Layout mit einklappbarer Seitenleiste
+- Seitenleisten-Navigation: Dashboard, Aufgaben, Zeiterfassung, Kunden, Aufträge, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Einstellungen
 - Einheitliche Status-Badges, Tabellen und Formular-Komponenten
 - Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert
 
@@ -198,6 +251,23 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `POST` | `/api/leads` | Lead anlegen |
 | `PUT` | `/api/leads/{id}` | Lead aktualisieren |
 | `DELETE` | `/api/leads/{id}` | Lead löschen |
+| `POST` | `/api/invoices/generate-recurring` | Wiederkehrende Rechnungen generieren |
+| `POST` | `/api/invoices/{id}/remind` | Zahlungserinnerung senden |
+| `POST` | `/api/invoices/{id}/send-email` | Rechnung per E-Mail senden |
+| `POST` | `/api/invoices/{id}/send-reminder-email` | Mahnung per E-Mail senden |
+| `POST` | `/api/invoices/{id}/generate-reminder-pdf` | Mahnungs-PDF generieren |
+| `GET` | `/api/invoices/{id}/reminder-pdf` | Mahnungs-PDF herunterladen |
+| `GET/POST/PUT/DELETE` | `/api/time-entries` | Zeiteintrag-CRUD |
+| `GET` | `/api/time-entries/summary` | Zeiteintrag-Zusammenfassung |
+| `POST` | `/api/orders/{id}/generate-quote-pdf` | Angebots-PDF generieren |
+| `GET` | `/api/orders/{id}/quote-pdf` | Angebots-PDF herunterladen |
+| `POST` | `/api/orders/{id}/send-quote-email` | Angebot per E-Mail senden |
+| `GET` | `/api/activities?customer_id=` | Kontakthistorie |
+| `POST` | `/api/activities` | Aktivität erstellen |
+| `GET/POST/PUT/DELETE` | `/api/expenses` | Ausgaben-CRUD |
+| `GET` | `/api/expenses/summary` | Ausgaben-Zusammenfassung |
+| `GET` | `/api/euer/overview` | EÜR-Übersicht |
+| `GET` | `/api/euer/export` | EÜR-CSV-Export |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Docs unter `/docs` (Swagger UI).
@@ -332,6 +402,12 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `SIGNATURE_PATH` | Pfad zum Unterschrift-Bild (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-Zeichen-Hex) |
+| `SMTP_HOST` | SMTP-Server | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP-Port | `587` |
+| `SMTP_USER` | SMTP-Benutzername | `user@example.com` |
+| `SMTP_PASSWORD` | SMTP-Passwort | (App-Passwort) |
+| `SMTP_FROM_EMAIL` | Absender-E-Mail | `info@example.com` |
+| `SMTP_FROM_NAME` | Absendername | `Ihre Firma` |
 
 **Sicherheitshinweise:**
 - `.env` niemals committen — ist in `.gitignore` eingetragen
@@ -363,8 +439,15 @@ celox-ops/
 │       ├── auth.py             # JWT-Login, Token-Validierung
 │       ├── models/             # SQLAlchemy 2.0 Mapped Models
 │       │   ├── ...
-│       │   └── lead.py         # Lead-Modell
+│       │   ├── lead.py         # Lead-Modell
+│       │   ├── time_entry.py   # Zeiteintrag-Modell
+│       │   ├── activity.py     # Aktivitätsprotokoll-Modell
+│       │   └── expense.py      # Ausgaben-Modell
 │       ├── schemas/            # Pydantic v2 Request/Response Schemas
+│       │   ├── time_entry.py   # Zeiteintrag-Schemas
+│       │   ├── activity.py     # Aktivitätsprotokoll-Schemas
+│       │   ├── expense.py      # Ausgaben-Schemas
+│       │   └── ...
 │       ├── routers/            # API-Endpunkte (alle paginiert)
 │       │   ├── customers.py    # CRUD + Suche + Referenzprüfung
 │       │   ├── orders.py       # CRUD + Status/Kunden-Filter
@@ -373,12 +456,19 @@ celox-ops/
 │       │   ├── dashboard.py    # Aggregierte KPIs
 │       │   ├── leads.py         # Lead-CRUD + Suche + Status-Filter
 │       │   ├── tasks.py         # Aggregierte Aufgabenliste
+│       │   ├── time_entries.py  # Zeiteintrag-CRUD + Zusammenfassung
+│       │   ├── activities.py   # Aktivitätsprotokoll-Endpunkte
+│       │   ├── expenses.py     # Ausgaben-CRUD + Zusammenfassung
+│       │   ├── euer.py         # EÜR-Übersicht + CSV-Export
 │       │   └── token_tracker.py # Token Tracker Share-API-Proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
-│       │   └── pdf_service.py      # WeasyPrint + Jinja2 + KI-Bericht
+│       │   ├── pdf_service.py      # WeasyPrint + Jinja2 + KI-Bericht
+│       │   └── email_service.py    # SMTP-E-Mail-Versand
 │       └── templates/
-│           └── invoice.html    # A4-Rechnungs-PDF-Template
+│           ├── invoice.html    # A4-Rechnungs-PDF-Template
+│           ├── reminder.html   # Mahnungs-PDF-Template
+│           └── quote.html      # Angebots-PDF-Template
 │
 ├── frontend/
 │   ├── Dockerfile              # Multi-Stage: Build → Nginx
@@ -387,21 +477,30 @@ celox-ops/
 │   └── src/
 │       ├── App.tsx             # Routing
 │       ├── api/                # Axios API-Client + CRUD-Funktionen
+│       │   ├── timeEntries.ts  # Zeiteintrag-API
+│       │   ├── activities.ts   # Aktivitätsprotokoll-API
+│       │   ├── expenses.ts     # Ausgaben-API
+│       │   ├── euer.ts         # EÜR-API
+│       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Seitenleiste + Header
 │       │   ├── DataTable.tsx   # Sortierbar, paginiert
 │       │   ├── TokenUsage.tsx  # KI-Nutzungs-Dashboard (Diagramme, KPIs, Export)
+│       │   ├── EmailDialog.tsx # Wiederverwendbarer E-Mail-Dialog
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
 │       │   ├── Settings.tsx
+│       │   ├── Tasks.tsx       # Aggregierte Aufgabenansicht
+│       │   ├── TimeTracking.tsx # Zeiterfassungsseite
+│       │   ├── Euer.tsx        # EÜR-Übersichtsseite
 │       │   ├── customers/      # Liste, Formular, Detail
 │       │   ├── orders/         # Liste, Formular, Detail
 │       │   ├── contracts/      # Liste, Formular, Detail
 │       │   ├── invoices/       # Liste, Formular, Detail
-│       │   ├── leads/         # Liste, Formular
-│       │   └── Tasks.tsx      # Aggregierte Aufgabenansicht
+│       │   ├── leads/          # Liste, Formular
+│       │   └── expenses/       # Liste, Formular
 │       └── utils/
 │           ├── formatters.ts   # Datum (DD.MM.YYYY), Währung (1.234,56 EUR)
 │           └── validators.ts

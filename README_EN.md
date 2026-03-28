@@ -26,6 +26,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Status workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (or Storniert)
 - Color-coded status badges
 - Optional fields for amount, hourly rate, and time period
+- **Quote PDF generation** for orders in status 'Angebot' with positions table and validity date
+- Optional positions table with dynamic line items
+- Download and email quote PDFs
 
 ### Contract Management
 - Contract types: Hosting, Wartung (Maintenance), Support, Sonstige (Other)
@@ -46,6 +49,27 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Single line item with description and amount
 - Auto invoice number, 14-day payment term
 
+### Recurring Invoices
+- Auto-generate draft invoices from active contracts based on billing cycle
+- Calculates due dates from billing_cycle + last_invoiced_date
+- German period labels (März 2026, Q1 2026, 1. Halbjahr 2026)
+- One-click generation from Tasks page
+- Amounts calculated from monthly_amount × cycle multiplier
+
+### Dunning System (Mahnwesen)
+- Three-level reminder workflow: Zahlungserinnerung → 1. Mahnung → Letzte Mahnung
+- Professional PDF templates with level-dependent text
+- Reminder level tracking on each invoice
+- Generate and download reminder PDFs
+- Send reminders via email directly from the app
+
+### Time Tracking (Zeiterfassung)
+- Start/stop timer with customer assignment (persisted in localStorage)
+- Manual time entries with date, hours, hourly rate, description
+- Per-customer summary: open hours, total amount, uninvoiced entries
+- Filter by customer and date range
+- Track billable hours for non-AI work (meetings, calls, configuration)
+
 ### PDF Generation
 - Professional A4 invoice PDFs with customizable branding
 - Generated via **WeasyPrint** with Jinja2 templates
@@ -54,6 +78,20 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Payment options**: bank transfer (IBAN/BIC) and PayPal (configurable)
 - **Tax number** in footer (Steuernummer, as required by German tax law)
 - Optional **AI usage report** attachment with selectable date range
+
+### Email Sending
+- Send invoices, quotes, and reminders directly via SMTP
+- Configurable SMTP settings (host, port, TLS, credentials)
+- Pre-filled recipient, subject, and message templates
+- Reusable email dialog with editable fields
+- PDF automatically attached
+
+### Activity Log (Kontakthistorie)
+- Per-customer timeline of all interactions
+- Automatic logging: invoice created, reminder sent, email sent, order/contract created
+- Manual entries: notes, calls, emails, meetings
+- Color-coded by type with relative timestamps
+- New tab on customer detail page
 
 ### AI Usage Tracking (Token Tracker Integration)
 - Integration with [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) via secure Share API
@@ -76,6 +114,20 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Score 0-100% with color-coded progress bar
 - Findings grouped by category with severity levels
 - Quick arguments panel for sales calls
+
+### Expenses
+- 10 categories (Hosting, Domain, Software, License, Hardware, AI/API, Advertising, Office, Travel, Other)
+- Recurring expense flag
+- Summary KPIs (yearly/monthly total, top category)
+
+### Income Statement (EÜR)
+- Automatic calculation from paid invoices (revenue) minus expenses
+- Year selector with monthly and quarterly breakdown
+- Chart.js bar chart: revenue vs expenses per month
+- Quarterly cards with revenue/expenses/profit
+- Monthly detail table with color-coded profit
+- Expense breakdown by category with progress bars
+- CSV export for tax advisor
 
 ### Dashboard
 - Revenue current month and year
@@ -101,6 +153,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **GitHub-inspired dark theme**
 - Color palette: `#0d1117` (background), `#161b22` (surfaces), `#58a6ff` (accent)
 - Responsive layout with collapsible sidebar
+- Sidebar navigation: Dashboard, Aufgaben, Zeiterfassung, Kunden, Aufträge, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Einstellungen
 - Consistent status badges, tables, and form components
 - Tab state persisted in URL hash across page refreshes
 
@@ -198,6 +251,23 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `POST` | `/api/leads` | Create lead |
 | `PUT` | `/api/leads/{id}` | Update lead |
 | `DELETE` | `/api/leads/{id}` | Delete lead |
+| `POST` | `/api/invoices/generate-recurring` | Generate recurring invoices |
+| `POST` | `/api/invoices/{id}/remind` | Send payment reminder |
+| `POST` | `/api/invoices/{id}/send-email` | Send invoice via email |
+| `POST` | `/api/invoices/{id}/send-reminder-email` | Send reminder via email |
+| `POST` | `/api/invoices/{id}/generate-reminder-pdf` | Generate reminder PDF |
+| `GET` | `/api/invoices/{id}/reminder-pdf` | Download reminder PDF |
+| `GET/POST/PUT/DELETE` | `/api/time-entries` | Time entry CRUD |
+| `GET` | `/api/time-entries/summary` | Time entry summary |
+| `POST` | `/api/orders/{id}/generate-quote-pdf` | Generate quote PDF |
+| `GET` | `/api/orders/{id}/quote-pdf` | Download quote PDF |
+| `POST` | `/api/orders/{id}/send-quote-email` | Send quote via email |
+| `GET` | `/api/activities?customer_id=` | Activity log |
+| `POST` | `/api/activities` | Create activity |
+| `GET/POST/PUT/DELETE` | `/api/expenses` | Expense CRUD |
+| `GET` | `/api/expenses/summary` | Expense summary |
+| `GET` | `/api/euer/overview` | EÜR overview |
+| `GET` | `/api/euer/export` | EÜR CSV export |
 | `GET` | `/api/health` | Health check |
 
 Interactive API docs at `/docs` (Swagger UI).
@@ -328,6 +398,12 @@ Active working time is calculated from message timestamps: intervals between con
 | `SIGNATURE_PATH` | Signature image path (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
+| `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP port | `587` |
+| `SMTP_USER` | SMTP username | `user@example.com` |
+| `SMTP_PASSWORD` | SMTP password | (app password) |
+| `SMTP_FROM_EMAIL` | Sender email | `info@example.com` |
+| `SMTP_FROM_NAME` | Sender name | `Your Company` |
 
 **Security notes:**
 - Never commit `.env` — it is in `.gitignore`
@@ -359,8 +435,15 @@ OPS/
 │       ├── auth.py             # JWT login, token validation
 │       ├── models/             # SQLAlchemy 2.0 Mapped models
 │       │   ├── ...
-│       │   └── lead.py         # Lead model
+│       │   ├── lead.py         # Lead model
+│       │   ├── time_entry.py   # Time entry model
+│       │   ├── activity.py     # Activity log model
+│       │   └── expense.py      # Expense model
 │       ├── schemas/            # Pydantic v2 request/response schemas
+│       │   ├── time_entry.py   # Time entry schemas
+│       │   ├── activity.py     # Activity log schemas
+│       │   ├── expense.py      # Expense schemas
+│       │   └── ...
 │       ├── routers/            # API endpoints (all paginated)
 │       │   ├── customers.py    # CRUD + search + reference check
 │       │   ├── orders.py       # CRUD + status/customer filter
@@ -369,12 +452,19 @@ OPS/
 │       │   ├── dashboard.py    # Aggregated KPIs
 │       │   ├── leads.py         # Lead CRUD + search + status filter
 │       │   ├── tasks.py         # Aggregated task list
+│       │   ├── time_entries.py  # Time entry CRUD + summary
+│       │   ├── activities.py   # Activity log endpoints
+│       │   ├── expenses.py     # Expense CRUD + summary
+│       │   ├── euer.py         # EÜR overview + CSV export
 │       │   └── token_tracker.py # Token Tracker share API proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
-│       │   └── pdf_service.py      # WeasyPrint + Jinja2 + AI report
+│       │   ├── pdf_service.py      # WeasyPrint + Jinja2 + AI report
+│       │   └── email_service.py    # SMTP email sending
 │       └── templates/
-│           └── invoice.html    # A4 invoice PDF template
+│           ├── invoice.html    # A4 invoice PDF template
+│           ├── reminder.html   # Reminder/dunning PDF template
+│           └── quote.html      # Quote PDF template
 │
 ├── frontend/
 │   ├── Dockerfile              # Multi-stage: build → Nginx
@@ -383,21 +473,30 @@ OPS/
 │   └── src/
 │       ├── App.tsx             # Routing
 │       ├── api/                # Axios API client + CRUD functions
+│       │   ├── timeEntries.ts  # Time entry API
+│       │   ├── activities.ts   # Activity log API
+│       │   ├── expenses.ts     # Expense API
+│       │   ├── euer.ts         # EÜR API
+│       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Sidebar + header
 │       │   ├── DataTable.tsx   # Sortable, paginated
 │       │   ├── TokenUsage.tsx  # AI usage dashboard (charts, KPIs, export)
+│       │   ├── EmailDialog.tsx # Reusable email sending dialog
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
 │       │   ├── Settings.tsx
+│       │   ├── Tasks.tsx       # Aggregated task view
+│       │   ├── TimeTracking.tsx # Time tracking page
+│       │   ├── Euer.tsx        # EÜR overview page
 │       │   ├── customers/      # List, form, detail
 │       │   ├── orders/         # List, form, detail
 │       │   ├── contracts/      # List, form, detail
 │       │   ├── invoices/       # List, form, detail
-│       │   ├── leads/         # List, form
-│       │   └── Tasks.tsx      # Aggregated task view
+│       │   ├── leads/          # List, form
+│       │   └── expenses/       # List, form
 │       └── utils/
 │           ├── formatters.ts   # Date (DD.MM.YYYY), currency (1.234,56 EUR)
 │           └── validators.ts
