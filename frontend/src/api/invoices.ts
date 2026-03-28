@@ -32,7 +32,7 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 export async function generatePdf(id: string): Promise<{ pdf_path: string }> {
-  const response = await api.post(`/invoices/${id}/pdf`)
+  const response = await api.post(`/invoices/${id}/generate-pdf`)
   return response.data
 }
 
