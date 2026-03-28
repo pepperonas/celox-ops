@@ -56,6 +56,14 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - One-click generation from Tasks page
 - Amounts calculated from monthly_amount × cycle multiplier
 
+### AI Time Import
+- Import active AI working time and API costs directly into invoice line items
+- Configurable hourly rate (default 95 €/h)
+- Selectable date range for the import period
+- Auto-creates two positions: work hours × rate + API costs as flat fee
+- Only visible when customer has Token Tracker linked
+- Automatically sets the AI usage report attachment period
+
 ### Dunning System (Mahnwesen)
 - Three-level reminder workflow: Zahlungserinnerung → 1. Mahnung → Letzte Mahnung
 - Professional PDF templates with level-dependent text
@@ -78,6 +86,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Payment options**: bank transfer (IBAN/BIC) and PayPal (configurable)
 - **Tax number** in footer (Steuernummer, as required by German tax law)
 - Optional **AI usage report** attachment with selectable date range
+- **In-browser PDF viewer** — view invoices, quotes, and reminders directly in a new tab
+- Default period for AI usage report: 1st of current month to today
 
 ### Email Sending
 - Send invoices, quotes, and reminders directly via SMTP
@@ -148,6 +158,12 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Settings
 - Token Tracker connection status
 - Configuration guide for Token Tracker integration
+
+### Smart Autocomplete
+- Title fields in invoices and orders suggest ~80 IT consulting services while typing
+- Position descriptions suggest ~80 detailed task descriptions (development, SEO, hosting, security, etc.)
+- Keyboard navigation (arrow keys + Enter), filtered as you type
+- Categories: Website, SEO, Hosting, Development, Consulting, Maintenance, Security, AI
 
 ### Design
 - **GitHub-inspired dark theme**
@@ -358,7 +374,7 @@ Claude Code → Token Tracker → Share API → celox ops → Customer Dashboard
 
 1. **Token Tracker**: Go to Settings → Share API → copy the Admin Key
 2. **celox ops `.env`**: Set `TOKEN_TRACKER_BASE_URL` and `TOKEN_TRACKER_ADMIN_KEY`
-3. **Link project**: Customer → Edit → "Projekt verknuepfen" → select project
+3. **Link project**: Customer → Edit → "Projekt verknüpfen" → select project
 
 ### Security
 
@@ -483,6 +499,7 @@ OPS/
 │       │   ├── DataTable.tsx   # Sortable, paginated
 │       │   ├── TokenUsage.tsx  # AI usage dashboard (charts, KPIs, export)
 │       │   ├── EmailDialog.tsx # Reusable email sending dialog
+│       │   ├── AutocompleteInput.tsx # Smart autocomplete for titles/descriptions
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx

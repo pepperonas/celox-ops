@@ -56,6 +56,14 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Ein-Klick-Generierung über die Aufgabenseite
 - Beträge aus Monatsbetrag × Turnus-Multiplikator
 
+### KI-Arbeitszeit importieren
+- Aktive KI-Arbeitszeit und API-Kosten direkt als Rechnungspositionen importieren
+- Konfigurierbarer Stundensatz (Standard 95 €/h)
+- Wählbarer Zeitraum für den Import
+- Erstellt automatisch zwei Positionen: Arbeitsstunden × Satz + API-Kosten pauschal
+- Nur sichtbar wenn Kunde Token Tracker verknüpft hat
+- Setzt automatisch den Zeitraum für den KI-Nutzungsbericht-Anhang
+
 ### Mahnwesen
 - Dreistufiges Mahnsystem: Zahlungserinnerung → 1. Mahnung → Letzte Mahnung
 - Professionelle PDF-Vorlagen mit stufenabhängigem Text
@@ -78,6 +86,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Zahlungsoptionen**: Banküberweisung (IBAN/BIC) und PayPal (konfigurierbar)
 - **Steuernummer** im Footer (gemäß § 14 Abs. 4 UStG)
 - Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
+- **PDF-Anzeige im Browser** — Rechnungen, Angebote und Mahnungen direkt in neuem Tab anzeigen
+- Standard-Zeitraum für KI-Nutzungsbericht: 1. des Monats bis heute
 
 ### E-Mail-Versand
 - Rechnungen, Angebote und Mahnungen direkt per SMTP versenden
@@ -148,6 +158,12 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### Einstellungen
 - Token Tracker Verbindungsstatus
 - Konfigurationsanleitung für Token Tracker Integration
+
+### Intelligente Autovervollständigung
+- Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
+- Positionsbeschreibungen schlagen ~80 detaillierte Tätigkeitsbeschreibungen vor (Entwicklung, SEO, Hosting, Sicherheit, etc.)
+- Tastaturnavigation (Pfeiltasten + Enter), gefiltert während der Eingabe
+- Kategorien: Website, SEO, Hosting, Entwicklung, Beratung, Wartung, Sicherheit, KI
 
 ### Design
 - **GitHub-inspiriertes Dark Theme**
@@ -328,7 +344,7 @@ docker compose up -d --build
 
 ## Besser zusammen: Token Tracker Integration
 
-celox ops und der [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) bilden ein vollständiges Consulting-Toolkit. OPS uebernimmt die Geschäftsseite (Kunden, Rechnungen, Verträge), während der Token Tracker die KI-Entwicklungsmetriken erfasst (Sitzungen, Tokens, Kosten, Code-Output).
+celox ops und der [Claude Token Tracker](https://github.com/pepperonas/claude-token-tracker) bilden ein vollständiges Consulting-Toolkit. OPS übernimmt die Geschäftsseite (Kunden, Rechnungen, Verträge), während der Token Tracker die KI-Entwicklungsmetriken erfasst (Sitzungen, Tokens, Kosten, Code-Output).
 
 ### Was diese Kombination einzigartig macht
 
@@ -376,7 +392,7 @@ Claude Code → Token Tracker → Share API → celox ops → Kunden-Dashboard +
 
 ### Aktive Zeiterfassung
 
-Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zwischen aufeinanderfolgenden KI-Interaktionen werden summiert, wobei Lücken > 5 Minuten als inaktiv zaehlen. Das ergibt realistische Arbeitszeiten (z.B. "5h 15min" statt "194h Sitzungsdauer").
+Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zwischen aufeinanderfolgenden KI-Interaktionen werden summiert, wobei Lücken > 5 Minuten als inaktiv zählen. Das ergibt realistische Arbeitszeiten (z.B. "5h 15min" statt "194h Sitzungsdauer").
 
 ---
 
@@ -487,6 +503,7 @@ celox-ops/
 │       │   ├── DataTable.tsx   # Sortierbar, paginiert
 │       │   ├── TokenUsage.tsx  # KI-Nutzungs-Dashboard (Diagramme, KPIs, Export)
 │       │   ├── EmailDialog.tsx # Wiederverwendbarer E-Mail-Dialog
+│       │   ├── AutocompleteInput.tsx # Intelligente Autovervollständigung für Titel/Beschreibungen
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
