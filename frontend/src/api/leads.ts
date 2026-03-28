@@ -29,3 +29,15 @@ export async function updateLead(id: string, data: LeadUpdate): Promise<Lead> {
 export async function deleteLead(id: string): Promise<void> {
   await api.delete(`/leads/${id}`)
 }
+
+export interface AnalyzeResult {
+  score: number
+  findings: { category: string; issue: string; severity: string }[]
+  load_time_ms: number
+  url: string
+}
+
+export async function analyzeWebsite(url: string): Promise<AnalyzeResult> {
+  const response = await api.post('/leads/analyze', { url })
+  return response.data
+}
