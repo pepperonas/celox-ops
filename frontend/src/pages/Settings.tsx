@@ -36,6 +36,27 @@ export default function Settings() {
     setLoading(false)
   }
 
+  const [exporting, setExporting] = useState(false)
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const response = await api.get('/backup/export', { responseType: 'blob' })
+      const url = URL.createObjectURL(response.data)
+      const a = document.createElement('a')
+      a.href = url
+      const disposition = response.headers['content-disposition'] || ''
+      const match = disposition.match(/filename="(.+)"/)
+      a.download = match ? match[1] : 'celox-ops-backup.json'
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Datenbank-Backup heruntergeladen.')
+    } catch {
+      toast.error('Fehler beim Exportieren.')
+    }
+    setExporting(false)
+  }
+
   return (
     <div className="max-w-2xl">
       <h2 className="text-lg font-semibold text-text mb-6">Einstellungen</h2>
@@ -97,6 +118,16 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
             </div>
           </div>
         )}
+      </div>
+      {/* Database Backup */}
+      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-4">Datenbank-Backup</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Exportiert die gesamte Datenbank als JSON-Datei: Kunden, Aufträge, Verträge, Rechnungen, Leads, Zeiteinträge, Ausgaben und Aktivitäten.
+        </p>
+        <button onClick={handleExport} disabled={exporting} className="btn-primary">
+          {exporting ? 'Exportiere...' : 'Datenbank herunterladen'}
+        </button>
       </div>
     </div>
   )
