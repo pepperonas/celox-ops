@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import axios from 'axios'
 import FormField from '../../components/FormField'
 import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { formatCurrency } from '../../utils/formatters'
-import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract } from '../../types'
+import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
 const emptyPosition: InvoicePosition = {
   position: 1,
@@ -43,6 +44,12 @@ export default function InvoiceForm() {
   const [loading, setLoading] = useState(false)
   const [attachTokenUsage, setAttachTokenUsage] = useState(false)
   const [selectedCustomerHasTracker, setSelectedCustomerHasTracker] = useState(false)
+  const [selectedCustomerTrackerUrl, setSelectedCustomerTrackerUrl] = useState('')
+  const [showAiImport, setShowAiImport] = useState(false)
+  const [aiImportFrom, setAiImportFrom] = useState('')
+  const [aiImportTo, setAiImportTo] = useState(new Date().toISOString().split('T')[0])
+  const [aiHourlyRate, setAiHourlyRate] = useState(95)
+  const [aiImportLoading, setAiImportLoading] = useState(false)
 
   useEffect(() => {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
@@ -76,11 +83,13 @@ export default function InvoiceForm() {
       getContracts({ customer_id: form.customer_id, page_size: 1000 }).then((r) => setContracts(r.items))
       getCustomer(form.customer_id).then((c) => {
         setSelectedCustomerHasTracker(Boolean(c.token_tracker_url))
-      }).catch(() => setSelectedCustomerHasTracker(false))
+        setSelectedCustomerTrackerUrl(c.token_tracker_url || '')
+      }).catch(() => { setSelectedCustomerHasTracker(false); setSelectedCustomerTrackerUrl('') })
     } else {
       setOrders([])
       setContracts([])
       setSelectedCustomerHasTracker(false)
+      setSelectedCustomerTrackerUrl('')
     }
   }, [form.customer_id])
 
@@ -115,6 +124,98 @@ export default function InvoiceForm() {
     if (form.positions.length <= 1) return
     const updated = form.positions.filter((_, i) => i !== index).map((p, i) => ({ ...p, position: i + 1 }))
     setForm({ ...form, positions: updated })
+  }
+
+  const handleAiImport = async () => {
+    if (!selectedCustomerTrackerUrl) return
+    setAiImportLoading(true)
+    try {
+      // Parse URLs from tracker field (supports single URL or JSON array with objects)
+      let urls: string[]
+      try {
+        const parsed = JSON.parse(selectedCustomerTrackerUrl)
+        if (!Array.isArray(parsed)) urls = [selectedCustomerTrackerUrl]
+        else urls = parsed.map((item: string | { url: string }) => typeof item === 'string' ? item : item.url)
+      } catch {
+        urls = [selectedCustomerTrackerUrl]
+      }
+
+      const params = new URLSearchParams()
+      if (aiImportFrom) params.set('from', aiImportFrom)
+      if (aiImportTo) params.set('to', aiImportTo)
+      const paramStr = params.toString()
+
+      // Fetch all URLs and merge
+      const results = await Promise.all(
+        urls.map(u => {
+          const sep = u.includes('?') ? '&' : '?'
+          const url = paramStr ? `${u}${sep}${paramStr}` : u
+          return axios.get<TokenTrackerData>(url).then(r => r.data)
+        })
+      )
+
+      const totalActiveMin = results.reduce((s, r) => s + (r.summary.total_active_min || 0), 0)
+      const totalCost = results.reduce((s, r) => s + (r.summary.total_cost || 0), 0)
+      const totalSessions = results.reduce((s, r) => s + (r.summary.total_sessions || 0), 0)
+      const totalLinesWritten = results.reduce((s, r) => s + (r.summary.lines_written || 0), 0)
+
+      if (totalActiveMin === 0) {
+        toast.error('Keine KI-Arbeitszeit im gewählten Zeitraum.')
+        setAiImportLoading(false)
+        return
+      }
+
+      const hours = Math.round(totalActiveMin / 60 * 100) / 100 // round to 2 decimals
+      const periodFrom = aiImportFrom || 'Beginn'
+      const periodTo = aiImportTo || 'heute'
+
+      const newPositions: InvoicePosition[] = []
+      const nextPos = form.positions.filter(p => p.beschreibung).length + 1
+
+      // Position 1: AI-assisted development hours
+      newPositions.push({
+        position: nextPos,
+        beschreibung: `KI-gestützte Entwicklung (${periodFrom} – ${periodTo})`,
+        menge: hours,
+        einheit: 'Stunden',
+        einzelpreis: aiHourlyRate,
+        gesamt: Math.round(hours * aiHourlyRate * 100) / 100,
+      })
+
+      // Position 2: AI API costs (if > 0)
+      if (totalCost > 0) {
+        const costEur = Math.round(totalCost * 0.92 * 100) / 100
+        newPositions.push({
+          position: nextPos + 1,
+          beschreibung: `KI-API-Kosten (${totalSessions} Sessions, ${totalLinesWritten.toLocaleString('de-DE')} Codezeilen)`,
+          menge: 1,
+          einheit: 'pauschal',
+          einzelpreis: costEur,
+          gesamt: costEur,
+        })
+      }
+
+      // Add to existing positions (replace empty first position if exists)
+      let existingPositions = form.positions.filter(p => p.beschreibung.trim() !== '')
+      const allPositions = [...existingPositions, ...newPositions].map((p, i) => ({
+        ...p,
+        position: i + 1,
+        gesamt: p.menge * p.einzelpreis,
+      }))
+
+      setForm({
+        ...form,
+        positions: allPositions.length > 0 ? allPositions : [{ ...emptyPosition }],
+        token_usage_from: aiImportFrom || null,
+        token_usage_to: aiImportTo || null,
+      })
+
+      setShowAiImport(false)
+      toast.success(`${hours} Stunden KI-Arbeitszeit importiert.`)
+    } catch {
+      toast.error('Fehler beim Laden der KI-Daten.')
+    }
+    setAiImportLoading(false)
   }
 
   const netto = form.positions.reduce((sum, p) => sum + p.menge * p.einzelpreis, 0)
@@ -223,10 +324,45 @@ export default function InvoiceForm() {
         <div className="bg-surface border border-border rounded-[12px] p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Positionen</h3>
-            <button type="button" onClick={addPosition} className="btn-secondary text-sm">
-              Position hinzufügen
-            </button>
+            <div className="flex gap-2">
+              {selectedCustomerHasTracker && (
+                <button type="button" onClick={() => setShowAiImport(!showAiImport)} className="btn-primary !text-xs !py-1.5 !px-3">
+                  KI-Arbeitszeit importieren
+                </button>
+              )}
+              <button type="button" onClick={addPosition} className="btn-secondary text-sm">
+                Position hinzufügen
+              </button>
+            </div>
           </div>
+
+          {/* AI Import Panel */}
+          {showAiImport && (
+            <div className="bg-surface-2 border border-accent/30 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-medium text-accent mb-3">KI-Arbeitszeit aus Token Tracker importieren</h4>
+              <p className="text-xs text-text-muted mb-3">Importiert die aktive KI-Arbeitszeit und API-Kosten als Rechnungspositionen.</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Von</label>
+                  <input type="date" value={aiImportFrom} onChange={e => setAiImportFrom(e.target.value)} className="w-full !py-1.5 !text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Bis</label>
+                  <input type="date" value={aiImportTo} onChange={e => setAiImportTo(e.target.value)} className="w-full !py-1.5 !text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Stundensatz (€)</label>
+                  <input type="number" value={aiHourlyRate} onChange={e => setAiHourlyRate(parseFloat(e.target.value) || 0)} min="0" step="5" className="w-full !py-1.5 !text-sm" />
+                </div>
+                <div className="flex items-end">
+                  <button type="button" onClick={handleAiImport} disabled={aiImportLoading} className="btn-primary w-full !py-1.5 !text-sm">
+                    {aiImportLoading ? 'Laden...' : 'Importieren'}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[11px] text-text-muted">Erstellt zwei Positionen: Arbeitszeit (Stunden × Satz) + KI-API-Kosten (pauschal). Der KI-Nutzungsbericht kann optional als PDF-Anhang beigefügt werden.</p>
+            </div>
+          )}
 
           <div className="space-y-3">
             {/* Header */}
