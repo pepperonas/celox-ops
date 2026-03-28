@@ -30,6 +30,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### Vertragsverwaltung
 - Vertragstypen: Hosting, Wartung, Support, Sonstige
 - Automatische Verlängerung mit konfigurierbarer Kündigungsfrist
+- Konfigurierbarer Zahlungsturnus (monatlich, quartalsweise, halbjährlich, jährlich)
 - Monatliche Betragserfassung
 
 ### Rechnungen
@@ -68,12 +69,26 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Potenzielle Kunden und Websites für Akquise vormerken
 - Einfache Liste mit URL (Pflicht), Name, Firma, E-Mail, Telefon, Notizen und Status-Workflow (Neu → Kontaktiert → Interessiert → Abgelehnt)
 - Volltextsuche über alle Felder
+- Integrierte Website-Qualitätsanalyse (SSL, Ladezeit, Mobile, SEO, Barrierefreiheit, Sicherheits-Header)
+- Score 0-100% mit farbcodiertem Fortschrittsbalken
+- Befunde gruppiert nach Kategorie mit Schweregrad
+- Gesprächsargumente-Panel für Akquise-Anrufe
 
 ### Dashboard
 - Umsatz aktueller Monat und Jahr
 - Offene Rechnungen (Anzahl + Gesamtbetrag)
 - Überfällige Rechnungen (hervorgehoben)
 - Aktive Verträge (Anzahl + monatliche Summe)
+
+### Aufgaben
+- Aggregierte Aufgabenliste anstehender Aktionen
+- Überfällige Rechnungen (kritische Priorität)
+- Rechnungen fällig innerhalb 30 Tagen
+- Rechnungsentwürfe noch nicht gestellt
+- Verträge laufen innerhalb 60 Tagen aus
+- Aktive Aufträge in Bearbeitung
+- Farbcodiert nach Priorität (kritisch/Warnung/Info)
+- Klick führt zur jeweiligen Detailseite
 
 ### Einstellungen
 - Token Tracker Verbindungsstatus
@@ -172,6 +187,7 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/invoices/{id}/pdf` | PDF herunterladen |
 | `DELETE` | `/api/invoices/{id}` | Löschen (nur Entwürfe) |
 | `GET` | `/api/dashboard/stats` | Dashboard-KPIs |
+| `GET` | `/api/tasks` | Aggregierte Aufgabenliste |
 | `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |
 | `GET/POST` | `/api/token-tracker/shares` | Share-Tokens verwalten |
 | `DELETE` | `/api/token-tracker/shares/{id}` | Share widerrufen |
@@ -349,6 +365,7 @@ celox-ops/
 │       │   ├── invoices.py     # CRUD + PDF + Status + Schnellrechnung
 │       │   ├── dashboard.py    # Aggregierte KPIs
 │       │   ├── leads.py         # Lead-CRUD + Suche + Status-Filter
+│       │   ├── tasks.py         # Aggregierte Aufgabenliste
 │       │   └── token_tracker.py # Token Tracker Share-API-Proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
@@ -376,7 +393,8 @@ celox-ops/
 │       │   ├── orders/         # Liste, Formular, Detail
 │       │   ├── contracts/      # Liste, Formular, Detail
 │       │   ├── invoices/       # Liste, Formular, Detail
-│       │   └── leads/         # Liste, Formular
+│       │   ├── leads/         # Liste, Formular
+│       │   └── Tasks.tsx      # Aggregierte Aufgabenansicht
 │       └── utils/
 │           ├── formatters.ts   # Datum (DD.MM.YYYY), Währung (1.234,56 EUR)
 │           └── validators.ts

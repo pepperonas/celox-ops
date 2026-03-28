@@ -28,6 +28,13 @@ class ContractType(str, enum.Enum):
     sonstige = "sonstige"
 
 
+class BillingCycle(str, enum.Enum):
+    monatlich = "monatlich"
+    quartalsweise = "quartalsweise"
+    halbjaehrlich = "halbjaehrlich"
+    jaehrlich = "jaehrlich"
+
+
 class ContractStatus(str, enum.Enum):
     aktiv = "aktiv"
     gekuendigt = "gekuendigt"
@@ -50,6 +57,9 @@ class Contract(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     monthly_amount: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), nullable=False
+    )
+    billing_cycle: Mapped[BillingCycle] = mapped_column(
+        Enum(BillingCycle), default=BillingCycle.monatlich, nullable=False
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)

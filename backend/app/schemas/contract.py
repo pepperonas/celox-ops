@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.contract import ContractStatus, ContractType
+from app.models.contract import BillingCycle, ContractStatus, ContractType
 
 
 class ContractBase(BaseModel):
@@ -13,6 +13,7 @@ class ContractBase(BaseModel):
     type: ContractType
     description: str | None = None
     monthly_amount: Decimal
+    billing_cycle: BillingCycle = BillingCycle.monatlich
     start_date: date
     end_date: date | None = None
     auto_renew: bool = True
@@ -30,6 +31,7 @@ class ContractUpdate(BaseModel):
     type: ContractType | None = None
     description: str | None = None
     monthly_amount: Decimal | None = None
+    billing_cycle: BillingCycle | None = None
     start_date: date | None = None
     end_date: date | None = None
     auto_renew: bool | None = None

@@ -30,6 +30,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Contract Management
 - Contract types: Hosting, Wartung (Maintenance), Support, Sonstige (Other)
 - Auto-renewal with configurable notice period
+- Configurable billing cycle (monthly, quarterly, semi-annual, annual)
 - Monthly amount tracking
 
 ### Invoices
@@ -68,12 +69,26 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Track potential clients and websites for outreach
 - Simple list with URL (required), name, company, email, phone, notes, and status workflow (Neu → Kontaktiert → Interessiert → Abgelehnt)
 - Full-text search across all fields
+- Built-in website quality analyzer (SSL, load time, mobile, SEO, accessibility, security headers)
+- Score 0-100% with color-coded progress bar
+- Findings grouped by category with severity levels
+- Quick arguments panel for sales calls
 
 ### Dashboard
 - Revenue current month and year
 - Open invoices (count + total)
 - Overdue invoices (highlighted)
 - Active contracts (count + monthly sum)
+
+### Tasks (Aufgaben)
+- Aggregated todo list of upcoming actions
+- Overdue invoices (critical priority)
+- Invoices due within 30 days
+- Draft invoices not yet sent
+- Contracts expiring within 60 days
+- Active orders in progress
+- Color-coded by priority (critical/warning/info)
+- Click-through to relevant detail pages
 
 ### Settings
 - Token Tracker connection status
@@ -172,6 +187,7 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/invoices/{id}/pdf` | Download PDF |
 | `DELETE` | `/api/invoices/{id}` | Delete (drafts only) |
 | `GET` | `/api/dashboard/stats` | Dashboard KPIs |
+| `GET` | `/api/tasks` | Aggregated task list |
 | `GET` | `/api/token-tracker/projects` | Projects from Token Tracker |
 | `GET/POST` | `/api/token-tracker/shares` | Manage share tokens |
 | `DELETE` | `/api/token-tracker/shares/{id}` | Revoke share |
@@ -345,6 +361,7 @@ OPS/
 │       │   ├── invoices.py     # CRUD + PDF + status + quick invoice
 │       │   ├── dashboard.py    # Aggregated KPIs
 │       │   ├── leads.py         # Lead CRUD + search + status filter
+│       │   ├── tasks.py         # Aggregated task list
 │       │   └── token_tracker.py # Token Tracker share API proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
@@ -372,7 +389,8 @@ OPS/
 │       │   ├── orders/         # List, form, detail
 │       │   ├── contracts/      # List, form, detail
 │       │   ├── invoices/       # List, form, detail
-│       │   └── leads/         # List, form
+│       │   ├── leads/         # List, form
+│       │   └── Tasks.tsx      # Aggregated task view
 │       └── utils/
 │           ├── formatters.ts   # Date (DD.MM.YYYY), currency (1.234,56 EUR)
 │           └── validators.ts

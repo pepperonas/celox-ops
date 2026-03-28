@@ -19,6 +19,13 @@ const statusOptions = [
   { value: 'ausgelaufen', label: 'Ausgelaufen' },
 ]
 
+const billingCycleOptions = [
+  { value: 'monatlich', label: 'Monatlich' },
+  { value: 'quartalsweise', label: 'Quartalsweise' },
+  { value: 'halbjaehrlich', label: 'Halbjährlich' },
+  { value: 'jaehrlich', label: 'Jährlich' },
+]
+
 const emptyForm: ContractCreate = {
   customer_id: '',
   title: '',
@@ -26,6 +33,7 @@ const emptyForm: ContractCreate = {
   type: 'hosting',
   status: 'aktiv',
   monthly_amount: 0,
+  billing_cycle: 'monatlich',
   start_date: '',
   end_date: '',
   auto_renew: true,
@@ -51,6 +59,7 @@ export default function ContractForm() {
           type: c.type,
           status: c.status,
           monthly_amount: c.monthly_amount,
+          billing_cycle: c.billing_cycle || 'monatlich',
           start_date: c.start_date?.split('T')[0] || '',
           end_date: c.end_date?.split('T')[0] || '',
           auto_renew: c.auto_renew,
@@ -141,15 +150,25 @@ export default function ContractForm() {
             options={statusOptions}
           />
         </div>
-        <FormField
-          label="Monatlicher Betrag"
-          name="monthly_amount"
-          type="number"
-          value={form.monthly_amount || 0}
-          onChange={handleChange}
-          step="0.01"
-          min={0}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            label="Monatlicher Betrag"
+            name="monthly_amount"
+            type="number"
+            value={form.monthly_amount || 0}
+            onChange={handleChange}
+            step="0.01"
+            min={0}
+          />
+          <FormField
+            label="Zahlungsturnus"
+            name="billing_cycle"
+            type="select"
+            value={form.billing_cycle || 'monatlich'}
+            onChange={handleChange}
+            options={billingCycleOptions}
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Startdatum"

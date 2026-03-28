@@ -20,6 +20,7 @@ import InvoiceForm from './pages/invoices/InvoiceForm'
 import InvoiceDetail from './pages/invoices/InvoiceDetail'
 import LeadList from './pages/leads/LeadList'
 import LeadForm from './pages/leads/LeadForm'
+import Tasks from './pages/Tasks'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kunden" element={<CustomerList />} />
           <Route path="/kunden/neu" element={<CustomerForm />} />
           <Route path="/kunden/:id" element={<CustomerDetail />} />

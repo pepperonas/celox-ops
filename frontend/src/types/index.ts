@@ -119,6 +119,7 @@ export interface OrderUpdate extends Partial<OrderCreate> {}
 
 export type ContractType = 'hosting' | 'wartung' | 'support' | 'sonstige'
 export type ContractStatus = 'aktiv' | 'gekuendigt' | 'ausgelaufen'
+export type BillingCycle = 'monatlich' | 'quartalsweise' | 'halbjaehrlich' | 'jaehrlich'
 
 export interface Contract {
   id: string
@@ -128,6 +129,7 @@ export interface Contract {
   type: ContractType
   description: string
   monthly_amount: number
+  billing_cycle: string
   start_date: string
   end_date: string
   auto_renew: boolean
@@ -144,6 +146,7 @@ export interface ContractCreate {
   type: ContractType
   status?: ContractStatus
   monthly_amount?: number
+  billing_cycle?: string
   start_date?: string
   end_date?: string
   auto_renew?: boolean
@@ -151,6 +154,16 @@ export interface ContractCreate {
 }
 
 export interface ContractUpdate extends Partial<ContractCreate> {}
+
+export interface Task {
+  type: string
+  priority: 'critical' | 'warning' | 'info'
+  title: string
+  subtitle: string
+  detail: string
+  link: string
+  date: string
+}
 
 export type InvoiceStatus = 'entwurf' | 'gestellt' | 'bezahlt' | 'ueberfaellig' | 'storniert'
 

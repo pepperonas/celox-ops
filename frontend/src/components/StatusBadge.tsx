@@ -24,6 +24,11 @@ const statusColors: Record<string, string> = {
   wartung: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
   support: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
   sonstige: 'bg-surface-2 text-text-muted border border-border',
+  // Billing cycles
+  monatlich: 'bg-surface-2 text-text-muted border border-border',
+  quartalsweise: 'bg-surface-2 text-text-muted border border-border',
+  halbjaehrlich: 'bg-surface-2 text-text-muted border border-border',
+  jaehrlich: 'bg-surface-2 text-text-muted border border-border',
 }
 
 const statusLabels: Record<string, string> = {
@@ -47,6 +52,11 @@ const statusLabels: Record<string, string> = {
   wartung: 'Wartung',
   support: 'Support',
   sonstige: 'Sonstige',
+  // Billing cycles
+  monatlich: 'Monatlich',
+  quartalsweise: 'Quartalsweise',
+  halbjaehrlich: 'Halbjährlich',
+  jaehrlich: 'Jährlich',
 }
 
 interface StatusBadgeProps {

@@ -71,6 +71,12 @@ export default function ContractDetail() {
             <p className="text-text">{formatCurrency(contract.monthly_amount)}</p>
           </div>
           <div>
+            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Zahlungsturnus</p>
+            <p className="text-text">
+              {{ monatlich: 'Monatlich', quartalsweise: 'Quartalsweise', halbjaehrlich: 'Halbjährlich', jaehrlich: 'Jährlich' }[contract.billing_cycle] || contract.billing_cycle || 'Monatlich'}
+            </p>
+          </div>
+          <div>
             <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Startdatum</p>
             <p className="text-text">{formatDate(contract.start_date)}</p>
           </div>
