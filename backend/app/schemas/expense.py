@@ -1,5 +1,6 @@
 import uuid
-from datetime import date, datetime
+from datetime import date as DateType
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +12,7 @@ class ExpenseBase(BaseModel):
     description: str
     category: ExpenseCategory
     amount: Decimal
-    date: date
+    date: DateType
     vendor: str | None = None
     recurring: bool = False
     notes: str | None = None
@@ -25,7 +26,7 @@ class ExpenseUpdate(BaseModel):
     description: str | None = None
     category: ExpenseCategory | None = None
     amount: Decimal | None = None
-    date: date | None = None
+    date: DateType | None = None
     vendor: str | None = None
     recurring: bool | None = None
     notes: str | None = None

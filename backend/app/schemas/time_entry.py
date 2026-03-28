@@ -1,5 +1,6 @@
 import uuid
-from datetime import date, datetime
+from datetime import date as DateType
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
@@ -8,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 class TimeEntryBase(BaseModel):
     customer_id: uuid.UUID
     description: str
-    date: date
+    date: DateType
     hours: Decimal
     hourly_rate: Decimal | None = None
     notes: str | None = None
@@ -21,7 +22,7 @@ class TimeEntryCreate(TimeEntryBase):
 class TimeEntryUpdate(BaseModel):
     customer_id: uuid.UUID | None = None
     description: str | None = None
-    date: date | None = None
+    date: DateType | None = None
     hours: Decimal | None = None
     hourly_rate: Decimal | None = None
     notes: str | None = None
