@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import FormField from '../../components/FormField'
+import AutocompleteInput from '../../components/AutocompleteInput'
 import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
@@ -300,7 +301,7 @@ export default function InvoiceForm() {
             />
           </div>
 
-          <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
+          <AutocompleteInput label="Titel" name="title" value={form.title} onChange={handleChange} required placeholder="z.B. Website-Erstellung, SEO-Optimierung..." />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField

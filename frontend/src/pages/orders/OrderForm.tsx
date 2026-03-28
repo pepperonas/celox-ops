@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
+import AutocompleteInput from '../../components/AutocompleteInput'
 import { getOrder, createOrder, updateOrder } from '../../api/orders'
 import { getCustomers } from '../../api/customers'
 import type { OrderCreate, Customer, InvoicePosition } from '../../types'
@@ -106,7 +107,7 @@ export default function OrderForm() {
           }))}
           placeholder="Kunde wählen..."
         />
-        <FormField label="Titel" name="title" value={form.title} onChange={handleChange} required />
+        <AutocompleteInput label="Titel" name="title" value={form.title} onChange={handleChange} required placeholder="z.B. Website-Erstellung, IT-Beratung..." />
         <FormField
           label="Beschreibung"
           name="description"
