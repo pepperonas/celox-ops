@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import FormField from '../../components/FormField'
-import AutocompleteInput from '../../components/AutocompleteInput'
+import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
@@ -380,12 +380,13 @@ export default function InvoiceForm() {
               <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-surface-2 rounded-lg p-2 md:p-0 md:bg-transparent">
                 <div className="md:col-span-4">
                   <label className="md:hidden text-xs text-text-muted mb-1 block">Beschreibung</label>
-                  <input
-                    type="text"
+                  <AutocompleteInput
+                    name={`pos-${idx}-beschreibung`}
                     value={pos.beschreibung}
                     onChange={(e) => updatePosition(idx, 'beschreibung', e.target.value)}
-                    placeholder="Beschreibung"
-                    className="input-field text-sm"
+                    placeholder="z.B. Technische Umsetzung, SEO..."
+                    suggestions={POSITION_SUGGESTIONS}
+                    compact
                   />
                 </div>
                 <div className="md:col-span-2">

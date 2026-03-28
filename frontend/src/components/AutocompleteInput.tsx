@@ -83,23 +83,110 @@ const IT_SUGGESTIONS = [
   'Social Media Integration',
 ]
 
+export const POSITION_SUGGESTIONS = [
+  // Website — Konzeption & Design
+  'Konzeption und Wireframing',
+  'UI/UX Design und Prototyping',
+  'Webdesign (Startseite + Unterseiten)',
+  'Responsive Design (Mobile/Tablet/Desktop)',
+  'Design-Abstimmung und Revisionen',
+  'Erstellung Designvorlage / Mockup',
+  // Website — Entwicklung
+  'Technische Umsetzung (HTML/CSS/JS)',
+  'Frontend-Entwicklung (React)',
+  'Frontend-Entwicklung (Next.js)',
+  'Backend-Entwicklung (Node.js)',
+  'Backend-Entwicklung (Python/FastAPI)',
+  'WordPress-Theme-Entwicklung',
+  'WordPress-Plugin-Anpassung',
+  'CMS-Einrichtung und Konfiguration',
+  'Datenbankmodellierung und -einrichtung',
+  'API-Entwicklung und Integration',
+  'Formularentwicklung mit Validierung',
+  'Kontaktformular mit E-Mail-Versand',
+  'Buchungssystem-Integration',
+  'Zahlungsintegration (Stripe/PayPal)',
+  // Content & SEO
+  'Content-Einpflege und Formatierung',
+  'Bildbearbeitung und -optimierung',
+  'Texterstellung und -überarbeitung',
+  'SEO-Grundoptimierung (Meta-Tags, Sitemap, robots.txt)',
+  'SEO-Analyse und Keyword-Recherche',
+  'Google Search Console Einrichtung',
+  'Google Analytics / Tag Manager Setup',
+  'Strukturierte Daten (Schema.org)',
+  // Hosting & Infrastruktur
+  'Server-Einrichtung und Konfiguration',
+  'Hosting-Migration (inkl. DNS)',
+  'SSL-Zertifikat Einrichtung',
+  'Domain-Einrichtung und DNS-Konfiguration',
+  'E-Mail-Einrichtung (IMAP/SMTP)',
+  'Backup-System einrichten',
+  'CDN-Konfiguration',
+  'Docker-Setup und Deployment',
+  'CI/CD Pipeline einrichten',
+  'Monitoring und Alerting einrichten',
+  // Performance & Sicherheit
+  'Performance-Optimierung (Ladezeit)',
+  'Bildkomprimierung und Lazy Loading',
+  'Caching-Konfiguration',
+  'Sicherheitsaudit und Härtung',
+  'DSGVO-Anpassung (Cookie-Banner, Datenschutz)',
+  'Impressum und Datenschutzerklärung',
+  'Sicherheitsupdates einspielen',
+  'Malware-Bereinigung',
+  'Firewall-Konfiguration',
+  // Wartung & Support
+  'Monatliche Wartung und Updates',
+  'CMS-Updates (Core + Plugins)',
+  'Fehlerbehebung / Bugfix',
+  'Technischer Support (Remote)',
+  'Einweisung / Schulung CMS-Bedienung',
+  'Dokumentation der technischen Umsetzung',
+  // App & Software
+  'App-Konzeption und Planung',
+  'Mobile App Entwicklung',
+  'Progressive Web App (PWA)',
+  'Desktop-Anwendung',
+  'Datenbank-Migration',
+  'Schnittstellen-Entwicklung (REST/GraphQL)',
+  'Automatisierung von Geschäftsprozessen',
+  // Beratung
+  'Technische Beratung (Erstgespräch)',
+  'Anforderungsanalyse',
+  'Architektur-Konzeption',
+  'Digitalisierungsberatung',
+  'Code-Review und Qualitätssicherung',
+  'Projektmanagement und Koordination',
+  // KI
+  'KI-gestützte Entwicklung',
+  'KI-API-Kosten',
+  'KI-Integration und Konfiguration',
+  'Chatbot-Einrichtung',
+  'Automatisierung mit KI-Werkzeugen',
+]
+
 interface Props {
-  label: string
+  label?: string
   name: string
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   required?: boolean
   placeholder?: string
+  suggestions?: string[]
+  className?: string
+  compact?: boolean
 }
 
-export default function AutocompleteInput({ label, name, value, onChange, required, placeholder }: Props) {
+export default function AutocompleteInput({ label, name, value, onChange, required, placeholder, suggestions, className, compact }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const pool = suggestions || IT_SUGGESTIONS
   const filtered = value.length >= 1
-    ? IT_SUGGESTIONS.filter(s => s.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
+    ? pool.filter(s => s.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
     : []
 
   useEffect(() => {
@@ -142,11 +229,13 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
   }
 
   return (
-    <div ref={wrapperRef} className="relative">
-      <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">
-        {label}
-        {required && <span className="text-danger ml-1">*</span>}
-      </label>
+    <div ref={wrapperRef} className={`relative ${className || ''}`}>
+      {label && (
+        <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">
+          {label}
+          {required && <span className="text-danger ml-1">*</span>}
+        </label>
+      )}
       <input
         ref={inputRef}
         type="text"
@@ -160,7 +249,7 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
         onKeyDown={handleKeyDown}
         required={required}
         placeholder={placeholder}
-        className="w-full"
+        className={compact ? 'w-full text-sm' : 'w-full'}
         autoComplete="off"
       />
       {showSuggestions && filtered.length > 0 && (
