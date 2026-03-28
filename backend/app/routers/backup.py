@@ -1,4 +1,6 @@
+import base64
 import json
+import os
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -6,6 +8,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
 
 from app.auth import get_current_user
 from app.database import get_db
@@ -64,6 +68,17 @@ async def export_database(db: AsyncSession = Depends(get_db)) -> Response:
         result = await db.execute(select(model))
         rows = result.scalars().all()
         data[name] = [_row_to_dict(r) for r in rows]
+
+    # Collect PDFs as base64
+    pdfs = {}
+    pdf_dir = settings.PDF_STORAGE_PATH
+    if os.path.isdir(pdf_dir):
+        for filename in os.listdir(pdf_dir):
+            if filename.endswith(".pdf"):
+                filepath = os.path.join(pdf_dir, filename)
+                with open(filepath, "rb") as f:
+                    pdfs[filename] = base64.b64encode(f.read()).decode("utf-8")
+    data["pdfs"] = pdfs
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     json_str = json.dumps(data, default=_serialize, ensure_ascii=False, indent=2)
