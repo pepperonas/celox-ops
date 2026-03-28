@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
+import toast from 'react-hot-toast'
 import type { Task } from '../types'
 
 const categoryLabels: Record<string, string> = {
@@ -27,9 +28,10 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(() => {
+  const loadTasks = useCallback(() => {
     api
       .get('/tasks')
       .then((r) => {
@@ -40,19 +42,50 @@ export default function Tasks() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
+
+  const handleGenerateRecurring = async () => {
+    setGenerating(true)
+    try {
+      const res = await api.post('/invoices/generate-recurring')
+      const created = res.data as unknown[]
+      if (created.length === 0) {
+        toast('Keine fälligen Vertragsrechnungen vorhanden', { icon: 'ℹ️' })
+      } else {
+        toast.success(`${created.length} Vertragsrechnung${created.length > 1 ? 'en' : ''} erstellt`)
+      }
+      loadTasks()
+    } catch {
+      toast.error('Fehler beim Generieren der Vertragsrechnungen')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (loading) {
     return <div className="text-text-muted py-12 text-center">Laden...</div>
   }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-lg font-semibold text-text">Aufgaben</h2>
-        {count > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-accent text-white text-xs font-semibold">
-            {count}
-          </span>
-        )}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-text">Aufgaben</h2>
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-accent text-white text-xs font-semibold">
+              {count}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleGenerateRecurring}
+          disabled={generating}
+          className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
+        >
+          {generating ? 'Generiere...' : 'Vertragsrechnungen generieren'}
+        </button>
       </div>
 
       {tasks.length === 0 ? (

@@ -100,6 +100,9 @@ export interface Order {
   hourly_rate: number
   start_date: string
   end_date: string
+  positions: InvoicePosition[] | null
+  quote_pdf_path: string | null
+  valid_until: string | null
   created_at: string
   updated_at: string
 }
@@ -113,6 +116,8 @@ export interface OrderCreate {
   hourly_rate?: number
   start_date?: string
   end_date?: string
+  positions?: InvoicePosition[] | null
+  valid_until?: string
 }
 
 export interface OrderUpdate extends Partial<OrderCreate> {}
@@ -134,6 +139,7 @@ export interface Contract {
   end_date: string
   auto_renew: boolean
   notice_period_days: number
+  last_invoiced_date: string | null
   status: ContractStatus
   created_at: string
   updated_at: string
@@ -196,6 +202,9 @@ export interface Invoice {
   notes: string
   token_usage_from: string | null
   token_usage_to: string | null
+  reminder_level: number
+  reminder_sent_at: string | null
+  reminder_pdf_path: string | null
   created_at: string
   updated_at: string
 }
@@ -270,4 +279,97 @@ export interface PaginatedResponse<T> {
   page: number
   page_size: number
   pages: number
+}
+
+export interface TimeEntry {
+  id: string
+  customer_id: string
+  customer_name?: string
+  description: string
+  date: string
+  hours: number
+  hourly_rate: number | null
+  notes: string
+  invoiced: boolean
+  created_at: string
+}
+
+export interface TimeEntryCreate {
+  customer_id: string
+  description: string
+  date: string
+  hours: number
+  hourly_rate?: number
+  notes?: string
+}
+
+export interface TimeEntryUpdate extends Partial<TimeEntryCreate> {
+  invoiced?: boolean
+}
+
+export interface Activity {
+  id: string
+  customer_id: string
+  type: string
+  title: string
+  description: string | null
+  created_at: string
+}
+
+export interface ActivityCreate {
+  customer_id: string
+  type: string
+  title: string
+  description?: string
+}
+
+export interface TimeEntrySummary {
+  customer_id: string
+  customer_name: string
+  total_hours: number
+  total_amount: number
+  uninvoiced_hours: number
+}
+
+export type ExpenseCategory =
+  | 'hosting'
+  | 'domain'
+  | 'software'
+  | 'lizenz'
+  | 'hardware'
+  | 'ki_api'
+  | 'werbung'
+  | 'buero'
+  | 'reise'
+  | 'sonstige'
+
+export interface Expense {
+  id: string
+  description: string
+  category: ExpenseCategory
+  amount: number
+  date: string
+  vendor: string | null
+  recurring: boolean
+  notes: string | null
+  created_at: string
+}
+
+export interface ExpenseCreate {
+  description: string
+  category: ExpenseCategory
+  amount: number
+  date: string
+  vendor?: string
+  recurring?: boolean
+  notes?: string
+}
+
+export interface ExpenseUpdate extends Partial<ExpenseCreate> {}
+
+export interface ExpenseSummary {
+  year: number
+  total: number
+  by_category: { category: string; total: number }[]
+  by_month: { month: number; total: number }[]
 }

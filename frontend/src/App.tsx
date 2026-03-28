@@ -21,6 +21,10 @@ import InvoiceDetail from './pages/invoices/InvoiceDetail'
 import LeadList from './pages/leads/LeadList'
 import LeadForm from './pages/leads/LeadForm'
 import Tasks from './pages/Tasks'
+import TimeTracking from './pages/TimeTracking'
+import ExpenseList from './pages/expenses/ExpenseList'
+import ExpenseForm from './pages/expenses/ExpenseForm'
+import Euer from './pages/Euer'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -44,6 +48,7 @@ export default function App() {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/aufgaben" element={<Tasks />} />
+          <Route path="/zeiterfassung" element={<TimeTracking />} />
           <Route path="/kunden" element={<CustomerList />} />
           <Route path="/kunden/neu" element={<CustomerForm />} />
           <Route path="/kunden/:id" element={<CustomerDetail />} />
@@ -63,6 +68,10 @@ export default function App() {
           <Route path="/vorgemerkt" element={<LeadList />} />
           <Route path="/vorgemerkt/neu" element={<LeadForm />} />
           <Route path="/vorgemerkt/:id/bearbeiten" element={<LeadForm />} />
+          <Route path="/ausgaben" element={<ExpenseList />} />
+          <Route path="/ausgaben/neu" element={<ExpenseForm />} />
+          <Route path="/ausgaben/:id/bearbeiten" element={<ExpenseForm />} />
+          <Route path="/euer" element={<Euer />} />
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>

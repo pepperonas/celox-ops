@@ -55,3 +55,32 @@ export async function updateInvoiceStatus(
   const response = await api.put(`/invoices/${id}/status`, { status })
   return response.data
 }
+
+export async function sendReminder(id: string): Promise<Invoice> {
+  const response = await api.post(`/invoices/${id}/remind`)
+  return response.data
+}
+
+export async function generateReminderPdf(id: string): Promise<{ reminder_pdf_path: string }> {
+  const response = await api.post(`/invoices/${id}/generate-reminder-pdf`)
+  return response.data
+}
+
+export async function downloadReminderPdf(id: string): Promise<Blob> {
+  const response = await api.get(`/invoices/${id}/reminder-pdf`, { responseType: 'blob' })
+  return response.data
+}
+
+export async function sendInvoiceEmail(
+  id: string,
+  data: { to_email: string; subject?: string; message?: string },
+): Promise<void> {
+  await api.post(`/invoices/${id}/send-email`, data)
+}
+
+export async function sendReminderEmail(
+  id: string,
+  data: { to_email: string; subject?: string; message?: string },
+): Promise<void> {
+  await api.post(`/invoices/${id}/send-reminder-email`, data)
+}

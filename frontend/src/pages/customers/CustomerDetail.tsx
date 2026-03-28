@@ -5,11 +5,12 @@ import { getCustomer, deleteCustomer } from '../../api/customers'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { getInvoices, createQuickInvoice } from '../../api/invoices'
+import { getActivities, createActivity, deleteActivity } from '../../api/activities'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import TokenUsage from '../../components/TokenUsage'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import type { Customer, Order, Contract, Invoice } from '../../types'
+import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate } from '../../types'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -19,8 +20,13 @@ export default function CustomerDetail() {
   const [orders, setOrders] = useState<Order[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [activitiesTotal, setActivitiesTotal] = useState(0)
+  const [showActivityForm, setShowActivityForm] = useState(false)
+  const [activityForm, setActivityForm] = useState({ type: 'note', title: '', description: '' })
+  const [activityLoading, setActivityLoading] = useState(false)
 
-  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'tokens'] as const
+  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'aktivitaeten', 'tokens'] as const
   type TabKey = typeof validTabs[number]
   const hashTab = location.hash.replace('#', '') as TabKey
   const initialTab = validTabs.includes(hashTab) ? hashTab : 'auftraege'
@@ -41,6 +47,7 @@ export default function CustomerDetail() {
     getOrders({ customer_id: id }).then((r) => setOrders(r.items))
     getContracts({ customer_id: id }).then((r) => setContracts(r.items))
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
+    getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
   }, [id])
 
 
@@ -78,6 +85,65 @@ export default function CustomerDetail() {
     setQuickLoading(false)
   }
 
+  const handleCreateActivity = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!id) return
+    setActivityLoading(true)
+    try {
+      await createActivity({
+        customer_id: id,
+        type: activityForm.type,
+        title: activityForm.title,
+        description: activityForm.description || undefined,
+      })
+      toast.success('Eintrag hinzugefügt.')
+      setShowActivityForm(false)
+      setActivityForm({ type: 'note', title: '', description: '' })
+      getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+    } catch {
+      toast.error('Fehler beim Erstellen des Eintrags.')
+    }
+    setActivityLoading(false)
+  }
+
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!id) return
+    try {
+      await deleteActivity(activityId)
+      toast.success('Eintrag gelöscht.')
+      getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+    } catch {
+      toast.error('Fehler beim Löschen.')
+    }
+  }
+
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMin < 1) return 'gerade eben'
+    if (diffMin < 60) return `vor ${diffMin} Minute${diffMin !== 1 ? 'n' : ''}`
+    if (diffHours < 24) return `vor ${diffHours} Stunde${diffHours !== 1 ? 'n' : ''}`
+    if (diffDays < 7) return `vor ${diffDays} Tag${diffDays !== 1 ? 'en' : ''}`
+    return formatDate(dateStr)
+  }
+
+  const activityTypeConfig: Record<string, { label: string; color: string }> = {
+    note: { label: 'Notiz', color: 'bg-gray-400' },
+    call: { label: 'Anruf', color: 'bg-green-500' },
+    email: { label: 'E-Mail', color: 'bg-blue-500' },
+    meeting: { label: 'Meeting', color: 'bg-purple-500' },
+    invoice: { label: 'Rechnung', color: 'bg-orange-500' },
+    order: { label: 'Auftrag', color: 'bg-accent' },
+    contract: { label: 'Vertrag', color: 'bg-cyan-500' },
+  }
+
+  const manualTypes = new Set(['note', 'call', 'email', 'meeting'])
+
   if (!customer) {
     return <div className="text-text-muted py-12 text-center">Laden...</div>
   }
@@ -86,6 +152,7 @@ export default function CustomerDetail() {
     { key: 'auftraege' as const, label: `Aufträge (${orders.length})` },
     { key: 'vertraege' as const, label: `Verträge (${contracts.length})` },
     { key: 'rechnungen' as const, label: `Rechnungen (${invoices.length})` },
+    { key: 'aktivitaeten' as const, label: `Aktivitäten (${activitiesTotal})` },
     ...(customer.token_tracker_url ? [{ key: 'tokens' as const, label: 'KI-Nutzung' }] : []),
   ]
 
@@ -273,6 +340,108 @@ export default function CustomerDetail() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === 'aktivitaeten' && (
+        <div>
+          {/* Add entry button */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowActivityForm(!showActivityForm)}
+              className="btn-primary"
+            >
+              {showActivityForm ? 'Abbrechen' : 'Eintrag hinzufügen'}
+            </button>
+          </div>
+
+          {/* Inline form */}
+          {showActivityForm && (
+            <div className="bg-surface border border-border rounded-[12px] p-5 mb-4">
+              <form onSubmit={handleCreateActivity} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Typ</label>
+                    <select
+                      value={activityForm.type}
+                      onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value })}
+                      className="w-full"
+                    >
+                      <option value="note">Notiz</option>
+                      <option value="call">Anruf</option>
+                      <option value="email">E-Mail</option>
+                      <option value="meeting">Meeting</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Titel *</label>
+                    <input
+                      type="text"
+                      value={activityForm.title}
+                      onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
+                      placeholder="z.B. Telefonat wegen Projektstart"
+                      className="w-full"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Beschreibung (optional)</label>
+                  <textarea
+                    value={activityForm.description}
+                    onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
+                    placeholder="Weitere Details..."
+                    className="w-full"
+                    rows={2}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" disabled={activityLoading} className="btn-primary">
+                    {activityLoading ? 'Speichern...' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="space-y-3">
+            {activities.length === 0 ? (
+              <div className="bg-surface border border-border rounded-[12px] px-4 py-8 text-center text-text-muted">
+                Keine Aktivitäten vorhanden.
+              </div>
+            ) : (
+              activities.map((a) => {
+                const config = activityTypeConfig[a.type] || { label: a.type, color: 'bg-gray-400' }
+                return (
+                  <div key={a.id} className="bg-surface border border-border rounded-[12px] p-4 flex items-start gap-3">
+                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${config.color}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-text">{a.title}</p>
+                      {a.description && (
+                        <p className="text-sm text-text-muted mt-0.5">{a.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-xs text-text-muted bg-surface-2 px-2 py-0.5 rounded">{config.label}</span>
+                        <span className="text-xs text-text-muted">{formatRelativeTime(a.created_at)}</span>
+                      </div>
+                    </div>
+                    {manualTypes.has(a.type) && (
+                      <button
+                        onClick={() => handleDeleteActivity(a.id)}
+                        className="text-text-muted hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Löschen"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
       )}
 

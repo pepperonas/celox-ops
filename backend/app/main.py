@@ -41,6 +41,10 @@ from app.routers.dashboard import router as dashboard_router  # noqa: E402
 from app.routers.token_tracker import router as token_tracker_router  # noqa: E402
 from app.routers.leads import router as leads_router  # noqa: E402
 from app.routers.tasks import router as tasks_router  # noqa: E402
+from app.routers.time_entries import router as time_entries_router  # noqa: E402
+from app.routers.activities import router as activities_router  # noqa: E402
+from app.routers.expenses import router as expenses_router  # noqa: E402
+from app.routers.euer import router as euer_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -51,6 +55,10 @@ app.include_router(dashboard_router)
 app.include_router(token_tracker_router)
 app.include_router(leads_router)
 app.include_router(tasks_router)
+app.include_router(time_entries_router)
+app.include_router(activities_router)
+app.include_router(expenses_router)
+app.include_router(euer_router)
 
 
 @app.get("/api/health")

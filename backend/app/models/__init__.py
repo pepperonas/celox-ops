@@ -3,6 +3,9 @@ from app.models.order import Order, OrderStatus
 from app.models.contract import Contract, ContractStatus, ContractType
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.lead import Lead, LeadStatus
+from app.models.time_entry import TimeEntry
+from app.models.activity import Activity
+from app.models.expense import Expense, ExpenseCategory
 
 __all__ = [
     "Customer",
@@ -15,4 +18,8 @@ __all__ = [
     "InvoiceStatus",
     "Lead",
     "LeadStatus",
+    "TimeEntry",
+    "Activity",
+    "Expense",
+    "ExpenseCategory",
 ]

@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,6 +56,10 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    positions: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    quote_pdf_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     customer: Mapped["Customer"] = relationship(  # noqa: F821
         "Customer", back_populates="orders"

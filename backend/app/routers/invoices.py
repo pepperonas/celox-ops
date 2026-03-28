@@ -20,8 +20,18 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     QuickInvoiceCreate,
 )
+from pydantic import BaseModel as PydanticBaseModel
+
+from app.models.activity import Activity
+from app.services.email_service import send_email
 from app.services.invoice_service import calculate_invoice_totals, generate_invoice_number
-from app.services.pdf_service import generate_invoice_pdf
+from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
+
+
+class EmailRequest(PydanticBaseModel):
+    to_email: str
+    subject: str | None = None
+    message: str | None = None
 
 router = APIRouter(
     prefix="/api/invoices",
@@ -142,6 +152,14 @@ async def create_invoice(
     db.add(invoice)
     await db.flush()
     await db.refresh(invoice)
+
+    activity = Activity(
+        customer_id=data.customer_id,
+        type="invoice",
+        title=f"Rechnung {invoice_number} erstellt",
+        description=f"{invoice.title} — {float(invoice.total):.2f} €",
+    )
+    db.add(activity)
 
     resp = InvoiceResponse.model_validate(invoice)
     resp.customer_name = customer.name
@@ -266,6 +284,382 @@ async def download_pdf(
         media_type="application/pdf",
         filename=f"{invoice.invoice_number}.pdf",
     )
+
+
+@router.post("/{invoice_id}/remind", response_model=InvoiceResponse)
+async def send_reminder(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Mahnstufe erhöhen und Mahnung versenden."""
+    from datetime import date as date_type, datetime as dt_type, timezone
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+
+    if invoice.status not in (InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig):
+        raise HTTPException(
+            status_code=400,
+            detail="Mahnungen können nur für gestellte oder überfällige Rechnungen erstellt werden",
+        )
+
+    if invoice.due_date >= date_type.today():
+        raise HTTPException(
+            status_code=400,
+            detail="Rechnung ist noch nicht fällig",
+        )
+
+    if invoice.reminder_level >= 3:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximale Mahnstufe (3) bereits erreicht",
+        )
+
+    invoice.reminder_level += 1
+    invoice.reminder_sent_at = dt_type.now(timezone.utc)
+
+    if invoice.status == InvoiceStatus.gestellt:
+        invoice.status = InvoiceStatus.ueberfaellig
+
+    await db.flush()
+    await db.refresh(invoice)
+
+    activity = Activity(
+        customer_id=invoice.customer_id,
+        type="invoice",
+        title=f"Mahnung gesendet: {invoice.invoice_number}",
+        description=f"Mahnstufe {invoice.reminder_level} — {float(invoice.total):.2f} €",
+    )
+    db.add(activity)
+
+    resp = InvoiceResponse.model_validate(invoice)
+    resp.customer_name = invoice.customer.name if invoice.customer else ""
+    return resp
+
+
+@router.post("/{invoice_id}/generate-reminder-pdf", response_model=InvoiceResponse)
+async def generate_reminder_pdf_endpoint(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Mahnungs-PDF generieren."""
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+
+    if invoice.reminder_level < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Keine Mahnung vorhanden. Bitte zuerst eine Mahnung senden.",
+        )
+
+    pdf_path = generate_reminder_pdf(invoice, invoice.customer, invoice.reminder_level)
+    invoice.reminder_pdf_path = pdf_path
+    await db.flush()
+    await db.refresh(invoice)
+
+    resp = InvoiceResponse.model_validate(invoice)
+    resp.customer_name = invoice.customer.name if invoice.customer else ""
+    return resp
+
+
+@router.get("/{invoice_id}/reminder-pdf")
+async def download_reminder_pdf(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """Mahnungs-PDF herunterladen."""
+    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    if not invoice.reminder_pdf_path:
+        raise HTTPException(status_code=404, detail="Mahnungs-PDF wurde noch nicht generiert")
+
+    level_names = {1: "Zahlungserinnerung", 2: "1-Mahnung", 3: "Letzte-Mahnung"}
+    level_name = level_names.get(invoice.reminder_level, "Mahnung")
+
+    return FileResponse(
+        path=invoice.reminder_pdf_path,
+        media_type="application/pdf",
+        filename=f"{level_name}_{invoice.invoice_number}.pdf",
+    )
+
+
+@router.post("/{invoice_id}/send-email")
+async def send_invoice_email(
+    invoice_id: uuid.UUID,
+    data: EmailRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Rechnung per E-Mail senden."""
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    if not invoice.pdf_path:
+        raise HTTPException(status_code=400, detail="PDF wurde noch nicht generiert. Bitte zuerst PDF erstellen.")
+
+    customer = invoice.customer
+
+    subject = data.subject or f"Rechnung {invoice.invoice_number} — {settings.BUSINESS_NAME}"
+
+    if data.message:
+        body_html = data.message.replace("\n", "<br>")
+    else:
+        customer_name = customer.name if customer else "Kunde"
+        body_html = (
+            f"Sehr geehrte Damen und Herren,<br><br>"
+            f"anbei erhalten Sie die Rechnung <strong>{invoice.invoice_number}</strong> "
+            f"über <strong>{invoice.total:.2f} EUR</strong>.<br><br>"
+            f"Bitte überweisen Sie den Betrag bis zum <strong>{invoice.due_date.strftime('%d.%m.%Y')}</strong> "
+            f"auf folgendes Konto:<br>"
+            f"IBAN: {settings.BUSINESS_BANK_IBAN}<br>"
+            f"BIC: {settings.BUSINESS_BANK_BIC}<br>"
+            f"Bank: {settings.BUSINESS_BANK_NAME}<br><br>"
+            f"Bei Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>"
+            f"Mit freundlichen Grüßen<br>"
+            f"{settings.BUSINESS_OWNER}<br>"
+            f"{settings.BUSINESS_NAME}"
+        )
+
+    try:
+        await send_email(
+            to_email=data.to_email,
+            subject=subject,
+            body_html=body_html,
+            pdf_path=invoice.pdf_path,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
+
+    activity = Activity(
+        customer_id=invoice.customer_id,
+        type="email",
+        title=f"Rechnung per E-Mail gesendet: {invoice.invoice_number}",
+        description=f"An {data.to_email} — {float(invoice.total):.2f} €",
+    )
+    db.add(activity)
+
+    return {"success": True, "message": f"Rechnung wurde an {data.to_email} gesendet."}
+
+
+@router.post("/{invoice_id}/send-reminder-email")
+async def send_reminder_email(
+    invoice_id: uuid.UUID,
+    data: EmailRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Mahnung per E-Mail senden."""
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    if not invoice.reminder_pdf_path:
+        raise HTTPException(status_code=400, detail="Mahnungs-PDF wurde noch nicht generiert.")
+    if invoice.reminder_level < 1:
+        raise HTTPException(status_code=400, detail="Keine Mahnung vorhanden.")
+
+    level_names = {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}
+    level_name = level_names.get(invoice.reminder_level, "Mahnung")
+
+    subject = data.subject or f"{level_name} — Rechnung {invoice.invoice_number} — {settings.BUSINESS_NAME}"
+
+    if data.message:
+        body_html = data.message.replace("\n", "<br>")
+    else:
+        body_html = (
+            f"Sehr geehrte Damen und Herren,<br><br>"
+            f"wir möchten Sie daran erinnern, dass die Rechnung "
+            f"<strong>{invoice.invoice_number}</strong> über "
+            f"<strong>{invoice.total:.2f} EUR</strong> noch offen ist.<br><br>"
+            f"Die Fälligkeit war am <strong>{invoice.due_date.strftime('%d.%m.%Y')}</strong>. "
+            f"Bitte überweisen Sie den offenen Betrag umgehend auf folgendes Konto:<br>"
+            f"IBAN: {settings.BUSINESS_BANK_IBAN}<br>"
+            f"BIC: {settings.BUSINESS_BANK_BIC}<br>"
+            f"Bank: {settings.BUSINESS_BANK_NAME}<br><br>"
+            f"Sollte sich Ihre Zahlung mit diesem Schreiben überschneiden, "
+            f"betrachten Sie diese Erinnerung bitte als gegenstandslos.<br><br>"
+            f"Mit freundlichen Grüßen<br>"
+            f"{settings.BUSINESS_OWNER}<br>"
+            f"{settings.BUSINESS_NAME}"
+        )
+
+    try:
+        await send_email(
+            to_email=data.to_email,
+            subject=subject,
+            body_html=body_html,
+            pdf_path=invoice.reminder_pdf_path,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
+
+    activity = Activity(
+        customer_id=invoice.customer_id,
+        type="email",
+        title=f"{level_name} per E-Mail gesendet: {invoice.invoice_number}",
+        description=f"An {data.to_email} — {float(invoice.total):.2f} €",
+    )
+    db.add(activity)
+
+    return {"success": True, "message": f"{level_name} wurde an {data.to_email} gesendet."}
+
+
+@router.post("/generate-recurring", response_model=list[InvoiceResponse])
+async def generate_recurring_invoices(db: AsyncSession = Depends(get_db)) -> list:
+    """Erstellt Entwurfsrechnungen für fällige Vertragsabrechnungen."""
+    from datetime import date as date_type, timedelta
+    from decimal import Decimal
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.models.contract import BillingCycle, Contract, ContractStatus
+
+    today = date_type.today()
+
+    # Get all active contracts
+    result = await db.execute(
+        select(Contract)
+        .options(joinedload(Contract.customer))
+        .where(Contract.status == ContractStatus.aktiv)
+    )
+    contracts = result.scalars().unique().all()
+
+    if not contracts:
+        return []
+
+    cycle_months = {
+        BillingCycle.monatlich: 1,
+        BillingCycle.quartalsweise: 3,
+        BillingCycle.halbjaehrlich: 6,
+        BillingCycle.jaehrlich: 12,
+    }
+
+    german_months = [
+        "", "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember",
+    ]
+
+    processed_contract_ids: set[uuid.UUID] = set()
+
+    for contract in contracts:
+        months = cycle_months[contract.billing_cycle]
+
+        if contract.last_invoiced_date is None:
+            # Never invoiced — due immediately
+            is_due = True
+        else:
+            next_date = contract.last_invoiced_date + relativedelta(months=months)
+            is_due = next_date <= today
+
+        if not is_due:
+            continue
+
+        # Build period label
+        if contract.billing_cycle == BillingCycle.monatlich:
+            period_label = f"{german_months[today.month]} {today.year}"
+        elif contract.billing_cycle == BillingCycle.quartalsweise:
+            quarter = (today.month - 1) // 3 + 1
+            period_label = f"Q{quarter} {today.year}"
+        elif contract.billing_cycle == BillingCycle.halbjaehrlich:
+            half = 1 if today.month <= 6 else 2
+            period_label = f"{half}. Halbjahr {today.year}"
+        else:  # jaehrlich
+            period_label = str(today.year)
+
+        # Calculate amount
+        amount = contract.monthly_amount * Decimal(str(months))
+
+        # Build invoice
+        invoice_number = await generate_invoice_number(db)
+
+        positions_json = [{
+            "position": 1,
+            "beschreibung": contract.title,
+            "menge": "1",
+            "einheit": period_label,
+            "einzelpreis": str(amount),
+            "gesamt": str(amount),
+        }]
+
+        positions_dicts = [{
+            "position": 1,
+            "beschreibung": contract.title,
+            "menge": Decimal("1"),
+            "einheit": period_label,
+            "einzelpreis": amount,
+            "gesamt": amount,
+        }]
+
+        subtotal, tax_amount, total = calculate_invoice_totals(
+            positions_dicts, Decimal("19.00"), settings.KLEINUNTERNEHMER
+        )
+
+        invoice = Invoice(
+            customer_id=contract.customer_id,
+            contract_id=contract.id,
+            invoice_number=invoice_number,
+            title=f"{contract.title} — {period_label}",
+            positions=positions_json,
+            subtotal=subtotal,
+            tax_rate=Decimal("19.00") if not settings.KLEINUNTERNEHMER else Decimal("0"),
+            tax_amount=tax_amount,
+            total=total,
+            invoice_date=today,
+            due_date=today + timedelta(days=14),
+            status=InvoiceStatus.entwurf,
+        )
+        db.add(invoice)
+
+        # Update contract
+        contract.last_invoiced_date = today
+        processed_contract_ids.add(contract.id)
+
+    if not processed_contract_ids:
+        return []
+
+    await db.flush()
+
+    # Re-query the invoices we just created to get customer data
+    new_result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(
+            Invoice.status == InvoiceStatus.entwurf,
+            Invoice.invoice_date == today,
+            Invoice.contract_id.in_(processed_contract_ids),
+        )
+        .order_by(Invoice.created_at.desc())
+    )
+    new_invoices = new_result.scalars().unique().all()
+
+    responses = []
+    for inv in new_invoices:
+        resp = InvoiceResponse.model_validate(inv)
+        resp.customer_name = inv.customer.name if inv.customer else ""
+        responses.append(resp)
+
+    return responses
 
 
 @router.post("/quick", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)

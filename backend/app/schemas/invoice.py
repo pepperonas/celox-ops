@@ -69,6 +69,9 @@ class InvoiceResponse(BaseModel):
     notes: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
+    reminder_level: int = 0
+    reminder_sent_at: datetime | None = None
+    reminder_pdf_path: str | None = None
     customer_name: str = ""
     created_at: datetime
     updated_at: datetime

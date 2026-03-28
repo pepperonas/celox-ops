@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.models.activity import Activity
 from app.models.contract import Contract, ContractStatus, ContractType
 from app.models.customer import Customer
 from app.schemas.contract import (
@@ -111,6 +112,14 @@ async def create_contract(
     db.add(contract)
     await db.flush()
     await db.refresh(contract)
+
+    activity = Activity(
+        customer_id=data.customer_id,
+        type="contract",
+        title=f"Vertrag erstellt: {data.title}",
+        description=f"Typ: {data.type.value}" if hasattr(data.type, 'value') else f"Typ: {data.type}",
+    )
+    db.add(activity)
 
     resp = ContractResponse.model_validate(contract)
     resp.customer_name = customer.name

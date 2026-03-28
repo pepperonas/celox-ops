@@ -1,16 +1,31 @@
 import math
 import uuid
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from pydantic import BaseModel as PydanticBaseModel
+
 from app.auth import get_current_user
+from app.config import settings
 from app.database import get_db
+from app.models.activity import Activity
 from app.models.customer import Customer
 from app.models.order import Order, OrderStatus
 from app.schemas.order import OrderCreate, OrderDetail, OrderResponse, OrderUpdate
+from app.services.email_service import send_email
+from app.services.pdf_service import generate_quote_pdf
+
+
+class EmailRequest(PydanticBaseModel):
+    to_email: str
+    subject: str | None = None
+    message: str | None = None
 
 router = APIRouter(
     prefix="/api/orders",
@@ -104,6 +119,14 @@ async def create_order(
     await db.flush()
     await db.refresh(order)
 
+    activity = Activity(
+        customer_id=data.customer_id,
+        type="order",
+        title=f"Auftrag erstellt: {data.title}",
+        description=f"Status: {order.status.value}" if hasattr(order.status, 'value') else None,
+    )
+    db.add(activity)
+
     resp = OrderResponse.model_validate(order)
     resp.customer_name = customer.name
     return resp
@@ -150,3 +173,100 @@ async def delete_order(
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     await db.delete(order)
+
+
+@router.post("/{order_id}/generate-quote-pdf")
+async def generate_quote_pdf_endpoint(
+    order_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(
+        select(Order).options(joinedload(Order.customer)).where(Order.id == order_id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if order.status != OrderStatus.angebot:
+        raise HTTPException(
+            status_code=400,
+            detail="Angebots-PDF kann nur für Aufträge im Status 'Angebot' erstellt werden",
+        )
+    customer = order.customer
+    if not customer:
+        raise HTTPException(status_code=400, detail="Kein Kunde zugeordnet")
+
+    pdf_path = generate_quote_pdf(order, customer)
+    order.quote_pdf_path = pdf_path
+    await db.flush()
+    await db.refresh(order)
+
+    return {"quote_pdf_path": pdf_path}
+
+
+@router.post("/{order_id}/send-quote-email")
+async def send_quote_email(
+    order_id: uuid.UUID,
+    data: EmailRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Angebot per E-Mail senden."""
+    result = await db.execute(
+        select(Order)
+        .options(joinedload(Order.customer))
+        .where(Order.id == order_id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if not order.quote_pdf_path or not os.path.isfile(order.quote_pdf_path):
+        raise HTTPException(status_code=400, detail="Angebots-PDF wurde noch nicht generiert.")
+
+    customer = order.customer
+
+    subject = data.subject or f"Angebot — {order.title} — {settings.BUSINESS_NAME}"
+
+    if data.message:
+        body_html = data.message.replace("\n", "<br>")
+    else:
+        customer_name = customer.name if customer else "Kunde"
+        body_html = (
+            f"Sehr geehrte Damen und Herren,<br><br>"
+            f"anbei erhalten Sie unser Angebot <strong>{order.title}</strong>.<br><br>"
+            f"Wir würden uns freuen, Sie als Kunden begrüßen zu dürfen. "
+            f"Bei Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>"
+            f"Mit freundlichen Grüßen<br>"
+            f"{settings.BUSINESS_OWNER}<br>"
+            f"{settings.BUSINESS_NAME}"
+        )
+
+    try:
+        await send_email(
+            to_email=data.to_email,
+            subject=subject,
+            body_html=body_html,
+            pdf_path=order.quote_pdf_path,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
+
+    return {"success": True, "message": f"Angebot wurde an {data.to_email} gesendet."}
+
+
+@router.get("/{order_id}/quote-pdf")
+async def download_quote_pdf(
+    order_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if not order.quote_pdf_path or not os.path.isfile(order.quote_pdf_path):
+        raise HTTPException(status_code=404, detail="Angebots-PDF nicht gefunden")
+
+    filename = os.path.basename(order.quote_pdf_path)
+    return FileResponse(
+        order.quote_pdf_path,
+        media_type="application/pdf",
+        filename=filename,
+    )

@@ -65,6 +65,7 @@ class Contract(Base):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     auto_renew: Mapped[bool] = mapped_column(Boolean, default=True)
     notice_period_days: Mapped[int] = mapped_column(Integer, default=30)
+    last_invoiced_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[ContractStatus] = mapped_column(
         Enum(ContractStatus), default=ContractStatus.aktiv, nullable=False
     )

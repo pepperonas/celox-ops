@@ -7,9 +7,16 @@ import {
   generatePdf,
   downloadPdf,
   updateInvoiceStatus,
+  sendReminder,
+  generateReminderPdf,
+  downloadReminderPdf,
+  sendInvoiceEmail,
+  sendReminderEmail,
 } from '../../api/invoices'
+import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import EmailDialog from '../../components/EmailDialog'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice } from '../../types'
 
@@ -19,10 +26,20 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [showDelete, setShowDelete] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [reminderLoading, setReminderLoading] = useState(false)
+  const [reminderPdfLoading, setReminderPdfLoading] = useState(false)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [showReminderEmailDialog, setShowReminderEmailDialog] = useState(false)
+  const [customerEmail, setCustomerEmail] = useState('')
 
   useEffect(() => {
     if (!id) return
-    getInvoice(id).then(setInvoice)
+    getInvoice(id).then((inv) => {
+      setInvoice(inv)
+      if (inv.customer_id) {
+        getCustomer(inv.customer_id).then((c) => setCustomerEmail(c.email || '')).catch(() => {})
+      }
+    })
   }, [id])
 
   const handleDelete = async () => {
@@ -77,6 +94,61 @@ export default function InvoiceDetail() {
     }
   }
 
+  const reminderLevelLabel = (level: number) => {
+    switch (level) {
+      case 1: return 'Zahlungserinnerung'
+      case 2: return '1. Mahnung'
+      case 3: return 'Letzte Mahnung'
+      default: return 'Keine Mahnung'
+    }
+  }
+
+  const isOverdue = invoice
+    ? (invoice.status === 'gestellt' || invoice.status === 'ueberfaellig') &&
+      new Date(invoice.due_date) < new Date()
+    : false
+
+  const canRemind = isOverdue && (invoice?.reminder_level ?? 0) < 3
+
+  const handleSendReminder = async () => {
+    setReminderLoading(true)
+    try {
+      const updated = await sendReminder(id!)
+      setInvoice(updated)
+      toast.success(`${reminderLevelLabel(updated.reminder_level)} wurde gesendet.`)
+    } catch {
+      toast.error('Fehler beim Senden der Mahnung.')
+    }
+    setReminderLoading(false)
+  }
+
+  const handleGenerateReminderPdf = async () => {
+    setReminderPdfLoading(true)
+    try {
+      await generateReminderPdf(id!)
+      toast.success('Mahnungs-PDF wurde generiert.')
+      const updated = await getInvoice(id!)
+      setInvoice(updated)
+    } catch {
+      toast.error('Fehler beim Generieren der Mahnungs-PDF.')
+    }
+    setReminderPdfLoading(false)
+  }
+
+  const handleDownloadReminderPdf = async () => {
+    try {
+      const blob = await downloadReminderPdf(id!)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Mahnung_${invoice?.invoice_number || 'mahnung'}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Fehler beim Herunterladen der Mahnungs-PDF.')
+    }
+  }
+
   if (!invoice) {
     return <div className="text-text-muted py-12 text-center">Laden...</div>
   }
@@ -95,6 +167,17 @@ export default function InvoiceDetail() {
             <p className="text-sm text-text-muted">{invoice.title}</p>
           </div>
           <StatusBadge status={invoice.status} />
+          {invoice.reminder_level > 0 && (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              invoice.reminder_level === 3
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                : invoice.reminder_level === 2
+                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+            }`}>
+              {reminderLevelLabel(invoice.reminder_level)}
+            </span>
+          )}
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -105,9 +188,14 @@ export default function InvoiceDetail() {
             {pdfLoading ? 'Generiert...' : 'PDF generieren'}
           </button>
           {invoice.pdf_path && (
-            <button onClick={handleDownloadPdf} className="btn-secondary text-sm">
-              PDF herunterladen
-            </button>
+            <>
+              <button onClick={handleDownloadPdf} className="btn-secondary text-sm">
+                PDF herunterladen
+              </button>
+              <button onClick={() => setShowEmailDialog(true)} className="btn-secondary text-sm">
+                Per E-Mail senden
+              </button>
+            </>
           )}
           {invoice.status === 'entwurf' && (
             <button
@@ -124,6 +212,34 @@ export default function InvoiceDetail() {
             >
               Als bezahlt markieren
             </button>
+          )}
+          {canRemind && (
+            <button
+              onClick={handleSendReminder}
+              disabled={reminderLoading}
+              className="bg-warning hover:bg-warning/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              {reminderLoading ? 'Wird gesendet...' : 'Mahnung senden'}
+            </button>
+          )}
+          {invoice.reminder_level > 0 && (
+            <button
+              onClick={handleGenerateReminderPdf}
+              disabled={reminderPdfLoading}
+              className="btn-secondary text-sm"
+            >
+              {reminderPdfLoading ? 'Generiert...' : 'Mahnungs-PDF generieren'}
+            </button>
+          )}
+          {invoice.reminder_pdf_path && (
+            <>
+              <button onClick={handleDownloadReminderPdf} className="btn-secondary text-sm">
+                Mahnungs-PDF herunterladen
+              </button>
+              <button onClick={() => setShowReminderEmailDialog(true)} className="btn-secondary text-sm">
+                Mahnung per E-Mail senden
+              </button>
+            </>
           )}
           {invoice.status === 'entwurf' && (
             <>
@@ -220,6 +336,42 @@ export default function InvoiceDetail() {
         onConfirm={handleDelete}
         title="Rechnung löschen"
         message={`Möchten Sie die Rechnung "${invoice.invoice_number}" wirklich löschen? Dies ist nur für Entwürfe möglich.`}
+      />
+
+      <EmailDialog
+        isOpen={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        defaultTo={customerEmail}
+        defaultSubject={`Rechnung ${invoice.invoice_number}`}
+        defaultMessage={`Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Rechnung ${invoice.invoice_number} über ${formatCurrency(invoice.total)}.\n\nBitte überweisen Sie den Betrag bis zum ${formatDate(invoice.due_date)}.\n\nBei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen`}
+        onSend={async (data) => {
+          try {
+            await sendInvoiceEmail(id!, data)
+            toast.success('Rechnung wurde per E-Mail gesendet.')
+          } catch (e: any) {
+            const msg = e?.response?.data?.detail || 'Fehler beim E-Mail-Versand.'
+            toast.error(msg)
+            throw e
+          }
+        }}
+      />
+
+      <EmailDialog
+        isOpen={showReminderEmailDialog}
+        onClose={() => setShowReminderEmailDialog(false)}
+        defaultTo={customerEmail}
+        defaultSubject={`${reminderLevelLabel(invoice.reminder_level)} — Rechnung ${invoice.invoice_number}`}
+        defaultMessage={`Sehr geehrte Damen und Herren,\n\nwir möchten Sie daran erinnern, dass die Rechnung ${invoice.invoice_number} über ${formatCurrency(invoice.total)} noch offen ist.\n\nDie Fälligkeit war am ${formatDate(invoice.due_date)}.\n\nBitte überweisen Sie den offenen Betrag umgehend.\n\nSollte sich Ihre Zahlung mit diesem Schreiben überschneiden, betrachten Sie diese Erinnerung bitte als gegenstandslos.\n\nMit freundlichen Grüßen`}
+        onSend={async (data) => {
+          try {
+            await sendReminderEmail(id!, data)
+            toast.success('Mahnung wurde per E-Mail gesendet.')
+          } catch (e: any) {
+            const msg = e?.response?.data?.detail || 'Fehler beim E-Mail-Versand.'
+            toast.error(msg)
+            throw e
+          }
+        }}
       />
     </div>
   )

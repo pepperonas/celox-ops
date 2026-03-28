@@ -29,6 +29,15 @@ const statusColors: Record<string, string> = {
   quartalsweise: 'bg-surface-2 text-text-muted border border-border',
   halbjaehrlich: 'bg-surface-2 text-text-muted border border-border',
   jaehrlich: 'bg-surface-2 text-text-muted border border-border',
+  // Expense categories
+  domain: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
+  software: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  lizenz: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  hardware: 'bg-[#d2992233] text-warning border border-[#d2992240]',
+  ki_api: 'bg-[#39d3531a] text-[#39d353] border border-[#39d35330]',
+  werbung: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
+  buero: 'bg-surface-2 text-text-muted border border-border',
+  reise: 'bg-[#d2992233] text-warning border border-[#d2992240]',
 }
 
 const statusLabels: Record<string, string> = {
@@ -57,6 +66,15 @@ const statusLabels: Record<string, string> = {
   quartalsweise: 'Quartalsweise',
   halbjaehrlich: 'Halbjährlich',
   jaehrlich: 'Jährlich',
+  // Expense categories
+  domain: 'Domain',
+  software: 'Software',
+  lizenz: 'Lizenz',
+  hardware: 'Hardware',
+  ki_api: 'KI/API',
+  werbung: 'Werbung',
+  buero: 'Büro',
+  reise: 'Reise',
 }
 
 interface StatusBadgeProps {

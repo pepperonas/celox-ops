@@ -43,6 +43,7 @@ class ContractResponse(ContractBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    last_invoiced_date: date | None = None
     customer_name: str = ""
     created_at: datetime
     updated_at: datetime

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getOrder, deleteOrder } from '../../api/orders'
+import { getOrder, deleteOrder, generateQuotePdf, downloadQuotePdf, sendQuoteEmail } from '../../api/orders'
 import { getInvoices } from '../../api/invoices'
+import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import EmailDialog from '../../components/EmailDialog'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Order, Invoice } from '../../types'
 
@@ -14,12 +16,41 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<Order | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [showDelete, setShowDelete] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [customerEmail, setCustomerEmail] = useState('')
 
   useEffect(() => {
     if (!id) return
-    getOrder(id).then(setOrder)
+    getOrder(id).then((o) => {
+      setOrder(o)
+      if (o.customer_id) {
+        getCustomer(o.customer_id).then((c) => setCustomerEmail(c.email || '')).catch(() => {})
+      }
+    })
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch(() => {})
   }, [id])
+
+  const handleGenerateQuotePdf = async () => {
+    setPdfLoading(true)
+    try {
+      await generateQuotePdf(id!)
+      toast.success('Angebots-PDF erstellt.')
+      const updated = await getOrder(id!)
+      setOrder(updated)
+    } catch {
+      toast.error('Fehler beim Erstellen des Angebots-PDF.')
+    }
+    setPdfLoading(false)
+  }
+
+  const handleDownloadQuotePdf = async () => {
+    try {
+      await downloadQuotePdf(id!)
+    } catch {
+      toast.error('Fehler beim Herunterladen des Angebots-PDF.')
+    }
+  }
 
   const handleDelete = async () => {
     try {
@@ -48,6 +79,21 @@ export default function OrderDetail() {
           <StatusBadge status={order.status} />
         </div>
         <div className="flex gap-3">
+          {order.status === 'angebot' && (
+            <button onClick={handleGenerateQuotePdf} disabled={pdfLoading} className="btn-secondary">
+              {pdfLoading ? 'Erstelle...' : 'Angebot PDF erstellen'}
+            </button>
+          )}
+          {order.quote_pdf_path && (
+            <>
+              <button onClick={handleDownloadQuotePdf} className="btn-secondary">
+                Angebot PDF herunterladen
+              </button>
+              <button onClick={() => setShowEmailDialog(true)} className="btn-secondary">
+                Angebot per E-Mail senden
+              </button>
+            </>
+          )}
           <button onClick={() => navigate(`/auftraege/${id}/bearbeiten`)} className="btn-secondary">
             Bearbeiten
           </button>
@@ -83,6 +129,12 @@ export default function OrderDetail() {
             <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Enddatum</p>
             <p className="text-text">{formatDate(order.end_date)}</p>
           </div>
+          {order.valid_until && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Gültig bis</p>
+              <p className="text-text">{formatDate(order.valid_until)}</p>
+            </div>
+          )}
           <div>
             <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Erstellt am</p>
             <p className="text-text">{formatDate(order.created_at)}</p>
@@ -135,6 +187,24 @@ export default function OrderDetail() {
         onConfirm={handleDelete}
         title="Auftrag löschen"
         message={`Möchten Sie den Auftrag "${order.title}" wirklich löschen?`}
+      />
+
+      <EmailDialog
+        isOpen={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        defaultTo={customerEmail}
+        defaultSubject={`Angebot — ${order.title}`}
+        defaultMessage={`Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie unser Angebot "${order.title}".\n\nWir würden uns freuen, Sie als Kunden begrüßen zu dürfen.\nBei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen`}
+        onSend={async (data) => {
+          try {
+            await sendQuoteEmail(id!, data)
+            toast.success('Angebot wurde per E-Mail gesendet.')
+          } catch (e: any) {
+            const msg = e?.response?.data?.detail || 'Fehler beim E-Mail-Versand.'
+            toast.error(msg)
+            throw e
+          }
+        }}
       />
     </div>
   )

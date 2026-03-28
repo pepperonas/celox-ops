@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import { getOrder, createOrder, updateOrder } from '../../api/orders'
 import { getCustomers } from '../../api/customers'
-import type { OrderCreate, Customer } from '../../types'
+import type { OrderCreate, Customer, InvoicePosition } from '../../types'
 
 const statusOptions = [
   { value: 'angebot', label: 'Angebot' },
@@ -23,6 +23,8 @@ const emptyForm: OrderCreate = {
   hourly_rate: 0,
   start_date: '',
   end_date: '',
+  valid_until: '',
+  positions: null,
 }
 
 export default function OrderForm() {
@@ -46,6 +48,8 @@ export default function OrderForm() {
           hourly_rate: o.hourly_rate,
           start_date: o.start_date?.split('T')[0] || '',
           end_date: o.end_date?.split('T')[0] || '',
+          valid_until: o.valid_until?.split('T')[0] || '',
+          positions: o.positions || null,
         }),
       )
     }
@@ -153,6 +157,122 @@ export default function OrderForm() {
             value={form.end_date || ''}
             onChange={handleChange}
           />
+        </div>
+        <FormField
+          label="Gültig bis"
+          name="valid_until"
+          type="date"
+          value={form.valid_until || ''}
+          onChange={handleChange}
+        />
+
+        {/* Positionen */}
+        <div className="border-t border-border pt-4 mt-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-text">Positionen (optional)</h3>
+            <button
+              type="button"
+              onClick={() => {
+                const positions: InvoicePosition[] = form.positions || []
+                setForm({
+                  ...form,
+                  positions: [
+                    ...positions,
+                    { position: positions.length + 1, beschreibung: '', menge: 1, einheit: 'Stk', einzelpreis: 0, gesamt: 0 },
+                  ],
+                })
+              }}
+              className="btn-secondary text-xs"
+            >
+              + Position
+            </button>
+          </div>
+          {form.positions && form.positions.length > 0 && (
+            <div className="space-y-3">
+              {form.positions.map((pos, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-4">
+                    <label className="block text-xs text-text-muted mb-1">Beschreibung</label>
+                    <input
+                      type="text"
+                      value={pos.beschreibung}
+                      onChange={(e) => {
+                        const updated = [...(form.positions || [])]
+                        updated[idx] = { ...updated[idx], beschreibung: e.target.value }
+                        setForm({ ...form, positions: updated })
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-text-muted mb-1">Menge</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={pos.menge}
+                      onChange={(e) => {
+                        const updated = [...(form.positions || [])]
+                        const menge = parseFloat(e.target.value) || 0
+                        updated[idx] = { ...updated[idx], menge, gesamt: menge * updated[idx].einzelpreis }
+                        setForm({ ...form, positions: updated })
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-xs text-text-muted mb-1">Einheit</label>
+                    <input
+                      type="text"
+                      value={pos.einheit}
+                      onChange={(e) => {
+                        const updated = [...(form.positions || [])]
+                        updated[idx] = { ...updated[idx], einheit: e.target.value }
+                        setForm({ ...form, positions: updated })
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-text-muted mb-1">Einzelpreis</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={pos.einzelpreis}
+                      onChange={(e) => {
+                        const updated = [...(form.positions || [])]
+                        const einzelpreis = parseFloat(e.target.value) || 0
+                        updated[idx] = { ...updated[idx], einzelpreis, gesamt: updated[idx].menge * einzelpreis }
+                        setForm({ ...form, positions: updated })
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-text-muted mb-1">Gesamt</label>
+                    <input
+                      type="number"
+                      value={pos.gesamt.toFixed(2)}
+                      readOnly
+                      className="input w-full bg-surface-2"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = (form.positions || []).filter((_, i) => i !== idx).map((p, i) => ({ ...p, position: i + 1 }))
+                        setForm({ ...form, positions: updated.length > 0 ? updated : null })
+                      }}
+                      className="text-red-500 hover:text-red-700 text-sm p-1"
+                      title="Position entfernen"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-4">

@@ -16,6 +16,8 @@ class OrderBase(BaseModel):
     hourly_rate: Decimal | None = None
     start_date: date | None = None
     end_date: date | None = None
+    positions: list | None = None
+    valid_until: date | None = None
 
 
 class OrderCreate(OrderBase):
@@ -31,6 +33,8 @@ class OrderUpdate(BaseModel):
     hourly_rate: Decimal | None = None
     start_date: date | None = None
     end_date: date | None = None
+    positions: list | None = None
+    valid_until: date | None = None
 
 
 class OrderResponse(OrderBase):
@@ -38,6 +42,7 @@ class OrderResponse(OrderBase):
 
     id: uuid.UUID
     customer_name: str = ""
+    quote_pdf_path: str | None = None
     created_at: datetime
     updated_at: datetime
 

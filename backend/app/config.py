@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     TOKEN_TRACKER_BASE_URL: str = ""
     TOKEN_TRACKER_ADMIN_KEY: str = ""
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = ""
+    SMTP_USE_TLS: bool = True
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
