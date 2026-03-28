@@ -31,8 +31,10 @@ def _serialize(obj):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
-    if hasattr(obj, "value"):  # Enum
+    if hasattr(obj, "value") and isinstance(obj.value, str):  # Enum
         return obj.value
+    if hasattr(obj, "hex"):  # UUID (including asyncpg UUID)
+        return str(obj)
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
