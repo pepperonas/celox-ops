@@ -334,6 +334,8 @@ Active working time is calculated from message timestamps: intervals between con
 - Generate strong values for `JWT_SECRET` and `POSTGRES_PASSWORD`
 - The `ADMIN_PASSWORD_HASH` must be a bcrypt hash (escape `$` as `$$`)
 - `TOKEN_TRACKER_ADMIN_KEY` is only needed if using the Token Tracker integration
+- `SIGNATURE_PATH` must point to a PNG inside the Docker volume (`/data/assets/`)
+- All personal data (address, tax number, bank details, PayPal) is stored exclusively in `.env` — never in code or templates
 
 ---
 

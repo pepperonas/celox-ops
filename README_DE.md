@@ -338,6 +338,8 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 - Starke Werte für `JWT_SECRET` und `POSTGRES_PASSWORD` generieren
 - `ADMIN_PASSWORD_HASH` muss ein bcrypt-Hash sein (`$` als `$$` escapen)
 - `TOKEN_TRACKER_ADMIN_KEY` wird nur bei Nutzung der Token Tracker Integration benötigt
+- `SIGNATURE_PATH` muss auf eine PNG-Datei im Docker-Volume zeigen (`/data/assets/`)
+- Alle persönlichen Daten (Adresse, Steuernummer, Bankverbindung, PayPal) werden ausschließlich in `.env` gespeichert — niemals im Code oder in Templates
 
 ---
 
