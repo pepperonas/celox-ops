@@ -498,7 +498,12 @@ export default function InvoiceForm() {
                 checked={attachTokenUsage}
                 onChange={(e) => {
                   setAttachTokenUsage(e.target.checked)
-                  if (!e.target.checked) {
+                  if (e.target.checked) {
+                    const now = new Date()
+                    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+                    const today = now.toISOString().split('T')[0]
+                    setForm({ ...form, token_usage_from: firstOfMonth, token_usage_to: today })
+                  } else {
                     setForm({ ...form, token_usage_from: null, token_usage_to: null })
                   }
                 }}
