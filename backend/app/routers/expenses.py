@@ -29,7 +29,7 @@ async def list_expenses(
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     sort_by: str = Query("date"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),

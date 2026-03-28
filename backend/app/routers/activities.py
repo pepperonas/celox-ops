@@ -23,7 +23,7 @@ MANUAL_TYPES = {"note", "call", "email", "meeting"}
 async def list_activities(
     customer_id: uuid.UUID = Query(...),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     query = select(Activity).where(Activity.customer_id == customer_id)

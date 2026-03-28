@@ -39,7 +39,7 @@ async def list_orders(
     customer_id: uuid.UUID | None = Query(None),
     order_status: OrderStatus | None = Query(None, alias="status"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
