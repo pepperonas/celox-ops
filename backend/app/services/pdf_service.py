@@ -1,3 +1,4 @@
+import base64
 import os
 from pathlib import Path
 
@@ -44,6 +45,13 @@ def generate_invoice_pdf(
 
     token_usage = _fetch_token_usage(customer, invoice)
 
+    # Load signature as base64
+    signature_b64 = None
+    sig_path = settings.SIGNATURE_PATH
+    if sig_path and os.path.isfile(sig_path):
+        with open(sig_path, "rb") as f:
+            signature_b64 = base64.b64encode(f.read()).decode("utf-8")
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
@@ -51,6 +59,7 @@ def generate_invoice_pdf(
         settings=settings,
         kleinunternehmer=settings.KLEINUNTERNEHMER,
         token_usage=token_usage,
+        signature_b64=signature_b64,
     )
 
     os.makedirs(settings.PDF_STORAGE_PATH, exist_ok=True)

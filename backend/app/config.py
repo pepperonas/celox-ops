@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     BUSINESS_BANK_BIC: str = ""
     KLEINUNTERNEHMER: bool = True
 
+    BUSINESS_PAYPAL: str = ""
+    SIGNATURE_PATH: str = "/data/assets/signature.png"
+
     PDF_STORAGE_PATH: str = "/data/invoices"
     LOGO_PATH: str = "/data/assets/logo.png"
 

@@ -268,30 +268,50 @@
     </div>
     {% endif %}
 
+    {% if signature_b64 %}
+    <div style="margin-top: 30px;">
+        <p style="font-size: 9pt; color: #555; margin-bottom: 5px;">Mit freundlichen Grüßen</p>
+        <img src="data:image/png;base64,{{ signature_b64 }}" style="max-height: 60px; max-width: 200px;" alt="Unterschrift">
+        <p style="font-size: 9pt; color: #333; margin-top: 3px;">{{ settings.BUSINESS_OWNER }}</p>
+    </div>
+    {% endif %}
+
     <div class="payment-info">
-        <h3>Bankverbindung</h3>
+        <h3>Zahlungsinformationen</h3>
+        {% if settings.BUSINESS_BANK_IBAN %}
         <table>
+            {% if settings.BUSINESS_BANK_NAME %}
             <tr>
                 <td><strong>Bank:</strong></td>
                 <td>{{ settings.BUSINESS_BANK_NAME }}</td>
             </tr>
+            {% endif %}
             <tr>
                 <td><strong>IBAN:</strong></td>
                 <td>{{ settings.BUSINESS_BANK_IBAN }}</td>
             </tr>
+            {% if settings.BUSINESS_BANK_BIC %}
             <tr>
                 <td><strong>BIC:</strong></td>
                 <td>{{ settings.BUSINESS_BANK_BIC }}</td>
             </tr>
+            {% endif %}
             <tr>
                 <td><strong>Verwendungszweck:</strong></td>
                 <td>{{ invoice.invoice_number }}</td>
             </tr>
         </table>
+        {% endif %}
+        {% if settings.BUSINESS_PAYPAL %}
+        <p style="margin-top: 10px; font-size: 9pt;">
+            <strong>PayPal:</strong> {{ settings.BUSINESS_PAYPAL }}
+        </p>
+        {% endif %}
     </div>
 
     <div class="footer">
         {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
+        {% if settings.BUSINESS_TAX_ID %} | USt-IdNr.: {{ settings.BUSINESS_TAX_ID }}{% endif %}
         {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
     </div>
 
