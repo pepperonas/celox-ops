@@ -158,6 +158,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### Einstellungen
 - Token Tracker Verbindungsstatus
 - Konfigurationsanleitung für Token Tracker Integration
+- **Datenbank-Backup** — Ein-Klick-Export aller Daten (Kunden, Aufträge, Verträge, Rechnungen, Leads, Zeiteinträge, Ausgaben, Aktivitäten) als JSON-Datei
+- PDFs als Base64 im Backup enthalten — alles in einer einzigen Datei
 
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
@@ -284,6 +286,7 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/expenses/summary` | Ausgaben-Zusammenfassung |
 | `GET` | `/api/euer/overview` | EÜR-Übersicht |
 | `GET` | `/api/euer/export` | EÜR-CSV-Export |
+| `GET` | `/api/backup/export` | Vollständiger Datenbank-Export (JSON + PDFs) |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Docs unter `/docs` (Swagger UI).
@@ -417,6 +420,7 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `PDF_STORAGE_PATH` | PDF-Speicherpfad | `/data/invoices` |
 | `SIGNATURE_PATH` | Pfad zum Unterschrift-Bild (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
+| `TOKEN_TRACKER_PUBLIC_URL` | Öffentliche Token Tracker URL (für Browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-Zeichen-Hex) |
 | `SMTP_HOST` | SMTP-Server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP-Port | `587` |
@@ -432,6 +436,7 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 - `TOKEN_TRACKER_ADMIN_KEY` wird nur bei Nutzung der Token Tracker Integration benötigt
 - `SIGNATURE_PATH` muss auf eine PNG-Datei im Docker-Volume zeigen (`/data/assets/`)
 - Alle persönlichen Daten (Adresse, Steuernummer, Bankverbindung, PayPal) werden ausschließlich in `.env` gespeichert — niemals im Code oder in Templates
+- Datenbank-Backups enthalten alle Geschäftsdaten — sicher aufbewahren und nicht weitergeben
 
 ---
 
@@ -476,6 +481,7 @@ celox-ops/
 │       │   ├── activities.py   # Aktivitätsprotokoll-Endpunkte
 │       │   ├── expenses.py     # Ausgaben-CRUD + Zusammenfassung
 │       │   ├── euer.py         # EÜR-Übersicht + CSV-Export
+│       │   ├── backup.py       # Vollständiger Datenbank-Export (JSON + PDFs)
 │       │   └── token_tracker.py # Token Tracker Share-API-Proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung

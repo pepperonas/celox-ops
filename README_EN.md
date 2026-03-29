@@ -158,6 +158,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Settings
 - Token Tracker connection status
 - Configuration guide for Token Tracker integration
+- **Database backup** — one-click export of all data (customers, orders, contracts, invoices, leads, time entries, expenses, activities) as JSON file
+- PDFs included as Base64 in the backup — everything in a single file
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest ~80 IT consulting services while typing
@@ -284,6 +286,7 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/expenses/summary` | Expense summary |
 | `GET` | `/api/euer/overview` | EÜR overview |
 | `GET` | `/api/euer/export` | EÜR CSV export |
+| `GET` | `/api/backup/export` | Full database export (JSON + PDFs) |
 | `GET` | `/api/health` | Health check |
 
 Interactive API docs at `/docs` (Swagger UI).
@@ -413,6 +416,7 @@ Active working time is calculated from message timestamps: intervals between con
 | `PDF_STORAGE_PATH` | PDF storage path | `/data/invoices` |
 | `SIGNATURE_PATH` | Signature image path (optional) | `/data/assets/signature.png` |
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
+| `TOKEN_TRACKER_PUBLIC_URL` | Public Token Tracker URL (for browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
 | `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP port | `587` |
@@ -428,6 +432,7 @@ Active working time is calculated from message timestamps: intervals between con
 - `TOKEN_TRACKER_ADMIN_KEY` is only needed if using the Token Tracker integration
 - `SIGNATURE_PATH` must point to a PNG inside the Docker volume (`/data/assets/`)
 - All personal data (address, tax number, bank details, PayPal) is stored exclusively in `.env` — never in code or templates
+- Database backups contain all business data — store securely and do not share
 
 ---
 
@@ -472,6 +477,7 @@ OPS/
 │       │   ├── activities.py   # Activity log endpoints
 │       │   ├── expenses.py     # Expense CRUD + summary
 │       │   ├── euer.py         # EÜR overview + CSV export
+│       │   ├── backup.py       # Full database export (JSON + PDFs)
 │       │   └── token_tracker.py # Token Tracker share API proxy
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
