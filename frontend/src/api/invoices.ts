@@ -84,3 +84,13 @@ export async function sendReminderEmail(
 ): Promise<void> {
   await api.post(`/invoices/${id}/send-reminder-email`, data)
 }
+
+export async function recordPayment(id: string, amount: number): Promise<Invoice> {
+  const response = await api.post(`/invoices/${id}/payment`, { amount })
+  return response.data
+}
+
+export async function createCreditNote(id: string): Promise<Invoice> {
+  const response = await api.post(`/invoices/${id}/credit-note`)
+  return response.data
+}

@@ -8,7 +8,7 @@ import {
   Legend,
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
-import { getEuerOverview, exportEuerCsv, type EuerOverview } from '../api/euer'
+import { getEuerOverview, exportEuerCsv, downloadMonthlyReport, type EuerOverview } from '../api/euer'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -26,11 +26,20 @@ const CHART_COLORS = {
   textMuted: '#8b949e',
 }
 
+const MONTH_NAMES = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+]
+
 export default function Euer() {
   const currentYear = new Date().getFullYear()
+  const currentMonth = new Date().getMonth() + 1
   const [year, setYear] = useState(currentYear)
   const [data, setData] = useState<EuerOverview | null>(null)
   const [loading, setLoading] = useState(true)
+  const [reportMonth, setReportMonth] = useState(currentMonth)
+  const [reportYear, setReportYear] = useState(currentYear)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i)
 
@@ -56,6 +65,17 @@ export default function Euer() {
     } catch {
       toast.error('Fehler beim Export.')
     }
+  }
+
+  const handleMonthlyReport = async () => {
+    setGeneratingReport(true)
+    try {
+      await downloadMonthlyReport(reportYear, reportMonth)
+      toast.success('Monatsbericht heruntergeladen.')
+    } catch {
+      toast.error('Fehler beim Erstellen des Monatsberichts.')
+    }
+    setGeneratingReport(false)
   }
 
   if (loading || !data) {
@@ -311,6 +331,51 @@ export default function Euer() {
           </div>
         </div>
       )}
+
+      {/* Monthly Report */}
+      <div className="bg-surface border border-border rounded-[12px] p-5 mt-6">
+        <h3 className="text-sm font-medium text-text mb-4">Monatsbericht generieren</h3>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Monat</label>
+            <select
+              value={reportMonth}
+              onChange={(e) => setReportMonth(Number(e.target.value))}
+              className="input-field w-auto"
+            >
+              {MONTH_NAMES.map((name, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Jahr</label>
+            <select
+              value={reportYear}
+              onChange={(e) => setReportYear(Number(e.target.value))}
+              className="input-field w-auto"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleMonthlyReport}
+            disabled={generatingReport}
+            className="btn-primary flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {generatingReport ? 'Wird erstellt...' : 'PDF herunterladen'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

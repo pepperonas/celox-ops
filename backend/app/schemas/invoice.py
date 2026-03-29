@@ -72,6 +72,9 @@ class InvoiceResponse(BaseModel):
     reminder_level: int = 0
     reminder_sent_at: datetime | None = None
     reminder_pdf_path: str | None = None
+    amount_paid: Decimal = Decimal("0")
+    is_credit_note: bool = False
+    credit_note_for: uuid.UUID | None = None
     customer_name: str = ""
     created_at: datetime
     updated_at: datetime
@@ -92,3 +95,7 @@ class QuickInvoiceCreate(BaseModel):
     einheit: str = "pauschal"
     einzelpreis: Decimal
     notes: str | None = None
+
+
+class PaymentRequest(BaseModel):
+    amount: Decimal

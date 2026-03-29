@@ -205,6 +205,9 @@ export interface Invoice {
   reminder_level: number
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
+  amount_paid: number
+  is_credit_note: boolean
+  credit_note_for: string | null
   created_at: string
   updated_at: string
 }
@@ -367,9 +370,44 @@ export interface ExpenseCreate {
 
 export interface ExpenseUpdate extends Partial<ExpenseCreate> {}
 
+export interface Attachment {
+  id: string
+  customer_id: string | null
+  order_id: string | null
+  contract_id: string | null
+  filename: string
+  original_name: string
+  content_type: string
+  size: number
+  created_at: string
+}
+
 export interface ExpenseSummary {
   year: number
   total: number
   by_category: { category: string; total: number }[]
   by_month: { month: number; total: number }[]
+}
+
+export interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  body: string
+  category: string
+  created_at: string
+}
+
+export interface EmailTemplateCreate {
+  name: string
+  subject: string
+  body: string
+  category: string
+}
+
+export interface EmailTemplateUpdate {
+  name?: string
+  subject?: string
+  body?: string
+  category?: string
 }

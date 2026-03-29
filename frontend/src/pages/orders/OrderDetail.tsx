@@ -7,6 +7,7 @@ import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import EmailDialog from '../../components/EmailDialog'
+import FileAttachments from '../../components/FileAttachments'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Order, Invoice } from '../../types'
 
@@ -157,6 +158,11 @@ export default function OrderDetail() {
             <p className="text-text text-sm whitespace-pre-wrap">{order.description}</p>
           </div>
         )}
+      </div>
+
+      {/* Anhänge */}
+      <div className="mb-6">
+        <FileAttachments order_id={id} />
       </div>
 
       {/* Related Invoices */}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 2.5cm 3cm 2.5cm;
+            @bottom-center {
+                content: "{{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}{% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}";
+                font-size: 7pt;
+                color: #999;
+                border-top: 0.5pt solid #ddd;
+                padding-top: 5px;
+            }
+        }
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+        .header-left {
+            flex: 1;
+        }
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+        .company-details {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 5px;
+        }
+        h1 {
+            font-size: 16pt;
+            color: #1a1a2e;
+            margin: 10px 0 25px 0;
+        }
+        .kpi-grid {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .kpi-box {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        .kpi-label {
+            font-size: 8pt;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .kpi-value {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+        .kpi-value.green { color: #2e7d32; }
+        .kpi-value.red { color: #c62828; }
+        .kpi-value.blue { color: #1565c0; }
+        h2 {
+            font-size: 12pt;
+            color: #1a1a2e;
+            margin: 25px 0 10px 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        thead th {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        thead th.right {
+            text-align: right;
+        }
+        tbody td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 9pt;
+        }
+        tbody td.right {
+            text-align: right;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        .total-row td {
+            font-weight: bold;
+            border-top: 2px solid #1a1a2e;
+            background-color: #f0f0f0 !important;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        .status-bezahlt { background: #e8f5e9; color: #2e7d32; }
+        .status-gestellt { background: #e3f2fd; color: #1565c0; }
+        .status-entwurf { background: #f5f5f5; color: #666; }
+        .status-ueberfaellig { background: #ffebee; color: #c62828; }
+        .status-storniert { background: #fafafa; color: #999; }
+        .empty-note {
+            font-size: 9pt;
+            color: #999;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ settings.BUSINESS_NAME }}</div>
+            <div class="company-details">
+                {{ settings.BUSINESS_OWNER }}<br>
+                {{ settings.BUSINESS_ADDRESS }}<br>
+                {{ settings.BUSINESS_EMAIL }}
+                {% if settings.BUSINESS_WEB %} | {{ settings.BUSINESS_WEB }}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <h1>Monatsbericht {{ month_name }} {{ year }}</h1>
+
+    <!-- KPI Boxes -->
+    <div class="kpi-grid">
+        <div class="kpi-box">
+            <div class="kpi-label">Umsatz</div>
+            <div class="kpi-value green">{{ "%.2f"|format(kpis.revenue) }} &euro;</div>
+        </div>
+        <div class="kpi-box">
+            <div class="kpi-label">Ausgaben</div>
+            <div class="kpi-value red">{{ "%.2f"|format(kpis.expenses) }} &euro;</div>
+        </div>
+        <div class="kpi-box">
+            <div class="kpi-label">Gewinn</div>
+            <div class="kpi-value {% if kpis.profit >= 0 %}green{% else %}red{% endif %}">{{ "%.2f"|format(kpis.profit) }} &euro;</div>
+        </div>
+        <div class="kpi-box">
+            <div class="kpi-label">Neue Kunden</div>
+            <div class="kpi-value blue">{{ kpis.new_customers }}</div>
+        </div>
+    </div>
+
+    <!-- Invoices -->
+    <h2>Rechnungen</h2>
+    {% if invoices %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nr.</th>
+                <th>Kunde</th>
+                <th>Titel</th>
+                <th>Status</th>
+                <th class="right">Betrag</th>
+                <th>Datum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invoices %}
+            <tr>
+                <td>{{ inv.invoice_number }}</td>
+                <td>{{ inv.customer_name }}</td>
+                <td>{{ inv.title }}</td>
+                <td><span class="status-badge status-{{ inv.status }}">{{ inv.status_label }}</span></td>
+                <td class="right">{{ "%.2f"|format(inv.total) }} &euro;</td>
+                <td>{{ inv.date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-note">Keine Rechnungen in diesem Monat.</p>
+    {% endif %}
+
+    <!-- Open Invoices -->
+    <h2>Offene Rechnungen</h2>
+    {% if open_invoices %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nr.</th>
+                <th>Kunde</th>
+                <th class="right">Betrag</th>
+                <th>Fällig am</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in open_invoices %}
+            <tr>
+                <td>{{ inv.invoice_number }}</td>
+                <td>{{ inv.customer_name }}</td>
+                <td class="right">{{ "%.2f"|format(inv.total) }} &euro;</td>
+                <td>{{ inv.due_date }}</td>
+                <td><span class="status-badge status-{{ inv.status }}">{{ inv.status_label }}</span></td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="2">Gesamt offen</td>
+                <td class="right">{{ "%.2f"|format(open_invoices_total) }} &euro;</td>
+                <td colspan="2"></td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-note">Keine offenen Rechnungen.</p>
+    {% endif %}
+
+    <!-- Time Entries -->
+    <h2>Zeiterfassung</h2>
+    {% if time_entries_by_customer %}
+    <table>
+        <thead>
+            <tr>
+                <th>Kunde</th>
+                <th class="right">Stunden</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in time_entries_by_customer %}
+            <tr>
+                <td>{{ entry.customer_name }}</td>
+                <td class="right">{{ "%.1f"|format(entry.hours) }} h</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>Gesamt</td>
+                <td class="right">{{ "%.1f"|format(total_hours) }} h</td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-note">Keine Zeiteinträge in diesem Monat.</p>
+    {% endif %}
+
+    <!-- Orders completed -->
+    <h2>Abgeschlossene Aufträge ({{ completed_orders|length }})</h2>
+    {% if completed_orders %}
+    <table>
+        <thead>
+            <tr>
+                <th>Auftrag</th>
+                <th>Kunde</th>
+                <th class="right">Betrag</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in completed_orders %}
+            <tr>
+                <td>{{ order.title }}</td>
+                <td>{{ order.customer_name }}</td>
+                <td class="right">{% if order.amount %}{{ "%.2f"|format(order.amount) }} &euro;{% else %}&ndash;{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-note">Keine Aufträge in diesem Monat abgeschlossen.</p>
+    {% endif %}
+</body>
+</html>

@@ -18,6 +18,7 @@ from app.schemas.invoice import (
     InvoiceResponse,
     InvoiceStatusUpdate,
     InvoiceUpdate,
+    PaymentRequest,
     QuickInvoiceCreate,
 )
 from pydantic import BaseModel as PydanticBaseModel
@@ -720,6 +721,145 @@ async def quick_invoice(
 
     resp = InvoiceResponse.model_validate(invoice)
     resp.customer_name = customer.name
+    return resp
+
+
+@router.post("/{invoice_id}/payment", response_model=InvoiceResponse)
+async def record_payment(
+    invoice_id: uuid.UUID,
+    data: PaymentRequest,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Teilzahlung erfassen."""
+    from decimal import Decimal
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+
+    if invoice.is_credit_note:
+        raise HTTPException(status_code=400, detail="Für Gutschriften können keine Zahlungen erfasst werden")
+
+    if data.amount <= Decimal("0"):
+        raise HTTPException(status_code=400, detail="Betrag muss positiv sein")
+
+    invoice.amount_paid = (invoice.amount_paid or Decimal("0")) + data.amount
+
+    if invoice.amount_paid >= invoice.total:
+        invoice.status = InvoiceStatus.bezahlt
+
+    await db.flush()
+    await db.refresh(invoice)
+
+    activity = Activity(
+        customer_id=invoice.customer_id,
+        type="payment",
+        title=f"Zahlung erfasst: {invoice.invoice_number}",
+        description=f"{float(data.amount):.2f} € — Gesamt bezahlt: {float(invoice.amount_paid):.2f} € von {float(invoice.total):.2f} €",
+    )
+    db.add(activity)
+
+    resp = InvoiceResponse.model_validate(invoice)
+    resp.customer_name = invoice.customer.name if invoice.customer else ""
+    return resp
+
+
+@router.post("/{invoice_id}/credit-note", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
+async def create_credit_note(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Gutschrift für eine Rechnung erstellen."""
+    from datetime import date as date_type, timedelta
+    from decimal import Decimal
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+
+    if invoice.is_credit_note:
+        raise HTTPException(status_code=400, detail="Für Gutschriften können keine weiteren Gutschriften erstellt werden")
+
+    if invoice.status not in (InvoiceStatus.gestellt, InvoiceStatus.bezahlt, InvoiceStatus.ueberfaellig):
+        raise HTTPException(
+            status_code=400,
+            detail="Gutschriften können nur für gestellte, bezahlte oder überfällige Rechnungen erstellt werden",
+        )
+
+    # Generate credit note number GS-YYYY-NNNN
+    from datetime import datetime
+    year = datetime.now().year
+    gs_prefix = f"GS-{year}-"
+    gs_result = await db.execute(
+        select(Invoice.invoice_number)
+        .where(Invoice.invoice_number.like(f"{gs_prefix}%"))
+        .order_by(Invoice.invoice_number.desc())
+        .limit(1)
+    )
+    last_gs = gs_result.scalar_one_or_none()
+    if last_gs:
+        next_seq = int(last_gs.split("-")[-1]) + 1
+    else:
+        next_seq = 1
+    gs_number = f"{gs_prefix}{next_seq:04d}"
+
+    # Negate all amounts
+    neg_positions = []
+    for pos in invoice.positions:
+        neg_pos = dict(pos)
+        neg_pos["gesamt"] = str(-abs(float(pos.get("gesamt", 0))))
+        neg_pos["einzelpreis"] = str(-abs(float(pos.get("einzelpreis", 0))))
+        neg_positions.append(neg_pos)
+
+    today = date_type.today()
+    credit_note = Invoice(
+        customer_id=invoice.customer_id,
+        invoice_number=gs_number,
+        title=f"Gutschrift zu {invoice.invoice_number}",
+        positions=neg_positions,
+        subtotal=-abs(invoice.subtotal),
+        tax_rate=invoice.tax_rate,
+        tax_amount=-abs(invoice.tax_amount),
+        total=-abs(invoice.total),
+        invoice_date=today,
+        due_date=today,
+        status=InvoiceStatus.bezahlt,
+        is_credit_note=True,
+        credit_note_for=invoice.id,
+        notes=f"Gutschrift zu Rechnung {invoice.invoice_number}",
+    )
+    db.add(credit_note)
+    await db.flush()
+    await db.refresh(credit_note)
+
+    activity = Activity(
+        customer_id=invoice.customer_id,
+        type="invoice",
+        title=f"Gutschrift {gs_number} erstellt",
+        description=f"Gutschrift zu {invoice.invoice_number} — {float(credit_note.total):.2f} €",
+    )
+    db.add(activity)
+
+    # Load customer for response
+    result2 = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == credit_note.id)
+    )
+    credit_note = result2.scalar_one()
+
+    resp = InvoiceResponse.model_validate(credit_note)
+    resp.customer_name = credit_note.customer.name if credit_note.customer else ""
     return resp
 
 

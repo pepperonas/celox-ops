@@ -21,10 +21,13 @@ import InvoiceDetail from './pages/invoices/InvoiceDetail'
 import LeadList from './pages/leads/LeadList'
 import LeadForm from './pages/leads/LeadForm'
 import Tasks from './pages/Tasks'
+import Calendar from './pages/Calendar'
 import TimeTracking from './pages/TimeTracking'
 import ExpenseList from './pages/expenses/ExpenseList'
 import ExpenseForm from './pages/expenses/ExpenseForm'
 import Euer from './pages/Euer'
+import Kanban from './pages/Kanban'
+import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -48,6 +51,7 @@ export default function App() {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/aufgaben" element={<Tasks />} />
+          <Route path="/kalender" element={<Calendar />} />
           <Route path="/zeiterfassung" element={<TimeTracking />} />
           <Route path="/kunden" element={<CustomerList />} />
           <Route path="/kunden/neu" element={<CustomerForm />} />
@@ -72,6 +76,8 @@ export default function App() {
           <Route path="/ausgaben/neu" element={<ExpenseForm />} />
           <Route path="/ausgaben/:id/bearbeiten" element={<ExpenseForm />} />
           <Route path="/euer" element={<Euer />} />
+          <Route path="/kanban" element={<Kanban />} />
+          <Route path="/analyse" element={<Analytics />} />
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>

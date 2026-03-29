@@ -5,6 +5,7 @@ import { getContract, deleteContract } from '../../api/contracts'
 import { getInvoices } from '../../api/invoices'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import FileAttachments from '../../components/FileAttachments'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Contract, Invoice } from '../../types'
 
@@ -99,6 +100,11 @@ export default function ContractDetail() {
             <p className="text-text text-sm whitespace-pre-wrap">{contract.description}</p>
           </div>
         )}
+      </div>
+
+      {/* Anhänge */}
+      <div className="mb-6">
+        <FileAttachments contract_id={id} />
       </div>
 
       <h3 className="text-lg font-semibold text-text mb-3">Zugehörige Rechnungen</h3>

@@ -5,7 +5,9 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.lead import Lead, LeadStatus
 from app.models.time_entry import TimeEntry
 from app.models.activity import Activity
+from app.models.attachment import Attachment
 from app.models.expense import Expense, ExpenseCategory
+from app.models.email_template import EmailTemplate
 
 __all__ = [
     "Customer",
@@ -22,4 +24,6 @@ __all__ = [
     "Activity",
     "Expense",
     "ExpenseCategory",
+    "Attachment",
+    "EmailTemplate",
 ]

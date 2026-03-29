@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getEmailTemplates } from '../api/emailTemplates'
+import type { EmailTemplate } from '../types'
 
 interface EmailDialogProps {
   isOpen: boolean
@@ -7,6 +9,7 @@ interface EmailDialogProps {
   defaultSubject: string
   defaultMessage: string
   onSend: (data: { to_email: string; subject: string; message: string }) => Promise<void>
+  placeholders?: Record<string, string>
 }
 
 export default function EmailDialog({
@@ -16,11 +19,14 @@ export default function EmailDialog({
   defaultSubject,
   defaultMessage,
   onSend,
+  placeholders,
 }: EmailDialogProps) {
   const [to, setTo] = useState(defaultTo)
   const [subject, setSubject] = useState(defaultSubject)
   const [message, setMessage] = useState(defaultMessage)
   const [sending, setSending] = useState(false)
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState('')
 
   // Reset fields when dialog opens with new defaults
   const [prevOpen, setPrevOpen] = useState(false)
@@ -28,8 +34,34 @@ export default function EmailDialog({
     setTo(defaultTo)
     setSubject(defaultSubject)
     setMessage(defaultMessage)
+    setSelectedTemplate('')
   }
   if (isOpen !== prevOpen) setPrevOpen(isOpen)
+
+  useEffect(() => {
+    if (isOpen) {
+      getEmailTemplates().then(setTemplates).catch(() => {})
+    }
+  }, [isOpen])
+
+  const applyPlaceholders = (text: string): string => {
+    if (!placeholders) return text
+    let result = text
+    for (const [key, value] of Object.entries(placeholders)) {
+      result = result.split(`{${key}}`).join(value)
+    }
+    return result
+  }
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId)
+    if (!templateId) return
+    const template = templates.find((t) => t.id === templateId)
+    if (template) {
+      setSubject(applyPlaceholders(template.subject))
+      setMessage(applyPlaceholders(template.body))
+    }
+  }
 
   if (!isOpen) return null
 
@@ -50,6 +82,24 @@ export default function EmailDialog({
         <h3 className="text-lg font-semibold text-text mb-5">E-Mail senden</h3>
 
         <div className="space-y-4">
+          {templates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Vorlage</label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                className="input w-full"
+              >
+                <option value="">Keine Vorlage</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.category})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-text-muted mb-1">An</label>
             <input

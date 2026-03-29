@@ -16,6 +16,21 @@ export async function getEuerOverview(year: number): Promise<EuerOverview> {
   return response.data
 }
 
+export async function downloadMonthlyReport(year: number, month: number): Promise<void> {
+  const response = await api.get('/dashboard/monthly-report', {
+    params: { year, month },
+    responseType: 'blob',
+  })
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `Monatsbericht_${year}_${String(month).padStart(2, '0')}.pdf`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
 export async function exportEuerCsv(year: number): Promise<void> {
   const response = await api.get('/euer/export', {
     params: { year, format: 'csv' },

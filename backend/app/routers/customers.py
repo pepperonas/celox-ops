@@ -1,16 +1,23 @@
+import json
 import math
 import uuid
+from datetime import date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.models.activity import Activity
+from app.models.attachment import Attachment
 from app.models.contract import Contract
 from app.models.customer import Customer
 from app.models.invoice import Invoice
 from app.models.order import Order
+from app.models.time_entry import TimeEntry
 from app.schemas.customer import (
     CustomerCreate,
     CustomerDetail,
@@ -167,3 +174,103 @@ async def delete_customer(
         )
 
     await db.delete(customer)
+
+
+def _dsgvo_serialize(obj):
+    """JSON serializer for DSGVO export."""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if hasattr(obj, "value") and isinstance(obj.value, str):
+        return obj.value
+    if hasattr(obj, "hex"):
+        return str(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
+def _row_to_dict(row) -> dict:
+    d = {}
+    for col in row.__table__.columns:
+        d[col.name] = getattr(row, col.name)
+    return d
+
+
+@router.get("/{customer_id}/dsgvo-export")
+async def dsgvo_export(
+    customer_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """DSGVO Art. 15 — Auskunftsrecht: Alle Daten eines Kunden als JSON."""
+    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    # Orders
+    orders_result = await db.execute(
+        select(Order).where(Order.customer_id == customer_id)
+    )
+    orders = [_row_to_dict(o) for o in orders_result.scalars().all()]
+
+    # Contracts
+    contracts_result = await db.execute(
+        select(Contract).where(Contract.customer_id == customer_id)
+    )
+    contracts = [_row_to_dict(c) for c in contracts_result.scalars().all()]
+
+    # Invoices
+    invoices_result = await db.execute(
+        select(Invoice).where(Invoice.customer_id == customer_id)
+    )
+    invoices = [_row_to_dict(i) for i in invoices_result.scalars().all()]
+
+    # Time entries
+    time_entries_result = await db.execute(
+        select(TimeEntry).where(TimeEntry.customer_id == customer_id)
+    )
+    time_entries = [_row_to_dict(t) for t in time_entries_result.scalars().all()]
+
+    # Activities
+    activities_result = await db.execute(
+        select(Activity).where(Activity.customer_id == customer_id)
+    )
+    activities = [_row_to_dict(a) for a in activities_result.scalars().all()]
+
+    # Attachments (filenames only)
+    attachments_result = await db.execute(
+        select(Attachment).where(Attachment.customer_id == customer_id)
+    )
+    attachments = [
+        {
+            "id": str(a.id),
+            "original_name": a.original_name,
+            "content_type": a.content_type,
+            "size": a.size,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+        }
+        for a in attachments_result.scalars().all()
+    ]
+
+    export = {
+        "export_type": "DSGVO Art. 15 — Auskunft",
+        "export_date": datetime.now().isoformat(),
+        "kunde": _row_to_dict(customer),
+        "auftraege": orders,
+        "vertraege": contracts,
+        "rechnungen": invoices,
+        "zeiterfassung": time_entries,
+        "aktivitaeten": activities,
+        "anhaenge": attachments,
+    }
+
+    customer_name = customer.name.replace(" ", "_")
+    json_str = json.dumps(export, default=_dsgvo_serialize, ensure_ascii=False, indent=2)
+
+    return Response(
+        content=json_str,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="dsgvo-export-{customer_name}.json"'
+        },
+    )

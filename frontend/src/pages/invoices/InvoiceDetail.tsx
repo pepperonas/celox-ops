@@ -12,6 +12,8 @@ import {
   downloadReminderPdf,
   sendInvoiceEmail,
   sendReminderEmail,
+  recordPayment,
+  createCreditNote,
 } from '../../api/invoices'
 import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
@@ -31,6 +33,10 @@ export default function InvoiceDetail() {
   const [showEmailDialog, setShowEmailDialog] = useState(false)
   const [showReminderEmailDialog, setShowReminderEmailDialog] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [creditNoteLoading, setCreditNoteLoading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -132,6 +138,37 @@ export default function InvoiceDetail() {
     setReminderLoading(false)
   }
 
+  const handleRecordPayment = async () => {
+    const amount = parseFloat(paymentAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Bitte einen gültigen Betrag eingeben.')
+      return
+    }
+    setPaymentLoading(true)
+    try {
+      const updated = await recordPayment(id!, amount)
+      setInvoice(updated)
+      setShowPaymentForm(false)
+      setPaymentAmount('')
+      toast.success(`Zahlung über ${formatCurrency(amount)} erfasst.`)
+    } catch {
+      toast.error('Fehler beim Erfassen der Zahlung.')
+    }
+    setPaymentLoading(false)
+  }
+
+  const handleCreateCreditNote = async () => {
+    setCreditNoteLoading(true)
+    try {
+      const creditNote = await createCreditNote(id!)
+      toast.success(`Gutschrift ${creditNote.invoice_number} wurde erstellt.`)
+      navigate(`/rechnungen/${creditNote.id}`)
+    } catch {
+      toast.error('Fehler beim Erstellen der Gutschrift.')
+    }
+    setCreditNoteLoading(false)
+  }
+
   const handleGenerateReminderPdf = async () => {
     setReminderPdfLoading(true)
     try {
@@ -187,6 +224,11 @@ export default function InvoiceDetail() {
             <p className="text-sm text-text-muted">{invoice.title}</p>
           </div>
           <StatusBadge status={invoice.status} />
+          {invoice.is_credit_note && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+              Gutschrift
+            </span>
+          )}
           {invoice.reminder_level > 0 && (
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
               invoice.reminder_level === 3
@@ -234,6 +276,23 @@ export default function InvoiceDetail() {
               className="bg-success hover:bg-success/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
             >
               Als bezahlt markieren
+            </button>
+          )}
+          {!invoice.is_credit_note && (invoice.status === 'gestellt' || invoice.status === 'ueberfaellig' || invoice.status === 'bezahlt') && (
+            <button
+              onClick={() => setShowPaymentForm(!showPaymentForm)}
+              className="btn-secondary text-sm"
+            >
+              Zahlung erfassen
+            </button>
+          )}
+          {!invoice.is_credit_note && (invoice.status === 'gestellt' || invoice.status === 'bezahlt' || invoice.status === 'ueberfaellig') && (
+            <button
+              onClick={handleCreateCreditNote}
+              disabled={creditNoteLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              {creditNoteLoading ? 'Wird erstellt...' : 'Gutschrift erstellen'}
             </button>
           )}
           {canRemind && (
@@ -303,6 +362,78 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
+      {/* Payment Info */}
+      {!invoice.is_credit_note && invoice.amount_paid > 0 && (
+        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Zahlungen</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Rechnungsbetrag</p>
+              <p className="text-text font-semibold tabular-nums">{formatCurrency(invoice.total)}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Bereits bezahlt</p>
+              <p className="text-success font-semibold tabular-nums">{formatCurrency(invoice.amount_paid)}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Offener Betrag</p>
+              <p className={`font-semibold tabular-nums ${invoice.total - invoice.amount_paid <= 0 ? 'text-success' : 'text-warning'}`}>
+                {formatCurrency(Math.max(0, invoice.total - invoice.amount_paid))}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Form */}
+      {showPaymentForm && (
+        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Zahlung erfassen</h3>
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-xs">
+              <label className="block text-sm font-medium text-text-muted mb-1">Betrag (EUR)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder={`Max. ${formatCurrency(invoice.total - (invoice.amount_paid || 0))}`}
+                className="input w-full"
+              />
+            </div>
+            <button
+              onClick={handleRecordPayment}
+              disabled={paymentLoading || !paymentAmount}
+              className="btn-primary"
+            >
+              {paymentLoading ? 'Wird gespeichert...' : 'Zahlung speichern'}
+            </button>
+            <button
+              onClick={() => { setShowPaymentForm(false); setPaymentAmount('') }}
+              className="btn-secondary"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Note Reference */}
+      {invoice.credit_note_for && (
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-[12px] p-5 mb-6">
+          <p className="text-sm text-purple-800 dark:text-purple-300">
+            Diese Gutschrift bezieht sich auf Rechnung{' '}
+            <button
+              onClick={() => navigate(`/rechnungen/${invoice.credit_note_for}`)}
+              className="underline font-medium hover:text-purple-900 dark:hover:text-purple-200"
+            >
+              anzeigen
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* Positions Table */}
       <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
         <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Positionen</h3>
@@ -370,6 +501,12 @@ export default function InvoiceDetail() {
         defaultTo={customerEmail}
         defaultSubject={`Rechnung ${invoice.invoice_number}`}
         defaultMessage={`Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Rechnung ${invoice.invoice_number} über ${formatCurrency(invoice.total)}.\n\nBitte überweisen Sie den Betrag bis zum ${formatDate(invoice.due_date)}.\n\nBei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen`}
+        placeholders={{
+          nr: invoice.invoice_number,
+          kunde: invoice.customer_name || '',
+          betrag: formatCurrency(invoice.total),
+          firma: invoice.customer_name || '',
+        }}
         onSend={async (data) => {
           try {
             await sendInvoiceEmail(id!, data)
@@ -388,6 +525,12 @@ export default function InvoiceDetail() {
         defaultTo={customerEmail}
         defaultSubject={`${reminderLevelLabel(invoice.reminder_level)} — Rechnung ${invoice.invoice_number}`}
         defaultMessage={`Sehr geehrte Damen und Herren,\n\nwir möchten Sie daran erinnern, dass die Rechnung ${invoice.invoice_number} über ${formatCurrency(invoice.total)} noch offen ist.\n\nDie Fälligkeit war am ${formatDate(invoice.due_date)}.\n\nBitte überweisen Sie den offenen Betrag umgehend.\n\nSollte sich Ihre Zahlung mit diesem Schreiben überschneiden, betrachten Sie diese Erinnerung bitte als gegenstandslos.\n\nMit freundlichen Grüßen`}
+        placeholders={{
+          nr: invoice.invoice_number,
+          kunde: invoice.customer_name || '',
+          betrag: formatCurrency(invoice.total),
+          firma: invoice.customer_name || '',
+        }}
         onSend={async (data) => {
           try {
             await sendReminderEmail(id!, data)

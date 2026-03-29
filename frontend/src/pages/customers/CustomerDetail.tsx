@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getCustomer, deleteCustomer } from '../../api/customers'
+import { getCustomer, deleteCustomer, downloadDsgvoExport } from '../../api/customers'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import { getActivities, createActivity, deleteActivity } from '../../api/activities'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import FileAttachments from '../../components/FileAttachments'
 import TokenUsage from '../../components/TokenUsage'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate } from '../../types'
@@ -168,6 +169,19 @@ export default function CustomerDetail() {
           <h2 className="text-lg font-semibold text-text">{customer.name}</h2>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={async () => {
+              try {
+                await downloadDsgvoExport(id!, customer?.name || 'kunde')
+                toast.success('DSGVO-Export heruntergeladen.')
+              } catch {
+                toast.error('Fehler beim DSGVO-Export.')
+              }
+            }}
+            className="px-3 py-1.5 text-xs border border-border text-text-muted rounded-lg hover:text-text hover:border-text-muted transition-colors"
+          >
+            DSGVO-Export
+          </button>
           <button onClick={() => setShowQuickInvoice(true)} className="btn-primary">
             Schnellrechnung
           </button>
@@ -224,6 +238,11 @@ export default function CustomerDetail() {
             <p className="text-text text-sm whitespace-pre-wrap">{customer.notes}</p>
           </div>
         )}
+      </div>
+
+      {/* Anhänge */}
+      <div className="mb-6">
+        <FileAttachments customer_id={id} />
       </div>
 
       {/* Tabs */}
