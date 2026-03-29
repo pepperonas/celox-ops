@@ -13,14 +13,7 @@ from app.config import settings
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.customer import Customer
-from app.models.order import Order
-from app.models.contract import Contract
-from app.models.invoice import Invoice
-from app.models.lead import Lead
-from app.models.time_entry import TimeEntry
-from app.models.expense import Expense
-from app.models.activity import Activity
+from app.models.customer import Base
 
 router = APIRouter(
     prefix="/api/backup",
@@ -55,19 +48,13 @@ async def export_database(db: AsyncSession = Depends(get_db)) -> Response:
     """Exportiert die gesamte Datenbank als JSON."""
     data = {}
 
-    for model, name in [
-        (Customer, "customers"),
-        (Order, "orders"),
-        (Contract, "contracts"),
-        (Invoice, "invoices"),
-        (Lead, "leads"),
-        (TimeEntry, "time_entries"),
-        (Expense, "expenses"),
-        (Activity, "activities"),
-    ]:
+    # Auto-discover all tables from SQLAlchemy Base
+    for mapper in Base.registry.mappers:
+        model = mapper.class_
+        table_name = model.__tablename__
         result = await db.execute(select(model))
         rows = result.scalars().all()
-        data[name] = [_row_to_dict(r) for r in rows]
+        data[table_name] = [_row_to_dict(r) for r in rows]
 
     # Collect PDFs as base64
     pdfs = {}
