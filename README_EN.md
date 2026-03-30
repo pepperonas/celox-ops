@@ -21,6 +21,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Overview of linked orders, contracts, and invoices per customer
 - Full-text search across all fields
 - Deletion protection when references exist
+- **File attachments** — upload documents to customers, orders, and contracts
+- **DSGVO data export** — one-click export of all customer data (Art. 15 DSGVO)
 
 ### Order Management
 - Status workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (or Storniert)
@@ -29,6 +31,12 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Quote PDF generation** for orders in status 'Angebot' with positions table and validity date
 - Optional positions table with dynamic line items
 - Download and email quote PDFs
+
+### Kanban Board
+- Visual order management with 4 columns: Angebot → Beauftragt → In Arbeit → Abgeschlossen
+- Drag & drop cards between columns to change status
+- Cards show title, customer, amount, date
+- Color-coded column headers
 
 ### Contract Management
 - Contract types: Hosting, Wartung (Maintenance), Support, Sonstige (Other)
@@ -43,6 +51,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Status workflow: Entwurf → Gestellt → Bezahlt (or Überfällig/Storniert)
 - Optional link to orders or contracts
 - **Kleinunternehmerregelung** (small business tax exemption) — configurable, affects calculation and PDF text
+- **Partial payments** — record payments, auto-complete when fully paid
+- **Credit notes** (Gutschriften) — separate number series GS-YYYY-NNNN, linked to original invoice
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -138,12 +148,20 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Monthly detail table with color-coded profit
 - Expense breakdown by category with progress bars
 - CSV export for tax advisor
+- **Monthly PDF reports** — downloadable business reports with KPIs, invoice list, time entries, open items
 
 ### Dashboard
-- Revenue current month and year
-- Open invoices (count + total)
-- Overdue invoices (highlighted)
-- Active contracts (count + monthly sum)
+- Revenue KPI cards (month/year, open invoices, active contracts)
+- **Revenue & expenses bar chart** (last 12 months)
+- **Invoice status doughnut chart** (distribution by status)
+- **Top 5 customers** by revenue with bar indicators
+- **Recent activities** timeline
+
+### Calendar
+- Monthly grid view with all deadlines and events
+- Invoice due dates (orange), overdue invoices (red), contract end dates (purple), time entries (green)
+- Click on a day to see all events
+- Month navigation with prev/next arrows and today button
 
 ### Tasks (Aufgaben)
 - Aggregated todo list of upcoming actions
@@ -160,6 +178,18 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Configuration guide for Token Tracker integration
 - **Database backup** — one-click export of all data (customers, orders, contracts, invoices, leads, time entries, expenses, activities) as JSON file
 - PDFs included as Base64 in the backup — everything in a single file
+- **Email template library** — 5 default templates (invoice, quote, reminder, acquisition, general) with {nr}, {kunde}, {betrag}, {firma} placeholders
+- Template management (create, edit, delete) in settings
+- Template selector in email sending dialog
+
+### Background Automation
+- Hourly cron job detects overdue invoices and updates status automatically
+
+### Analytics
+- **Customer profitability** — revenue, hours, effective hourly rate per customer
+- **Revenue forecast** — 3/6/12 month projections based on contracts and pipeline
+- Color-coded profitability indicators
+- Forecast chart with recurring vs pipeline breakdown
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest ~80 IT consulting services while typing
@@ -171,7 +201,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **GitHub-inspired dark theme**
 - Color palette: `#0d1117` (background), `#161b22` (surfaces), `#58a6ff` (accent)
 - Responsive layout with collapsible sidebar
-- Sidebar navigation: Dashboard, Aufgaben, Zeiterfassung, Kunden, Aufträge, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Einstellungen
+- Sidebar navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Einstellungen
 - Consistent status badges, tables, and form components
 - Tab state persisted in URL hash across page refreshes
 
@@ -287,6 +317,17 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/euer/overview` | EÜR overview |
 | `GET` | `/api/euer/export` | EÜR CSV export |
 | `GET` | `/api/backup/export` | Full database export (JSON + PDFs) |
+| `POST` | `/api/invoices/{id}/payment` | Record partial payment |
+| `POST` | `/api/invoices/{id}/credit-note` | Create credit note |
+| `GET/POST/DELETE` | `/api/attachments` | File attachment CRUD |
+| `GET` | `/api/attachments/{id}/download` | Download attachment |
+| `GET` | `/api/customers/{id}/dsgvo-export` | DSGVO data export |
+| `GET` | `/api/dashboard/charts` | Dashboard chart data |
+| `GET` | `/api/dashboard/profitability` | Customer profitability |
+| `GET` | `/api/dashboard/forecast` | Revenue forecast |
+| `GET` | `/api/dashboard/monthly-report` | Monthly report PDF |
+| `GET/POST/PUT/DELETE` | `/api/email-templates` | Email template CRUD |
+| `POST` | `/api/email-templates/seed` | Create default templates |
 | `GET` | `/api/health` | Health check |
 
 Interactive API docs at `/docs` (Swagger UI).
@@ -459,11 +500,14 @@ OPS/
 │       │   ├── lead.py         # Lead model
 │       │   ├── time_entry.py   # Time entry model
 │       │   ├── activity.py     # Activity log model
-│       │   └── expense.py      # Expense model
+│       │   ├── expense.py      # Expense model
+│       │   ├── attachment.py   # File attachment model
+│       │   └── email_template.py # Email template model
 │       ├── schemas/            # Pydantic v2 request/response schemas
 │       │   ├── time_entry.py   # Time entry schemas
 │       │   ├── activity.py     # Activity log schemas
 │       │   ├── expense.py      # Expense schemas
+│       │   ├── email_template.py # Email template schemas
 │       │   └── ...
 │       ├── routers/            # API endpoints (all paginated)
 │       │   ├── customers.py    # CRUD + search + reference check
@@ -478,15 +522,19 @@ OPS/
 │       │   ├── expenses.py     # Expense CRUD + summary
 │       │   ├── euer.py         # EÜR overview + CSV export
 │       │   ├── backup.py       # Full database export (JSON + PDFs)
-│       │   └── token_tracker.py # Token Tracker share API proxy
+│       │   ├── token_tracker.py # Token Tracker share API proxy
+│       │   ├── attachments.py  # File attachment endpoints
+│       │   └── email_templates.py # Email template CRUD
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
 │       │   ├── pdf_service.py      # WeasyPrint + Jinja2 + AI report
-│       │   └── email_service.py    # SMTP email sending
+│       │   ├── email_service.py    # SMTP email sending
+│       │   └── cron_service.py    # Background automation (overdue detection)
 │       └── templates/
 │           ├── invoice.html    # A4 invoice PDF template
 │           ├── reminder.html   # Reminder/dunning PDF template
-│           └── quote.html      # Quote PDF template
+│           ├── quote.html      # Quote PDF template
+│           └── monthly_report.html # Monthly report PDF template
 │
 ├── frontend/
 │   ├── Dockerfile              # Multi-stage: build → Nginx
@@ -499,6 +547,9 @@ OPS/
 │       │   ├── activities.ts   # Activity log API
 │       │   ├── expenses.ts     # Expense API
 │       │   ├── euer.ts         # EÜR API
+│       │   ├── analytics.ts   # Analytics API
+│       │   ├── attachments.ts # File attachment API
+│       │   ├── emailTemplates.ts # Email template API
 │       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Sidebar + header
@@ -506,13 +557,17 @@ OPS/
 │       │   ├── TokenUsage.tsx  # AI usage dashboard (charts, KPIs, export)
 │       │   ├── EmailDialog.tsx # Reusable email sending dialog
 │       │   ├── AutocompleteInput.tsx # Smart autocomplete for titles/descriptions
+│       │   ├── FileAttachments.tsx # File attachment component
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
 │       │   ├── Settings.tsx
 │       │   ├── Tasks.tsx       # Aggregated task view
+│       │   ├── Calendar.tsx   # Calendar with deadlines and events
 │       │   ├── TimeTracking.tsx # Time tracking page
+│       │   ├── Kanban.tsx     # Kanban board for orders
+│       │   ├── Analytics.tsx  # Customer profitability + revenue forecast
 │       │   ├── Euer.tsx        # EÜR overview page
 │       │   ├── customers/      # List, form, detail
 │       │   ├── orders/         # List, form, detail

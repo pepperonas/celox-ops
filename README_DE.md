@@ -20,7 +20,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Stammdaten (Name, Firma, E-Mail, Telefon, Adresse, Website)
 - Übersicht verknüpfter Aufträge, Verträge und Rechnungen pro Kunde
 - Volltextsuche über alle Felder
-- Löschschchutz bei bestehenden Referenzen
+- Löschschutz bei bestehenden Referenzen
+- **Dateianhänge** — Dokumente an Kunden, Aufträge und Verträge anhängen
+- **DSGVO-Datenexport** — Ein-Klick-Export aller Kundendaten (Art. 15 DSGVO)
 
 ### Auftragsverwaltung
 - Status-Workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (oder Storniert)
@@ -29,6 +31,12 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Angebots-PDF** für Aufträge im Status 'Angebot' mit Positionstabelle und Gültigkeitsdatum
 - Optionale Positionstabelle mit dynamischen Zeilen
 - Angebots-PDFs herunterladen und per E-Mail versenden
+
+### Kanban-Board
+- Visuelle Auftragsverwaltung mit 4 Spalten: Angebot → Beauftragt → In Arbeit → Abgeschlossen
+- Drag & Drop zum Statuswechsel
+- Karten zeigen Titel, Kunde, Betrag, Datum
+- Farbcodierte Spaltenköpfe
 
 ### Vertragsverwaltung
 - Vertragstypen: Hosting, Wartung, Support, Sonstige
@@ -43,6 +51,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Überfällig/Storniert)
 - Optionale Verknüpfung mit Aufträgen oder Verträgen
 - **Kleinunternehmerregelung** — konfigurierbar, beeinflusst Berechnung und PDF-Text
+- **Teilzahlungen** — Zahlungen erfassen, automatisch abgeschlossen bei Vollzahlung
+- **Gutschriften** — eigener Nummernkreis GS-YYYY-NNNN, verknüpft mit Originalrechnung
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -138,12 +148,20 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Monatliche Detailtabelle mit farbcodiertem Gewinn
 - Ausgabenaufschlüsselung nach Kategorie mit Fortschrittsbalken
 - CSV-Export für Steuerberater
+- **Monatsberichte als PDF** — herunterladbare Geschäftsberichte mit KPIs, Rechnungsliste, Zeitauswertung, offene Posten
 
 ### Dashboard
-- Umsatz aktueller Monat und Jahr
-- Offene Rechnungen (Anzahl + Gesamtbetrag)
-- Überfällige Rechnungen (hervorgehoben)
-- Aktive Verträge (Anzahl + monatliche Summe)
+- Umsatz-KPI-Karten (Monat/Jahr, offene Rechnungen, aktive Verträge)
+- **Umsatz- und Ausgaben-Balkendiagramm** (letzte 12 Monate)
+- **Rechnungsstatus-Kreisdiagramm** (Verteilung nach Status)
+- **Top 5 Kunden** nach Umsatz mit Balkenindikatoren
+- **Letzte Aktivitäten** Timeline
+
+### Kalender
+- Monatsraster mit allen Fristen und Terminen
+- Fällige Rechnungen (orange), überfällige (rot), Vertragsenden (lila), Zeiteinträge (grün)
+- Klick auf einen Tag zeigt alle Ereignisse
+- Monatsnavigation mit Pfeilen und Heute-Button
 
 ### Aufgaben
 - Aggregierte Aufgabenliste anstehender Aktionen
@@ -160,6 +178,18 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Konfigurationsanleitung für Token Tracker Integration
 - **Datenbank-Backup** — Ein-Klick-Export aller Daten (Kunden, Aufträge, Verträge, Rechnungen, Leads, Zeiteinträge, Ausgaben, Aktivitäten) als JSON-Datei
 - PDFs als Base64 im Backup enthalten — alles in einer einzigen Datei
+- **E-Mail-Vorlagen** — 5 Standardvorlagen (Rechnung, Angebot, Mahnung, Akquise, Allgemein) mit {nr}, {kunde}, {betrag}, {firma} Platzhaltern
+- Vorlagenverwaltung (erstellen, bearbeiten, löschen) in Einstellungen
+- Vorlagenauswahl im E-Mail-Versand-Dialog
+
+### Hintergrund-Automatisierung
+- Stündlicher Cron-Job erkennt überfällige Rechnungen und aktualisiert Status automatisch
+
+### Analyse
+- **Kunden-Rentabilität** — Umsatz, Stunden, effektiver Stundensatz pro Kunde
+- **Umsatzprognose** — 3/6/12 Monate basierend auf Verträgen und Pipeline
+- Farbcodierte Rentabilitätsindikatoren
+- Prognosediagramm mit Aufteilung wiederkehrend vs. Pipeline
 
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
@@ -171,7 +201,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **GitHub-inspiriertes Dark Theme**
 - Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
 - Responsives Layout mit einklappbarer Seitenleiste
-- Seitenleisten-Navigation: Dashboard, Aufgaben, Zeiterfassung, Kunden, Aufträge, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Einstellungen
+- Seitenleisten-Navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Einstellungen
 - Einheitliche Status-Badges, Tabellen und Formular-Komponenten
 - Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert
 
@@ -287,6 +317,17 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/euer/overview` | EÜR-Übersicht |
 | `GET` | `/api/euer/export` | EÜR-CSV-Export |
 | `GET` | `/api/backup/export` | Vollständiger Datenbank-Export (JSON + PDFs) |
+| `POST` | `/api/invoices/{id}/payment` | Teilzahlung erfassen |
+| `POST` | `/api/invoices/{id}/credit-note` | Gutschrift erstellen |
+| `GET/POST/DELETE` | `/api/attachments` | Dateianhang-CRUD |
+| `GET` | `/api/attachments/{id}/download` | Anhang herunterladen |
+| `GET` | `/api/customers/{id}/dsgvo-export` | DSGVO-Datenexport |
+| `GET` | `/api/dashboard/charts` | Dashboard-Diagrammdaten |
+| `GET` | `/api/dashboard/profitability` | Kunden-Rentabilität |
+| `GET` | `/api/dashboard/forecast` | Umsatzprognose |
+| `GET` | `/api/dashboard/monthly-report` | Monatsbericht-PDF |
+| `GET/POST/PUT/DELETE` | `/api/email-templates` | E-Mail-Vorlagen-CRUD |
+| `POST` | `/api/email-templates/seed` | Standardvorlagen erstellen |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Docs unter `/docs` (Swagger UI).
@@ -463,11 +504,14 @@ celox-ops/
 │       │   ├── lead.py         # Lead-Modell
 │       │   ├── time_entry.py   # Zeiteintrag-Modell
 │       │   ├── activity.py     # Aktivitätsprotokoll-Modell
-│       │   └── expense.py      # Ausgaben-Modell
+│       │   ├── expense.py      # Ausgaben-Modell
+│       │   ├── attachment.py   # Dateianhang-Modell
+│       │   └── email_template.py # E-Mail-Vorlagen-Modell
 │       ├── schemas/            # Pydantic v2 Request/Response Schemas
 │       │   ├── time_entry.py   # Zeiteintrag-Schemas
 │       │   ├── activity.py     # Aktivitätsprotokoll-Schemas
 │       │   ├── expense.py      # Ausgaben-Schemas
+│       │   ├── email_template.py # E-Mail-Vorlagen-Schemas
 │       │   └── ...
 │       ├── routers/            # API-Endpunkte (alle paginiert)
 │       │   ├── customers.py    # CRUD + Suche + Referenzprüfung
@@ -482,15 +526,19 @@ celox-ops/
 │       │   ├── expenses.py     # Ausgaben-CRUD + Zusammenfassung
 │       │   ├── euer.py         # EÜR-Übersicht + CSV-Export
 │       │   ├── backup.py       # Vollständiger Datenbank-Export (JSON + PDFs)
-│       │   └── token_tracker.py # Token Tracker Share-API-Proxy
+│       │   ├── token_tracker.py # Token Tracker Share-API-Proxy
+│       │   ├── attachments.py  # Dateianhang-Endpunkte
+│       │   └── email_templates.py # E-Mail-Vorlagen-CRUD
 │       ├── services/
 │       │   ├── invoice_service.py  # Rechnungsnummer + Berechnung
 │       │   ├── pdf_service.py      # WeasyPrint + Jinja2 + KI-Bericht
-│       │   └── email_service.py    # SMTP-E-Mail-Versand
+│       │   ├── email_service.py    # SMTP-E-Mail-Versand
+│       │   └── cron_service.py    # Hintergrund-Automatisierung (Überfälligkeitserkennung)
 │       └── templates/
 │           ├── invoice.html    # A4-Rechnungs-PDF-Template
 │           ├── reminder.html   # Mahnungs-PDF-Template
-│           └── quote.html      # Angebots-PDF-Template
+│           ├── quote.html      # Angebots-PDF-Template
+│           └── monthly_report.html # Monatsbericht-PDF-Template
 │
 ├── frontend/
 │   ├── Dockerfile              # Multi-Stage: Build → Nginx
@@ -503,6 +551,9 @@ celox-ops/
 │       │   ├── activities.ts   # Aktivitätsprotokoll-API
 │       │   ├── expenses.ts     # Ausgaben-API
 │       │   ├── euer.ts         # EÜR-API
+│       │   ├── analytics.ts   # Analyse-API
+│       │   ├── attachments.ts # Dateianhang-API
+│       │   ├── emailTemplates.ts # E-Mail-Vorlagen-API
 │       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Seitenleiste + Header
@@ -510,13 +561,17 @@ celox-ops/
 │       │   ├── TokenUsage.tsx  # KI-Nutzungs-Dashboard (Diagramme, KPIs, Export)
 │       │   ├── EmailDialog.tsx # Wiederverwendbarer E-Mail-Dialog
 │       │   ├── AutocompleteInput.tsx # Intelligente Autovervollständigung für Titel/Beschreibungen
+│       │   ├── FileAttachments.tsx # Dateianhang-Komponente
 │       │   └── ...             # StatusBadge, FormField, DeleteDialog, Toast
 │       ├── pages/
 │       │   ├── Login.tsx
 │       │   ├── Dashboard.tsx
 │       │   ├── Settings.tsx
 │       │   ├── Tasks.tsx       # Aggregierte Aufgabenansicht
+│       │   ├── Calendar.tsx   # Kalender mit Fristen und Terminen
 │       │   ├── TimeTracking.tsx # Zeiterfassungsseite
+│       │   ├── Kanban.tsx     # Kanban-Board für Aufträge
+│       │   ├── Analytics.tsx  # Kunden-Rentabilität + Umsatzprognose
 │       │   ├── Euer.tsx        # EÜR-Übersichtsseite
 │       │   ├── customers/      # Liste, Formular, Detail
 │       │   ├── orders/         # Liste, Formular, Detail
