@@ -32,12 +32,11 @@ docker compose -f docker-compose.dev.yml up -d --build
 docker exec celox-ops-db-1 psql -U celoxops -d celoxops -c "ALTER TABLE tablename ADD COLUMN colname TYPE;"
 ```
 
-### Deployment to VPS (69.62.121.168)
+### Deployment to VPS
 ```bash
-# SSH key: ~/.ssh/id_ed25519_server_new
 tar czf /tmp/celox-ops.tar.gz --exclude='.git' --exclude='node_modules' --exclude='.DS_Store' --exclude='._*' --exclude='.env' .
-scp -i ~/.ssh/id_ed25519_server_new /tmp/celox-ops.tar.gz root@69.62.121.168:/tmp/
-ssh -i ~/.ssh/id_ed25519_server_new root@69.62.121.168 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp/celox-ops.tar.gz && find . -name "._*" -delete && docker compose up -d --build'
+scp /tmp/celox-ops.tar.gz root@YOUR_VPS:/tmp/
+ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp/celox-ops.tar.gz && find . -name "._*" -delete && docker compose up -d --build'
 ```
 
 ## Architecture
