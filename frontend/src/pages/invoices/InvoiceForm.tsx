@@ -46,6 +46,10 @@ export default function InvoiceForm() {
   const [attachTokenUsage, setAttachTokenUsage] = useState(false)
   const [selectedCustomerHasTracker, setSelectedCustomerHasTracker] = useState(false)
   const [selectedCustomerTrackerUrl, setSelectedCustomerTrackerUrl] = useState('')
+  const [discountEnabled, setDiscountEnabled] = useState(false)
+  const [discountPercent, setDiscountPercent] = useState(true)
+  const [discountValue, setDiscountValue] = useState('')
+  const [discountReason, setDiscountReason] = useState('')
   const [showAiImport, setShowAiImport] = useState(false)
   const [aiImportFrom, setAiImportFrom] = useState('')
   const [aiImportTo, setAiImportTo] = useState(new Date().toISOString().split('T')[0])
@@ -219,7 +223,11 @@ export default function InvoiceForm() {
     setAiImportLoading(false)
   }
 
-  const netto = form.positions.reduce((sum, p) => sum + p.menge * p.einzelpreis, 0)
+  const positionsNetto = form.positions.reduce((sum, p) => sum + p.menge * p.einzelpreis, 0)
+  const discountAmount = discountEnabled && discountValue
+    ? (discountPercent ? positionsNetto * (parseFloat(discountValue) || 0) / 100 : parseFloat(discountValue) || 0)
+    : 0
+  const netto = positionsNetto - discountAmount
   const taxRate = form.tax_rate || 0
   const taxAmount = netto * (taxRate / 100)
   const brutto = netto + taxAmount
@@ -228,13 +236,28 @@ export default function InvoiceForm() {
     e.preventDefault()
     setLoading(true)
 
+    const allPositions = form.positions.map((p, i) => ({
+      ...p,
+      position: i + 1,
+      gesamt: p.menge * p.einzelpreis,
+    }))
+
+    // Add discount as negative position
+    if (discountEnabled && discountAmount > 0) {
+      const reason = discountReason || 'Rabatt'
+      allPositions.push({
+        position: allPositions.length + 1,
+        beschreibung: `Rabatt: ${reason}${discountPercent ? ` (${discountValue}%)` : ''}`,
+        menge: 1,
+        einheit: 'pauschal',
+        einzelpreis: -discountAmount,
+        gesamt: -discountAmount,
+      })
+    }
+
     const payload: InvoiceCreate = {
       ...form,
-      positions: form.positions.map((p, i) => ({
-        ...p,
-        position: i + 1,
-        gesamt: p.menge * p.einzelpreis,
-      })),
+      positions: allPositions,
     }
 
     try {
@@ -459,16 +482,85 @@ export default function InvoiceForm() {
               />
             </div>
 
+            {/* Discount */}
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                type="checkbox"
+                id="discount-toggle"
+                checked={discountEnabled}
+                onChange={(e) => setDiscountEnabled(e.target.checked)}
+                className="w-4 h-4 accent-[#58a6ff]"
+              />
+              <label htmlFor="discount-toggle" className="text-xs uppercase tracking-wider text-text-muted cursor-pointer">Rabatt gewähren</label>
+            </div>
+            {discountEnabled && (
+              <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-surface-2 rounded-lg">
+                <div>
+                  <label className="block text-xs text-text-muted mb-1">Typ</label>
+                  <select value={discountPercent ? 'percent' : 'fixed'} onChange={(e) => setDiscountPercent(e.target.value === 'percent')} className="w-auto !py-1.5 !text-sm">
+                    <option value="percent">Prozent (%)</option>
+                    <option value="fixed">Festbetrag (€)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-text-muted mb-1">{discountPercent ? 'Rabatt (%)' : 'Rabatt (€)'}</label>
+                  <input type="number" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} min="0" step={discountPercent ? '5' : '0.01'} max={discountPercent ? '100' : undefined} placeholder={discountPercent ? 'z.B. 10' : 'z.B. 50'} className="w-28 !py-1.5 !text-sm" />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs text-text-muted mb-1">Begründung</label>
+                  <AutocompleteInput
+                    name="discount_reason"
+                    value={discountReason}
+                    onChange={(e) => setDiscountReason(e.target.value)}
+                    placeholder="z.B. Treuerabatt, Erstkundenrabatt..."
+                    suggestions={[
+                      'Treuerabatt',
+                      'Erstkundenrabatt',
+                      'Mengenrabatt',
+                      'Projektrabatt',
+                      'Sonderkonditionen',
+                      'Langfristige Zusammenarbeit',
+                      'Empfehlungsrabatt',
+                      'Non-Profit / Verein',
+                      'Vorkasse-Rabatt',
+                      'Paketpreis',
+                      'Frühbucherrabatt',
+                      'Nachlass wegen Verzögerung',
+                      'Kulanz',
+                      'Bestandskundenrabatt',
+                      'Jubiläumsrabatt',
+                    ]}
+                    compact
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="text-sm text-success font-medium tabular-nums whitespace-nowrap">
+                    −{formatCurrency(discountAmount)}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-col items-end gap-1">
-              <div className="flex justify-between w-60">
+              <div className="flex justify-between w-72">
+                <span className="text-sm text-text-muted">Zwischensumme:</span>
+                <span className="text-sm text-text font-medium tabular-nums">{formatCurrency(positionsNetto)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between w-72">
+                  <span className="text-sm text-success">Rabatt:</span>
+                  <span className="text-sm text-success font-medium tabular-nums">−{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between w-72">
                 <span className="text-sm text-text-muted">Netto:</span>
                 <span className="text-sm text-text font-medium tabular-nums">{formatCurrency(netto)}</span>
               </div>
-              <div className="flex justify-between w-60">
+              <div className="flex justify-between w-72">
                 <span className="text-sm text-text-muted">USt. ({taxRate}%):</span>
                 <span className="text-sm text-text font-medium tabular-nums">{formatCurrency(taxAmount)}</span>
               </div>
-              <div className="flex justify-between w-60 pt-2 border-t border-border">
+              <div className="flex justify-between w-72 pt-2 border-t border-border">
                 <span className="text-sm font-semibold text-text">Brutto:</span>
                 <span className="text-sm font-bold text-accent tabular-nums">{formatCurrency(brutto)}</span>
               </div>
