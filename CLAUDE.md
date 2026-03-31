@@ -1,0 +1,85 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+celox ops is a full-stack business management webapp for freelancers/IT consultants. German-language UI. Single-user JWT auth. Manages customers, orders, contracts, invoices (with PDF generation), leads, time tracking, expenses, and integrates with the Claude Token Tracker for AI usage transparency.
+
+## Commands
+
+### Production
+```bash
+docker compose up -d --build          # Build and start all services
+docker compose up -d --build backend   # Rebuild backend only
+docker compose up -d --build frontend  # Rebuild frontend only
+docker compose restart backend         # Restart without rebuild (picks up .env changes)
+docker compose down                    # Stop all
+```
+
+### Development
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+# Backend: http://localhost:8000 (auto-reload)
+# Frontend: http://localhost:5173 (Vite HMR)
+# API Docs: http://localhost:8000/docs
+# DB: localhost:5433
+```
+
+### Database
+```bash
+# Add column (no Alembic auto-migrate — tables created via Base.metadata.create_all on startup)
+docker exec celox-ops-db-1 psql -U celoxops -d celoxops -c "ALTER TABLE tablename ADD COLUMN colname TYPE;"
+```
+
+### Deployment to VPS (69.62.121.168)
+```bash
+# SSH key: ~/.ssh/id_ed25519_server_new
+tar czf /tmp/celox-ops.tar.gz --exclude='.git' --exclude='node_modules' --exclude='.DS_Store' --exclude='._*' --exclude='.env' .
+scp -i ~/.ssh/id_ed25519_server_new /tmp/celox-ops.tar.gz root@69.62.121.168:/tmp/
+ssh -i ~/.ssh/id_ed25519_server_new root@69.62.121.168 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp/celox-ops.tar.gz && find . -name "._*" -delete && docker compose up -d --build'
+```
+
+## Architecture
+
+### Backend (Python 3.12, FastAPI)
+- **Entry point**: `backend/app/main.py` — FastAPI app with lifespan (creates tables + starts hourly cron)
+- **Config**: `backend/app/config.py` — Pydantic Settings, all from `.env`
+- **Database**: `backend/app/database.py` — async SQLAlchemy 2.0 with asyncpg, connection pooling
+- **Auth**: `backend/app/auth.py` — JWT (python-jose), single-user, OAuth2PasswordBearer
+- **Pattern**: Each module has model → schema → router. All routers registered in main.py after app creation (to avoid circular imports).
+- **Models inherit from `Base`** defined in `models/customer.py`. New models MUST import Base from there.
+- **All list endpoints return paginated**: `{items: [], total, page, page_size, pages}` — NOT plain arrays.
+- **UUIDs**: All primary keys are UUID (asyncpg uses its own UUID type — serialize with `str()` for JSON).
+- **Enum values**: Stay ASCII in code (`ueberfaellig`, `gekuendigt`, `halbjaehrlich`). German umlauts only in user-facing text/labels.
+- **PDF generation**: WeasyPrint + Jinja2 templates in `backend/app/templates/`. Signature loaded as base64. Footer uses `@page @bottom-center` (not position:fixed).
+- **Cron**: Background asyncio task in lifespan checks overdue invoices hourly.
+- **Backup export** (`routers/backup.py`): Auto-discovers all tables via `Base.registry.mappers` — no manual list needed for new tables.
+
+### Frontend (React 18, TypeScript, TailwindCSS, Vite)
+- **Entry**: `frontend/src/main.tsx` → `App.tsx` (routing) → `Layout.tsx` (sidebar + content)
+- **State**: Zustand for auth (`store/authStore.ts`), localStorage for JWT
+- **API client**: `api/client.ts` — Axios with JWT interceptor, 401 redirect
+- **Types**: All in `frontend/src/types/index.ts` — must match backend Pydantic schemas exactly
+- **Routing**: German paths (`/kunden`, `/auftraege`, `/rechnungen`, `/vorgemerkt`, `/ausgaben`, etc.)
+- **Theme**: GitHub-inspired dark theme. Colors defined as CSS variables in `index.css` AND as Tailwind custom colors in `tailwind.config.ts`. Key colors: `bg` (#0d1117), `surface` (#161b22), `accent` (#58a6ff).
+- **Charts**: Chart.js + react-chartjs-2. Cast options as `any` to avoid TS issues with Chart.js types.
+- **Tab persistence**: CustomerDetail uses URL hash (`#auftraege`, `#tokens`) for tab state.
+
+### Token Tracker Integration
+- Backend proxies to Token Tracker via `TOKEN_TRACKER_BASE_URL` (internal Docker URL: `http://host.docker.internal:3007`)
+- Browser-facing share URLs use `TOKEN_TRACKER_PUBLIC_URL` (e.g., `https://tracker.celox.io`)
+- Customer `token_tracker_url` stores JSON: `[{"url":"...","label":"..."},...]` for multi-project support
+- `TokenUsage.tsx` fetches from multiple URLs and merges data client-side
+
+### Key Gotchas
+- **Pydantic `date` field shadowing**: If a model has a field named `date`, import as `from datetime import date as DateType` to avoid `date | None` failing in subsequent classes in the same file.
+- **Docker .env `$` escaping**: bcrypt hashes in `ADMIN_PASSWORD_HASH` must escape `$` as `$$`.
+- **page_size limit**: Set to `le=1000` on all list endpoints (frontend requests 1000 for dropdowns).
+- **PDF footer**: Use `@page @bottom-center` in CSS, NOT `position: fixed` (causes overlap with content).
+- **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
+
+## Database Tables (10)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates
+
+Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container.
