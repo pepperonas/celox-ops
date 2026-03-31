@@ -167,6 +167,16 @@ export default function CustomerDetail() {
             </svg>
           </button>
           <h2 className="text-lg font-semibold text-text">{customer.name}</h2>
+          <div className="flex items-center gap-2 ml-2">
+            <span title={customer.token_tracker_url ? 'KI-Tracker verknüpft' : 'Kein KI-Tracker'} className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${customer.token_tracker_url ? 'bg-success' : 'bg-danger'}`}></span>
+              <span className="text-[10px] text-text-muted">KI</span>
+            </span>
+            <span title={customer.github_repos ? 'GitHub verknüpft' : 'Kein GitHub'} className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${customer.github_repos ? 'bg-success' : 'bg-danger'}`}></span>
+              <span className="text-[10px] text-text-muted">GitHub</span>
+            </span>
+          </div>
         </div>
         <div className="flex gap-3">
           <button
