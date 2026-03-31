@@ -82,6 +82,7 @@ from app.routers.expenses import router as expenses_router  # noqa: E402
 from app.routers.euer import router as euer_router  # noqa: E402
 from app.routers.backup import router as backup_router  # noqa: E402
 from app.routers.attachments import router as attachments_router  # noqa: E402
+from app.routers.github import router as github_router  # noqa: E402
 from app.routers.email_templates import router as email_templates_router  # noqa: E402
 
 app.include_router(auth_router)
@@ -99,6 +100,7 @@ app.include_router(expenses_router)
 app.include_router(euer_router)
 app.include_router(backup_router)
 app.include_router(attachments_router)
+app.include_router(github_router)
 app.include_router(email_templates_router)
 
 

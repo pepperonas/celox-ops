@@ -32,6 +32,8 @@ const emptyForm: InvoiceCreate = {
   notes: '',
   token_usage_from: null,
   token_usage_to: null,
+  github_commits_from: null,
+  github_commits_to: null,
 }
 
 export default function InvoiceForm() {
@@ -46,6 +48,8 @@ export default function InvoiceForm() {
   const [attachTokenUsage, setAttachTokenUsage] = useState(false)
   const [selectedCustomerHasTracker, setSelectedCustomerHasTracker] = useState(false)
   const [selectedCustomerTrackerUrl, setSelectedCustomerTrackerUrl] = useState('')
+  const [selectedCustomerHasGithub, setSelectedCustomerHasGithub] = useState(false)
+  const [attachGithubCommits, setAttachGithubCommits] = useState(false)
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discountPercent, setDiscountPercent] = useState(true)
   const [discountValue, setDiscountValue] = useState('')
@@ -89,7 +93,8 @@ export default function InvoiceForm() {
       getCustomer(form.customer_id).then((c) => {
         setSelectedCustomerHasTracker(Boolean(c.token_tracker_url))
         setSelectedCustomerTrackerUrl(c.token_tracker_url || '')
-      }).catch(() => { setSelectedCustomerHasTracker(false); setSelectedCustomerTrackerUrl('') })
+        setSelectedCustomerHasGithub(Boolean(c.github_repos))
+      }).catch(() => { setSelectedCustomerHasTracker(false); setSelectedCustomerTrackerUrl(''); setSelectedCustomerHasGithub(false) })
     } else {
       setOrders([])
       setContracts([])
@@ -626,6 +631,61 @@ export default function InvoiceForm() {
                       type="date"
                       value={form.token_usage_to || ''}
                       onChange={(e) => setForm({ ...form, token_usage_to: e.target.value || null })}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* GitHub Commits */}
+        {selectedCustomerHasGithub && (
+          <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="attach-github-commits"
+                checked={attachGithubCommits}
+                onChange={(e) => {
+                  setAttachGithubCommits(e.target.checked)
+                  if (e.target.checked) {
+                    const now = new Date()
+                    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+                    const today = now.toISOString().split('T')[0]
+                    setForm({ ...form, github_commits_from: firstOfMonth, github_commits_to: today })
+                  } else {
+                    setForm({ ...form, github_commits_from: null, github_commits_to: null })
+                  }
+                }}
+                className="w-4 h-4 accent-[#58a6ff]"
+              />
+              <label htmlFor="attach-github-commits" className="text-sm font-semibold text-text cursor-pointer">
+                GitHub Commits an Rechnung anhängen
+              </label>
+            </div>
+            {attachGithubCommits && (
+              <div>
+                <p className="text-xs text-text-muted mb-3">
+                  Listet alle Code-Änderungen (Commits) der verknüpften Repositories im gewählten Zeitraum als Anlage auf.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
+                    <input
+                      type="date"
+                      value={form.github_commits_from || ''}
+                      onChange={(e) => setForm({ ...form, github_commits_from: e.target.value || null })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
+                    <input
+                      type="date"
+                      value={form.github_commits_to || ''}
+                      onChange={(e) => setForm({ ...form, github_commits_to: e.target.value || null })}
                       className="w-full"
                     />
                   </div>

@@ -28,6 +28,8 @@ class InvoiceBase(BaseModel):
     notes: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
+    github_commits_from: date | None = None
+    github_commits_to: date | None = None
 
 
 class InvoiceCreate(InvoiceBase):
@@ -46,6 +48,8 @@ class InvoiceUpdate(BaseModel):
     notes: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
+    github_commits_from: date | None = None
+    github_commits_to: date | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -69,6 +73,8 @@ class InvoiceResponse(BaseModel):
     notes: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
+    github_commits_from: date | None = None
+    github_commits_to: date | None = None
     reminder_level: int = 0
     reminder_sent_at: datetime | None = None
     reminder_pdf_path: str | None = None

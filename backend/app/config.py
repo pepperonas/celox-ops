@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     LOGO_PATH: str = "/data/assets/logo.png"
 
     GITHUB_TOKEN: str = ""
+    GITHUB_USERNAME: str = ""
 
     TOKEN_TRACKER_BASE_URL: str = ""
     TOKEN_TRACKER_PUBLIC_URL: str = ""

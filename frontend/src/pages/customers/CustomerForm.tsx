@@ -4,6 +4,8 @@ import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import { getCustomer, createCustomer, updateCustomer } from '../../api/customers'
 import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../../api/tokenTracker'
+import { getGithubRepos } from '../../api/github'
+import type { GithubRepo } from '../../types'
 import type { CustomerCreate } from '../../types'
 
 interface LinkedProject {
@@ -33,6 +35,9 @@ export default function CustomerForm() {
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [projectSearch, setProjectSearch] = useState('')
   const [linkingProject, setLinkingProject] = useState(false)
+  const [githubReposList, setGithubReposList] = useState<GithubRepo[]>([])
+  const [showGithubPicker, setShowGithubPicker] = useState(false)
+  const [githubSearch, setGithubSearch] = useState('')
 
   useEffect(() => {
     if (id) {
@@ -203,16 +208,42 @@ export default function CustomerForm() {
         </div>
 
         <div>
-          <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">GitHub Repositories</label>
-          <input
-            type="text"
-            name="github_repos"
-            value={form.github_repos || ''}
-            onChange={handleChange}
-            placeholder="z.B. pepperonas/villa-kinder, pepperonas/edersee (kommagetrennt)"
-            className="w-full"
-          />
-          <p className="text-[11px] text-text-muted mt-1">Kommagetrennte Liste von owner/repo. Commits werden optional in Rechnungs-PDFs aufgenommen.</p>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs uppercase tracking-wider text-text-muted">GitHub Repositories</label>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const repos = await getGithubRepos()
+                  setGithubReposList(repos)
+                  setShowGithubPicker(true)
+                } catch { toast.error('GitHub nicht erreichbar.') }
+              }}
+              className="btn-secondary !text-xs !py-1 !px-3"
+            >
+              Repo hinzufügen
+            </button>
+          </div>
+          {(form.github_repos || '').split(',').filter(r => r.trim()).length > 0 ? (
+            <div className="space-y-1.5">
+              {(form.github_repos || '').split(',').filter(r => r.trim()).map((repo, i) => (
+                <div key={i} className="flex items-center gap-2 bg-surface-2 border border-border rounded-lg px-3 py-2">
+                  <span className="w-2 h-2 rounded-full bg-text-muted flex-shrink-0"></span>
+                  <span className="text-sm text-text flex-1">{repo.trim()}</span>
+                  <button type="button" onClick={() => {
+                    const repos = (form.github_repos || '').split(',').filter(r => r.trim()).filter((_, j) => j !== i)
+                    setForm({ ...form, github_repos: repos.join(', ') })
+                  }} className="text-text-muted hover:text-danger transition-colors p-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">Keine Repos verknüpft.</p>
+          )}
         </div>
         <FormField label="Adresse" name="address" value={form.address || ''} onChange={handleChange} />
         <FormField label="Notizen" name="notes" type="textarea" value={form.notes || ''} onChange={handleChange} />
@@ -264,6 +295,55 @@ export default function CustomerForm() {
             </div>
             <div className="flex justify-end pt-4 mt-3 border-t border-border">
               <button type="button" onClick={() => setShowProjectPicker(false)} className="btn-secondary">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* GitHub Repo Picker */}
+      {showGithubPicker && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowGithubPicker(false)}>
+          <div className="bg-surface border border-border rounded-[16px] p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-text mb-1">GitHub Repository verknüpfen</h3>
+            <p className="text-text-muted text-sm mb-4">{githubReposList.length} Repos gefunden.</p>
+            <input
+              type="text"
+              placeholder="Repos filtern..."
+              value={githubSearch}
+              onChange={(e) => setGithubSearch(e.target.value)}
+              className="w-full mb-3"
+              autoFocus
+            />
+            <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
+              {githubReposList
+                .filter(r => r.full_name.toLowerCase().includes(githubSearch.toLowerCase()))
+                .slice(0, 50)
+                .map((r) => {
+                  const alreadyLinked = (form.github_repos || '').includes(r.full_name)
+                  return (
+                    <button
+                      key={r.full_name}
+                      type="button"
+                      disabled={alreadyLinked}
+                      onClick={() => {
+                        const current = (form.github_repos || '').split(',').map(s => s.trim()).filter(Boolean)
+                        current.push(r.full_name)
+                        setForm({ ...form, github_repos: current.join(', ') })
+                        setShowGithubPicker(false)
+                        toast.success(`${r.full_name} verknüpft.`)
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors flex justify-between items-center group ${alreadyLinked ? 'opacity-40' : 'hover:bg-surface-2'}`}
+                    >
+                      <div>
+                        <span className="text-sm text-text group-hover:text-accent transition-colors">{r.full_name}</span>
+                        {r.private && <span className="text-[10px] text-text-muted ml-2 bg-surface-2 px-1.5 py-0.5 rounded">privat</span>}
+                      </div>
+                      {alreadyLinked && <span className="text-xs text-text-muted">verknüpft</span>}
+                    </button>
+                  )
+                })}
+            </div>
+            <div className="flex justify-end pt-4 mt-3 border-t border-border">
+              <button type="button" onClick={() => setShowGithubPicker(false)} className="btn-secondary">Abbrechen</button>
             </div>
           </div>
         </div>

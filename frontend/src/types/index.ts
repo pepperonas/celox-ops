@@ -204,6 +204,8 @@ export interface Invoice {
   notes: string
   token_usage_from: string | null
   token_usage_to: string | null
+  github_commits_from: string | null
+  github_commits_to: string | null
   reminder_level: number
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
@@ -226,9 +228,18 @@ export interface InvoiceCreate {
   notes?: string
   token_usage_from?: string | null
   token_usage_to?: string | null
+  github_commits_from?: string | null
+  github_commits_to?: string | null
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}
+
+export interface GithubRepo {
+  full_name: string
+  name: string
+  private: boolean
+  pushed_at: string
+}
 
 export type LeadStatus = 'neu' | 'kontaktiert' | 'interessiert' | 'abgelehnt'
 

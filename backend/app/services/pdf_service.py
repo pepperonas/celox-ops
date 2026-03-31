@@ -14,7 +14,9 @@ from app.models.order import Order
 
 def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | None:
     """Fetch GitHub commits for the invoice period from customer's repos."""
-    if not invoice.token_usage_from or not invoice.token_usage_to:
+    date_from = invoice.github_commits_from or invoice.token_usage_from
+    date_to = invoice.github_commits_to or invoice.token_usage_to
+    if not date_from or not date_to:
         return None
     if not customer.github_repos or not settings.GITHUB_TOKEN:
         return None
@@ -40,8 +42,8 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
         try:
             url = f"https://api.github.com/repos/{repo}/commits"
             params = {
-                "since": f"{invoice.token_usage_from.isoformat()}T00:00:00Z",
-                "until": f"{invoice.token_usage_to.isoformat()}T23:59:59Z",
+                "since": f"{date_from.isoformat()}T00:00:00Z",
+                "until": f"{date_to.isoformat()}T23:59:59Z",
                 "per_page": 100,
             }
             resp = httpx.get(url, headers=headers, params=params, timeout=15)
