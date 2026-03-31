@@ -53,6 +53,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Kleinunternehmerregelung** — konfigurierbar, beeinflusst Berechnung und PDF-Text
 - **Teilzahlungen** — Zahlungen erfassen, automatisch abgeschlossen bei Vollzahlung
 - **Gutschriften** — eigener Nummernkreis GS-YYYY-NNNN, verknüpft mit Originalrechnung
+- **Rabattfunktion** — prozentual oder Festbetrag mit Autovervollständigung für Begründungen (Treuerabatt, Erstkundenrabatt, Mengenrabatt, Non-Profit, etc.)
+- Rabatt als negative Position auf dem Rechnungs-PDF
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -95,7 +97,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Unterschrift** als eingebettetes Bild (Base64, konfigurierbarer Pfad)
 - **Zahlungsoptionen**: Banküberweisung (IBAN/BIC) und PayPal (konfigurierbar)
 - **Steuernummer** im Footer (gemäß § 14 Abs. 4 UStG)
-- Optionaler **KI-Nutzungsbericht** als Anhang mit wählbarem Zeitraum
+- Bis zu 3 optionale PDF-Anlagen: KI-Nutzungsbericht, GitHub-Commit-Verlauf, oder beides — jeweils mit unabhängigem Zeitraum
 - **PDF-Anzeige im Browser** — Rechnungen, Angebote und Mahnungen direkt in neuem Tab anzeigen
 - Standard-Zeitraum für KI-Nutzungsbericht: 1. des Monats bis heute
 
@@ -125,6 +127,13 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **CSV-Export** und **HTML-Bericht** zur Weitergabe an Kunden
 - Kundenfreundliche Bezeichnungen — "Arbeitssitzungen" statt "Sessions", "Codezeilen" statt "Tokens"
 - KI-Nutzungsbericht kann als zweite Seite an **Rechnungs-PDFs angehängt** werden
+
+### GitHub-Integration
+- **Repository-Verknüpfung** — GitHub-Repos über durchsuchbaren Picker mit Kunden verknüpfen (lädt alle Repos via GitHub API)
+- **Commit-Verlauf im Rechnungs-PDF** — eigener Toggle mit unabhängigem Zeitraum
+- Commits als Anlage 'Entwicklungsprotokoll': Datum, Repository, Commit-Nachricht, Autor
+- Kann zusammen mit oder unabhängig vom KI-Nutzungsbericht verwendet werden
+- Private Repos unterstützt (erfordert GitHub-Token)
 
 ### Leads (Vorgemerkt)
 - Potenzielle Kunden und Websites für Akquise vormerken
@@ -326,6 +335,7 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/dashboard/profitability` | Kunden-Rentabilität |
 | `GET` | `/api/dashboard/forecast` | Umsatzprognose |
 | `GET` | `/api/dashboard/monthly-report` | Monatsbericht-PDF |
+| `GET` | `/api/github/repos` | GitHub-Repositories auflisten |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | E-Mail-Vorlagen-CRUD |
 | `POST` | `/api/email-templates/seed` | Standardvorlagen erstellen |
 | `GET` | `/api/health` | Health Check |
@@ -463,6 +473,8 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_PUBLIC_URL` | Öffentliche Token Tracker URL (für Browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-Zeichen-Hex) |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (optional) | `ghp_...` |
+| `GITHUB_USERNAME` | GitHub-Benutzername (optional) | `pepperonas` |
 | `SMTP_HOST` | SMTP-Server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP-Port | `587` |
 | `SMTP_USER` | SMTP-Benutzername | `user@example.com` |
@@ -475,6 +487,7 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 - Starke Werte für `JWT_SECRET` und `POSTGRES_PASSWORD` generieren
 - `ADMIN_PASSWORD_HASH` muss ein bcrypt-Hash sein (`$` als `$$` escapen)
 - `TOKEN_TRACKER_ADMIN_KEY` wird nur bei Nutzung der Token Tracker Integration benötigt
+- `GITHUB_TOKEN` gewährt Lesezugriff auf Repositories — verwende einen Token mit minimalen Berechtigungen
 - `SIGNATURE_PATH` muss auf eine PNG-Datei im Docker-Volume zeigen (`/data/assets/`)
 - Alle persönlichen Daten (Adresse, Steuernummer, Bankverbindung, PayPal) werden ausschließlich in `.env` gespeichert — niemals im Code oder in Templates
 - Datenbank-Backups enthalten alle Geschäftsdaten — sicher aufbewahren und nicht weitergeben
@@ -527,6 +540,7 @@ celox-ops/
 │       │   ├── euer.py         # EÜR-Übersicht + CSV-Export
 │       │   ├── backup.py       # Vollständiger Datenbank-Export (JSON + PDFs)
 │       │   ├── token_tracker.py # Token Tracker Share-API-Proxy
+│       │   ├── github.py        # GitHub-Integrations-Endpunkte
 │       │   ├── attachments.py  # Dateianhang-Endpunkte
 │       │   └── email_templates.py # E-Mail-Vorlagen-CRUD
 │       ├── services/
@@ -554,6 +568,7 @@ celox-ops/
 │       │   ├── analytics.ts   # Analyse-API
 │       │   ├── attachments.ts # Dateianhang-API
 │       │   ├── emailTemplates.ts # E-Mail-Vorlagen-API
+│       │   ├── github.ts       # GitHub-Integrations-API
 │       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Seitenleiste + Header

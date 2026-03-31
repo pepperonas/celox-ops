@@ -53,6 +53,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Kleinunternehmerregelung** (small business tax exemption) — configurable, affects calculation and PDF text
 - **Partial payments** — record payments, auto-complete when fully paid
 - **Credit notes** (Gutschriften) — separate number series GS-YYYY-NNNN, linked to original invoice
+- **Discount function** — percentage or fixed amount with autocomplete for reasons (loyalty, first-time customer, volume, non-profit, etc.)
+- Discount shown as negative position on invoice PDF
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -95,7 +97,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Signature image** embedded (base64, configurable path)
 - **Payment options**: bank transfer (IBAN/BIC) and PayPal (configurable)
 - **Tax number** in footer (Steuernummer, as required by German tax law)
-- Optional **AI usage report** attachment with selectable date range
+- Up to 3 optional PDF attachments: AI usage report, GitHub commit history, or both — each with independent date range
 - **In-browser PDF viewer** — view invoices, quotes, and reminders directly in a new tab
 - Default period for AI usage report: 1st of current month to today
 
@@ -125,6 +127,13 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **CSV export** and **HTML report** generation for sending to clients
 - Customer-friendly labels — "Arbeitssitzungen" instead of "Sessions", "Codezeilen" instead of "Tokens"
 - AI usage report can be **attached to invoice PDFs** as a second page
+
+### GitHub Integration
+- **Repository linking** — connect GitHub repos to customers via searchable picker (loads all repos from GitHub API)
+- **Commit history in invoice PDFs** — separate toggle with independent date range
+- Commits listed as 'Entwicklungsprotokoll' attachment: date, repo, commit message, author
+- Can be combined with or used independently from AI usage report
+- Private repos supported (requires GitHub token)
 
 ### Leads (Vorgemerkt)
 - Track potential clients and websites for outreach
@@ -326,6 +335,7 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/dashboard/profitability` | Customer profitability |
 | `GET` | `/api/dashboard/forecast` | Revenue forecast |
 | `GET` | `/api/dashboard/monthly-report` | Monthly report PDF |
+| `GET` | `/api/github/repos` | List GitHub repositories |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | Email template CRUD |
 | `POST` | `/api/email-templates/seed` | Create default templates |
 | `GET` | `/api/health` | Health check |
@@ -459,6 +469,8 @@ Active working time is calculated from message timestamps: intervals between con
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_PUBLIC_URL` | Public Token Tracker URL (for browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
+| `GITHUB_TOKEN` | GitHub personal access token (optional) | `ghp_...` |
+| `GITHUB_USERNAME` | GitHub username (optional) | `pepperonas` |
 | `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP port | `587` |
 | `SMTP_USER` | SMTP username | `user@example.com` |
@@ -471,6 +483,7 @@ Active working time is calculated from message timestamps: intervals between con
 - Generate strong values for `JWT_SECRET` and `POSTGRES_PASSWORD`
 - The `ADMIN_PASSWORD_HASH` must be a bcrypt hash (escape `$` as `$$`)
 - `TOKEN_TRACKER_ADMIN_KEY` is only needed if using the Token Tracker integration
+- `GITHUB_TOKEN` grants read access to your repositories — use a fine-grained token with minimal permissions
 - `SIGNATURE_PATH` must point to a PNG inside the Docker volume (`/data/assets/`)
 - All personal data (address, tax number, bank details, PayPal) is stored exclusively in `.env` — never in code or templates
 - Database backups contain all business data — store securely and do not share
@@ -523,6 +536,7 @@ OPS/
 │       │   ├── euer.py         # EÜR overview + CSV export
 │       │   ├── backup.py       # Full database export (JSON + PDFs)
 │       │   ├── token_tracker.py # Token Tracker share API proxy
+│       │   ├── github.py        # GitHub integration endpoints
 │       │   ├── attachments.py  # File attachment endpoints
 │       │   └── email_templates.py # Email template CRUD
 │       ├── services/
@@ -550,6 +564,7 @@ OPS/
 │       │   ├── analytics.ts   # Analytics API
 │       │   ├── attachments.ts # File attachment API
 │       │   ├── emailTemplates.ts # Email template API
+│       │   ├── github.ts       # GitHub integration API
 │       │   └── ...
 │       ├── components/
 │       │   ├── Layout.tsx      # Sidebar + header
