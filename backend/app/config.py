@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     PDF_STORAGE_PATH: str = "/data/invoices"
     LOGO_PATH: str = "/data/assets/logo.png"
 
+    GITHUB_TOKEN: str = ""
+
     TOKEN_TRACKER_BASE_URL: str = ""
     TOKEN_TRACKER_PUBLIC_URL: str = ""
     TOKEN_TRACKER_ADMIN_KEY: str = ""

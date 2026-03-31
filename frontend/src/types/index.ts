@@ -7,6 +7,7 @@ export interface Customer {
   address: string
   website: string
   token_tracker_url: string
+  github_repos: string
   notes: string
   created_at: string
   updated_at: string
@@ -73,6 +74,7 @@ export interface CustomerCreate {
   address?: string
   website?: string
   token_tracker_url?: string
+  github_repos?: string
   notes?: string
 }
 

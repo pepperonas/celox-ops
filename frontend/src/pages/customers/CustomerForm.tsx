@@ -19,6 +19,7 @@ const emptyForm: CustomerCreate = {
   address: '',
   website: '',
   token_tracker_url: '',
+  github_repos: '',
   notes: '',
 }
 
@@ -44,6 +45,7 @@ export default function CustomerForm() {
           address: c.address,
           website: c.website,
           token_tracker_url: c.token_tracker_url,
+          github_repos: c.github_repos,
           notes: c.notes,
         }),
       )
@@ -200,6 +202,18 @@ export default function CustomerForm() {
           )}
         </div>
 
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">GitHub Repositories</label>
+          <input
+            type="text"
+            name="github_repos"
+            value={form.github_repos || ''}
+            onChange={handleChange}
+            placeholder="z.B. pepperonas/villa-kinder, pepperonas/edersee (kommagetrennt)"
+            className="w-full"
+          />
+          <p className="text-[11px] text-text-muted mt-1">Kommagetrennte Liste von owner/repo. Commits werden optional in Rechnungs-PDFs aufgenommen.</p>
+        </div>
         <FormField label="Adresse" name="address" value={form.address || ''} onChange={handleChange} />
         <FormField label="Notizen" name="notes" type="textarea" value={form.notes || ''} onChange={handleChange} />
 

@@ -12,6 +12,7 @@ class CustomerBase(BaseModel):
     address: str | None = None
     website: str | None = None
     token_tracker_url: str | None = None
+    github_repos: str | None = None
     notes: str | None = None
 
 
@@ -27,6 +28,7 @@ class CustomerUpdate(BaseModel):
     address: str | None = None
     website: str | None = None
     token_tracker_url: str | None = None
+    github_repos: str | None = None
     notes: str | None = None
 
 

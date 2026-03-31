@@ -440,5 +440,53 @@
         {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
     </div>
     {% endif %}
+
+    {% if github_commits %}
+    <div style="page-break-before: always;"></div>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ settings.BUSINESS_NAME }}</div>
+            <div class="company-details">Code-Änderungen zu {{ invoice.invoice_number }}</div>
+        </div>
+    </div>
+
+    <h1 style="margin-top: 20px;">Anlage: Entwicklungsprotokoll</h1>
+    <p style="font-size: 9pt; color: #666; margin-bottom: 20px;">
+        Übersicht aller Code-Änderungen (Commits) im Zeitraum
+        {{ invoice.token_usage_from.strftime('%d.%m.%Y') }} bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') }}.
+        Insgesamt {{ github_commits|length }} Commit{{ 's' if github_commits|length != 1 else '' }}.
+    </p>
+
+    <table class="positions">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Repository</th>
+                <th>Änderung</th>
+                <th>Autor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in github_commits %}
+            <tr>
+                <td style="white-space: nowrap;">{{ c.date }}</td>
+                <td style="white-space: nowrap; color: #58a6ff;">{{ c.repo }}</td>
+                <td><code style="font-size: 8pt; color: #999;">{{ c.sha }}</code> {{ c.message }}</td>
+                <td style="white-space: nowrap;">{{ c.author }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p style="font-size: 8pt; color: #999; margin-top: 20px; font-style: italic;">
+        Automatisch aus GitHub abgerufen. Jeder Eintrag entspricht einer einzelnen Code-Änderung
+        im Versionskontrollsystem des Projekts.
+    </p>
+
+    <div class="footer">
+        {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
+        {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
+    </div>
+    {% endif %}
 </body>
 </html>
