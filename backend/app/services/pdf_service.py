@@ -18,16 +18,20 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
     date_to = invoice.github_commits_to or invoice.token_usage_to
     if not date_from or not date_to:
         return None
-    if not customer.github_repos or not settings.GITHUB_TOKEN:
+    if not settings.GITHUB_TOKEN:
         return None
 
     import json
+    # Use invoice-specific selection, fallback to all customer repos
+    repos_source = invoice.selected_github_repos or customer.github_repos
+    if not repos_source:
+        return None
     repos = []
     try:
-        parsed = json.loads(customer.github_repos)
-        repos = parsed if isinstance(parsed, list) else [customer.github_repos]
+        parsed = json.loads(repos_source)
+        repos = parsed if isinstance(parsed, list) else [repos_source]
     except (json.JSONDecodeError, TypeError):
-        repos = [r.strip() for r in customer.github_repos.split(",") if r.strip()]
+        repos = [r.strip() for r in repos_source.split(",") if r.strip()]
 
     if not repos:
         return None
@@ -66,22 +70,54 @@ def _fetch_token_usage(customer: Customer, invoice: Invoice) -> dict | None:
     """Fetch token usage data from tracker if invoice has date range and customer has tracker URL."""
     if not invoice.token_usage_from or not invoice.token_usage_to:
         return None
-    if not customer.token_tracker_url:
+
+    import json as _json
+
+    # Use invoice-specific selection, fallback to all customer URLs
+    tracker_source = invoice.selected_tracker_urls or customer.token_tracker_url
+    if not tracker_source:
         return None
 
+    # Parse URLs from JSON (supports single URL, array of strings, array of {url, label} objects)
+    urls: list[str] = []
     try:
-        params = {
-            "from": invoice.token_usage_from.isoformat(),
-            "to": invoice.token_usage_to.isoformat(),
-        }
-        sep = "&" if "?" in customer.token_tracker_url else "?"
-        url = f"{customer.token_tracker_url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
-        resp = httpx.get(url, timeout=30)
-        if resp.status_code == 200:
-            return resp.json()
-    except Exception:
-        pass
-    return None
+        parsed = _json.loads(tracker_source)
+        if isinstance(parsed, list):
+            for item in parsed:
+                urls.append(item["url"] if isinstance(item, dict) else item)
+        else:
+            urls = [tracker_source]
+    except (_json.JSONDecodeError, TypeError):
+        urls = [tracker_source]
+
+    if not urls:
+        return None
+
+    # Fetch and merge all URLs
+    merged = None
+    for tracker_url in urls:
+        try:
+            params = {
+                "from": invoice.token_usage_from.isoformat(),
+                "to": invoice.token_usage_to.isoformat(),
+            }
+            sep = "&" if "?" in tracker_url else "?"
+            url = f"{tracker_url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
+            resp = httpx.get(url, timeout=30)
+            if resp.status_code == 200:
+                data = resp.json()
+                if merged is None:
+                    merged = data
+                else:
+                    # Merge summaries
+                    for key in ["total_messages", "total_sessions", "total_cost", "lines_added", "lines_removed", "lines_written", "total_input_tokens", "total_output_tokens"]:
+                        if key in merged.get("summary", {}) and key in data.get("summary", {}):
+                            merged["summary"][key] += data["summary"][key]
+                    merged["sessions"] = merged.get("sessions", []) + data.get("sessions", [])
+                    merged["daily"] = merged.get("daily", []) + data.get("daily", [])
+        except Exception:
+            continue
+    return merged
 
 
 def generate_invoice_pdf(

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     PDF_STORAGE_PATH: str = "/data/invoices"
     LOGO_PATH: str = "/data/assets/logo.png"
 
+    INVOICE_NUMBER_OFFSET: int = 0
+
     GITHUB_TOKEN: str = ""
     GITHUB_USERNAME: str = ""
 

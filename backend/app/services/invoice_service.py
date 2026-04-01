@@ -4,7 +4,13 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.invoice import Invoice
+
+# Offset for externally issued invoices not tracked in this system.
+# Set INVOICE_NUMBER_OFFSET in .env to the number of invoices already
+# issued outside this app for the current year.
+INVOICE_NUMBER_OFFSET = int(getattr(settings, "INVOICE_NUMBER_OFFSET", 0) or 0)
 
 
 async def generate_invoice_number(db: AsyncSession) -> str:
@@ -23,7 +29,7 @@ async def generate_invoice_number(db: AsyncSession) -> str:
         last_seq = int(last_number.split("-")[-1])
         next_seq = last_seq + 1
     else:
-        next_seq = 1
+        next_seq = INVOICE_NUMBER_OFFSET + 1
 
     return f"{prefix}{next_seq:04d}"
 

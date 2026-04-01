@@ -67,6 +67,8 @@ class Invoice(Base):
     token_usage_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     github_commits_from: Mapped[date | None] = mapped_column(Date, nullable=True)
     github_commits_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    selected_tracker_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected_github_repos: Mapped[str | None] = mapped_column(Text, nullable=True)
     reminder_level: Mapped[int] = mapped_column(Integer, default=0)
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_pdf_path: Mapped[str | None] = mapped_column(String(500), nullable=True)

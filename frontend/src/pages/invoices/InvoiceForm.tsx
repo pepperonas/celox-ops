@@ -48,7 +48,11 @@ export default function InvoiceForm() {
   const [attachTokenUsage, setAttachTokenUsage] = useState(false)
   const [selectedCustomerHasTracker, setSelectedCustomerHasTracker] = useState(false)
   const [selectedCustomerTrackerUrl, setSelectedCustomerTrackerUrl] = useState('')
+  const [customerTrackerProjects, setCustomerTrackerProjects] = useState<{url: string; label: string}[]>([])
+  const [selectedTrackerUrls, setSelectedTrackerUrls] = useState<string[]>([])
   const [selectedCustomerHasGithub, setSelectedCustomerHasGithub] = useState(false)
+  const [customerGithubRepos, setCustomerGithubRepos] = useState<string[]>([])
+  const [selectedGithubRepos, setSelectedGithubRepos] = useState<string[]>([])
   const [attachGithubCommits, setAttachGithubCommits] = useState(false)
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discountPercent, setDiscountPercent] = useState(true)
@@ -93,7 +97,31 @@ export default function InvoiceForm() {
       getCustomer(form.customer_id).then((c) => {
         setSelectedCustomerHasTracker(Boolean(c.token_tracker_url))
         setSelectedCustomerTrackerUrl(c.token_tracker_url || '')
+        // Parse tracker projects
+        if (c.token_tracker_url) {
+          try {
+            const parsed = JSON.parse(c.token_tracker_url)
+            if (Array.isArray(parsed)) {
+              const projects = parsed.map((item: string | {url: string; label: string}) =>
+                typeof item === 'string' ? { url: item, label: '' } : item
+              )
+              setCustomerTrackerProjects(projects)
+              setSelectedTrackerUrls(projects.map((p: {url: string}) => p.url))
+            } else {
+              setCustomerTrackerProjects([{ url: c.token_tracker_url, label: '' }])
+              setSelectedTrackerUrls([c.token_tracker_url])
+            }
+          } catch {
+            setCustomerTrackerProjects([{ url: c.token_tracker_url, label: '' }])
+            setSelectedTrackerUrls([c.token_tracker_url])
+          }
+        }
         setSelectedCustomerHasGithub(Boolean(c.github_repos))
+        if (c.github_repos) {
+          const repos = c.github_repos.split(',').map((r: string) => r.trim()).filter(Boolean)
+          setCustomerGithubRepos(repos)
+          setSelectedGithubRepos(repos)
+        }
       }).catch(() => { setSelectedCustomerHasTracker(false); setSelectedCustomerTrackerUrl(''); setSelectedCustomerHasGithub(false) })
     } else {
       setOrders([])
@@ -263,6 +291,12 @@ export default function InvoiceForm() {
     const payload: InvoiceCreate = {
       ...form,
       positions: allPositions,
+      selected_tracker_urls: attachTokenUsage && selectedTrackerUrls.length > 0
+        ? JSON.stringify(selectedTrackerUrls)
+        : null,
+      selected_github_repos: attachGithubCommits && selectedGithubRepos.length > 0
+        ? selectedGithubRepos.join(', ')
+        : null,
     }
 
     try {
@@ -611,28 +645,39 @@ export default function InvoiceForm() {
               </label>
             </div>
             {attachTokenUsage && (
-              <div>
-                <p className="text-xs text-text-muted mb-3">
+              <div className="space-y-3">
+                <p className="text-xs text-text-muted">
                   Der Bericht zeigt dem Kunden transparent, welche KI-gestützte Entwicklungsarbeit im gewählten Zeitraum stattfand.
                 </p>
+                {customerTrackerProjects.length > 1 && (
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Projekte auswählen</label>
+                    <div className="space-y-1">
+                      {customerTrackerProjects.map((p) => (
+                        <label key={p.url} className="flex items-center gap-2 text-sm text-text cursor-pointer hover:text-accent transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedTrackerUrls.includes(p.url)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedTrackerUrls([...selectedTrackerUrls, p.url])
+                              else setSelectedTrackerUrls(selectedTrackerUrls.filter(u => u !== p.url))
+                            }}
+                            className="w-3.5 h-3.5 accent-[#58a6ff]"
+                          />
+                          {p.label || p.url.replace(/.*\/share\//, '').slice(0, 12) + '...'}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
-                    <input
-                      type="date"
-                      value={form.token_usage_from || ''}
-                      onChange={(e) => setForm({ ...form, token_usage_from: e.target.value || null })}
-                      className="w-full"
-                    />
+                    <input type="date" value={form.token_usage_from || ''} onChange={(e) => setForm({ ...form, token_usage_from: e.target.value || null })} className="w-full" />
                   </div>
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
-                    <input
-                      type="date"
-                      value={form.token_usage_to || ''}
-                      onChange={(e) => setForm({ ...form, token_usage_to: e.target.value || null })}
-                      className="w-full"
-                    />
+                    <input type="date" value={form.token_usage_to || ''} onChange={(e) => setForm({ ...form, token_usage_to: e.target.value || null })} className="w-full" />
                   </div>
                 </div>
               </div>
@@ -666,28 +711,39 @@ export default function InvoiceForm() {
               </label>
             </div>
             {attachGithubCommits && (
-              <div>
-                <p className="text-xs text-text-muted mb-3">
-                  Listet alle Code-Änderungen (Commits) der verknüpften Repositories im gewählten Zeitraum als Anlage auf.
+              <div className="space-y-3">
+                <p className="text-xs text-text-muted">
+                  Listet alle Code-Änderungen (Commits) der ausgewählten Repositories im gewählten Zeitraum als Anlage auf.
                 </p>
+                {customerGithubRepos.length > 1 && (
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Repos auswählen</label>
+                    <div className="space-y-1">
+                      {customerGithubRepos.map((repo) => (
+                        <label key={repo} className="flex items-center gap-2 text-sm text-text cursor-pointer hover:text-accent transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedGithubRepos.includes(repo)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedGithubRepos([...selectedGithubRepos, repo])
+                              else setSelectedGithubRepos(selectedGithubRepos.filter(r => r !== repo))
+                            }}
+                            className="w-3.5 h-3.5 accent-[#58a6ff]"
+                          />
+                          {repo}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
-                    <input
-                      type="date"
-                      value={form.github_commits_from || ''}
-                      onChange={(e) => setForm({ ...form, github_commits_from: e.target.value || null })}
-                      className="w-full"
-                    />
+                    <input type="date" value={form.github_commits_from || ''} onChange={(e) => setForm({ ...form, github_commits_from: e.target.value || null })} className="w-full" />
                   </div>
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
-                    <input
-                      type="date"
-                      value={form.github_commits_to || ''}
-                      onChange={(e) => setForm({ ...form, github_commits_to: e.target.value || null })}
-                      className="w-full"
-                    />
+                    <input type="date" value={form.github_commits_to || ''} onChange={(e) => setForm({ ...form, github_commits_to: e.target.value || null })} className="w-full" />
                   </div>
                 </div>
               </div>

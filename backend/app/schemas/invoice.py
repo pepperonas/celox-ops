@@ -30,6 +30,8 @@ class InvoiceBase(BaseModel):
     token_usage_to: date | None = None
     github_commits_from: date | None = None
     github_commits_to: date | None = None
+    selected_tracker_urls: str | None = None
+    selected_github_repos: str | None = None
 
 
 class InvoiceCreate(InvoiceBase):
@@ -50,6 +52,8 @@ class InvoiceUpdate(BaseModel):
     token_usage_to: date | None = None
     github_commits_from: date | None = None
     github_commits_to: date | None = None
+    selected_tracker_urls: str | None = None
+    selected_github_repos: str | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -75,6 +79,8 @@ class InvoiceResponse(BaseModel):
     token_usage_to: date | None = None
     github_commits_from: date | None = None
     github_commits_to: date | None = None
+    selected_tracker_urls: str | None = None
+    selected_github_repos: str | None = None
     reminder_level: int = 0
     reminder_sent_at: datetime | None = None
     reminder_pdf_path: str | None = None

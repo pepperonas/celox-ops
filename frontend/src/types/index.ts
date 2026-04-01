@@ -206,6 +206,8 @@ export interface Invoice {
   token_usage_to: string | null
   github_commits_from: string | null
   github_commits_to: string | null
+  selected_tracker_urls: string | null
+  selected_github_repos: string | null
   reminder_level: number
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
@@ -230,6 +232,8 @@ export interface InvoiceCreate {
   token_usage_to?: string | null
   github_commits_from?: string | null
   github_commits_to?: string | null
+  selected_tracker_urls?: string | null
+  selected_github_repos?: string | null
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}
