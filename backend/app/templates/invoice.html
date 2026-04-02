@@ -256,7 +256,7 @@
                 <td class="label">Nettobetrag:</td>
                 <td class="value">{{ "%.2f"|format(invoice.subtotal|float) }} &euro;</td>
             </tr>
-            {% if not kleinunternehmer %}
+            {% if not invoice.tax_exempt %}
             <tr>
                 <td class="label">MwSt. ({{ "%.0f"|format(invoice.tax_rate|float) }}%):</td>
                 <td class="value">{{ "%.2f"|format(invoice.tax_amount|float) }} &euro;</td>
@@ -269,7 +269,7 @@
         </table>
     </div>
 
-    {% if kleinunternehmer %}
+    {% if invoice.tax_exempt %}
     <div class="kleinunternehmer-note">
         Gemäß &sect; 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).
     </div>

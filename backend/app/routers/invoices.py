@@ -132,7 +132,7 @@ async def create_invoice(
         })
 
     subtotal, tax_amount, total = calculate_invoice_totals(
-        positions_dicts, data.tax_rate, settings.KLEINUNTERNEHMER
+        positions_dicts, data.tax_rate, data.tax_exempt
     )
 
     invoice = Invoice(
@@ -143,7 +143,8 @@ async def create_invoice(
         title=data.title,
         positions=positions_json,
         subtotal=subtotal,
-        tax_rate=data.tax_rate,
+        tax_rate=data.tax_rate if not data.tax_exempt else Decimal("0"),
+        tax_exempt=data.tax_exempt,
         tax_amount=tax_amount,
         total=total,
         invoice_date=data.invoice_date,
@@ -196,7 +197,7 @@ async def update_invoice(
 
         tax_rate = data.tax_rate if data.tax_rate is not None else invoice.tax_rate
         subtotal, tax_amount, total = calculate_invoice_totals(
-            positions_dicts, tax_rate, settings.KLEINUNTERNEHMER
+            positions_dicts, tax_rate, data.tax_exempt if data.tax_exempt is not None else invoice.tax_exempt
         )
         update_data["subtotal"] = subtotal
         update_data["tax_amount"] = tax_amount
@@ -612,8 +613,9 @@ async def generate_recurring_invoices(db: AsyncSession = Depends(get_db)) -> lis
             "gesamt": amount,
         }]
 
+        is_exempt = settings.KLEINUNTERNEHMER
         subtotal, tax_amount, total = calculate_invoice_totals(
-            positions_dicts, Decimal("19.00"), settings.KLEINUNTERNEHMER
+            positions_dicts, Decimal("19.00"), is_exempt
         )
 
         invoice = Invoice(
@@ -623,7 +625,8 @@ async def generate_recurring_invoices(db: AsyncSession = Depends(get_db)) -> lis
             title=f"{contract.title} — {period_label}",
             positions=positions_json,
             subtotal=subtotal,
-            tax_rate=Decimal("19.00") if not settings.KLEINUNTERNEHMER else Decimal("0"),
+            tax_rate=Decimal("0") if is_exempt else Decimal("19.00"),
+            tax_exempt=is_exempt,
             tax_amount=tax_amount,
             total=total,
             invoice_date=today,
@@ -692,7 +695,8 @@ async def quick_invoice(
     }]
 
     subtotal = gesamt
-    if settings.KLEINUNTERNEHMER:
+    is_exempt = settings.KLEINUNTERNEHMER
+    if is_exempt:
         tax_amount = Decimal("0")
         tax_rate = Decimal("0")
     else:
@@ -705,6 +709,7 @@ async def quick_invoice(
         customer_id=data.customer_id,
         invoice_number=invoice_number,
         title=data.beschreibung,
+        tax_exempt=is_exempt,
         positions=positions_json,
         subtotal=subtotal,
         tax_rate=tax_rate,

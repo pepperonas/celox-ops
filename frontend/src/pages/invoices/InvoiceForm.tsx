@@ -28,6 +28,7 @@ const emptyForm: InvoiceCreate = {
   title: '',
   positions: [{ ...emptyPosition }],
   tax_rate: 19,
+  tax_exempt: true,
   invoice_date: new Date().toISOString().split('T')[0],
   due_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
   notes: '',
@@ -77,6 +78,7 @@ export default function InvoiceForm() {
           title: inv.title,
           positions: inv.positions.length > 0 ? inv.positions : [{ ...emptyPosition }],
           tax_rate: inv.tax_rate,
+          tax_exempt: inv.tax_exempt ?? true,
           invoice_date: inv.invoice_date?.split('T')[0] || '',
           due_date: inv.due_date?.split('T')[0] || '',
           notes: inv.notes,
@@ -332,7 +334,7 @@ export default function InvoiceForm() {
     ? (discountPercent ? positionsNetto * (parseFloat(discountValue) || 0) / 100 : parseFloat(discountValue) || 0)
     : 0
   const netto = positionsNetto - discountAmount
-  const taxRate = form.tax_rate || 0
+  const taxRate = form.tax_exempt ? 0 : (form.tax_rate || 0)
   const taxAmount = netto * (taxRate / 100)
   const brutto = netto + taxAmount
 
@@ -583,16 +585,30 @@ export default function InvoiceForm() {
           {/* Totals */}
           <div className="mt-6 pt-4 border-t border-border">
             <div className="flex items-center gap-3 mb-4">
-              <label className="text-xs uppercase tracking-wider text-text-muted">USt.-Satz (%):</label>
               <input
-                type="number"
-                name="tax_rate"
-                value={form.tax_rate || 0}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                className="input-field w-24 text-sm"
+                type="checkbox"
+                id="tax-exempt"
+                checked={form.tax_exempt || false}
+                onChange={(e) => setForm({ ...form, tax_exempt: e.target.checked })}
+                className="w-4 h-4 accent-[#58a6ff]"
               />
+              <label htmlFor="tax-exempt" className="text-xs uppercase tracking-wider text-text-muted cursor-pointer">
+                Keine USt. (Kleinunternehmerregelung §19 UStG)
+              </label>
+              {!form.tax_exempt && (
+                <div className="flex items-center gap-2 ml-4">
+                  <label className="text-xs text-text-muted">USt.-Satz (%):</label>
+                  <input
+                    type="number"
+                    name="tax_rate"
+                    value={form.tax_rate || 19}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-20 text-sm"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Discount */}

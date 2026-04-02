@@ -23,6 +23,7 @@ class InvoiceBase(BaseModel):
     title: str
     positions: list[InvoicePosition]
     tax_rate: Decimal = Decimal("19.00")
+    tax_exempt: bool = False
     invoice_date: date
     due_date: date
     notes: str | None = None
@@ -46,6 +47,7 @@ class InvoiceUpdate(BaseModel):
     title: str | None = None
     positions: list[InvoicePosition] | None = None
     tax_rate: Decimal | None = None
+    tax_exempt: bool | None = None
     invoice_date: date | None = None
     due_date: date | None = None
     notes: str | None = None
@@ -70,6 +72,7 @@ class InvoiceResponse(BaseModel):
     positions: list[InvoicePosition]
     subtotal: Decimal
     tax_rate: Decimal
+    tax_exempt: bool = False
     tax_amount: Decimal
     total: Decimal
     invoice_date: date

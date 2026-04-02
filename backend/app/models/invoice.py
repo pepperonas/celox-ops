@@ -54,6 +54,7 @@ class Invoice(Base):
     tax_rate: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), nullable=False, default=Decimal("19.00")
     )
+    tax_exempt: Mapped[bool] = mapped_column(default=False)
     tax_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)

@@ -196,6 +196,7 @@ export interface Invoice {
   positions: InvoicePosition[]
   subtotal: number
   tax_rate: number
+  tax_exempt: boolean
   tax_amount: number
   total: number
   invoice_date: string
@@ -226,6 +227,7 @@ export interface InvoiceCreate {
   title: string
   positions: InvoicePosition[]
   tax_rate?: number
+  tax_exempt?: boolean
   invoice_date?: string
   due_date?: string
   notes?: string
