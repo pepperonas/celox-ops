@@ -211,8 +211,8 @@ export default function InvoiceForm() {
   }
 
   const removePosition = (index: number) => {
-    if (form.positions.length <= 1) return
     const updated = form.positions.filter((_, i) => i !== index).map((p, i) => ({ ...p, position: i + 1 }))
+    if (updated.length === 0) { setForm({ ...form, positions: [{ ...emptyPosition }] }); return }
     setForm({ ...form, positions: updated })
   }
 
@@ -549,7 +549,7 @@ export default function InvoiceForm() {
                   <button
                     type="button"
                     onClick={() => removePosition(idx)}
-                    disabled={form.positions.length <= 1}
+                    disabled={false}
                     className="p-1.5 text-text-muted hover:text-danger disabled:opacity-30 transition-colors"
                     title="Position entfernen"
                   >
