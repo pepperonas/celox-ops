@@ -46,7 +46,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 
 ### Invoices
 - **Auto-generated invoice numbers** in format `CO-YYYY-NNNN` (sequential per year)
-- **Dynamic line items** — add/remove rows with live calculation
+- **Dynamic line items** — add/remove any row (including the last one) with live calculation
 - Net/VAT/gross calculated automatically
 - Status workflow: Entwurf → Gestellt → Bezahlt (or Überfällig/Storniert)
 - Optional link to orders or contracts

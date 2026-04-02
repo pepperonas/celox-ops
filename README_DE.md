@@ -46,7 +46,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 
 ### Rechnungen
 - **Automatisch generierte Rechnungsnummern** im Format `CO-YYYY-NNNN` (fortlaufend pro Jahr)
-- **Dynamische Positionen** — Zeilen hinzufügen/entfernen mit Live-Berechnung
+- **Dynamische Positionen** — Zeilen hinzufügen/entfernen (auch die letzte) mit Live-Berechnung
 - Netto/MwSt./Brutto automatisch berechnet
 - Status-Workflow: Entwurf → Gestellt → Bezahlt (oder Überfällig/Storniert)
 - Optionale Verknüpfung mit Aufträgen oder Verträgen
