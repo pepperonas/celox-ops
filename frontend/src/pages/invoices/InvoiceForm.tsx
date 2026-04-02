@@ -6,6 +6,7 @@ import FormField from '../../components/FormField'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
+import axiosRaw from 'axios'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { formatCurrency } from '../../utils/formatters'
@@ -97,20 +98,28 @@ export default function InvoiceForm() {
       getCustomer(form.customer_id).then((c) => {
         setSelectedCustomerHasTracker(Boolean(c.token_tracker_url))
         setSelectedCustomerTrackerUrl(c.token_tracker_url || '')
-        // Parse tracker projects
+        // Parse tracker projects and fetch labels
         if (c.token_tracker_url) {
           try {
             const parsed = JSON.parse(c.token_tracker_url)
-            if (Array.isArray(parsed)) {
-              const projects = parsed.map((item: string | {url: string; label: string}) =>
-                typeof item === 'string' ? { url: item, label: '' } : item
-              )
-              setCustomerTrackerProjects(projects)
-              setSelectedTrackerUrls(projects.map((p: {url: string}) => p.url))
-            } else {
-              setCustomerTrackerProjects([{ url: c.token_tracker_url, label: '' }])
-              setSelectedTrackerUrls([c.token_tracker_url])
-            }
+            const items = Array.isArray(parsed) ? parsed : [c.token_tracker_url]
+            const projects = items.map((item: string | {url: string; label: string}) =>
+              typeof item === 'string' ? { url: item, label: '' } : item
+            )
+            setCustomerTrackerProjects(projects)
+            setSelectedTrackerUrls(projects.map((p: {url: string}) => p.url))
+            // Fetch labels for projects without label
+            projects.forEach((p: {url: string; label: string}, i: number) => {
+              if (!p.label && p.url) {
+                axiosRaw.get(p.url).then(res => {
+                  setCustomerTrackerProjects(prev => {
+                    const updated = [...prev]
+                    if (updated[i]) updated[i] = { ...updated[i], label: res.data?.label || '' }
+                    return updated
+                  })
+                }).catch(() => {})
+              }
+            })
           } catch {
             setCustomerTrackerProjects([{ url: c.token_tracker_url, label: '' }])
             setSelectedTrackerUrls([c.token_tracker_url])
