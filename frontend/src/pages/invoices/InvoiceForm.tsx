@@ -59,7 +59,7 @@ export default function InvoiceForm() {
   const [discountValue, setDiscountValue] = useState('')
   const [discountReason, setDiscountReason] = useState('')
   const [showAiImport, setShowAiImport] = useState(false)
-  const [aiImportFrom, setAiImportFrom] = useState('')
+  const [aiImportFrom, setAiImportFrom] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
   const [aiImportTo, setAiImportTo] = useState(new Date().toISOString().split('T')[0])
   const [aiHourlyRate, setAiHourlyRate] = useState(95)
   const [aiImportLoading, setAiImportLoading] = useState(false)
