@@ -80,7 +80,50 @@ export default function InvoiceForm() {
           invoice_date: inv.invoice_date?.split('T')[0] || '',
           due_date: inv.due_date?.split('T')[0] || '',
           notes: inv.notes,
+          token_usage_from: inv.token_usage_from?.split('T')[0] || null,
+          token_usage_to: inv.token_usage_to?.split('T')[0] || null,
+          github_commits_from: inv.github_commits_from?.split('T')[0] || null,
+          github_commits_to: inv.github_commits_to?.split('T')[0] || null,
+          selected_tracker_urls: inv.selected_tracker_urls || null,
+          selected_github_repos: inv.selected_github_repos || null,
+          include_activity_chart: inv.include_activity_chart || false,
         })
+        // Restore toggle states from saved data
+        if (inv.token_usage_from) {
+          setAttachTokenUsage(true)
+          if (inv.selected_tracker_urls) {
+            try {
+              const urls = JSON.parse(inv.selected_tracker_urls)
+              if (Array.isArray(urls)) setSelectedTrackerUrls(urls)
+            } catch {}
+          }
+        }
+        if (inv.selected_github_repos || inv.github_commits_from) {
+          setAttachGithubCommits(true)
+          if (inv.selected_github_repos) {
+            setSelectedGithubRepos(inv.selected_github_repos.split(',').map((r: string) => r.trim()).filter(Boolean))
+          }
+        }
+        // Restore discount if negative position exists
+        const discountPos = inv.positions.find((p: any) => p.einzelpreis < 0 || p.gesamt < 0)
+        if (discountPos) {
+          setDiscountEnabled(true)
+          const match = discountPos.beschreibung?.match(/\((\d+(?:\.\d+)?)%\)/)
+          if (match) {
+            setDiscountPercent(true)
+            setDiscountValue(match[1])
+          } else {
+            setDiscountPercent(false)
+            setDiscountValue(String(Math.abs(discountPos.gesamt || discountPos.einzelpreis)))
+          }
+          const reasonMatch = discountPos.beschreibung?.match(/Rabatt:\s*(.+?)(?:\s*\(|$)/)
+          if (reasonMatch) setDiscountReason(reasonMatch[1].trim())
+        }
+        // Restore AI import dates
+        if (inv.token_usage_from) {
+          setAiImportFrom(inv.token_usage_from.split('T')[0])
+          setAiImportTo(inv.token_usage_to?.split('T')[0] || new Date().toISOString().split('T')[0])
+        }
         // Load orders/contracts for this customer
         if (inv.customer_id) {
           getOrders({ customer_id: inv.customer_id, page_size: 1000 }).then((r) => setOrders(r.items))
