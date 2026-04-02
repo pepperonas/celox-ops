@@ -258,6 +258,7 @@ export default function InvoiceForm() {
       })
 
       setShowAiImport(false)
+      setAttachTokenUsage(true)
       toast.success(`${hours} Stunden KI-Arbeitszeit importiert.`)
     } catch {
       toast.error('Fehler beim Laden der KI-Daten.')
@@ -642,10 +643,13 @@ export default function InvoiceForm() {
                 onChange={(e) => {
                   setAttachTokenUsage(e.target.checked)
                   if (e.target.checked) {
-                    const now = new Date()
-                    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-                    const today = now.toISOString().split('T')[0]
-                    setForm({ ...form, token_usage_from: firstOfMonth, token_usage_to: today })
+                    // Only set defaults if not already set (e.g. by KI-Import)
+                    if (!form.token_usage_from || !form.token_usage_to) {
+                      const now = new Date()
+                      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+                      const today = now.toISOString().split('T')[0]
+                      setForm({ ...form, token_usage_from: firstOfMonth, token_usage_to: today })
+                    }
                   } else {
                     setForm({ ...form, token_usage_from: null, token_usage_to: null })
                   }
@@ -741,7 +745,7 @@ export default function InvoiceForm() {
                   </div>
                 )}
                 {form.token_usage_from && form.token_usage_to ? (
-                  <p className="text-xs text-text-muted">Zeitraum: {form.token_usage_from} bis {form.token_usage_to} (vom KI-Nutzungsbericht übernommen)</p>
+                  <p className="text-xs text-text-muted">Zeitraum: {form.token_usage_from ? new Date(form.token_usage_from + 'T00:00:00').toLocaleDateString('de-DE') : '–'} bis {form.token_usage_to ? new Date(form.token_usage_to + 'T00:00:00').toLocaleDateString('de-DE') : '–'} (vom KI-Nutzungsbericht übernommen)</p>
                 ) : (
                   <p className="text-xs text-warning">Bitte zuerst den KI-Nutzungsbericht aktivieren um den Zeitraum festzulegen.</p>
                 )}
