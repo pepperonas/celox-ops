@@ -225,10 +225,22 @@ def generate_invoice_pdf(
                 current += timedelta(days=1)
             activity_chart_data = chart
 
+    # Calculate discount amount for template
+    from decimal import Decimal as Dec
+    positions_subtotal = sum(Dec(str(p.get("menge", 0))) * Dec(str(p.get("einzelpreis", 0))) for p in positions)
+    discount_amount = Dec("0")
+    if invoice.discount_type and invoice.discount_value:
+        if invoice.discount_type == "percent":
+            discount_amount = positions_subtotal * Dec(str(invoice.discount_value)) / Dec("100")
+        else:
+            discount_amount = Dec(str(invoice.discount_value))
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
         positions=positions,
+        positions_subtotal=float(positions_subtotal),
+        discount_amount=float(discount_amount),
         settings=settings,
         kleinunternehmer=settings.KLEINUNTERNEHMER,
         token_usage=token_usage,

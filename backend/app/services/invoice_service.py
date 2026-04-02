@@ -37,16 +37,28 @@ async def generate_invoice_number(db: AsyncSession) -> str:
 def calculate_invoice_totals(
     positions: list[dict],
     tax_rate: Decimal,
-    kleinunternehmer: bool,
+    tax_exempt: bool,
+    discount_type: str | None = None,
+    discount_value: float | None = None,
 ) -> tuple[Decimal, Decimal, Decimal]:
-    subtotal = Decimal("0.00")
+    positions_subtotal = Decimal("0.00")
     for pos in positions:
         gesamt = Decimal(str(pos["menge"])) * Decimal(str(pos["einzelpreis"]))
-        subtotal += gesamt
+        positions_subtotal += gesamt
 
-    subtotal = subtotal.quantize(Decimal("0.01"))
+    positions_subtotal = positions_subtotal.quantize(Decimal("0.01"))
 
-    if kleinunternehmer:
+    # Apply discount
+    discount = Decimal("0.00")
+    if discount_type and discount_value:
+        if discount_type == "percent":
+            discount = (positions_subtotal * Decimal(str(discount_value)) / Decimal("100")).quantize(Decimal("0.01"))
+        else:
+            discount = Decimal(str(discount_value)).quantize(Decimal("0.01"))
+
+    subtotal = (positions_subtotal - discount).quantize(Decimal("0.01"))
+
+    if tax_exempt:
         tax_amount = Decimal("0.00")
     else:
         tax_amount = (subtotal * tax_rate / Decimal("100")).quantize(Decimal("0.01"))

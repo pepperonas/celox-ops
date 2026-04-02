@@ -132,7 +132,8 @@ async def create_invoice(
         })
 
     subtotal, tax_amount, total = calculate_invoice_totals(
-        positions_dicts, data.tax_rate, data.tax_exempt
+        positions_dicts, data.tax_rate, data.tax_exempt,
+        discount_type=data.discount_type, discount_value=data.discount_value,
     )
 
     invoice = Invoice(
@@ -150,6 +151,9 @@ async def create_invoice(
         invoice_date=data.invoice_date,
         due_date=data.due_date,
         notes=data.notes,
+        discount_type=data.discount_type,
+        discount_value=Decimal(str(data.discount_value)) if data.discount_value else None,
+        discount_reason=data.discount_reason,
     )
     db.add(invoice)
     await db.flush()
@@ -196,8 +200,12 @@ async def update_invoice(
         update_data["positions"] = positions_json
 
         tax_rate = data.tax_rate if data.tax_rate is not None else invoice.tax_rate
+        tax_exempt = data.tax_exempt if data.tax_exempt is not None else invoice.tax_exempt
+        d_type = data.discount_type if data.discount_type is not None else invoice.discount_type
+        d_value = data.discount_value if data.discount_value is not None else (float(invoice.discount_value) if invoice.discount_value else None)
         subtotal, tax_amount, total = calculate_invoice_totals(
-            positions_dicts, tax_rate, data.tax_exempt if data.tax_exempt is not None else invoice.tax_exempt
+            positions_dicts, tax_rate, tax_exempt,
+            discount_type=d_type, discount_value=d_value,
         )
         update_data["subtotal"] = subtotal
         update_data["tax_amount"] = tax_amount

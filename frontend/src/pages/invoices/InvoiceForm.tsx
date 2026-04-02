@@ -106,20 +106,12 @@ export default function InvoiceForm() {
             setSelectedGithubRepos(inv.selected_github_repos.split(',').map((r: string) => r.trim()).filter(Boolean))
           }
         }
-        // Restore discount if negative position exists
-        const discountPos = inv.positions.find((p: any) => p.einzelpreis < 0 || p.gesamt < 0)
-        if (discountPos) {
+        // Restore discount from DB fields
+        if (inv.discount_type) {
           setDiscountEnabled(true)
-          const match = discountPos.beschreibung?.match(/\((\d+(?:\.\d+)?)%\)/)
-          if (match) {
-            setDiscountPercent(true)
-            setDiscountValue(match[1])
-          } else {
-            setDiscountPercent(false)
-            setDiscountValue(String(Math.abs(discountPos.gesamt || discountPos.einzelpreis)))
-          }
-          const reasonMatch = discountPos.beschreibung?.match(/Rabatt:\s*(.+?)(?:\s*\(|$)/)
-          if (reasonMatch) setDiscountReason(reasonMatch[1].trim())
+          setDiscountPercent(inv.discount_type === 'percent')
+          setDiscountValue(inv.discount_value ? String(inv.discount_value) : '')
+          setDiscountReason(inv.discount_reason || '')
         }
         // Restore AI import dates
         if (inv.token_usage_from) {
@@ -348,22 +340,12 @@ export default function InvoiceForm() {
       gesamt: p.menge * p.einzelpreis,
     }))
 
-    // Add discount as negative position
-    if (discountEnabled && discountAmount > 0) {
-      const reason = discountReason || 'Rabatt'
-      allPositions.push({
-        position: allPositions.length + 1,
-        beschreibung: `Rabatt: ${reason}${discountPercent ? ` (${discountValue}%)` : ''}`,
-        menge: 1,
-        einheit: 'pauschal',
-        einzelpreis: -discountAmount,
-        gesamt: -discountAmount,
-      })
-    }
-
     const payload: InvoiceCreate = {
       ...form,
       positions: allPositions,
+      discount_type: discountEnabled ? (discountPercent ? 'percent' : 'fixed') : null,
+      discount_value: discountEnabled && discountAmount > 0 ? parseFloat(discountValue) || 0 : null,
+      discount_reason: discountEnabled ? discountReason || null : null,
       selected_tracker_urls: attachTokenUsage && selectedTrackerUrls.length > 0
         ? JSON.stringify(selectedTrackerUrls)
         : null,

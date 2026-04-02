@@ -210,6 +210,9 @@ export interface Invoice {
   selected_tracker_urls: string | null
   selected_github_repos: string | null
   include_activity_chart: boolean
+  discount_type: string | null
+  discount_value: number | null
+  discount_reason: string | null
   reminder_level: number
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
@@ -238,6 +241,9 @@ export interface InvoiceCreate {
   selected_tracker_urls?: string | null
   selected_github_repos?: string | null
   include_activity_chart?: boolean
+  discount_type?: string | null
+  discount_value?: number | null
+  discount_reason?: string | null
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}

@@ -34,6 +34,9 @@ class InvoiceBase(BaseModel):
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
     include_activity_chart: bool = False
+    discount_type: str | None = None
+    discount_value: float | None = None
+    discount_reason: str | None = None
 
 
 class InvoiceCreate(InvoiceBase):
@@ -58,6 +61,9 @@ class InvoiceUpdate(BaseModel):
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
     include_activity_chart: bool = False
+    discount_type: str | None = None
+    discount_value: float | None = None
+    discount_reason: str | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -87,6 +93,9 @@ class InvoiceResponse(BaseModel):
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
     include_activity_chart: bool = False
+    discount_type: str | None = None
+    discount_value: float | None = None
+    discount_reason: str | None = None
     reminder_level: int = 0
     reminder_sent_at: datetime | None = None
     reminder_pdf_path: str | None = None
