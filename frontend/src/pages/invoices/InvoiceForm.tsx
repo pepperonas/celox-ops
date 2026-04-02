@@ -174,6 +174,24 @@ export default function InvoiceForm() {
           setCustomerGithubRepos(repos)
           setSelectedGithubRepos(repos)
         }
+        // Auto-activate toggles for new invoices when customer has integrations
+        if (!isEdit) {
+          const now = new Date()
+          const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+          const today = now.toISOString().split('T')[0]
+          if (c.token_tracker_url) {
+            setAttachTokenUsage(true)
+            setForm(prev => ({
+              ...prev,
+              token_usage_from: prev.token_usage_from || firstOfMonth,
+              token_usage_to: prev.token_usage_to || today,
+              include_activity_chart: true,
+            }))
+          }
+          if (c.github_repos) {
+            setAttachGithubCommits(true)
+          }
+        }
       }).catch(() => { setSelectedCustomerHasTracker(false); setSelectedCustomerTrackerUrl(''); setSelectedCustomerHasGithub(false) })
     } else {
       setOrders([])
