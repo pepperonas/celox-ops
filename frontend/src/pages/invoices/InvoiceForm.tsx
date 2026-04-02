@@ -76,7 +76,11 @@ export default function InvoiceForm() {
           order_id: inv.order_id,
           contract_id: inv.contract_id,
           title: inv.title,
-          positions: inv.positions.length > 0 ? inv.positions : [{ ...emptyPosition }],
+          positions: (() => {
+            // Filter out old discount positions (negative values) — discount is now stored separately
+            const cleaned = inv.positions.filter((p: any) => p.einzelpreis >= 0 && p.gesamt >= 0)
+            return cleaned.length > 0 ? cleaned : [{ ...emptyPosition }]
+          })(),
           tax_rate: inv.tax_rate,
           tax_exempt: inv.tax_exempt ?? true,
           invoice_date: inv.invoice_date?.split('T')[0] || '',
