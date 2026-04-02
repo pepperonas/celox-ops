@@ -55,6 +55,11 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Credit notes** (Gutschriften) — separate number series GS-YYYY-NNNN, linked to original invoice
 - **Discount function** — percentage or fixed amount with autocomplete for reasons (loyalty, first-time customer, volume, non-profit, etc.)
 - Discount shown as negative position on invoice PDF
+- **Multi-project billing** — select specific Token Tracker projects and GitHub repos per invoice via checkboxes
+- **Activity chart attachment** — optional CSS bar chart showing daily work intensity in the PDF
+- **Invoice number offset** — configurable for externally issued invoices (INVOICE_NUMBER_OFFSET in .env)
+- **Full state persistence** — all toggles, date ranges, project selections, and discounts restored when editing
+- **Unified date range** — GitHub commits and activity chart inherit the period from the AI usage report
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -469,6 +474,7 @@ Active working time is calculated from message timestamps: intervals between con
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_PUBLIC_URL` | Public Token Tracker URL (for browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-char hex) |
+| `INVOICE_NUMBER_OFFSET` | Number of externally issued invoices (optional) | `1` |
 | `GITHUB_TOKEN` | GitHub personal access token (optional) | `ghp_...` |
 | `GITHUB_USERNAME` | GitHub username (optional) | `pepperonas` |
 | `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
@@ -620,6 +626,7 @@ CO-2026-0001
 - Composite index on customer name+company for search
 - Connection pooling: pool_size=5, max_overflow=10, pre_ping enabled, 5-min recycle
 - Token Tracker aggregator cached with 5-min TTL (eliminates repeated full-table scans)
+- GitHub repos cached with 10-min TTL (eliminates repeated API calls)
 
 ---
 

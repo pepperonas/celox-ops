@@ -55,6 +55,11 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Gutschriften** — eigener Nummernkreis GS-YYYY-NNNN, verknüpft mit Originalrechnung
 - **Rabattfunktion** — prozentual oder Festbetrag mit Autovervollständigung für Begründungen (Treuerabatt, Erstkundenrabatt, Mengenrabatt, Non-Profit, etc.)
 - Rabatt als negative Position auf dem Rechnungs-PDF
+- **Multi-Projekt-Abrechnung** — Token-Tracker-Projekte und GitHub-Repos pro Rechnung über Checkboxen auswählen
+- **Aktivitätsdiagramm als Anlage** — optionales CSS-Balkendiagramm der täglichen Arbeitsintensität im PDF
+- **Rechnungsnummer-Offset** — konfigurierbar für extern vergebene Rechnungen (INVOICE_NUMBER_OFFSET in .env)
+- **Vollständige Zustandsspeicherung** — alle Toggles, Zeiträume, Projektauswahl und Rabatte beim Bearbeiten wiederhergestellt
+- **Einheitlicher Zeitraum** — GitHub Commits und Aktivitätsdiagramm übernehmen den Zeitraum vom KI-Nutzungsbericht
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -473,6 +478,7 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `TOKEN_TRACKER_BASE_URL` | Token Tracker URL (optional) | `http://host:port` |
 | `TOKEN_TRACKER_PUBLIC_URL` | Öffentliche Token Tracker URL (für Browser) | `https://tracker.example.com` |
 | `TOKEN_TRACKER_ADMIN_KEY` | Share Admin Key (optional) | (64-Zeichen-Hex) |
+| `INVOICE_NUMBER_OFFSET` | Anzahl extern vergebener Rechnungen (optional) | `1` |
 | `GITHUB_TOKEN` | GitHub Personal Access Token (optional) | `ghp_...` |
 | `GITHUB_USERNAME` | GitHub-Benutzername (optional) | `pepperonas` |
 | `SMTP_HOST` | SMTP-Server | `smtp.gmail.com` |
@@ -624,6 +630,7 @@ CO-2026-0001
 - Composite Index auf Kundenname+Firma für Suche
 - Connection Pooling: pool_size=5, max_overflow=10, pre_ping aktiviert, 5-Min-Recycle
 - Token Tracker Aggregator mit 5-Min-TTL gecacht (eliminiert wiederholte Full-Table-Scans)
+- GitHub-Repos mit 10-Min-TTL gecacht (eliminiert wiederholte API-Aufrufe)
 
 ---
 
