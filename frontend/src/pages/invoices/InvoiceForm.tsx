@@ -306,6 +306,9 @@ export default function InvoiceForm() {
       selected_github_repos: attachGithubCommits && selectedGithubRepos.length > 0
         ? selectedGithubRepos.join(', ')
         : null,
+      // Sync GitHub dates from KI-Nutzungsbericht
+      github_commits_from: attachGithubCommits ? form.token_usage_from : null,
+      github_commits_to: attachGithubCommits ? form.token_usage_to : null,
     }
 
     try {
@@ -704,14 +707,6 @@ export default function InvoiceForm() {
                 checked={attachGithubCommits}
                 onChange={(e) => {
                   setAttachGithubCommits(e.target.checked)
-                  if (e.target.checked) {
-                    const now = new Date()
-                    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-                    const today = now.toISOString().split('T')[0]
-                    setForm({ ...form, github_commits_from: firstOfMonth, github_commits_to: today })
-                  } else {
-                    setForm({ ...form, github_commits_from: null, github_commits_to: null })
-                  }
                 }}
                 className="w-4 h-4 accent-[#58a6ff]"
               />
@@ -745,16 +740,11 @@ export default function InvoiceForm() {
                     </div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
-                    <input type="date" value={form.github_commits_from || ''} onChange={(e) => setForm({ ...form, github_commits_from: e.target.value || null })} className="w-full" />
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
-                    <input type="date" value={form.github_commits_to || ''} onChange={(e) => setForm({ ...form, github_commits_to: e.target.value || null })} className="w-full" />
-                  </div>
-                </div>
+                {form.token_usage_from && form.token_usage_to ? (
+                  <p className="text-xs text-text-muted">Zeitraum: {form.token_usage_from} bis {form.token_usage_to} (vom KI-Nutzungsbericht übernommen)</p>
+                ) : (
+                  <p className="text-xs text-warning">Bitte zuerst den KI-Nutzungsbericht aktivieren um den Zeitraum festzulegen.</p>
+                )}
               </div>
             )}
           </div>
