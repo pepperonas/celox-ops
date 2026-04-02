@@ -451,36 +451,93 @@
     </div>
 
     <h1 style="margin-top: 20px;">Anlage: Entwicklungsprotokoll</h1>
-    <p style="font-size: 9pt; color: #666; margin-bottom: 20px;">
-        Übersicht aller Code-Änderungen (Commits) im Zeitraum
-        {{ invoice.token_usage_from.strftime('%d.%m.%Y') }} bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') }}.
-        Insgesamt {{ github_commits|length }} Commit{{ 's' if github_commits|length != 1 else '' }}.
+    <p style="font-size: 9pt; color: #666; margin-bottom: 15px;">
+        Übersicht aller Code-Änderungen im Zeitraum
+        {{ invoice.token_usage_from.strftime('%d.%m.%Y') if invoice.token_usage_from else '' }}
+        bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') if invoice.token_usage_to else '' }}.
     </p>
 
+    {# Summary stats #}
+    <table class="positions" style="margin-bottom: 20px;">
+        <thead>
+            <tr>
+                <th>Kennzahl</th>
+                <th style="text-align: right;">Wert</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Commits</td>
+                <td style="text-align: right;">{{ github_commits.total_commits }}</td>
+            </tr>
+            <tr>
+                <td>Zeilen hinzugefügt</td>
+                <td style="text-align: right; color: #22863a;">+{{ "{:,}".format(github_commits.total_additions) }}</td>
+            </tr>
+            <tr>
+                <td>Zeilen entfernt</td>
+                <td style="text-align: right; color: #d73a49;">&minus;{{ "{:,}".format(github_commits.total_deletions) }}</td>
+            </tr>
+            <tr>
+                <td>Netto-Änderung</td>
+                <td style="text-align: right; font-weight: bold;">{{ "{:+,}".format(github_commits.total_additions - github_commits.total_deletions) }} Zeilen</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {# Daily code changes chart #}
+    {% if github_commits.daily_chart %}
+    <h3 style="font-size: 11pt; color: #1a1a2e; margin-bottom: 10px;">Code-Änderungen pro Tag</h3>
+    <div style="margin-bottom: 25px;">
+        <div style="display: flex; align-items: flex-end; gap: 3px; height: 120px; border-bottom: 2px solid #1a1a2e; padding-bottom: 2px;">
+            {% for day in github_commits.daily_chart %}
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 1px;">
+                <div style="width: 100%; max-width: 18px; background: #22863a; border-radius: 2px 2px 0 0; height: {{ day.add_pct }}%;{% if day.additions > 0 %} min-height: 2px;{% endif %}"></div>
+                <div style="width: 100%; max-width: 18px; background: #d73a49; border-radius: 0 0 2px 2px; height: {{ day.del_pct }}%;{% if day.deletions > 0 %} min-height: 2px;{% endif %}"></div>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 3px; margin-top: 4px;">
+            {% for day in github_commits.daily_chart %}
+            <div style="flex: 1; text-align: center; font-size: 6pt; color: #999;">{{ day.date[5:] }}</div>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 8pt;">
+            <span><span style="display: inline-block; width: 8px; height: 8px; background: #22863a; border-radius: 2px;"></span> Hinzugefügt</span>
+            <span><span style="display: inline-block; width: 8px; height: 8px; background: #d73a49; border-radius: 2px;"></span> Entfernt</span>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Commit list #}
+    <h3 style="font-size: 11pt; color: #1a1a2e; margin-bottom: 10px;">Einzelne Commits</h3>
     <table class="positions">
         <thead>
             <tr>
                 <th>Datum</th>
-                <th>Repository</th>
+                <th>Repo</th>
                 <th>Änderung</th>
-                <th>Autor</th>
+                <th style="text-align: right;">+/&minus;</th>
             </tr>
         </thead>
         <tbody>
-            {% for c in github_commits %}
+            {% for c in github_commits.commits %}
             <tr>
                 <td style="white-space: nowrap;">{{ c.date }}</td>
                 <td style="white-space: nowrap; color: #58a6ff;">{{ c.repo }}</td>
                 <td><code style="font-size: 8pt; color: #999;">{{ c.sha }}</code> {{ c.message }}</td>
-                <td style="white-space: nowrap;">{{ c.author }}</td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <span style="color: #22863a;">+{{ c.additions }}</span>
+                    <span style="color: #d73a49;">&minus;{{ c.deletions }}</span>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <p style="font-size: 8pt; color: #999; margin-top: 20px; font-style: italic;">
-        Automatisch aus GitHub abgerufen. Jeder Eintrag entspricht einer einzelnen Code-Änderung
-        im Versionskontrollsystem des Projekts.
+        Automatisch aus GitHub abgerufen. Jeder Eintrag entspricht einer Code-Änderung
+        im Versionskontrollsystem. Zeilen hinzugefügt/entfernt basierend auf Git-Diff-Statistiken.
     </p>
 
     <div class="footer">

@@ -37,6 +37,9 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
         return None
 
     all_commits = []
+    daily_stats: dict[str, dict] = {}  # date -> {additions, deletions}
+    total_additions = 0
+    total_deletions = 0
     headers = {
         "Authorization": f"token {settings.GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
@@ -53,17 +56,68 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
             resp = httpx.get(url, headers=headers, params=params, timeout=15)
             if resp.status_code == 200:
                 for c in resp.json():
+                    sha = c["sha"]
+                    date_str = c["commit"]["author"]["date"][:10]
+                    additions = 0
+                    deletions = 0
+                    # Fetch individual commit for stats
+                    try:
+                        detail = httpx.get(
+                            f"https://api.github.com/repos/{repo}/commits/{sha}",
+                            headers=headers, timeout=10,
+                        )
+                        if detail.status_code == 200:
+                            stats = detail.json().get("stats", {})
+                            additions = stats.get("additions", 0)
+                            deletions = stats.get("deletions", 0)
+                    except Exception:
+                        pass
+
+                    total_additions += additions
+                    total_deletions += deletions
+
+                    if date_str not in daily_stats:
+                        daily_stats[date_str] = {"additions": 0, "deletions": 0, "commits": 0}
+                    daily_stats[date_str]["additions"] += additions
+                    daily_stats[date_str]["deletions"] += deletions
+                    daily_stats[date_str]["commits"] += 1
+
                     all_commits.append({
                         "repo": repo.split("/")[-1] if "/" in repo else repo,
-                        "sha": c["sha"][:7],
+                        "sha": sha[:7],
                         "message": c["commit"]["message"].split("\n")[0][:120],
                         "author": c["commit"]["author"]["name"],
-                        "date": c["commit"]["author"]["date"][:10],
+                        "date": date_str,
+                        "additions": additions,
+                        "deletions": deletions,
                     })
         except Exception:
             continue
 
-    return all_commits if all_commits else None
+    if not all_commits:
+        return None
+
+    # Build daily chart data
+    max_changes = max((d["additions"] + d["deletions"] for d in daily_stats.values()), default=1) or 1
+    daily_chart = []
+    for date_str in sorted(daily_stats.keys()):
+        d = daily_stats[date_str]
+        daily_chart.append({
+            "date": date_str,
+            "additions": d["additions"],
+            "deletions": d["deletions"],
+            "commits": d["commits"],
+            "add_pct": round(d["additions"] / max_changes * 100),
+            "del_pct": round(d["deletions"] / max_changes * 100),
+        })
+
+    return {
+        "commits": all_commits,
+        "total_additions": total_additions,
+        "total_deletions": total_deletions,
+        "total_commits": len(all_commits),
+        "daily_chart": daily_chart,
+    }
 
 
 def _fetch_token_usage(customer: Customer, invoice: Invoice) -> dict | None:
