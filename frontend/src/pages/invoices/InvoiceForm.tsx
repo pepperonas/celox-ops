@@ -751,6 +751,27 @@ export default function InvoiceForm() {
           </div>
         )}
 
+        {/* Activity Chart */}
+        {selectedCustomerHasTracker && attachTokenUsage && (
+          <div className="bg-surface border border-border rounded-[12px] p-5">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="include-activity-chart"
+                checked={form.include_activity_chart || false}
+                onChange={(e) => setForm({ ...form, include_activity_chart: e.target.checked })}
+                className="w-4 h-4 accent-[#58a6ff]"
+              />
+              <label htmlFor="include-activity-chart" className="text-sm font-semibold text-text cursor-pointer">
+                Aktivitätsdiagramm anhängen
+              </label>
+            </div>
+            <p className="text-xs text-text-muted mt-2 ml-7">
+              Zeigt als letzte Anlage ein Balkendiagramm der täglichen Arbeitsintensität im Rechnungszeitraum.
+            </p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex justify-end gap-3">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">

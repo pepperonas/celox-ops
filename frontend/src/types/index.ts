@@ -208,6 +208,7 @@ export interface Invoice {
   github_commits_to: string | null
   selected_tracker_urls: string | null
   selected_github_repos: string | null
+  include_activity_chart: boolean
   reminder_level: number
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
@@ -234,6 +235,7 @@ export interface InvoiceCreate {
   github_commits_to?: string | null
   selected_tracker_urls?: string | null
   selected_github_repos?: string | null
+  include_activity_chart?: boolean
 }
 
 export interface InvoiceUpdate extends Partial<InvoiceCreate> {}

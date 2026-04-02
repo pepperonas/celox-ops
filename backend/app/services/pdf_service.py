@@ -140,6 +140,37 @@ def generate_invoice_pdf(
         with open(sig_path, "rb") as f:
             signature_b64 = base64.b64encode(f.read()).decode("utf-8")
 
+    # Prepare activity chart data from token_usage daily data
+    activity_chart_data = None
+    if invoice.include_activity_chart and token_usage and token_usage.get("daily"):
+        from datetime import date as date_type, timedelta
+        daily = token_usage["daily"]
+        daily_map = {d["date"]: d for d in daily}
+
+        # Build complete date range with all days
+        if invoice.token_usage_from and invoice.token_usage_to:
+            start = invoice.token_usage_from
+            end = invoice.token_usage_to
+            max_msgs = max((d.get("messages", 0) for d in daily), default=1) or 1
+            chart = []
+            current = start
+            day_count = 0
+            while current <= end:
+                key = current.isoformat()
+                d = daily_map.get(key, {})
+                msgs = d.get("messages", 0)
+                day_count += 1
+                chart.append({
+                    "date": key,
+                    "messages": msgs,
+                    "pct": round(msgs / max_msgs * 100) if msgs > 0 else 0,
+                    "is_weekend": current.weekday() >= 5,
+                    "label": current.strftime("%d.%m."),
+                    "show_label": day_count % max(1, ((end - start).days + 1) // 15) == 0,
+                })
+                current += timedelta(days=1)
+            activity_chart_data = chart
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
@@ -148,6 +179,7 @@ def generate_invoice_pdf(
         kleinunternehmer=settings.KLEINUNTERNEHMER,
         token_usage=token_usage,
         github_commits=github_commits,
+        activity_chart_data=activity_chart_data,
         signature_b64=signature_b64,
     )
 

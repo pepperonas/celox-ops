@@ -488,5 +488,73 @@
         {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
     </div>
     {% endif %}
+
+    {% if activity_chart_data %}
+    <div style="page-break-before: always;"></div>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ settings.BUSINESS_NAME }}</div>
+            <div class="company-details">Aktivitätsverlauf zu {{ invoice.invoice_number }}</div>
+        </div>
+    </div>
+
+    <h1 style="margin-top: 20px;">Anlage: Arbeitsaktivität</h1>
+    <p style="font-size: 9pt; color: #666; margin-bottom: 20px;">
+        Tägliche Arbeitsintensität im Zeitraum
+        {{ invoice.token_usage_from.strftime('%d.%m.%Y') if invoice.token_usage_from else '' }}
+        bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') if invoice.token_usage_to else '' }}.
+        Höhe der Balken entspricht der Anzahl der KI-Anfragen pro Tag.
+    </p>
+
+    <div style="margin-bottom: 30px;">
+        <div style="display: flex; align-items: flex-end; gap: 2px; height: 160px; border-bottom: 2px solid #1a1a2e; padding-bottom: 2px;">
+            {% for day in activity_chart_data %}
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
+                <div style="width: 100%; max-width: 20px; background: {{ '#58a6ff' if day.messages > 0 else '#f0f0f0' }}; border-radius: 2px 2px 0 0; height: {{ day.pct }}%;{% if day.messages > 0 %} min-height: 3px;{% endif %}"></div>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 2px; margin-top: 4px;">
+            {% for day in activity_chart_data %}
+            <div style="flex: 1; text-align: center; font-size: 6pt; color: #999;{% if day.is_weekend %} color: #ccc;{% endif %}">
+                {% if day.show_label %}{{ day.label }}{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <table class="positions" style="margin-bottom: 20px;">
+        <thead>
+            <tr>
+                <th>Kennzahl</th>
+                <th style="text-align: right;">Wert</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Aktive Arbeitstage</td>
+                <td style="text-align: right;">{{ activity_chart_data|selectattr('messages', 'gt', 0)|list|length }}</td>
+            </tr>
+            <tr>
+                <td>Intensivster Tag</td>
+                <td style="text-align: right;">{{ activity_chart_data|map(attribute='messages')|max }} Anfragen ({{ activity_chart_data|sort(attribute='messages', reverse=True)|first|attr('date') }})</td>
+            </tr>
+            <tr>
+                <td>Durchschnitt pro Arbeitstag</td>
+                <td style="text-align: right;">{{ "%.0f"|format(activity_chart_data|selectattr('messages', 'gt', 0)|map(attribute='messages')|list|sum / [activity_chart_data|selectattr('messages', 'gt', 0)|list|length, 1]|max) }} Anfragen</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p style="font-size: 8pt; color: #999; font-style: italic;">
+        Jeder Balken zeigt die Anzahl der KI-gestützten Entwicklungsaktionen an einem Tag.
+        Blaue Balken = aktive Arbeitstage, Lücken = keine KI-Aktivität.
+    </p>
+
+    <div class="footer">
+        {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}
+        {% if settings.BUSINESS_TAX_NUMBER %} | Steuernr.: {{ settings.BUSINESS_TAX_NUMBER }}{% endif %}
+    </div>
+    {% endif %}
 </body>
 </html>

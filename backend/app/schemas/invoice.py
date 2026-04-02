@@ -32,6 +32,7 @@ class InvoiceBase(BaseModel):
     github_commits_to: date | None = None
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
+    include_activity_chart: bool = False
 
 
 class InvoiceCreate(InvoiceBase):
@@ -54,6 +55,7 @@ class InvoiceUpdate(BaseModel):
     github_commits_to: date | None = None
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
+    include_activity_chart: bool = False
 
 
 class InvoiceResponse(BaseModel):
@@ -81,6 +83,7 @@ class InvoiceResponse(BaseModel):
     github_commits_to: date | None = None
     selected_tracker_urls: str | None = None
     selected_github_repos: str | None = None
+    include_activity_chart: bool = False
     reminder_level: int = 0
     reminder_sent_at: datetime | None = None
     reminder_pdf_path: str | None = None
