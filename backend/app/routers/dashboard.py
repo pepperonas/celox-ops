@@ -154,56 +154,102 @@ async def get_stats(
 
 
 @router.get("/charts")
-async def get_chart_data(db: AsyncSession = Depends(get_db)) -> dict:
+async def get_chart_data(
+    period: str = Query("30d", regex="^(30d|12m)$"),
+    include_drafts: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     today = date.today()
 
-    # --- revenue_by_month: last 12 months ---
-    twelve_months_ago = today.replace(day=1) - relativedelta(months=11)
+    # --- Revenue data ---
+    if period == "30d":
+        # Daily for last 30 days
+        start_date = today - relativedelta(days=29)
+        statuses = [InvoiceStatus.bezahlt]
+        if include_drafts:
+            statuses.append(InvoiceStatus.entwurf)
 
-    # Revenue per month (paid invoices)
-    rev_result = await db.execute(
-        select(
-            func.extract("year", Invoice.invoice_date).label("y"),
-            func.extract("month", Invoice.invoice_date).label("m"),
-            func.coalesce(func.sum(Invoice.total), 0),
+        rev_result = await db.execute(
+            select(
+                Invoice.invoice_date,
+                func.coalesce(func.sum(Invoice.total), 0),
+            )
+            .where(Invoice.status.in_(statuses), Invoice.invoice_date >= start_date)
+            .group_by(Invoice.invoice_date)
         )
-        .where(
-            Invoice.status == InvoiceStatus.bezahlt,
-            Invoice.invoice_date >= twelve_months_ago,
-        )
-        .group_by("y", "m")
-    )
-    rev_map: dict[str, float] = {}
-    for y, m, total in rev_result.all():
-        key = f"{int(y)}-{int(m):02d}"
-        rev_map[key] = float(total)
+        rev_map: dict[str, float] = {}
+        for d, total in rev_result.all():
+            rev_map[d.isoformat()] = float(total)
 
-    # Expenses per month
-    exp_result = await db.execute(
-        select(
-            func.extract("year", Expense.date).label("y"),
-            func.extract("month", Expense.date).label("m"),
-            func.coalesce(func.sum(Expense.amount), 0),
+        exp_result = await db.execute(
+            select(
+                Expense.date,
+                func.coalesce(func.sum(Expense.amount), 0),
+            )
+            .where(Expense.date >= start_date)
+            .group_by(Expense.date)
         )
-        .where(Expense.date >= twelve_months_ago)
-        .group_by("y", "m")
-    )
-    exp_map: dict[str, float] = {}
-    for y, m, total in exp_result.all():
-        key = f"{int(y)}-{int(m):02d}"
-        exp_map[key] = float(total)
+        exp_map: dict[str, float] = {}
+        for d, total in exp_result.all():
+            exp_map[d.isoformat()] = float(total)
 
-    revenue_by_month = []
-    for i in range(12):
-        d = today.replace(day=1) - relativedelta(months=11 - i)
-        key = f"{d.year}-{d.month:02d}"
-        revenue_by_month.append(
-            {
-                "month": key,
+        revenue_by_period = []
+        for i in range(30):
+            d = start_date + relativedelta(days=i)
+            key = d.isoformat()
+            revenue_by_period.append({
+                "label": d.strftime("%d.%m."),
                 "revenue": rev_map.get(key, 0.0),
                 "expenses": exp_map.get(key, 0.0),
-            }
+            })
+    else:
+        # Monthly for last 12 months (original logic)
+        twelve_months_ago = today.replace(day=1) - relativedelta(months=11)
+        statuses = [InvoiceStatus.bezahlt]
+        if include_drafts:
+            statuses.append(InvoiceStatus.entwurf)
+
+        rev_result = await db.execute(
+            select(
+                func.extract("year", Invoice.invoice_date).label("y"),
+                func.extract("month", Invoice.invoice_date).label("m"),
+                func.coalesce(func.sum(Invoice.total), 0),
+            )
+            .where(
+                Invoice.status.in_(statuses),
+                Invoice.invoice_date >= twelve_months_ago,
+            )
+            .group_by("y", "m")
         )
+        rev_map: dict[str, float] = {}
+        for y, m, total in rev_result.all():
+            key = f"{int(y)}-{int(m):02d}"
+            rev_map[key] = float(total)
+
+        exp_result = await db.execute(
+            select(
+                func.extract("year", Expense.date).label("y"),
+                func.extract("month", Expense.date).label("m"),
+                func.coalesce(func.sum(Expense.amount), 0),
+            )
+            .where(Expense.date >= twelve_months_ago)
+            .group_by("y", "m")
+        )
+        exp_map: dict[str, float] = {}
+        for y, m, total in exp_result.all():
+            key = f"{int(y)}-{int(m):02d}"
+            exp_map[key] = float(total)
+
+        months_de = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+        revenue_by_period = []
+        for i in range(12):
+            d = today.replace(day=1) - relativedelta(months=11 - i)
+            key = f"{d.year}-{d.month:02d}"
+            revenue_by_period.append({
+                "label": f"{months_de[d.month - 1]} {str(d.year)[2:]}",
+                "revenue": rev_map.get(key, 0.0),
+                "expenses": exp_map.get(key, 0.0),
+            })
 
     # --- invoice_status_distribution ---
     status_result = await db.execute(
@@ -276,7 +322,7 @@ async def get_chart_data(db: AsyncSession = Depends(get_db)) -> dict:
     ]
 
     return {
-        "revenue_by_month": revenue_by_month,
+        "revenue_by_period": revenue_by_period,
         "invoice_status_distribution": invoice_status_distribution,
         "top_customers": top_customers,
         "recent_invoices": recent_invoices,

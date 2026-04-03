@@ -30,7 +30,7 @@ const colors = {
 }
 
 interface ChartData {
-  revenue_by_month: { month: string; revenue: number; expenses: number }[]
+  revenue_by_period: { label: string; revenue: number; expenses: number }[]
   invoice_status_distribution: { status: string; count: number; total: number }[]
   top_customers: { name: string; revenue: number; invoices_count: number }[]
   recent_invoices: {
@@ -72,11 +72,6 @@ const activityDotColors: Record<string, string> = {
   expense: colors.red,
 }
 
-function formatMonthLabel(month: string): string {
-  const [y, m] = month.split('-')
-  const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
-  return `${months[parseInt(m) - 1]} ${y.slice(2)}`
-}
 
 function timeAgo(dateStr: string): string {
   const now = new Date()
@@ -97,11 +92,13 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [chartPeriod, setChartPeriod] = useState<'30d' | '12m'>('30d')
+  const [includeDrafts, setIncludeDrafts] = useState(false)
 
   const loadData = useCallback(() => {
     Promise.all([
       api.get('/dashboard/stats'),
-      api.get('/dashboard/charts'),
+      api.get('/dashboard/charts', { params: { period: chartPeriod, include_drafts: includeDrafts } }),
     ])
       .then(([statsRes, chartsRes]) => {
         setStats(statsRes.data)
@@ -109,7 +106,7 @@ export default function Dashboard() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [chartPeriod, includeDrafts])
 
   const handleRefreshDrafts = async () => {
     setRefreshing(true)
@@ -126,7 +123,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const cards = stats
     ? [
@@ -215,23 +212,37 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Revenue & Expenses Bar Chart */}
           <div className="bg-surface border border-border rounded-[12px] p-5">
-            <h3 className="text-sm font-semibold text-text mb-4">Umsatz & Ausgaben (12 Monate)</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-text">Umsatz & Ausgaben</h3>
+              <div className="flex gap-2">
+                <div className="flex rounded-[6px] overflow-hidden border border-border">
+                  {(['30d', '12m'] as const).map((p) => (
+                    <button key={p} onClick={() => setChartPeriod(p)} className={`px-2.5 py-1 text-[11px] transition-all ${chartPeriod === p ? 'bg-accent text-white' : 'bg-surface-2 text-text-muted hover:text-text'}`}>
+                      {p === '30d' ? '30 Tage' : '12 Monate'}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setIncludeDrafts(!includeDrafts)} className={`px-2.5 py-1 text-[11px] rounded-[6px] border transition-all ${includeDrafts ? 'bg-accent/20 text-accent border-accent/40' : 'bg-surface-2 text-text-muted border-border hover:text-text'}`}>
+                  {includeDrafts ? 'inkl. Entwürfe' : 'nur Bezahlt'}
+                </button>
+              </div>
+            </div>
             <div style={{ height: 280 }}>
               <Bar
                 data={{
-                  labels: chartData.revenue_by_month.map((d) => formatMonthLabel(d.month)),
+                  labels: chartData.revenue_by_period.map((d) => d.label),
                   datasets: [
                     {
-                      label: 'Umsatz',
-                      data: chartData.revenue_by_month.map((d) => d.revenue),
-                      backgroundColor: colors.green,
+                      label: includeDrafts ? 'Umsatz + Entwürfe' : 'Umsatz',
+                      data: chartData.revenue_by_period.map((d) => d.revenue),
+                      backgroundColor: includeDrafts ? colors.accent : colors.green,
                       borderRadius: 4,
                       barPercentage: 0.7,
                       categoryPercentage: 0.8,
                     },
                     {
                       label: 'Ausgaben',
-                      data: chartData.revenue_by_month.map((d) => d.expenses),
+                      data: chartData.revenue_by_period.map((d) => d.expenses),
                       backgroundColor: colors.red,
                       borderRadius: 4,
                       barPercentage: 0.7,
