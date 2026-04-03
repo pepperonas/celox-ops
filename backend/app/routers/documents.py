@@ -138,7 +138,7 @@ async def generate_all_documents(
             content = _replace_placeholders(tmpl.content, customer)
             full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
             pdf = HTML(string=full_html).write_pdf()
-            filename = f"{tmpl.category}/{tmpl.name.replace(' ', '-')}.pdf"
+            filename = f"{tmpl.name.replace(' ', '-')}.pdf"
             zf.writestr(filename, pdf)
 
     buf.seek(0)
