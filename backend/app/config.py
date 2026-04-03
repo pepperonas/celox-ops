@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     GITHUB_TOKEN: str = ""
     GITHUB_USERNAME: str = ""
+    PAGESPEED_API_KEY: str = ""
 
     TOKEN_TRACKER_BASE_URL: str = ""
     TOKEN_TRACKER_PUBLIC_URL: str = ""

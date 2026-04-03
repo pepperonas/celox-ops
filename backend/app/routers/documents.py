@@ -53,8 +53,8 @@ li {{ margin-bottom: 4px; }}
 </div>
 {content}
 <div class="signature">
-<div class="sig-block"><div class="sig-line">Ort, Datum, Unterschrift Auftraggeber<br>{firma}</div></div>
-<div class="sig-block">{signature_html}<div class="sig-line">Ort, Datum, Unterschrift Auftragnehmer<br>{anbieter_firma}</div></div>
+<div class="sig-block"><div class="sig-line"><br><br><br>Ort, Datum, Unterschrift Auftraggeber<br>{firma}</div></div>
+<div class="sig-block">{signature_html}<div class="sig-line">{datum}<br>{anbieter_name}<br>{anbieter_firma}</div></div>
 </div>
 </body></html>"""
 
@@ -64,7 +64,7 @@ def _load_signature_html() -> str:
     if sig_path and os.path.isfile(sig_path):
         with open(sig_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
-        return f'<img src="data:image/png;base64,{b64}" style="max-height:50px;max-width:180px;margin-bottom:5px;" alt="Unterschrift"><br>'
+        return f'<img src="data:image/png;base64,{b64}" style="max-height:70px;max-width:250px;margin-bottom:8px;display:block;" alt="Unterschrift">'
     return ""
 
 

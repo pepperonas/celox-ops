@@ -5,6 +5,7 @@ from jinja2 import Template
 from weasyprint import HTML
 
 from app.auth import get_current_user
+from app.config import settings
 
 router = APIRouter(
     prefix="/api/pagespeed",
@@ -129,11 +130,14 @@ async def analyze_pagespeed(
     """Führt Google PageSpeed Analyse durch und gibt PDF zurück."""
     try:
         async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.get(PAGESPEED_API, params={
+            params: dict = {
                 "url": url,
                 "strategy": strategy,
                 "category": ["performance", "accessibility", "best-practices", "seo"],
-            })
+            }
+            if settings.PAGESPEED_API_KEY:
+                params["key"] = settings.PAGESPEED_API_KEY
+            resp = await client.get(PAGESPEED_API, params=params)
         if resp.status_code != 200:
             raise HTTPException(status_code=502, detail=f"PageSpeed API Fehler: {resp.status_code}")
         data = resp.json()
