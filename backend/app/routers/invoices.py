@@ -536,6 +536,144 @@ async def send_reminder_email(
     return {"success": True, "message": f"{level_name} wurde an {data.to_email} gesendet."}
 
 
+@router.post("/refresh-drafts")
+async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
+    """Aktualisiert alle Entwürfe: token_usage_to + github_commits_to auf heute, reimportiert KI-Daten, regeneriert PDFs."""
+    from datetime import date, timedelta
+    import json
+    import httpx
+
+    today = date.today()
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.status == InvoiceStatus.entwurf)
+    )
+    drafts = result.scalars().unique().all()
+
+    updated_count = 0
+    pdf_count = 0
+
+    for inv in drafts:
+        changed = False
+
+        # Update token_usage_to to today
+        if inv.token_usage_from:
+            inv.token_usage_to = today
+            changed = True
+
+            # Re-fetch KI data and rebuild positions
+            customer = inv.customer
+            tracker_source = inv.selected_tracker_urls or (customer.token_tracker_url if customer else None)
+            if tracker_source:
+                urls: list[str] = []
+                try:
+                    parsed = json.loads(tracker_source)
+                    if isinstance(parsed, list):
+                        for item in parsed:
+                            urls.append(item if isinstance(item, str) else item.get("url", ""))
+                    else:
+                        urls = [tracker_source]
+                except (json.JSONDecodeError, TypeError):
+                    urls = [tracker_source]
+
+                # Fetch token data from all URLs
+                total_active_min = 0
+                total_cost = 0.0
+                total_sessions = 0
+                total_lines = 0
+                for url in urls:
+                    try:
+                        params = {"from": inv.token_usage_from.isoformat(), "to": today.isoformat()}
+                        sep = "&" if "?" in url else "?"
+                        full_url = f"{url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
+                        resp = httpx.get(full_url, timeout=30)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            s = data.get("summary", {})
+                            total_active_min += s.get("total_active_min", 0)
+                            total_cost += s.get("total_cost", 0)
+                            total_sessions += s.get("total_sessions", 0)
+                            total_lines += s.get("lines_written", 0)
+                    except Exception:
+                        continue
+
+                if total_active_min > 0:
+                    hours = round(total_active_min / 60, 2)
+                    # Find hourly rate from existing position or default to 95
+                    hourly_rate = Decimal("95")
+                    for p in (inv.positions or []):
+                        if "Stunden" in str(p.get("einheit", "")) and float(p.get("einzelpreis", 0)) > 0:
+                            hourly_rate = Decimal(str(p["einzelpreis"]))
+                            break
+
+                    period_from = inv.token_usage_from.isoformat()
+                    period_to = today.isoformat()
+                    cost_eur = round(total_cost * 0.92, 2)
+
+                    new_positions = [{
+                        "position": 1,
+                        "beschreibung": f"KI-gestützte Entwicklung ({period_from} – {period_to})",
+                        "menge": str(hours),
+                        "einheit": "Stunden",
+                        "einzelpreis": str(hourly_rate),
+                        "gesamt": str(round(hours * float(hourly_rate), 2)),
+                    }]
+                    if cost_eur > 0:
+                        new_positions.append({
+                            "position": 2,
+                            "beschreibung": f"KI-API-Kosten ({total_sessions} Sessions, {total_lines:,} Codezeilen)",
+                            "menge": "1",
+                            "einheit": "pauschal",
+                            "einzelpreis": str(cost_eur),
+                            "gesamt": str(cost_eur),
+                        })
+
+                    # Keep non-KI positions (manually added ones)
+                    manual_positions = [p for p in (inv.positions or [])
+                                       if not str(p.get("beschreibung", "")).startswith("KI-")]
+                    all_positions = new_positions + manual_positions
+                    for i, p in enumerate(all_positions):
+                        p["position"] = i + 1
+
+                    inv.positions = all_positions
+
+                    # Recalculate totals
+                    subtotal, tax_amount, total_amount = calculate_invoice_totals(
+                        all_positions, inv.tax_rate, inv.tax_exempt,
+                        discount_type=inv.discount_type,
+                        discount_value=float(inv.discount_value) if inv.discount_value else None,
+                    )
+                    inv.subtotal = subtotal
+                    inv.tax_amount = tax_amount
+                    inv.total = total_amount
+
+        # Update github_commits_to to today
+        if inv.github_commits_from:
+            inv.github_commits_to = today
+            changed = True
+
+        if changed:
+            updated_count += 1
+            # Regenerate PDF
+            try:
+                from app.services.pdf_service import generate_invoice_pdf
+                pdf_path = generate_invoice_pdf(inv, inv.customer)
+                inv.pdf_path = pdf_path
+                pdf_count += 1
+            except Exception:
+                pass
+
+    await db.flush()
+
+    return {
+        "updated": updated_count,
+        "pdfs_generated": pdf_count,
+        "total_drafts": len(drafts),
+    }
+
+
 @router.post("/generate-recurring", response_model=list[InvoiceResponse])
 async def generate_recurring_invoices(db: AsyncSession = Depends(get_db)) -> list:
     """Erstellt Entwurfsrechnungen für fällige Vertragsabrechnungen."""

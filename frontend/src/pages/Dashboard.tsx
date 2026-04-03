@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import toast from 'react-hot-toast'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -95,8 +96,9 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     Promise.all([
       api.get('/dashboard/stats'),
       api.get('/dashboard/charts'),
@@ -107,6 +109,23 @@ export default function Dashboard() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }, [])
+
+  const handleRefreshDrafts = async () => {
+    setRefreshing(true)
+    try {
+      const res = await api.post('/invoices/refresh-drafts')
+      const { updated, pdfs_generated } = res.data
+      toast.success(`${updated} Entwürfe aktualisiert, ${pdfs_generated} PDFs generiert.`)
+      loadData()
+    } catch {
+      toast.error('Fehler beim Aktualisieren.')
+    }
+    setRefreshing(false)
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
 
   const cards = stats
@@ -169,7 +188,21 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
           {cards.map((card) => (
             <div key={card.label} className="bg-surface border border-border rounded-[12px] p-5">
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">{card.label}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs uppercase tracking-wider text-text-muted">{card.label}</p>
+                {card.label === 'Entwürfe' && parseInt(card.value) > 0 && (
+                  <button
+                    onClick={handleRefreshDrafts}
+                    disabled={refreshing}
+                    title="Alle Entwürfe auf heute aktualisieren + PDFs neu generieren"
+                    className="text-text-muted hover:text-accent transition-colors p-0.5"
+                  >
+                    <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               <p className={`text-[28px] font-bold tabular-nums ${card.valueColor}`}>{card.value}</p>
               <p className="text-xs text-text-muted mt-1">{card.sub}</p>
             </div>
