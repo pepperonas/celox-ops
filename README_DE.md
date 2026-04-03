@@ -23,6 +23,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Löschschutz bei bestehenden Referenzen
 - **Dateianhänge** — Dokumente an Kunden, Aufträge und Verträge anhängen
 - **DSGVO-Datenexport** — Ein-Klick-Export aller Kundendaten (Art. 15 DSGVO)
+- **Google PageSpeed Insights** — Ein-Klick PDF-Report mit Performance, Barrierefreiheit, SEO Scores
 
 ### Auftragsverwaltung
 - Status-Workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (oder Storniert)
@@ -150,6 +151,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Score 0-100% mit farbcodiertem Fortschrittsbalken
 - Befunde gruppiert nach Kategorie mit Schweregrad
 - Gesprächsargumente-Panel für Akquise-Anrufe
+- **Google PageSpeed PDF-Report** — automatische Analyse via Google API mit Core Web Vitals
 
 ### Ausgaben
 - 10 Kategorien (Hosting, Domain, Software, Lizenz, Hardware, KI/API, Werbung, Büro, Reise, Sonstige)
@@ -209,6 +211,21 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Farbcodierte Rentabilitätsindikatoren
 - Prognosediagramm mit Aufteilung wiederkehrend vs. Pipeline
 
+### Vertragsdokumente
+- 10 vordefinierte deutsche Rechtsvorlagen: AV-Vertrag (DSGVO Art. 28), Datenschutzerklärung, DSB-Bestellung, Website-Vertrag, Hosting, Wartung, IT-Beratung, Support, AGB, NDA
+- Gruppiert nach Kategorie: Datenschutz, Dienstleistung, Allgemein
+- Kundenauswahl mit Live-HTML-Vorschau
+- PDF-Generierung mit **digitaler Signatur** (B2B rechtsgültig nach § 126b BGB)
+- **Alle als ZIP herunterladen** — alle Vorlagen für einen Kunden mit Unterschrift in einer Datei
+- Platzhaltersystem: {firma}, {kunde_name}, {anbieter_firma}, {datum}, etc.
+
+### Google PageSpeed Insights
+- Automatische Website-Performance-Analyse via Google PageSpeed Insights API v5
+- PDF-Report mit 4 Scores (Performance, Barrierefreiheit, Best Practices, SEO)
+- Core Web Vitals, Optimierungsmöglichkeiten, Diagnosen, bestandene Prüfungen
+- Verfügbar auf Kundendetailseite und Lead-Formular
+- Optionaler API-Key für höheres Kontingent (PAGESPEED_API_KEY in .env)
+
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
 - Positionsbeschreibungen schlagen ~80 detaillierte Tätigkeitsbeschreibungen vor (Entwicklung, SEO, Hosting, Sicherheit, etc.)
@@ -219,7 +236,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **GitHub-inspiriertes Dark Theme**
 - Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
 - Responsives Layout mit einklappbarer Seitenleiste
-- Seitenleisten-Navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Einstellungen
+- Seitenleisten-Navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
 - Einheitliche Status-Badges, Tabellen und Formular-Komponenten
 - Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert
 
@@ -348,6 +365,11 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/github/repos` | GitHub-Repositories auflisten |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | E-Mail-Vorlagen-CRUD |
 | `POST` | `/api/email-templates/seed` | Standardvorlagen erstellen |
+| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF-Report |
+| `GET` | `/api/documents/templates` | Dokumentvorlagen auflisten |
+| `POST` | `/api/documents/generate` | Einzelnes Dokument als PDF |
+| `POST` | `/api/documents/generate-all` | Alle Dokumente als ZIP |
+| `GET` | `/api/documents/preview` | HTML-Vorschau eines Dokuments |
 | `GET` | `/api/health` | Health Check |
 
 Interaktive API-Docs unter `/docs` (Swagger UI).
@@ -486,6 +508,7 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `INVOICE_NUMBER_OFFSET` | Anzahl extern vergebener Rechnungen (optional) | `1` |
 | `GITHUB_TOKEN` | GitHub Personal Access Token (optional) | `ghp_...` |
 | `GITHUB_USERNAME` | GitHub-Benutzername (optional) | `pepperonas` |
+| `PAGESPEED_API_KEY` | Google PageSpeed API-Key (optional) | `AIza...` |
 | `SMTP_HOST` | SMTP-Server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP-Port | `587` |
 | `SMTP_USER` | SMTP-Benutzername | `user@example.com` |

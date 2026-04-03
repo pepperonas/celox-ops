@@ -23,6 +23,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Deletion protection when references exist
 - **File attachments** — upload documents to customers, orders, and contracts
 - **DSGVO data export** — one-click export of all customer data (Art. 15 DSGVO)
+- **Google PageSpeed Insights** — one-click PDF report with performance, accessibility, SEO scores
 
 ### Order Management
 - Status workflow: **Angebot → Beauftragt → In Arbeit → Abgeschlossen** (or Storniert)
@@ -150,6 +151,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Score 0-100% with color-coded progress bar
 - Findings grouped by category with severity levels
 - Quick arguments panel for sales calls
+- **Google PageSpeed PDF report** — automated analysis via Google API with Core Web Vitals
 
 ### Expenses
 - 10 categories (Hosting, Domain, Software, License, Hardware, AI/API, Advertising, Office, Travel, Other)
@@ -209,6 +211,21 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Color-coded profitability indicators
 - Forecast chart with recurring vs pipeline breakdown
 
+### Legal Document Templates
+- 10 pre-built German legal templates: AV-Vertrag (GDPR Art. 28), privacy policy, DPO appointment, website contract, hosting, maintenance, IT consulting, support, terms & conditions, NDA
+- Grouped by category: Datenschutz, Dienstleistung, Allgemein
+- Customer selector with live HTML preview
+- PDF generation with **digital signature** (legally valid B2B under German law, § 126b BGB)
+- **Download all as ZIP** — all templates for one customer with signature in a single file
+- Placeholder system: {firma}, {kunde_name}, {anbieter_firma}, {datum}, etc.
+
+### Google PageSpeed Insights
+- Automated website performance analysis via Google PageSpeed Insights API v5
+- PDF report with 4 scores (Performance, Accessibility, Best Practices, SEO)
+- Core Web Vitals, optimization opportunities, diagnostics, passed audits
+- Available on customer detail page and lead form
+- Optional API key for higher quota (PAGESPEED_API_KEY in .env)
+
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest ~80 IT consulting services while typing
 - Position descriptions suggest ~80 detailed task descriptions (development, SEO, hosting, security, etc.)
@@ -219,7 +236,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **GitHub-inspired dark theme**
 - Color palette: `#0d1117` (background), `#161b22` (surfaces), `#58a6ff` (accent)
 - Responsive layout with collapsible sidebar
-- Sidebar navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Einstellungen
+- Sidebar navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
 - Consistent status badges, tables, and form components
 - Tab state persisted in URL hash across page refreshes
 
@@ -348,6 +365,11 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/github/repos` | List GitHub repositories |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | Email template CRUD |
 | `POST` | `/api/email-templates/seed` | Create default templates |
+| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF report |
+| `GET` | `/api/documents/templates` | List document templates |
+| `POST` | `/api/documents/generate` | Generate single document PDF |
+| `POST` | `/api/documents/generate-all` | Generate all documents as ZIP |
+| `GET` | `/api/documents/preview` | HTML preview of document |
 | `GET` | `/api/health` | Health check |
 
 Interactive API docs at `/docs` (Swagger UI).
@@ -482,6 +504,7 @@ Active working time is calculated from message timestamps: intervals between con
 | `INVOICE_NUMBER_OFFSET` | Number of externally issued invoices (optional) | `1` |
 | `GITHUB_TOKEN` | GitHub personal access token (optional) | `ghp_...` |
 | `GITHUB_USERNAME` | GitHub username (optional) | `pepperonas` |
+| `PAGESPEED_API_KEY` | Google PageSpeed API key (optional) | `AIza...` |
 | `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP port | `587` |
 | `SMTP_USER` | SMTP username | `user@example.com` |
