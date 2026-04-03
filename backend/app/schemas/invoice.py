@@ -27,6 +27,7 @@ class InvoiceBase(BaseModel):
     invoice_date: date
     due_date: date
     notes: str | None = None
+    special_terms: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
     github_commits_from: date | None = None
@@ -54,6 +55,7 @@ class InvoiceUpdate(BaseModel):
     invoice_date: date | None = None
     due_date: date | None = None
     notes: str | None = None
+    special_terms: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
     github_commits_from: date | None = None
@@ -86,6 +88,7 @@ class InvoiceResponse(BaseModel):
     status: InvoiceStatus
     pdf_path: str | None = None
     notes: str | None = None
+    special_terms: str | None = None
     token_usage_from: date | None = None
     token_usage_to: date | None = None
     github_commits_from: date | None = None

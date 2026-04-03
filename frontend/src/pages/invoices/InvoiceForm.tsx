@@ -86,6 +86,7 @@ export default function InvoiceForm() {
           invoice_date: inv.invoice_date?.split('T')[0] || '',
           due_date: inv.due_date?.split('T')[0] || '',
           notes: inv.notes,
+          special_terms: inv.special_terms || null,
           token_usage_from: inv.token_usage_from?.split('T')[0] || null,
           token_usage_to: inv.token_usage_to?.split('T')[0] || null,
           github_commits_from: inv.github_commits_from?.split('T')[0] || null,
@@ -683,8 +684,8 @@ export default function InvoiceForm() {
           </div>
         </div>
 
-        {/* Notes */}
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        {/* Notes + Special Terms */}
+        <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
           <FormField
             label="Notizen"
             name="notes"
@@ -693,6 +694,39 @@ export default function InvoiceForm() {
             onChange={handleChange}
             placeholder="Optionale Anmerkungen zur Rechnung..."
           />
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Sondervereinbarung</label>
+            <AutocompleteInput
+              name="special_terms"
+              value={form.special_terms || ''}
+              onChange={(e) => setForm({ ...form, special_terms: e.target.value })}
+              placeholder="z.B. 12 Monate kostenloses Hosting..."
+              suggestions={[
+                '12 Monate kostenloses Hosting inklusive',
+                '24 Monate kostenloses Hosting inklusive',
+                '12 Monate kostenlose Wartung und Updates',
+                '24 Monate kostenlose Wartung und Updates',
+                '6 Monate kostenloser technischer Support',
+                '12 Monate kostenloser technischer Support',
+                'Kostenlose SSL-Zertifikat-Einrichtung und -Verlängerung',
+                'Kostenlose Domain-Registrierung für 1 Jahr',
+                'Kostenlose SEO-Grundoptimierung inklusive',
+                '3 kostenlose Revisionen nach Projektabschluss',
+                '5 kostenlose Änderungswünsche nach Abnahme',
+                'Monatlich 2 Stunden kostenloser Support',
+                'Monatlich 1 kostenlose Inhaltsaktualisierung',
+                'Kostenlose Einweisung in das CMS (bis 2 Stunden)',
+                'Kostenlose Backup-Einrichtung und monatliche Sicherung',
+                'Kostenlose Monitoring-Einrichtung mit E-Mail-Benachrichtigung',
+                'Kostenlose Migration der bestehenden Website-Inhalte',
+                'Kostenlose Erstellung eines Impressums und einer Datenschutzerklärung',
+                'Zahlbar in 2 Raten: 50% bei Auftragserteilung, 50% bei Abnahme',
+                'Zahlbar in 3 Raten: jeweils ein Drittel bei Beauftragung, Halbzeit und Abnahme',
+              ]}
+              compact
+            />
+            <p className="text-[11px] text-text-muted mt-1">Wird als hervorgehobener Block im PDF angezeigt.</p>
+          </div>
         </div>
 
         {/* KI-Nutzungsbericht */}

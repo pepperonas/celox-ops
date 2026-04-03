@@ -291,6 +291,13 @@
     </div>
     {% endif %}
 
+    {% if invoice.special_terms %}
+    <div style="margin-top: 15px; padding: 12px 15px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
+        <strong style="font-size: 9pt; color: #1a1a2e;">Sondervereinbarung:</strong>
+        <p style="font-size: 9pt; color: #333; margin-top: 4px; white-space: pre-wrap;">{{ invoice.special_terms }}</p>
+    </div>
+    {% endif %}
+
     {% if signature_b64 %}
     <div class="signature-block">
         <p style="font-size: 9pt; color: #555; margin-bottom: 5px;">Mit freundlichen Grüßen</p>
