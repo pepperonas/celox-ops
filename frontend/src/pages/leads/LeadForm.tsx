@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
+import { api } from '../../api/client'
 import { getLead, createLead, updateLead, analyzeWebsite, type AnalyzeResult } from '../../api/leads'
 import type { LeadCreate } from '../../types'
 
@@ -134,6 +135,26 @@ export default function LeadForm() {
                 className="btn-primary whitespace-nowrap !px-4"
               >
                 {analyzing ? 'Prüfe...' : 'Analysieren'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!form.url) return
+                  toast.loading('PageSpeed läuft...', { id: 'ps' })
+                  try {
+                    const url = form.url.startsWith('http') ? form.url : `https://${form.url}`
+                    const resp = await api.get('/pagespeed/analyze', { params: { url, strategy: 'mobile' }, responseType: 'blob' })
+                    const blobUrl = URL.createObjectURL(resp.data)
+                    window.open(blobUrl, '_blank')
+                    toast.success('PageSpeed Report erstellt.', { id: 'ps' })
+                  } catch {
+                    toast.error('PageSpeed fehlgeschlagen.', { id: 'ps' })
+                  }
+                }}
+                disabled={!form.url}
+                className="btn-secondary whitespace-nowrap !px-4"
+              >
+                PageSpeed
               </button>
             </div>
           </div>
