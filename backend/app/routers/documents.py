@@ -54,7 +54,7 @@ li {{ margin-bottom: 4px; }}
 {content}
 <div class="signature">
 <div class="sig-block"><div class="sig-line" style="margin-top:60px;">Ort, Datum, Unterschrift Auftraggeber<br>{firma}</div></div>
-<div class="sig-block"><div class="sig-line" style="margin-top:0;">{signature_html}{datum}<br>{anbieter_name}<br>{anbieter_firma}</div></div>
+<div class="sig-block">{signature_html}<div class="sig-line">{datum}<br>{anbieter_name}<br>{anbieter_firma}</div></div>
 </div>
 </body></html>"""
 
