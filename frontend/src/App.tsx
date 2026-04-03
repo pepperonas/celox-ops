@@ -28,6 +28,7 @@ import ExpenseForm from './pages/expenses/ExpenseForm'
 import Euer from './pages/Euer'
 import Kanban from './pages/Kanban'
 import Analytics from './pages/Analytics'
+import Documents from './pages/Documents'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/euer" element={<Euer />} />
           <Route path="/kanban" element={<Kanban />} />
           <Route path="/analyse" element={<Analytics />} />
+          <Route path="/dokumente" element={<Documents />} />
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>

@@ -8,6 +8,7 @@ from app.models.activity import Activity
 from app.models.attachment import Attachment
 from app.models.expense import Expense, ExpenseCategory
 from app.models.email_template import EmailTemplate
+from app.models.document_template import DocumentTemplate
 
 __all__ = [
     "Customer",
@@ -26,4 +27,5 @@ __all__ = [
     "ExpenseCategory",
     "Attachment",
     "EmailTemplate",
+    "DocumentTemplate",
 ]
