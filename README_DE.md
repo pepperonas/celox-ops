@@ -60,6 +60,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Rechnungsnummer-Offset** — konfigurierbar für extern vergebene Rechnungen (INVOICE_NUMBER_OFFSET in .env)
 - **Vollständige Zustandsspeicherung** — alle Toggles, Zeiträume, Projektauswahl und Rabatte beim Bearbeiten wiederhergestellt
 - **Einheitlicher Zeitraum** — GitHub Commits und Aktivitätsdiagramm übernehmen den Zeitraum vom KI-Nutzungsbericht
+- **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: KI-Zeit reimportieren, Summen neuberechnen, PDFs regenerieren
+- **USt-Steuerung pro Rechnung** — Checkbox für USt inkl./exkl. (Kleinunternehmerregelung pro Rechnung, nicht nur global)
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -165,7 +167,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Monatsberichte als PDF** — herunterladbare Geschäftsberichte mit KPIs, Rechnungsliste, Zeitauswertung, offene Posten
 
 ### Dashboard
-- 5 KPI-Karten: Umsatz (Monat/Jahr), Entwürfe (Anzahl + Summe), offene Rechnungen, aktive Verträge
+- 5 KPI-Karten: Umsatz (Monat/Jahr), Entwürfe (Anzahl + Summe) mit **Ein-Klick-Aktualisierung**, offene Rechnungen, aktive Verträge
+- **Zeitraum-Umschalter**: 30 Tage (tägliche Balken, Standard) oder 12 Monate (monatlich)
+- **Daten-Umschalter**: nur bezahlte Rechnungen oder inklusive Entwürfe
 - **Umsatz- und Ausgaben-Balkendiagramm** (letzte 12 Monate)
 - **Rechnungsstatus-Kreisdiagramm** (Verteilung nach Status)
 - **Top 5 Kunden** nach Umsatz mit Balkenindikatoren
@@ -304,6 +308,7 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `POST` | `/api/invoices/{id}/generate-pdf` | PDF generieren |
 | `GET` | `/api/invoices/{id}/pdf` | PDF herunterladen |
 | `DELETE` | `/api/invoices/{id}` | Löschen (nur Entwürfe) |
+| `POST` | `/api/invoices/refresh-drafts` | Alle Rechnungsentwürfe auf heute aktualisieren |
 | `GET` | `/api/dashboard/stats` | Dashboard-KPIs |
 | `GET` | `/api/tasks` | Aggregierte Aufgabenliste |
 | `GET` | `/api/token-tracker/projects` | Projekte aus Token Tracker |

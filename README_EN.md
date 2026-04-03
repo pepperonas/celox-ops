@@ -60,6 +60,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Invoice number offset** — configurable for externally issued invoices (INVOICE_NUMBER_OFFSET in .env)
 - **Full state persistence** — all toggles, date ranges, project selections, and discounts restored when editing
 - **Unified date range** — GitHub commits and activity chart inherit the period from the AI usage report
+- **One-click draft refresh** — update all drafts to today: re-import AI time, recalculate totals, regenerate PDFs
+- **Per-invoice tax control** — checkbox to include/exclude VAT (Kleinunternehmerregelung per invoice, not just globally)
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -165,7 +167,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Monthly PDF reports** — downloadable business reports with KPIs, invoice list, time entries, open items
 
 ### Dashboard
-- 5 KPI cards: revenue (month/year), draft invoices (count + sum), open invoices, active contracts
+- 5 KPI cards: revenue (month/year), draft invoices (count + sum) with **one-click refresh** button, open invoices, active contracts
+- **Period toggle**: 30 days (daily bars, default) or 12 months (monthly bars)
+- **Data toggle**: paid invoices only or including drafts
 - **Revenue & expenses bar chart** (last 12 months)
 - **Invoice status doughnut chart** (distribution by status)
 - **Top 5 customers** by revenue with bar indicators
@@ -304,6 +308,7 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `POST` | `/api/invoices/{id}/generate-pdf` | Generate PDF |
 | `GET` | `/api/invoices/{id}/pdf` | Download PDF |
 | `DELETE` | `/api/invoices/{id}` | Delete (drafts only) |
+| `POST` | `/api/invoices/refresh-drafts` | Refresh all draft invoices to today |
 | `GET` | `/api/dashboard/stats` | Dashboard KPIs |
 | `GET` | `/api/tasks` | Aggregated task list |
 | `GET` | `/api/token-tracker/projects` | Projects from Token Tracker |
