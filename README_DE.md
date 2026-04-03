@@ -165,7 +165,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Monatsberichte als PDF** — herunterladbare Geschäftsberichte mit KPIs, Rechnungsliste, Zeitauswertung, offene Posten
 
 ### Dashboard
-- Umsatz-KPI-Karten (Monat/Jahr, offene Rechnungen, aktive Verträge)
+- 5 KPI-Karten: Umsatz (Monat/Jahr), Entwürfe (Anzahl + Summe), offene Rechnungen, aktive Verträge
 - **Umsatz- und Ausgaben-Balkendiagramm** (letzte 12 Monate)
 - **Rechnungsstatus-Kreisdiagramm** (Verteilung nach Status)
 - **Top 5 Kunden** nach Umsatz mit Balkenindikatoren

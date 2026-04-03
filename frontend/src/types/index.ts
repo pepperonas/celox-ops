@@ -285,6 +285,8 @@ export interface LeadUpdate extends Partial<LeadCreate> {}
 export interface DashboardStats {
   revenue_month: number
   revenue_year: number
+  draft_invoices_count: number
+  draft_invoices_sum: number
   open_invoices_count: number
   open_invoices_sum: number
   overdue_invoices_count: number

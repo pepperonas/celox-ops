@@ -165,7 +165,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Monthly PDF reports** — downloadable business reports with KPIs, invoice list, time entries, open items
 
 ### Dashboard
-- Revenue KPI cards (month/year, open invoices, active contracts)
+- 5 KPI cards: revenue (month/year), draft invoices (count + sum), open invoices, active contracts
 - **Revenue & expenses bar chart** (last 12 months)
 - **Invoice status doughnut chart** (distribution by status)
 - **Top 5 customers** by revenue with bar indicators

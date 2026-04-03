@@ -59,6 +59,8 @@ class ForecastData(BaseModel):
 class DashboardStats(BaseModel):
     revenue_month: Decimal
     revenue_year: Decimal
+    draft_invoices_count: int
+    draft_invoices_sum: Decimal
     open_invoices_count: int
     open_invoices_sum: Decimal
     overdue_invoices_count: int
@@ -95,6 +97,16 @@ async def get_stats(
     )
     revenue_year = result.scalar_one()
 
+    # Draft invoices (entwurf)
+    result = await db.execute(
+        select(func.count(), func.coalesce(func.sum(Invoice.total), 0)).where(
+            Invoice.status == InvoiceStatus.entwurf,
+        )
+    )
+    row = result.one()
+    draft_invoices_count = row[0]
+    draft_invoices_sum = row[1]
+
     # Open invoices (gestellt)
     result = await db.execute(
         select(func.count(), func.coalesce(func.sum(Invoice.total), 0)).where(
@@ -130,6 +142,8 @@ async def get_stats(
     return DashboardStats(
         revenue_month=revenue_month,
         revenue_year=revenue_year,
+        draft_invoices_count=draft_invoices_count,
+        draft_invoices_sum=draft_invoices_sum,
         open_invoices_count=open_invoices_count,
         open_invoices_sum=open_invoices_sum,
         overdue_invoices_count=overdue_invoices_count,

@@ -124,6 +124,12 @@ export default function Dashboard() {
           valueColor: 'text-success',
         },
         {
+          label: 'Entwürfe',
+          value: String(stats.draft_invoices_count),
+          sub: formatCurrency(stats.draft_invoices_sum),
+          valueColor: 'text-text-muted',
+        },
+        {
           label: 'Offene Rechnungen',
           value: String(stats.open_invoices_count),
           sub: formatCurrency(stats.open_invoices_sum),
@@ -150,7 +156,7 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       {loading ? (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-surface border border-border rounded-[12px] p-5 animate-pulse">
               <div className="h-3 bg-surface-2 rounded w-1/2 mb-3" />
@@ -160,7 +166,7 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
           {cards.map((card) => (
             <div key={card.label} className="bg-surface border border-border rounded-[12px] p-5">
               <p className="text-xs uppercase tracking-wider text-text-muted mb-2">{card.label}</p>
