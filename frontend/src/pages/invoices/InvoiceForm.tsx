@@ -695,37 +695,80 @@ export default function InvoiceForm() {
             placeholder="Optionale Anmerkungen zur Rechnung..."
           />
           <div>
-            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Sondervereinbarung</label>
-            <AutocompleteInput
-              name="special_terms"
-              value={form.special_terms || ''}
-              onChange={(e) => setForm({ ...form, special_terms: e.target.value })}
-              placeholder="z.B. 12 Monate kostenloses Hosting..."
-              suggestions={[
-                '12 Monate kostenloses Hosting inklusive',
-                '24 Monate kostenloses Hosting inklusive',
-                '12 Monate kostenlose Wartung und Updates',
-                '24 Monate kostenlose Wartung und Updates',
-                '6 Monate kostenloser technischer Support',
-                '12 Monate kostenloser technischer Support',
-                'Kostenlose SSL-Zertifikat-Einrichtung und -Verlängerung',
-                'Kostenlose Domain-Registrierung für 1 Jahr',
-                'Kostenlose SEO-Grundoptimierung inklusive',
-                '3 kostenlose Revisionen nach Projektabschluss',
-                '5 kostenlose Änderungswünsche nach Abnahme',
-                'Monatlich 2 Stunden kostenloser Support',
-                'Monatlich 1 kostenlose Inhaltsaktualisierung',
-                'Kostenlose Einweisung in das CMS (bis 2 Stunden)',
-                'Kostenlose Backup-Einrichtung und monatliche Sicherung',
-                'Kostenlose Monitoring-Einrichtung mit E-Mail-Benachrichtigung',
-                'Kostenlose Migration der bestehenden Website-Inhalte',
-                'Kostenlose Erstellung eines Impressums und einer Datenschutzerklärung',
-                'Zahlbar in 2 Raten: 50% bei Auftragserteilung, 50% bei Abnahme',
-                'Zahlbar in 3 Raten: jeweils ein Drittel bei Beauftragung, Halbzeit und Abnahme',
-              ]}
-              compact
-            />
-            <p className="text-[11px] text-text-muted mt-1">Wird als hervorgehobener Block im PDF angezeigt.</p>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs uppercase tracking-wider text-text-muted">Sondervereinbarungen</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = (() => { try { return JSON.parse(form.special_terms || '[]') } catch { return form.special_terms ? [form.special_terms] : [] } })()
+                  setForm({ ...form, special_terms: JSON.stringify([...current, '']) })
+                }}
+                className="btn-secondary !text-xs !py-1 !px-3"
+              >
+                Hinzufügen
+              </button>
+            </div>
+            {(() => {
+              let terms: string[] = []
+              try { terms = JSON.parse(form.special_terms || '[]') } catch { terms = form.special_terms ? [form.special_terms] : [] }
+              if (terms.length === 0) return <p className="text-xs text-text-muted">Keine Sondervereinbarungen.</p>
+              return (
+                <div className="space-y-2">
+                  {terms.map((term, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <AutocompleteInput
+                          name={`special_term_${i}`}
+                          value={term}
+                          onChange={(e) => {
+                            const updated = [...terms]
+                            updated[i] = e.target.value
+                            setForm({ ...form, special_terms: JSON.stringify(updated) })
+                          }}
+                          placeholder="z.B. 12 Monate kostenloses Hosting..."
+                          suggestions={[
+                            '12 Monate kostenloses Hosting inklusive',
+                            '24 Monate kostenloses Hosting inklusive',
+                            '12 Monate kostenlose Wartung und Updates',
+                            '24 Monate kostenlose Wartung und Updates',
+                            '6 Monate kostenloser technischer Support',
+                            '12 Monate kostenloser technischer Support',
+                            'Kostenlose SSL-Zertifikat-Einrichtung und -Verlängerung',
+                            'Kostenlose Domain-Registrierung für 1 Jahr',
+                            'Kostenlose SEO-Grundoptimierung inklusive',
+                            '3 kostenlose Revisionen nach Projektabschluss',
+                            '5 kostenlose Änderungswünsche nach Abnahme',
+                            'Monatlich 2 Stunden kostenloser Support',
+                            'Monatlich 1 kostenlose Inhaltsaktualisierung',
+                            'Kostenlose Einweisung in das CMS (bis 2 Stunden)',
+                            'Kostenlose Backup-Einrichtung und monatliche Sicherung',
+                            'Kostenlose Monitoring-Einrichtung mit E-Mail-Benachrichtigung',
+                            'Kostenlose Migration der bestehenden Website-Inhalte',
+                            'Kostenlose Erstellung eines Impressums und einer Datenschutzerklärung',
+                            'Zahlbar in 2 Raten: 50% bei Auftragserteilung, 50% bei Abnahme',
+                            'Zahlbar in 3 Raten: jeweils ein Drittel bei Beauftragung, Halbzeit und Abnahme',
+                          ]}
+                          compact
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = terms.filter((_, j) => j !== i)
+                          setForm({ ...form, special_terms: updated.length > 0 ? JSON.stringify(updated) : null })
+                        }}
+                        className="text-text-muted hover:text-danger transition-colors p-1 mt-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+            <p className="text-[11px] text-text-muted mt-2">Werden als hervorgehobener Block im PDF angezeigt.</p>
           </div>
         </div>
 

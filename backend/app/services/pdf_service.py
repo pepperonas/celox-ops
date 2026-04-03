@@ -235,12 +235,23 @@ def generate_invoice_pdf(
         else:
             discount_amount = Dec(str(invoice.discount_value))
 
+    # Parse special terms (JSON array or plain string)
+    import json as _json2
+    special_terms_list = []
+    if invoice.special_terms:
+        try:
+            parsed = _json2.loads(invoice.special_terms)
+            special_terms_list = [t for t in parsed if t.strip()] if isinstance(parsed, list) else [invoice.special_terms]
+        except (_json2.JSONDecodeError, TypeError):
+            special_terms_list = [invoice.special_terms]
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
         positions=positions,
         positions_subtotal=float(positions_subtotal),
         discount_amount=float(discount_amount),
+        special_terms_list=special_terms_list,
         settings=settings,
         kleinunternehmer=settings.KLEINUNTERNEHMER,
         token_usage=token_usage,

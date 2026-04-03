@@ -291,10 +291,18 @@
     </div>
     {% endif %}
 
-    {% if invoice.special_terms %}
+    {% if special_terms_list %}
     <div style="margin-top: 15px; padding: 12px 15px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
-        <strong style="font-size: 9pt; color: #1a1a2e;">Sondervereinbarung:</strong>
-        <p style="font-size: 9pt; color: #333; margin-top: 4px; white-space: pre-wrap;">{{ invoice.special_terms }}</p>
+        <strong style="font-size: 9pt; color: #1a1a2e;">Sondervereinbarung{{ 'en' if special_terms_list|length > 1 else '' }}:</strong>
+        {% if special_terms_list|length == 1 %}
+        <p style="font-size: 9pt; color: #333; margin-top: 4px;">{{ special_terms_list[0] }}</p>
+        {% else %}
+        <ul style="font-size: 9pt; color: #333; margin-top: 4px; padding-left: 18px;">
+            {% for term in special_terms_list %}
+            <li style="margin-bottom: 2px;">{{ term }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </div>
     {% endif %}
 
