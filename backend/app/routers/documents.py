@@ -1,4 +1,8 @@
+import base64
+import io
+import os
 import uuid
+import zipfile
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -50,9 +54,18 @@ li {{ margin-bottom: 4px; }}
 {content}
 <div class="signature">
 <div class="sig-block"><div class="sig-line">Ort, Datum, Unterschrift Auftraggeber<br>{firma}</div></div>
-<div class="sig-block"><div class="sig-line">Ort, Datum, Unterschrift Auftragnehmer<br>{anbieter_firma}</div></div>
+<div class="sig-block">{signature_html}<div class="sig-line">Ort, Datum, Unterschrift Auftragnehmer<br>{anbieter_firma}</div></div>
 </div>
 </body></html>"""
+
+
+def _load_signature_html() -> str:
+    sig_path = settings.SIGNATURE_PATH
+    if sig_path and os.path.isfile(sig_path):
+        with open(sig_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
+        return f'<img src="data:image/png;base64,{b64}" style="max-height:50px;max-width:180px;margin-bottom:5px;" alt="Unterschrift"><br>'
+    return ""
 
 
 def _replace_placeholders(text: str, customer: Customer) -> str:
@@ -71,6 +84,7 @@ def _replace_placeholders(text: str, customer: Customer) -> str:
         "{anbieter_steuernr}": settings.BUSINESS_TAX_NUMBER,
         "{datum}": today.strftime("%d.%m.%Y"),
         "{jahr}": str(today.year),
+        "{signature_html}": _load_signature_html(),
     }
     for key, value in replacements.items():
         text = text.replace(key, value)
@@ -98,6 +112,40 @@ async def seed_templates(db: AsyncSession = Depends(get_db)) -> dict:
             count += 1
     await db.flush()
     return {"created": count, "total": len(SYSTEM_TEMPLATES)}
+
+
+@router.post("/generate-all")
+async def generate_all_documents(
+    customer_id: uuid.UUID = Query(...),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Generiert alle Vorlagen für einen Kunden als ZIP mit Signatur."""
+    customer = await db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    result = await db.execute(select(DocumentTemplate).order_by(DocumentTemplate.category, DocumentTemplate.name))
+    templates = result.scalars().all()
+
+    if not templates:
+        raise HTTPException(status_code=404, detail="Keine Vorlagen vorhanden")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for tmpl in templates:
+            content = _replace_placeholders(tmpl.content, customer)
+            full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
+            pdf = HTML(string=full_html).write_pdf()
+            filename = f"{tmpl.category}/{tmpl.name.replace(' ', '-')}.pdf"
+            zf.writestr(filename, pdf)
+
+    buf.seek(0)
+    customer_label = (customer.company or customer.name).replace(" ", "-")
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="Vertragsdokumente_{customer_label}.zip"'},
+    )
 
 
 @router.post("/generate")

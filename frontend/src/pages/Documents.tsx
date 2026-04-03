@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { api } from '../api/client'
 import { getDocumentTemplates, seedDocumentTemplates, generateDocument, previewDocument, type DocumentTemplate } from '../api/documents'
 import { getCustomers } from '../api/customers'
 import type { Customer } from '../types'
@@ -161,6 +162,31 @@ export default function Documents() {
                       className="btn-primary whitespace-nowrap"
                     >
                       {generating ? 'Generiert...' : 'PDF herunterladen'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!selectedCustomerId) return
+                        setGenerating(true)
+                        try {
+                          const resp = await api.post(`/documents/generate-all?customer_id=${selectedCustomerId}`, {}, { responseType: 'blob' })
+                          const url = URL.createObjectURL(resp.data)
+                          const a = document.createElement('a')
+                          a.href = url
+                          const disposition = resp.headers['content-disposition'] || ''
+                          const match = disposition.match(/filename="(.+)"/)
+                          a.download = match ? decodeURIComponent(match[1]) : 'Vertragsdokumente.zip'
+                          a.click()
+                          URL.revokeObjectURL(url)
+                          toast.success('ZIP mit allen Dokumenten heruntergeladen.')
+                        } catch {
+                          toast.error('Fehler beim Generieren.')
+                        }
+                        setGenerating(false)
+                      }}
+                      disabled={!selectedCustomerId || generating}
+                      className="btn-secondary whitespace-nowrap"
+                    >
+                      Alle als ZIP
                     </button>
                   </div>
                 </div>
