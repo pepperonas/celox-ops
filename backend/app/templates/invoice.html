@@ -225,6 +225,12 @@
 
     <h1>{{ invoice.title }}</h1>
 
+    {% if invoice.service_description %}
+    <div class="intro" style="margin-bottom: 20px; font-size: 10pt; color: #333;">
+        <p style="white-space: pre-wrap;">{{ invoice.service_description }}</p>
+    </div>
+    {% endif %}
+
     <table class="positions">
         <thead>
             <tr>
@@ -362,10 +368,11 @@
         </div>
     </div>
 
-    <h1 style="margin-top: 20px;">Anlage: KI-Nutzungsbericht</h1>
+    <h1 style="margin-top: 20px;">Anlage: Leistungsnachweis</h1>
     <p style="font-size: 9pt; color: #666; margin-bottom: 20px;">
-        Dieser Bericht zeigt die KI-gestützte Entwicklungsarbeit am Projekt
+        Detaillierter Nachweis der erbrachten Entwicklungsleistungen
         im Zeitraum {{ invoice.token_usage_from.strftime('%d.%m.%Y') }} bis {{ invoice.token_usage_to.strftime('%d.%m.%Y') }}.
+        Alle Aktivitäten werden automatisch protokolliert und umfassen Konzeption, Entwicklung, Tests und Optimierung.
     </p>
 
     <table class="positions" style="margin-bottom: 25px;">
@@ -381,23 +388,23 @@
                 <td style="text-align: right;">{{ token_usage.summary.total_sessions }}</td>
             </tr>
             <tr>
-                <td>KI-Anfragen gesamt</td>
+                <td>Entwicklungsschritte</td>
                 <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.total_messages) }}</td>
             </tr>
             <tr>
-                <td>Codezeilen geschrieben</td>
+                <td>Erstellte Codezeilen</td>
                 <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_written) }}</td>
             </tr>
             <tr>
-                <td>Codezeilen hinzugefügt</td>
-                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_added) }}</td>
+                <td>Neue Funktionalität (Zeilen)</td>
+                <td style="text-align: right;">+{{ "{:,.0f}".format(token_usage.summary.lines_added) }}</td>
             </tr>
             <tr>
-                <td>Codezeilen entfernt</td>
-                <td style="text-align: right;">{{ "{:,.0f}".format(token_usage.summary.lines_removed) }}</td>
+                <td>Bereinigte Altlasten (Zeilen)</td>
+                <td style="text-align: right;">&minus;{{ "{:,.0f}".format(token_usage.summary.lines_removed) }}</td>
             </tr>
             <tr>
-                <td>KI-Kosten (API)</td>
+                <td>Infrastrukturkosten</td>
                 <td style="text-align: right;">${{ "%.2f"|format(token_usage.summary.total_cost) }}</td>
             </tr>
         </tbody>

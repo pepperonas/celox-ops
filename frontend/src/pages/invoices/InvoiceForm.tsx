@@ -84,6 +84,7 @@ export default function InvoiceForm() {
           tax_rate: inv.tax_rate,
           tax_exempt: inv.tax_exempt ?? true,
           invoice_date: inv.invoice_date?.split('T')[0] || '',
+          service_description: inv.service_description || null,
           due_date: inv.due_date?.split('T')[0] || '',
           notes: inv.notes,
           special_terms: inv.special_terms || null,
@@ -279,22 +280,22 @@ export default function InvoiceForm() {
       const newPositions: InvoicePosition[] = []
       const nextPos = form.positions.filter(p => p.beschreibung).length + 1
 
-      // Position 1: AI-assisted development hours
+      // Position 1: Development hours (value-oriented, not tool-oriented)
       newPositions.push({
         position: nextPos,
-        beschreibung: `KI-gestützte Entwicklung (${periodFrom} – ${periodTo})`,
+        beschreibung: `Entwicklung und Umsetzung (${periodFrom} – ${periodTo})`,
         menge: hours,
         einheit: 'Stunden',
         einzelpreis: aiHourlyRate,
         gesamt: Math.round(hours * aiHourlyRate * 100) / 100,
       })
 
-      // Position 2: AI API costs (if > 0)
+      // Position 2: Infrastructure/tooling costs (if > 0)
       if (totalCost > 0) {
         const costEur = Math.round(totalCost * 0.92 * 100) / 100
         newPositions.push({
           position: nextPos + 1,
-          beschreibung: `KI-API-Kosten (${totalSessions} Sessions, ${totalLinesWritten.toLocaleString('de-DE')} Codezeilen)`,
+          beschreibung: `Technische Infrastruktur und Entwicklungstools`,
           menge: 1,
           einheit: 'pauschal',
           einzelpreis: costEur,
@@ -427,6 +428,19 @@ export default function InvoiceForm() {
           </div>
 
           <AutocompleteInput label="Titel" name="title" value={form.title} onChange={handleChange} required placeholder="z.B. Website-Erstellung, SEO-Optimierung..." />
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Leistungsbeschreibung (optional)</label>
+            <textarea
+              name="service_description"
+              value={form.service_description || ''}
+              onChange={(e) => setForm({ ...form, service_description: e.target.value || null })}
+              placeholder="z.B. Modernisierung der Website mit verbesserter Ladezeit, mobiloptimiertem Design und aktualisiertem Content. Inklusive SEO-Grundoptimierung und CMS-Einrichtung."
+              rows={3}
+              className="w-full"
+            />
+            <p className="text-[11px] text-text-muted mt-1">Wird im PDF vor den Positionen angezeigt — beschreibe das Ergebnis, nicht die Tools.</p>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField

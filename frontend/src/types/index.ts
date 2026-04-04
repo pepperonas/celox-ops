@@ -204,6 +204,7 @@ export interface Invoice {
   pdf_path: string | null
   notes: string
   special_terms: string | null
+  service_description: string | null
   token_usage_from: string | null
   token_usage_to: string | null
   github_commits_from: string | null
@@ -236,6 +237,7 @@ export interface InvoiceCreate {
   due_date?: string
   notes?: string
   special_terms?: string | null
+  service_description?: string | null
   token_usage_from?: string | null
   token_usage_to?: string | null
   github_commits_from?: string | null
