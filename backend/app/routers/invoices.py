@@ -614,7 +614,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
 
                     new_positions = [{
                         "position": 1,
-                        "beschreibung": f"Entwicklung und Umsetzung ({period_from} – {period_to})",
+                        "beschreibung": f"{inv.title} ({period_from} – {period_to})",
                         "menge": str(hours),
                         "einheit": "Stunden",
                         "einzelpreis": str(hourly_rate),
@@ -623,7 +623,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                     if cost_eur > 0:
                         new_positions.append({
                             "position": 2,
-                            "beschreibung": "Technische Infrastruktur und Entwicklungstools",
+                            "beschreibung": "Technische Infrastruktur & externe Systemkosten",
                             "menge": "1",
                             "einheit": "pauschal",
                             "einzelpreis": str(cost_eur),

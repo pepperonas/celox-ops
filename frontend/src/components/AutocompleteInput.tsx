@@ -1,19 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
 
 const IT_SUGGESTIONS = [
-  // Website
-  'Website-Erstellung',
+  // Website (wertorientiert)
+  'Website-Erstellung & Einrichtung',
+  'Website-Redesign & Optimierung',
+  'Website-Relaunch & Modernisierung',
   'Website-Erstellung (WordPress)',
   'Website-Erstellung (React)',
-  'Website-Redesign',
-  'Website-Relaunch',
-  'Website-Wartung',
-  'Website-Pflege und Aktualisierung',
-  'Website-Optimierung',
-  'Website-Migration',
-  'Landing Page Erstellung',
-  'One-Page Website',
-  'Responsive Anpassung',
+  'Website-Pflege & Aktualisierung',
+  'Performance- & Ladezeit-Optimierung',
+  'Website-Migration & Relaunch',
+  'Landing Page mit Conversion-Optimierung',
+  'Responsive Anpassung & Mobile-Optimierung',
+  'Barrierefreiheit & Accessibility-Optimierung',
   // SEO
   'SEO-Optimierung',
   'SEO-Grundoptimierung',

@@ -280,22 +280,23 @@ export default function InvoiceForm() {
       const newPositions: InvoicePosition[] = []
       const nextPos = form.positions.filter(p => p.beschreibung).length + 1
 
-      // Position 1: Development hours (value-oriented, not tool-oriented)
+      // Position 1: Use invoice title as base for value-oriented description
+      const titleBase = form.title?.trim() || 'Entwicklung und Umsetzung'
       newPositions.push({
         position: nextPos,
-        beschreibung: `Entwicklung und Umsetzung (${periodFrom} – ${periodTo})`,
+        beschreibung: `${titleBase} (${periodFrom} – ${periodTo})`,
         menge: hours,
         einheit: 'Stunden',
         einzelpreis: aiHourlyRate,
         gesamt: Math.round(hours * aiHourlyRate * 100) / 100,
       })
 
-      // Position 2: Infrastructure/tooling costs (if > 0)
+      // Position 2: Infrastructure costs (if > 0)
       if (totalCost > 0) {
         const costEur = Math.round(totalCost * 0.92 * 100) / 100
         newPositions.push({
           position: nextPos + 1,
-          beschreibung: `Technische Infrastruktur und Entwicklungstools`,
+          beschreibung: 'Technische Infrastruktur & externe Systemkosten',
           menge: 1,
           einheit: 'pauschal',
           einzelpreis: costEur,

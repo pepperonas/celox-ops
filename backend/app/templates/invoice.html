@@ -264,7 +264,7 @@
                 <td class="value">{{ "%.2f"|format(positions_subtotal|float) }} &euro;</td>
             </tr>
             <tr>
-                <td class="label">Rabatt{% if invoice.discount_reason %} ({{ invoice.discount_reason }}){% endif %}{% if invoice.discount_type == 'percent' %} {{ "%.0f"|format(invoice.discount_value|float) }}%{% endif %}:</td>
+                <td class="label">Projekt-Rabatt{% if invoice.discount_type == 'percent' %} ({{ "%.0f"|format(invoice.discount_value|float) }}%){% endif %}{% if invoice.discount_reason %} — {{ invoice.discount_reason }}{% endif %}:</td>
                 <td class="value">&minus;{{ "%.2f"|format(discount_amount|float) }} &euro;</td>
             </tr>
             {% endif %}
