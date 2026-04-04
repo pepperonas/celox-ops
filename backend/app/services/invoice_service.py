@@ -17,19 +17,17 @@ async def generate_invoice_number(db: AsyncSession) -> str:
     year = datetime.now().year
     prefix = f"CO-{year}-"
 
+    # Get all existing numbers for this year
     result = await db.execute(
         select(Invoice.invoice_number)
         .where(Invoice.invoice_number.like(f"{prefix}%"))
-        .order_by(Invoice.invoice_number.desc())
-        .limit(1)
     )
-    last_number = result.scalar_one_or_none()
+    existing = {int(n.split("-")[-1]) for n in result.scalars().all()}
 
-    if last_number:
-        last_seq = int(last_number.split("-")[-1])
-        next_seq = last_seq + 1
-    else:
-        next_seq = INVOICE_NUMBER_OFFSET + 1
+    # Find the first gap starting from offset+1
+    next_seq = INVOICE_NUMBER_OFFSET + 1
+    while next_seq in existing:
+        next_seq += 1
 
     return f"{prefix}{next_seq:04d}"
 
