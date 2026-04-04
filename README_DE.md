@@ -59,6 +59,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Multi-Projekt-Abrechnung** — Token-Tracker-Projekte und GitHub-Repos pro Rechnung über Checkboxen auswählen
 - **Aktivitätsdiagramm als Anlage** — optionales CSS-Balkendiagramm der täglichen Arbeitsintensität im PDF
 - **Rechnungsnummer-Offset** — konfigurierbar für extern vergebene Rechnungen (INVOICE_NUMBER_OFFSET in .env)
+- **Lückenlose Nummerierung** — gelöschte Entwürfe geben ihre Nummer zur Wiederverwendung frei (erste freie Lücke ab Offset+1)
+- **Wertorientierte Positionen** — KI-Import verwendet den Rechnungstitel als Positionsbeschreibung statt technischer KI-Begriffe
+- **Leistungsbeschreibung** — optionales Freitext-Feld, wird im PDF vor den Positionen angezeigt (Ergebnis statt Tools)
 - **Vollständige Zustandsspeicherung** — alle Toggles, Zeiträume, Projektauswahl und Rabatte beim Bearbeiten wiederhergestellt
 - **Einheitlicher Zeitraum** — GitHub Commits und Aktivitätsdiagramm übernehmen den Zeitraum vom KI-Nutzungsbericht
 - **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: KI-Zeit reimportieren, Summen neuberechnen, PDFs regenerieren

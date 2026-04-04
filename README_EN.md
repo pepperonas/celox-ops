@@ -59,6 +59,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Multi-project billing** — select specific Token Tracker projects and GitHub repos per invoice via checkboxes
 - **Activity chart attachment** — optional CSS bar chart showing daily work intensity in the PDF
 - **Invoice number offset** — configurable for externally issued invoices (INVOICE_NUMBER_OFFSET in .env)
+- **Gap-filling numbering** — deleted drafts free up their number for reuse (maintains sequential order)
+- **Value-oriented positions** — AI import uses invoice title as position description, not generic "KI-gestützte Entwicklung"
+- **Service description** — optional field shown prominently in PDF before line items (describe outcomes, not tools)
 - **Full state persistence** — all toggles, date ranges, project selections, and discounts restored when editing
 - **Unified date range** — GitHub commits and activity chart inherit the period from the AI usage report
 - **One-click draft refresh** — update all drafts to today: re-import AI time, recalculate totals, regenerate PDFs
