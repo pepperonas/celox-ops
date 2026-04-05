@@ -12,7 +12,7 @@ import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import TokenUsage from '../../components/TokenUsage'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate } from '../../types'
+import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -27,8 +27,10 @@ export default function CustomerDetail() {
   const [showActivityForm, setShowActivityForm] = useState(false)
   const [activityForm, setActivityForm] = useState({ type: 'note', title: '', description: '' })
   const [activityLoading, setActivityLoading] = useState(false)
+  const [pagespeedResults, setPagespeedResults] = useState<PagespeedResult[]>([])
+  const [pagespeedLoading, setPagespeedLoading] = useState(false)
 
-  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'aktivitaeten', 'tokens'] as const
+  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'aktivitaeten', 'pagespeed', 'tokens'] as const
   type TabKey = typeof validTabs[number]
   const hashTab = location.hash.replace('#', '') as TabKey
   const initialTab = validTabs.includes(hashTab) ? hashTab : 'auftraege'
@@ -50,6 +52,7 @@ export default function CustomerDetail() {
     getContracts({ customer_id: id }).then((r) => setContracts(r.items))
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
     getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+    api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
   }, [id])
 
 
@@ -155,6 +158,7 @@ export default function CustomerDetail() {
     { key: 'vertraege' as const, label: `Verträge (${contracts.length})` },
     { key: 'rechnungen' as const, label: `Rechnungen (${invoices.length})` },
     { key: 'aktivitaeten' as const, label: `Aktivitäten (${activitiesTotal})` },
+    ...(customer.website ? [{ key: 'pagespeed' as const, label: `PageSpeed (${pagespeedResults.length})` }] : []),
     ...(customer.token_tracker_url ? [{ key: 'tokens' as const, label: 'KI-Nutzung' }] : []),
   ]
 
@@ -491,6 +495,149 @@ export default function CustomerDetail() {
                 )
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'pagespeed' && (
+        <div>
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={async () => {
+                if (!customer.website) return
+                setPagespeedLoading(true)
+                toast.loading('PageSpeed Analyse läuft...', { id: 'pagespeed' })
+                try {
+                  const url = customer.website.startsWith('http') ? customer.website : `https://${customer.website}`
+                  const resp = await api.get('/pagespeed/analyze', { params: { url, strategy: 'mobile', customer_id: id }, responseType: 'blob' })
+                  const blobUrl = URL.createObjectURL(resp.data)
+                  window.open(blobUrl, '_blank')
+                  toast.success('PageSpeed Report erstellt.', { id: 'pagespeed' })
+                  api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
+                } catch {
+                  toast.error('PageSpeed Analyse fehlgeschlagen.', { id: 'pagespeed' })
+                }
+                setPagespeedLoading(false)
+              }}
+              disabled={pagespeedLoading}
+              className="btn-primary"
+            >
+              {pagespeedLoading ? 'Analyse läuft...' : 'Neue Analyse (Mobile)'}
+            </button>
+            <button
+              onClick={async () => {
+                if (!customer.website) return
+                setPagespeedLoading(true)
+                toast.loading('PageSpeed Analyse läuft...', { id: 'pagespeed' })
+                try {
+                  const url = customer.website.startsWith('http') ? customer.website : `https://${customer.website}`
+                  const resp = await api.get('/pagespeed/analyze', { params: { url, strategy: 'desktop', customer_id: id }, responseType: 'blob' })
+                  const blobUrl = URL.createObjectURL(resp.data)
+                  window.open(blobUrl, '_blank')
+                  toast.success('PageSpeed Report erstellt.', { id: 'pagespeed' })
+                  api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
+                } catch {
+                  toast.error('PageSpeed Analyse fehlgeschlagen.', { id: 'pagespeed' })
+                }
+                setPagespeedLoading(false)
+              }}
+              disabled={pagespeedLoading}
+              className="btn-secondary"
+            >
+              {pagespeedLoading ? 'Analyse läuft...' : 'Neue Analyse (Desktop)'}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-surface-2 border-b border-border">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Datum</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">URL</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Strategie</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Performance</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Barrierefrei</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Best Practices</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">SEO</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {pagespeedResults.length === 0 ? (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-text-muted">Keine PageSpeed-Ergebnisse vorhanden.</td></tr>
+                ) : (
+                  pagespeedResults.map((r) => {
+                    const scoreColor = (score: number | null) => {
+                      if (score === null) return 'text-text-muted'
+                      if (score >= 90) return 'text-green-500'
+                      if (score >= 50) return 'text-yellow-500'
+                      return 'text-red-500'
+                    }
+                    return (
+                      <tr key={r.id} className="hover:bg-surface-2 transition-colors">
+                        <td className="px-4 py-3 text-sm text-text">{formatDate(r.created_at)}</td>
+                        <td className="px-4 py-3 text-sm text-text truncate max-w-[200px]">{r.url}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-surface-2 px-2 py-0.5 rounded text-text-muted">
+                            {r.strategy === 'mobile' ? 'Mobile' : 'Desktop'}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-center font-semibold ${scoreColor(r.score_performance)}`}>
+                          {r.score_performance ?? '–'}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-center font-semibold ${scoreColor(r.score_accessibility)}`}>
+                          {r.score_accessibility ?? '–'}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-center font-semibold ${scoreColor(r.score_best_practices)}`}>
+                          {r.score_best_practices ?? '–'}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-center font-semibold ${scoreColor(r.score_seo)}`}>
+                          {r.score_seo ?? '–'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const resp = await api.get(`/pagespeed/results/${r.id}/pdf`, { responseType: 'blob' })
+                                  const blobUrl = URL.createObjectURL(resp.data)
+                                  window.open(blobUrl, '_blank')
+                                } catch {
+                                  toast.error('PDF konnte nicht geladen werden.')
+                                }
+                              }}
+                              className="text-accent hover:text-accent-hover transition-colors"
+                              title="PDF anzeigen"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await api.delete(`/pagespeed/results/${r.id}`)
+                                  setPagespeedResults((prev) => prev.filter((p) => p.id !== r.id))
+                                  toast.success('Ergebnis gelöscht.')
+                                } catch {
+                                  toast.error('Fehler beim Löschen.')
+                                }
+                              }}
+                              className="text-text-muted hover:text-red-500 transition-colors"
+                              title="Löschen"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

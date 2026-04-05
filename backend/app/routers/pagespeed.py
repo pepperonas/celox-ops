@@ -1,11 +1,20 @@
+import json
+import os
+import uuid
+
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from jinja2 import Template
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from weasyprint import HTML
 
 from app.auth import get_current_user
 from app.config import settings
+from app.database import get_db
+from app.models.pagespeed_result import PagespeedResult
+from app.schemas.pagespeed_result import PagespeedResultResponse
 
 router = APIRouter(
     prefix="/api/pagespeed",
@@ -14,6 +23,8 @@ router = APIRouter(
 )
 
 PAGESPEED_API = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+
+PDF_DIR = "/data/pagespeed"
 
 REPORT_TEMPLATE = Template("""<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><style>
@@ -35,7 +46,7 @@ h2 { font-size: 12pt; color: #1a1a2e; margin-top: 20px; }
 .opportunity { padding: 8px 10px; margin: 5px 0; background: #fff8e1; border-left: 3px solid #ffa400; border-radius: 0 4px 4px 0; font-size: 9pt; }
 .diagnostic { padding: 8px 10px; margin: 5px 0; background: #fce4ec; border-left: 3px solid #ff4e42; border-radius: 0 4px 4px 0; font-size: 9pt; }
 .passed { padding: 6px 10px; margin: 3px 0; font-size: 9pt; color: #666; }
-.passed::before { content: "✓ "; color: #0cce6b; }
+.passed::before { content: "\\2713 "; color: #0cce6b; }
 .meta { font-size: 8pt; color: #999; margin-top: 20px; }
 </style></head><body>
 <h1>Google PageSpeed Insights Report</h1>
@@ -67,7 +78,7 @@ h2 { font-size: 12pt; color: #1a1a2e; margin-top: 20px; }
 </table>
 
 {% if opportunities %}
-<h2>Optimierungsmöglichkeiten</h2>
+<h2>Optimierungsm\u00f6glichkeiten</h2>
 {% for o in opportunities %}
 <div class="opportunity">
     <strong>{{ o.title }}</strong>
@@ -94,7 +105,7 @@ h2 { font-size: 12pt; color: #1a1a2e; margin-top: 20px; }
 {% endfor %}
 {% endif %}
 
-<p class="meta">Generiert via Google PageSpeed Insights API v5. Daten können je nach Netzwerk und Serverauslastung variieren.</p>
+<p class="meta">Generiert via Google PageSpeed Insights API v5. Daten k\u00f6nnen je nach Netzwerk und Serverauslastung variieren.</p>
 </body></html>""")
 
 
@@ -126,8 +137,10 @@ def _color_hex(score: float) -> str:
 async def analyze_pagespeed(
     url: str = Query(...),
     strategy: str = Query("mobile", regex="^(mobile|desktop)$"),
+    customer_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
 ) -> Response:
-    """Führt Google PageSpeed Analyse durch und gibt PDF zurück."""
+    """Führt Google PageSpeed Analyse durch, speichert Ergebnis und gibt PDF zurück."""
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             params: dict = {
@@ -156,12 +169,14 @@ async def analyze_pagespeed(
         "best-practices": "Best Practices",
         "seo": "SEO",
     }
+    score_values = {}
     for key, label in cat_map.items():
         cat = cats.get(key, {})
         score = cat.get("score", 0) or 0
+        score_values[key] = int(score * 100)
         categories.append({
             "label": label,
-            "score": int(score * 100),
+            "score": score_values[key],
             "color": _score_color(score),
         })
 
@@ -180,7 +195,7 @@ async def analyze_pagespeed(
         score = audit.get("score", 0) or 0
         metrics.append({
             "label": label,
-            "value": audit.get("displayValue", "–"),
+            "value": audit.get("displayValue", "\u2013"),
             "rating": _score_label(score),
             "color": _color_hex(score),
         })
@@ -226,10 +241,101 @@ async def analyze_pagespeed(
     )
 
     pdf = HTML(string=html).write_pdf()
-    filename = f"PageSpeed_{url.replace('https://', '').replace('http://', '').replace('/', '_')}.pdf"
+    domain = url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
+    filename = f"PageSpeed_{domain}.pdf"
+
+    # Save to DB if customer_id provided
+    if customer_id:
+        os.makedirs(PDF_DIR, exist_ok=True)
+        result_id = uuid.uuid4()
+        pdf_filename = f"{result_id}.pdf"
+        pdf_path = os.path.join(PDF_DIR, pdf_filename)
+        with open(pdf_path, "wb") as f:
+            f.write(pdf)
+
+        result = PagespeedResult(
+            id=result_id,
+            customer_id=uuid.UUID(customer_id),
+            url=url,
+            strategy=strategy,
+            score_performance=score_values.get("performance"),
+            score_accessibility=score_values.get("accessibility"),
+            score_best_practices=score_values.get("best-practices"),
+            score_seo=score_values.get("seo"),
+            pdf_path=pdf_path,
+            raw_scores=json.dumps(score_values),
+        )
+        db.add(result)
+        await db.commit()
 
     return Response(
         content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/results", response_model=list[PagespeedResultResponse])
+async def list_pagespeed_results(
+    customer_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+) -> list[PagespeedResultResponse]:
+    """Liste aller PageSpeed-Ergebnisse für einen Kunden."""
+    result = await db.execute(
+        select(PagespeedResult)
+        .where(PagespeedResult.customer_id == uuid.UUID(customer_id))
+        .order_by(PagespeedResult.created_at.desc())
+    )
+    return [PagespeedResultResponse.model_validate(r) for r in result.scalars().all()]
+
+
+@router.delete("/results/{result_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_pagespeed_result(
+    result_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Löscht ein PageSpeed-Ergebnis und die zugehörige PDF."""
+    result = await db.execute(
+        select(PagespeedResult).where(PagespeedResult.id == uuid.UUID(result_id))
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Ergebnis nicht gefunden")
+
+    # Delete PDF file
+    if entry.pdf_path and os.path.exists(entry.pdf_path):
+        os.remove(entry.pdf_path)
+
+    await db.execute(
+        delete(PagespeedResult).where(PagespeedResult.id == uuid.UUID(result_id))
+    )
+    await db.commit()
+
+
+@router.get("/results/{result_id}/pdf")
+async def download_pagespeed_pdf(
+    result_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Lädt die gespeicherte PDF eines PageSpeed-Ergebnisses herunter."""
+    result = await db.execute(
+        select(PagespeedResult).where(PagespeedResult.id == uuid.UUID(result_id))
+    )
+    entry = result.scalar_one_or_none()
+    if not entry or not entry.pdf_path:
+        raise HTTPException(status_code=404, detail="PDF nicht gefunden")
+
+    if not os.path.exists(entry.pdf_path):
+        raise HTTPException(status_code=404, detail="PDF-Datei nicht gefunden")
+
+    with open(entry.pdf_path, "rb") as f:
+        pdf_data = f.read()
+
+    domain = entry.url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
+    filename = f"PageSpeed_{domain}_{entry.created_at.strftime('%Y%m%d')}.pdf"
+
+    return Response(
+        content=pdf_data,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

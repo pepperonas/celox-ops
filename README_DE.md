@@ -226,7 +226,11 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Automatische Website-Performance-Analyse via Google PageSpeed Insights API v5
 - PDF-Report mit 4 Scores (Performance, Barrierefreiheit, Best Practices, SEO)
 - Core Web Vitals, Optimierungsmöglichkeiten, Diagnosen, bestandene Prüfungen
-- Verfügbar auf Kundendetailseite und Lead-Formular
+- **Ergebnis-Historie** — alle Analysen werden in der Datenbank gespeichert und im eigenen Tab auf der Kundendetailseite angezeigt
+- **Tabelle mit Farbcodes** — Performance, Barrierefreiheit, Best Practices, SEO pro Ergebnis farbcodiert (grün/gelb/rot)
+- Mobile und Desktop Analyse separat ausführbar
+- Gespeicherte PDFs jederzeit erneut abrufbar oder löschbar
+- Verfügbar auf Kundendetailseite (eigener Tab bei hinterlegter Website) und Lead-Formular
 - Optionaler API-Key für höheres Kontingent (PAGESPEED_API_KEY in .env)
 
 ### Intelligente Autovervollständigung
@@ -368,7 +372,10 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `GET` | `/api/github/repos` | GitHub-Repositories auflisten |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | E-Mail-Vorlagen-CRUD |
 | `POST` | `/api/email-templates/seed` | Standardvorlagen erstellen |
-| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF-Report |
+| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF-Report (speichert in DB bei customer_id) |
+| `GET` | `/api/pagespeed/results` | PageSpeed-Ergebnisse pro Kunde |
+| `DELETE` | `/api/pagespeed/results/{id}` | PageSpeed-Ergebnis löschen |
+| `GET` | `/api/pagespeed/results/{id}/pdf` | Gespeicherte PageSpeed-PDF herunterladen |
 | `GET` | `/api/documents/templates` | Dokumentvorlagen auflisten |
 | `POST` | `/api/documents/generate` | Einzelnes Dokument als PDF |
 | `POST` | `/api/documents/generate-all` | Alle Dokumente als ZIP |
@@ -556,12 +563,14 @@ celox-ops/
 │       │   ├── activity.py     # Aktivitätsprotokoll-Modell
 │       │   ├── expense.py      # Ausgaben-Modell
 │       │   ├── attachment.py   # Dateianhang-Modell
-│       │   └── email_template.py # E-Mail-Vorlagen-Modell
+│       │   ├── email_template.py # E-Mail-Vorlagen-Modell
+│       │   └── pagespeed_result.py # PageSpeed-Ergebnis-Modell
 │       ├── schemas/            # Pydantic v2 Request/Response Schemas
 │       │   ├── time_entry.py   # Zeiteintrag-Schemas
 │       │   ├── activity.py     # Aktivitätsprotokoll-Schemas
 │       │   ├── expense.py      # Ausgaben-Schemas
 │       │   ├── email_template.py # E-Mail-Vorlagen-Schemas
+│       │   ├── pagespeed_result.py # PageSpeed-Ergebnis-Schemas
 │       │   └── ...
 │       ├── routers/            # API-Endpunkte (alle paginiert)
 │       │   ├── customers.py    # CRUD + Suche + Referenzprüfung

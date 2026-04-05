@@ -86,6 +86,9 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 
 ### PageSpeed Integration
 - `routers/pagespeed.py` calls Google PageSpeed Insights API v5
+- Results stored in `pagespeed_results` table with scores, PDF path, and customer link
+- PDFs saved to `/data/pagespeed/` volume; list/delete/download via dedicated endpoints
+- Customer detail page shows PageSpeed tab (when website set) with color-coded score table
 - Optional `PAGESPEED_API_KEY` for higher quota (set in .env)
 - Nginx proxy timeout must be ≥120s for slow API responses
 
@@ -96,7 +99,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Special terms**: Stored as JSON array string in `special_terms` field. Single string also supported (backward compatible).
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (11)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates
+## Database Tables (12)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results
 
 Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.

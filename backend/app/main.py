@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import async_session_factory, engine
 from app.models.customer import Base
+import app.models.pagespeed_result  # noqa: F401 — register for create_all
 from app.services.cron_service import check_overdue_invoices
 
 logger = logging.getLogger(__name__)

@@ -226,7 +226,11 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Automated website performance analysis via Google PageSpeed Insights API v5
 - PDF report with 4 scores (Performance, Accessibility, Best Practices, SEO)
 - Core Web Vitals, optimization opportunities, diagnostics, passed audits
-- Available on customer detail page and lead form
+- **Result history** — all analyses are stored in the database and displayed in a dedicated tab on the customer detail page
+- **Color-coded score table** — Performance, Accessibility, Best Practices, SEO per result color-coded (green/yellow/red)
+- Mobile and Desktop analysis separately executable
+- Stored PDFs can be re-downloaded or deleted at any time
+- Available on customer detail page (dedicated tab when website is set) and lead form
 - Optional API key for higher quota (PAGESPEED_API_KEY in .env)
 
 ### Smart Autocomplete
@@ -368,7 +372,10 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `GET` | `/api/github/repos` | List GitHub repositories |
 | `GET/POST/PUT/DELETE` | `/api/email-templates` | Email template CRUD |
 | `POST` | `/api/email-templates/seed` | Create default templates |
-| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF report |
+| `GET` | `/api/pagespeed/analyze` | Google PageSpeed PDF report (saves to DB if customer_id given) |
+| `GET` | `/api/pagespeed/results` | List PageSpeed results for customer |
+| `DELETE` | `/api/pagespeed/results/{id}` | Delete PageSpeed result |
+| `GET` | `/api/pagespeed/results/{id}/pdf` | Download stored PageSpeed PDF |
 | `GET` | `/api/documents/templates` | List document templates |
 | `POST` | `/api/documents/generate` | Generate single document PDF |
 | `POST` | `/api/documents/generate-all` | Generate all documents as ZIP |
@@ -552,12 +559,14 @@ OPS/
 │       │   ├── activity.py     # Activity log model
 │       │   ├── expense.py      # Expense model
 │       │   ├── attachment.py   # File attachment model
-│       │   └── email_template.py # Email template model
+│       │   ├── email_template.py # Email template model
+│       │   └── pagespeed_result.py # PageSpeed result model
 │       ├── schemas/            # Pydantic v2 request/response schemas
 │       │   ├── time_entry.py   # Time entry schemas
 │       │   ├── activity.py     # Activity log schemas
 │       │   ├── expense.py      # Expense schemas
 │       │   ├── email_template.py # Email template schemas
+│       │   ├── pagespeed_result.py # PageSpeed result schemas
 │       │   └── ...
 │       ├── routers/            # API endpoints (all paginated)
 │       │   ├── customers.py    # CRUD + search + reference check

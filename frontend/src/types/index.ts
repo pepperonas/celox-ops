@@ -422,6 +422,19 @@ export interface ExpenseSummary {
   by_month: { month: number; total: number }[]
 }
 
+export interface PagespeedResult {
+  id: string
+  customer_id: string
+  url: string
+  strategy: string
+  score_performance: number | null
+  score_accessibility: number | null
+  score_best_practices: number | null
+  score_seo: number | null
+  pdf_path: string | null
+  created_at: string
+}
+
 export interface EmailTemplate {
   id: string
   name: string
