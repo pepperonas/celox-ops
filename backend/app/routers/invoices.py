@@ -558,6 +558,12 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
     for inv in drafts:
         changed = False
 
+        # Always update invoice_date to today
+        if inv.invoice_date != today:
+            inv.invoice_date = today
+            inv.due_date = today + timedelta(days=14)
+            changed = True
+
         # Update token_usage_to to today
         if inv.token_usage_from:
             inv.token_usage_to = today
@@ -630,9 +636,19 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                             "gesamt": str(cost_eur),
                         })
 
-                    # Keep non-KI positions (manually added ones)
-                    manual_positions = [p for p in (inv.positions or [])
-                                       if not str(p.get("beschreibung", "")).startswith("KI-")]
+                    # Remove old auto-generated positions, keep manual ones
+                    def _is_auto_position(p: dict) -> bool:
+                        desc = str(p.get("beschreibung", ""))
+                        if desc.startswith("KI-"):
+                            return True
+                        if desc == "Technische Infrastruktur & externe Systemkosten":
+                            return True
+                        # Matches "<title> (YYYY-MM-DD – YYYY-MM-DD)"
+                        if inv.title and desc.startswith(inv.title + " (") and " – " in desc:
+                            return True
+                        return False
+
+                    manual_positions = [p for p in (inv.positions or []) if not _is_auto_position(p)]
                     all_positions = new_positions + manual_positions
                     for i, p in enumerate(all_positions):
                         p["position"] = i + 1

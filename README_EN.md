@@ -64,7 +64,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Service description** — optional field shown prominently in PDF before line items (describe outcomes, not tools)
 - **Full state persistence** — all toggles, date ranges, project selections, and discounts restored when editing
 - **Unified date range** — GitHub commits and activity chart inherit the period from the AI usage report
-- **One-click draft refresh** — update all drafts to today: re-import AI time, recalculate totals, regenerate PDFs
+- **One-click draft refresh** — update all drafts to today: set invoice date + payment term, re-import AI time (old auto-positions replaced, manual ones preserved), recalculate totals, regenerate PDFs
 - **Per-invoice tax control** — checkbox to include/exclude VAT (Kleinunternehmerregelung per invoice, not just globally)
 
 ### Quick Invoices

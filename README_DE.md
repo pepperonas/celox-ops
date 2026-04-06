@@ -64,7 +64,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Leistungsbeschreibung** — optionales Freitext-Feld, wird im PDF vor den Positionen angezeigt (Ergebnis statt Tools)
 - **Vollständige Zustandsspeicherung** — alle Toggles, Zeiträume, Projektauswahl und Rabatte beim Bearbeiten wiederhergestellt
 - **Einheitlicher Zeitraum** — GitHub Commits und Aktivitätsdiagramm übernehmen den Zeitraum vom KI-Nutzungsbericht
-- **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: KI-Zeit reimportieren, Summen neuberechnen, PDFs regenerieren
+- **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: Rechnungsdatum + Zahlungsziel setzen, KI-Zeit reimportieren (alte Auto-Positionen werden ersetzt, manuelle bleiben erhalten), Summen neuberechnen, PDFs regenerieren
 - **USt-Steuerung pro Rechnung** — Checkbox für USt inkl./exkl. (Kleinunternehmerregelung pro Rechnung, nicht nur global)
 
 ### Schnellrechnungen
