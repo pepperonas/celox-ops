@@ -1,8 +1,10 @@
 import os
 import uuid
+from pathlib import PurePosixPath
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +13,7 @@ from app.database import get_db
 from app.models.attachment import Attachment
 
 ATTACHMENTS_DIR = "/data/attachments"
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 router = APIRouter(
     prefix="/api/attachments",
@@ -23,6 +26,11 @@ def _ensure_dir():
     os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
 
 
+def _safe_filename(name: str) -> str:
+    """Strip directory components to prevent path traversal."""
+    return PurePosixPath(name).name or "unnamed"
+
+
 def _attachment_to_dict(a: Attachment) -> dict:
     return {
         "id": str(a.id),
@@ -33,6 +41,8 @@ def _attachment_to_dict(a: Attachment) -> dict:
         "original_name": a.original_name,
         "content_type": a.content_type,
         "size": a.size,
+        "description": a.description,
+        "notes": a.notes,
         "created_at": a.created_at.isoformat() if a.created_at else None,
     }
 
@@ -43,16 +53,23 @@ async def upload_attachment(
     customer_id: str | None = Form(None),
     order_id: str | None = Form(None),
     contract_id: str | None = Form(None),
+    description: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     _ensure_dir()
 
     file_id = uuid.uuid4()
-    original_name = file.filename or "unnamed"
+    original_name = _safe_filename(file.filename or "unnamed")
     stored_name = f"{file_id}_{original_name}"
     file_path = os.path.join(ATTACHMENTS_DIR, stored_name)
 
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Datei zu groß (max. 20 MB).",
+        )
+
     with open(file_path, "wb") as f:
         f.write(content)
 
@@ -65,10 +82,16 @@ async def upload_attachment(
         original_name=original_name,
         content_type=file.content_type or "application/octet-stream",
         size=len(content),
+        description=description,
     )
-    db.add(attachment)
-    await db.flush()
-    await db.refresh(attachment)
+    try:
+        db.add(attachment)
+        await db.flush()
+        await db.refresh(attachment)
+    except Exception:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise
 
     return _attachment_to_dict(attachment)
 
@@ -117,6 +140,33 @@ async def download_attachment(
         filename=attachment.original_name,
         media_type=attachment.content_type,
     )
+
+
+class AttachmentUpdate(BaseModel):
+    description: str | None = None
+    notes: str | None = None
+
+
+@router.patch("/{attachment_id}")
+async def update_attachment(
+    attachment_id: uuid.UUID,
+    data: AttachmentUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(
+        select(Attachment).where(Attachment.id == attachment_id)
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Anhang nicht gefunden")
+
+    if data.description is not None:
+        attachment.description = data.description
+    if data.notes is not None:
+        attachment.notes = data.notes
+    await db.flush()
+    await db.refresh(attachment)
+    return _attachment_to_dict(attachment)
 
 
 @router.delete("/{attachment_id}", status_code=204)

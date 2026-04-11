@@ -30,7 +30,9 @@ export default function CustomerDetail() {
   const [pagespeedResults, setPagespeedResults] = useState<PagespeedResult[]>([])
   const [pagespeedLoading, setPagespeedLoading] = useState(false)
 
-  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'aktivitaeten', 'pagespeed', 'tokens'] as const
+  const [attachmentsCount, setAttachmentsCount] = useState(0)
+
+  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'dokumente', 'aktivitaeten', 'pagespeed', 'tokens'] as const
   type TabKey = typeof validTabs[number]
   const hashTab = location.hash.replace('#', '') as TabKey
   const initialTab = validTabs.includes(hashTab) ? hashTab : 'auftraege'
@@ -157,6 +159,7 @@ export default function CustomerDetail() {
     { key: 'auftraege' as const, label: `Aufträge (${orders.length})` },
     { key: 'vertraege' as const, label: `Verträge (${contracts.length})` },
     { key: 'rechnungen' as const, label: `Rechnungen (${invoices.length})` },
+    { key: 'dokumente' as const, label: `Dokumente (${attachmentsCount})` },
     { key: 'aktivitaeten' as const, label: `Aktivitäten (${activitiesTotal})` },
     ...(customer.website ? [{ key: 'pagespeed' as const, label: `PageSpeed (${pagespeedResults.length})` }] : []),
     ...(customer.token_tracker_url ? [{ key: 'tokens' as const, label: 'KI-Nutzung' }] : []),
@@ -275,11 +278,6 @@ export default function CustomerDetail() {
         )}
       </div>
 
-      {/* Anhänge */}
-      <div className="mb-6">
-        <FileAttachments customer_id={id} />
-      </div>
-
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-border">
         {tabs.map((tab) => (
@@ -395,6 +393,10 @@ export default function CustomerDetail() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeTab === 'dokumente' && (
+        <FileAttachments customer_id={id} onCountChange={setAttachmentsCount} />
       )}
 
       {activeTab === 'aktivitaeten' && (

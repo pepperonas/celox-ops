@@ -210,7 +210,7 @@ async def analyze_pagespeed(
                 "description": audit.get("description", "")[:200],
                 "savings": f"{int(savings)}ms" if savings else None,
             })
-    opportunities.sort(key=lambda x: x.get("savings") or "0", reverse=True)
+    opportunities.sort(key=lambda x: int((x.get("savings") or "0ms").replace("ms", "") or 0), reverse=True)
 
     # Diagnostics
     diagnostics = []

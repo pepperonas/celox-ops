@@ -21,7 +21,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Overview of linked orders, contracts, and invoices per customer
 - Full-text search across all fields
 - Deletion protection when references exist
-- **File attachments** — upload documents to customers, orders, and contracts
+- **Document management** — dedicated tab per customer for file uploads (drag & drop, max 20 MB), with description and notes, editable after upload
 - **DSGVO data export** — one-click export of all customer data (Art. 15 DSGVO)
 - **Google PageSpeed Insights** — one-click PDF report with performance, accessibility, SEO scores
 
@@ -56,6 +56,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Credit notes** (Gutschriften) — separate number series GS-YYYY-NNNN, linked to original invoice
 - **Discount function** — percentage or fixed amount with autocomplete for reasons (loyalty, first-time customer, volume, non-profit, etc.)
 - Discount shown as negative position on invoice PDF
+- **Special terms** — unlimited per invoice with autocomplete (hosting, support, SSL, migrations, payment plans, etc.)
 - **Multi-project billing** — select specific Token Tracker projects and GitHub repos per invoice via checkboxes
 - **Activity chart attachment** — optional CSS bar chart showing daily work intensity in the PDF
 - **Invoice number offset** — configurable for externally issued invoices (INVOICE_NUMBER_OFFSET in .env)
@@ -66,6 +67,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Unified date range** — GitHub commits and activity chart inherit the period from the AI usage report
 - **One-click draft refresh** — update all drafts to today: set invoice date + payment term, re-import AI time (old auto-positions replaced, manual ones preserved), recalculate totals, regenerate PDFs
 - **Per-invoice tax control** — checkbox to include/exclude VAT (Kleinunternehmerregelung per invoice, not just globally)
+- **Complete detail view** — invoice detail page shows discount (subtotal, deduction, reason), special terms, service description, and tax exemption notice
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -363,6 +365,7 @@ All endpoints under `/api/`, protected via JWT Bearer Token.
 | `POST` | `/api/invoices/{id}/payment` | Record partial payment |
 | `POST` | `/api/invoices/{id}/credit-note` | Create credit note |
 | `GET/POST/DELETE` | `/api/attachments` | File attachment CRUD |
+| `PATCH` | `/api/attachments/{id}` | Update description/notes |
 | `GET` | `/api/attachments/{id}/download` | Download attachment |
 | `GET` | `/api/customers/{id}/dsgvo-export` | DSGVO data export |
 | `GET` | `/api/dashboard/charts` | Dashboard chart data |

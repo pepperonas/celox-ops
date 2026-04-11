@@ -48,7 +48,7 @@ def calculate_invoice_totals(
 
     # Apply discount
     discount = Decimal("0.00")
-    if discount_type and discount_value:
+    if discount_type and discount_value is not None and discount_value != 0:
         if discount_type == "percent":
             discount = (positions_subtotal * Decimal(str(discount_value)) / Decimal("100")).quantize(Decimal("0.01"))
         else:

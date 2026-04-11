@@ -21,7 +21,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Übersicht verknüpfter Aufträge, Verträge und Rechnungen pro Kunde
 - Volltextsuche über alle Felder
 - Löschschutz bei bestehenden Referenzen
-- **Dateianhänge** — Dokumente an Kunden, Aufträge und Verträge anhängen
+- **Dokumentenverwaltung** — eigener Tab pro Kunde für Datei-Uploads (Drag & Drop, max. 20 MB), mit Beschreibung und Notizen, nachträglich editierbar
 - **DSGVO-Datenexport** — Ein-Klick-Export aller Kundendaten (Art. 15 DSGVO)
 - **Google PageSpeed Insights** — Ein-Klick PDF-Report mit Performance, Barrierefreiheit, SEO Scores
 
@@ -56,6 +56,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Gutschriften** — eigener Nummernkreis GS-YYYY-NNNN, verknüpft mit Originalrechnung
 - **Rabattfunktion** — prozentual oder Festbetrag mit Autovervollständigung für Begründungen (Treuerabatt, Erstkundenrabatt, Mengenrabatt, Non-Profit, etc.)
 - Rabatt als negative Position auf dem Rechnungs-PDF
+- **Sondervereinbarungen** — beliebig viele pro Rechnung mit Autovervollständigung (Hosting, Support, SSL, Migrationen, Zahlungspläne, etc.)
 - **Multi-Projekt-Abrechnung** — Token-Tracker-Projekte und GitHub-Repos pro Rechnung über Checkboxen auswählen
 - **Aktivitätsdiagramm als Anlage** — optionales CSS-Balkendiagramm der täglichen Arbeitsintensität im PDF
 - **Rechnungsnummer-Offset** — konfigurierbar für extern vergebene Rechnungen (INVOICE_NUMBER_OFFSET in .env)
@@ -66,6 +67,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Einheitlicher Zeitraum** — GitHub Commits und Aktivitätsdiagramm übernehmen den Zeitraum vom KI-Nutzungsbericht
 - **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: Rechnungsdatum + Zahlungsziel setzen, KI-Zeit reimportieren (alte Auto-Positionen werden ersetzt, manuelle bleiben erhalten), Summen neuberechnen, PDFs regenerieren
 - **USt-Steuerung pro Rechnung** — Checkbox für USt inkl./exkl. (Kleinunternehmerregelung pro Rechnung, nicht nur global)
+- **Vollständige Detailansicht** — Rechnungsdetailseite zeigt Rabatt (Zwischensumme, Abzug, Grund), Sondervereinbarungen, Leistungsbeschreibung und Steuerbefreiungshinweis
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -363,6 +365,7 @@ Alle Endpunkte unter `/api/`, geschützt via JWT Bearer Token.
 | `POST` | `/api/invoices/{id}/payment` | Teilzahlung erfassen |
 | `POST` | `/api/invoices/{id}/credit-note` | Gutschrift erstellen |
 | `GET/POST/DELETE` | `/api/attachments` | Dateianhang-CRUD |
+| `PATCH` | `/api/attachments/{id}` | Beschreibung/Notizen aktualisieren |
 | `GET` | `/api/attachments/{id}/download` | Anhang herunterladen |
 | `GET` | `/api/customers/{id}/dsgvo-export` | DSGVO-Datenexport |
 | `GET` | `/api/dashboard/charts` | Dashboard-Diagrammdaten |

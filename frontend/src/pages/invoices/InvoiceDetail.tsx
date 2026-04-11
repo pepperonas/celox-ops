@@ -464,20 +464,81 @@ export default function InvoiceDetail() {
 
         {/* Totals */}
         <div className="mt-4 pt-4 border-t border-border flex flex-col items-end gap-1">
+          {invoice.discount_type && invoice.discount_value != null && invoice.discount_value > 0 && (
+            <>
+              <div className="flex justify-between w-64">
+                <span className="text-sm text-text-muted">Zwischensumme:</span>
+                <span className="text-sm text-text tabular-nums">
+                  {formatCurrency(invoice.positions.reduce((sum, p) => sum + Number(p.gesamt), 0))}
+                </span>
+              </div>
+              <div className="flex justify-between w-64">
+                <span className="text-sm text-success">
+                  Rabatt{invoice.discount_type === 'percent' ? ` (${invoice.discount_value}%)` : ''}:
+                </span>
+                <span className="text-sm text-success tabular-nums">
+                  −{formatCurrency(
+                    invoice.discount_type === 'percent'
+                      ? invoice.positions.reduce((sum, p) => sum + Number(p.gesamt), 0) * (Number(invoice.discount_value) / 100)
+                      : Number(invoice.discount_value)
+                  )}
+                </span>
+              </div>
+              {invoice.discount_reason && (
+                <div className="w-64 text-right">
+                  <span className="text-xs text-text-muted italic">{invoice.discount_reason}</span>
+                </div>
+              )}
+            </>
+          )}
           <div className="flex justify-between w-64">
             <span className="text-sm text-text-muted">Netto:</span>
             <span className="text-sm text-text tabular-nums">{formatCurrency(invoice.subtotal)}</span>
           </div>
-          <div className="flex justify-between w-64">
-            <span className="text-sm text-text-muted">USt. ({invoice.tax_rate}%):</span>
-            <span className="text-sm text-text tabular-nums">{formatCurrency(invoice.tax_amount)}</span>
-          </div>
+          {invoice.tax_exempt ? (
+            <div className="flex justify-between w-64">
+              <span className="text-sm text-text-muted">USt.:</span>
+              <span className="text-sm text-text-muted text-xs">Steuerfrei gem. § 19 UStG</span>
+            </div>
+          ) : (
+            <div className="flex justify-between w-64">
+              <span className="text-sm text-text-muted">USt. ({invoice.tax_rate}%):</span>
+              <span className="text-sm text-text tabular-nums">{formatCurrency(invoice.tax_amount)}</span>
+            </div>
+          )}
           <div className="flex justify-between w-64 pt-2 border-t border-border">
             <span className="font-semibold text-text">Brutto:</span>
             <span className="font-bold text-accent text-lg tabular-nums">{formatCurrency(invoice.total)}</span>
           </div>
         </div>
       </div>
+
+      {/* Special Terms */}
+      {invoice.special_terms && (() => {
+        let terms: string[] = []
+        try { terms = JSON.parse(invoice.special_terms) } catch { terms = invoice.special_terms ? [invoice.special_terms] : [] }
+        return terms.length > 0 ? (
+          <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+            <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-3">Sondervereinbarungen</h3>
+            <ul className="space-y-1.5">
+              {terms.map((term, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-text">
+                  <span className="text-accent mt-0.5">•</span>
+                  <span>{term}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null
+      })()}
+
+      {/* Service Description */}
+      {invoice.service_description && (
+        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+          <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Leistungsbeschreibung</p>
+          <p className="text-text text-sm whitespace-pre-wrap">{invoice.service_description}</p>
+        </div>
+      )}
 
       {/* Notes */}
       {invoice.notes && (

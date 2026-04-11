@@ -63,7 +63,8 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Routing**: German paths (`/kunden`, `/auftraege`, `/rechnungen`, `/vorgemerkt`, `/ausgaben`, etc.)
 - **Theme**: GitHub-inspired dark theme. Colors defined as CSS variables in `index.css` AND as Tailwind custom colors in `tailwind.config.ts`. Key colors: `bg` (#0d1117), `surface` (#161b22), `accent` (#58a6ff).
 - **Charts**: Chart.js + react-chartjs-2. Cast options as `any` to avoid TS issues with Chart.js types.
-- **Tab persistence**: CustomerDetail uses URL hash (`#auftraege`, `#tokens`) for tab state.
+- **Tab persistence**: CustomerDetail uses URL hash (`#auftraege`, `#dokumente`, `#tokens`) for tab state.
+- **Attachments**: `FileAttachments` component with drag & drop, description + notes (inline-editable). PATCH endpoint uses JSON body (not FormData). Upload uses FormData with 20MB server-side limit.
 
 ### Token Tracker Integration
 - Backend proxies to Token Tracker via `TOKEN_TRACKER_BASE_URL` (internal Docker URL: `http://host.docker.internal:3007`)
@@ -95,8 +96,13 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 ### Key Gotchas (continued)
 - **Nginx timeout**: Set to 120s in `nginx/default.conf` for PageSpeed and other long-running API calls
 - **Signature in documents**: Image goes ABOVE the line (`border-top`), text BELOW. Signature HTML is a placeholder `{signature_html}` replaced during rendering.
-- **Discount storage**: Stored as `discount_type` (percent/fixed), `discount_value`, `discount_reason` on Invoice model — NOT as negative positions.
+- **Discount storage**: Stored as `discount_type` (percent/fixed), `discount_value`, `discount_reason` on Invoice model — NOT as negative positions. Guard in `invoice_service.py` uses `discount_value is not None and discount_value != 0`.
 - **Special terms**: Stored as JSON array string in `special_terms` field. Single string also supported (backward compatible).
+- **Attachment fields**: `description` (String 500) and `notes` (String 2000) on Attachment model. PATCH endpoint accepts JSON body (`AttachmentUpdate` Pydantic model), NOT FormData.
+- **Path traversal prevention**: Attachment filenames sanitized via `PurePosixPath(name).name` before storage.
+- **Orphan file cleanup**: Upload writes file first, then DB insert in try/except — file removed on DB failure.
+- **Async httpx in refresh-drafts**: Uses `httpx.AsyncClient` (not sync `httpx.get`) to avoid blocking the event loop.
+- **Invoice detail display**: `positions[].gesamt` values from JSON may be strings — always wrap in `Number()` before arithmetic.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
 ## Database Tables (12)

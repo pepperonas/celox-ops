@@ -412,6 +412,8 @@ export interface Attachment {
   original_name: string
   content_type: string
   size: number
+  description: string | null
+  notes: string | null
   created_at: string
 }
 

@@ -3,17 +3,24 @@ import type { Attachment } from '../types'
 
 export async function uploadAttachment(
   file: File,
-  refs: { customer_id?: string; order_id?: string; contract_id?: string },
+  refs: { customer_id?: string; order_id?: string; contract_id?: string; description?: string },
 ): Promise<Attachment> {
   const formData = new FormData()
   formData.append('file', file)
   if (refs.customer_id) formData.append('customer_id', refs.customer_id)
   if (refs.order_id) formData.append('order_id', refs.order_id)
   if (refs.contract_id) formData.append('contract_id', refs.contract_id)
+  if (refs.description) formData.append('description', refs.description)
 
-  const res = await api.post('/attachments', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const res = await api.post('/attachments', formData)
+  return res.data
+}
+
+export async function updateAttachment(
+  id: string,
+  data: { description?: string; notes?: string },
+): Promise<Attachment> {
+  const res = await api.patch(`/attachments/${id}`, data)
   return res.data
 }
 

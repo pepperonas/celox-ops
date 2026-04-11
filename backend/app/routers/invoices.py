@@ -554,6 +554,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
 
     updated_count = 0
     pdf_count = 0
+    async_client = httpx.AsyncClient(timeout=30)
 
     for inv in drafts:
         changed = False
@@ -594,7 +595,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                         params = {"from": inv.token_usage_from.isoformat(), "to": today.isoformat()}
                         sep = "&" if "?" in url else "?"
                         full_url = f"{url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
-                        resp = httpx.get(full_url, timeout=30)
+                        resp = await async_client.get(full_url)
                         if resp.status_code == 200:
                             data = resp.json()
                             s = data.get("summary", {})
@@ -681,6 +682,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
             except Exception:
                 pass
 
+    await async_client.aclose()
     await db.flush()
 
     return {
