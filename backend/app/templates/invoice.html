@@ -249,8 +249,8 @@
                 <td>{{ pos.beschreibung }}</td>
                 <td>{{ "%.2f"|format(pos.menge|float) }}</td>
                 <td>{{ pos.einheit if pos.einheit is defined else 'Stk' }}</td>
-                <td>{{ "%.2f"|format(pos.einzelpreis|float) }} &euro;</td>
-                <td>{{ "%.2f"|format(pos.gesamt|float) }} &euro;</td>
+                <td>{{ "%.2f"|format(pos.einzelpreis|float) }}&nbsp;&euro;</td>
+                <td>{{ "%.2f"|format(pos.gesamt|float) }}&nbsp;&euro;</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -261,26 +261,26 @@
             {% if invoice.discount_type and invoice.discount_value %}
             <tr>
                 <td class="label">Zwischensumme:</td>
-                <td class="value">{{ "%.2f"|format(positions_subtotal|float) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(positions_subtotal|float) }}&nbsp;&euro;</td>
             </tr>
             <tr>
                 <td class="label">Projekt-Rabatt{% if invoice.discount_type == 'percent' %} ({{ "%.0f"|format(invoice.discount_value|float) }}%){% endif %}{% if invoice.discount_reason %} — {{ invoice.discount_reason }}{% endif %}:</td>
-                <td class="value">&minus;{{ "%.2f"|format(discount_amount|float) }} &euro;</td>
+                <td class="value">&minus;{{ "%.2f"|format(discount_amount|float) }}&nbsp;&euro;</td>
             </tr>
             {% endif %}
             <tr>
                 <td class="label">Nettobetrag:</td>
-                <td class="value">{{ "%.2f"|format(invoice.subtotal|float) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(invoice.subtotal|float) }}&nbsp;&euro;</td>
             </tr>
             {% if not invoice.tax_exempt %}
             <tr>
                 <td class="label">MwSt. ({{ "%.0f"|format(invoice.tax_rate|float) }}%):</td>
-                <td class="value">{{ "%.2f"|format(invoice.tax_amount|float) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(invoice.tax_amount|float) }}&nbsp;&euro;</td>
             </tr>
             {% endif %}
             <tr class="total-row">
                 <td class="label">Gesamtbetrag:</td>
-                <td class="value">{{ "%.2f"|format(invoice.total|float) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(invoice.total|float) }}&nbsp;&euro;</td>
             </tr>
         </table>
     </div>

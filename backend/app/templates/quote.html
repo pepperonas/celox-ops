@@ -251,8 +251,8 @@
                 <td>{{ pos.beschreibung }}</td>
                 <td>{{ "%.2f"|format(pos.menge|float) }}</td>
                 <td>{{ pos.einheit if pos.einheit is defined else 'Stk' }}</td>
-                <td>{{ "%.2f"|format(pos.einzelpreis|float) }} &euro;</td>
-                <td>{{ "%.2f"|format(pos.gesamt|float) }} &euro;</td>
+                <td>{{ "%.2f"|format(pos.einzelpreis|float) }}&nbsp;&euro;</td>
+                <td>{{ "%.2f"|format(pos.gesamt|float) }}&nbsp;&euro;</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -262,21 +262,21 @@
         <table>
             <tr>
                 <td class="label">Nettobetrag:</td>
-                <td class="value">{{ "%.2f"|format(subtotal) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(subtotal) }}&nbsp;&euro;</td>
             </tr>
             {% if not kleinunternehmer %}
             <tr>
                 <td class="label">MwSt. (19%):</td>
-                <td class="value">{{ "%.2f"|format(subtotal * 0.19) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(subtotal * 0.19) }}&nbsp;&euro;</td>
             </tr>
             <tr class="total-row">
                 <td class="label">Gesamtbetrag:</td>
-                <td class="value">{{ "%.2f"|format(subtotal * 1.19) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(subtotal * 1.19) }}&nbsp;&euro;</td>
             </tr>
             {% else %}
             <tr class="total-row">
                 <td class="label">Gesamtbetrag:</td>
-                <td class="value">{{ "%.2f"|format(subtotal) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(subtotal) }}&nbsp;&euro;</td>
             </tr>
             {% endif %}
         </table>
@@ -286,7 +286,7 @@
         <table>
             <tr class="total-row">
                 <td class="label">Gesamtbetrag:</td>
-                <td class="value">{{ "%.2f"|format(order.amount|float) }} &euro;</td>
+                <td class="value">{{ "%.2f"|format(order.amount|float) }}&nbsp;&euro;</td>
             </tr>
         </table>
     </div>

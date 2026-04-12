@@ -541,9 +541,15 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
     """Aktualisiert alle Entwürfe: token_usage_to + github_commits_to auf heute, reimportiert KI-Daten, regeneriert PDFs."""
     from datetime import date, timedelta
     import json
+    import logging
+    import re
     import httpx
 
+    logger = logging.getLogger(__name__)
     today = date.today()
+
+    # Matches "<anything> (YYYY-MM-DD – YYYY-MM-DD)" with en-dash or hyphen
+    _period_pattern = re.compile(r"\(\d{4}-\d{2}-\d{2}\s+[–-]\s+\d{4}-\d{2}-\d{2}\)\s*$")
 
     result = await db.execute(
         select(Invoice)
@@ -626,6 +632,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                         "einheit": "Stunden",
                         "einzelpreis": str(hourly_rate),
                         "gesamt": str(round(hours * float(hourly_rate), 2)),
+                        "auto": True,
                     }]
                     if cost_eur > 0:
                         new_positions.append({
@@ -635,17 +642,21 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                             "einheit": "pauschal",
                             "einzelpreis": str(cost_eur),
                             "gesamt": str(cost_eur),
+                            "auto": True,
                         })
 
-                    # Remove old auto-generated positions, keep manual ones
+                    # Remove old auto-generated positions, keep manual ones.
+                    # Uses explicit auto:true flag (new) or legacy pattern matching (old data).
                     def _is_auto_position(p: dict) -> bool:
+                        if p.get("auto") is True:
+                            return True
                         desc = str(p.get("beschreibung", ""))
                         if desc.startswith("KI-"):
                             return True
                         if desc == "Technische Infrastruktur & externe Systemkosten":
                             return True
-                        # Matches "<title> (YYYY-MM-DD – YYYY-MM-DD)"
-                        if inv.title and desc.startswith(inv.title + " (") and " – " in desc:
+                        # Matches "<anything> (YYYY-MM-DD – YYYY-MM-DD)" regardless of title
+                        if _period_pattern.search(desc):
                             return True
                         return False
 
@@ -660,7 +671,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                     subtotal, tax_amount, total_amount = calculate_invoice_totals(
                         all_positions, inv.tax_rate, inv.tax_exempt,
                         discount_type=inv.discount_type,
-                        discount_value=float(inv.discount_value) if inv.discount_value else None,
+                        discount_value=float(inv.discount_value) if inv.discount_value is not None else None,
                     )
                     inv.subtotal = subtotal
                     inv.tax_amount = tax_amount
@@ -679,8 +690,8 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                 pdf_path = generate_invoice_pdf(inv, inv.customer)
                 inv.pdf_path = pdf_path
                 pdf_count += 1
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"PDF-Generierung fehlgeschlagen für Rechnung {inv.invoice_number}: {e}", exc_info=True)
 
     await async_client.aclose()
     await db.flush()

@@ -12,7 +12,9 @@ export async function uploadAttachment(
   if (refs.contract_id) formData.append('contract_id', refs.contract_id)
   if (refs.description) formData.append('description', refs.description)
 
-  const res = await api.post('/attachments', formData)
+  const res = await api.post('/attachments', formData, {
+    headers: { 'Content-Type': undefined },
+  })
   return res.data
 }
 

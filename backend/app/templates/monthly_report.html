@@ -148,15 +148,15 @@
     <div class="kpi-grid">
         <div class="kpi-box">
             <div class="kpi-label">Umsatz</div>
-            <div class="kpi-value green">{{ "%.2f"|format(kpis.revenue) }} &euro;</div>
+            <div class="kpi-value green">{{ "%.2f"|format(kpis.revenue) }}&nbsp;&euro;</div>
         </div>
         <div class="kpi-box">
             <div class="kpi-label">Ausgaben</div>
-            <div class="kpi-value red">{{ "%.2f"|format(kpis.expenses) }} &euro;</div>
+            <div class="kpi-value red">{{ "%.2f"|format(kpis.expenses) }}&nbsp;&euro;</div>
         </div>
         <div class="kpi-box">
             <div class="kpi-label">Gewinn</div>
-            <div class="kpi-value {% if kpis.profit >= 0 %}green{% else %}red{% endif %}">{{ "%.2f"|format(kpis.profit) }} &euro;</div>
+            <div class="kpi-value {% if kpis.profit >= 0 %}green{% else %}red{% endif %}">{{ "%.2f"|format(kpis.profit) }}&nbsp;&euro;</div>
         </div>
         <div class="kpi-box">
             <div class="kpi-label">Neue Kunden</div>
@@ -185,7 +185,7 @@
                 <td>{{ inv.customer_name }}</td>
                 <td>{{ inv.title }}</td>
                 <td><span class="status-badge status-{{ inv.status }}">{{ inv.status_label }}</span></td>
-                <td class="right">{{ "%.2f"|format(inv.total) }} &euro;</td>
+                <td class="right">{{ "%.2f"|format(inv.total) }}&nbsp;&euro;</td>
                 <td>{{ inv.date }}</td>
             </tr>
             {% endfor %}
@@ -213,14 +213,14 @@
             <tr>
                 <td>{{ inv.invoice_number }}</td>
                 <td>{{ inv.customer_name }}</td>
-                <td class="right">{{ "%.2f"|format(inv.total) }} &euro;</td>
+                <td class="right">{{ "%.2f"|format(inv.total) }}&nbsp;&euro;</td>
                 <td>{{ inv.due_date }}</td>
                 <td><span class="status-badge status-{{ inv.status }}">{{ inv.status_label }}</span></td>
             </tr>
             {% endfor %}
             <tr class="total-row">
                 <td colspan="2">Gesamt offen</td>
-                <td class="right">{{ "%.2f"|format(open_invoices_total) }} &euro;</td>
+                <td class="right">{{ "%.2f"|format(open_invoices_total) }}&nbsp;&euro;</td>
                 <td colspan="2"></td>
             </tr>
         </tbody>
@@ -272,7 +272,7 @@
             <tr>
                 <td>{{ order.title }}</td>
                 <td>{{ order.customer_name }}</td>
-                <td class="right">{% if order.amount %}{{ "%.2f"|format(order.amount) }} &euro;{% else %}&ndash;{% endif %}</td>
+                <td class="right">{% if order.amount %}{{ "%.2f"|format(order.amount) }}&nbsp;&euro;{% else %}&ndash;{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
