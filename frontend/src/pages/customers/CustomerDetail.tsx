@@ -7,6 +7,7 @@ import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import { getActivities, createActivity, deleteActivity } from '../../api/activities'
+import { listAttachments } from '../../api/attachments'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
@@ -54,6 +55,7 @@ export default function CustomerDetail() {
     getContracts({ customer_id: id }).then((r) => setContracts(r.items))
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
     getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+    listAttachments({ customer_id: id }).then((a) => setAttachmentsCount(a.length)).catch(() => {})
     api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
   }, [id])
 

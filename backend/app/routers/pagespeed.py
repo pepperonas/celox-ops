@@ -13,7 +13,6 @@ from weasyprint import HTML
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
-from app.models.attachment import Attachment
 from app.models.pagespeed_result import PagespeedResult
 from app.schemas.pagespeed_result import PagespeedResultResponse
 
@@ -267,30 +266,6 @@ async def analyze_pagespeed(
             raw_scores=json.dumps(score_values),
         )
         db.add(result)
-
-        # Also create an Attachment entry so it appears in the Documents tab
-        from datetime import datetime
-        attach_dir = "/data/attachments"
-        os.makedirs(attach_dir, exist_ok=True)
-        attach_id = uuid.uuid4()
-        attach_original_name = filename
-        attach_stored_name = f"{attach_id}_{attach_original_name}"
-        attach_path = os.path.join(attach_dir, attach_stored_name)
-        with open(attach_path, "wb") as f:
-            f.write(pdf)
-
-        strategy_label = "Mobile" if strategy == "mobile" else "Desktop"
-        attachment = Attachment(
-            id=attach_id,
-            customer_id=uuid.UUID(customer_id),
-            filename=attach_stored_name,
-            original_name=attach_original_name,
-            content_type="application/pdf",
-            size=len(pdf),
-            description=f"PageSpeed Report ({strategy_label}) — {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-            notes=f"URL: {url}",
-        )
-        db.add(attachment)
         await db.commit()
 
     return Response(

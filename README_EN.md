@@ -232,7 +232,6 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Color-coded score table** — Performance, Accessibility, Best Practices, SEO per result color-coded (green/yellow/red)
 - Mobile and Desktop analysis separately executable
 - Stored PDFs can be re-downloaded or deleted at any time
-- **Auto-added to Documents tab** — every generated PageSpeed report also appears as a document with description and URL note
 - Available on customer detail page (dedicated tab when website is set) and lead form
 - Optional API key for higher quota (PAGESPEED_API_KEY in .env)
 
