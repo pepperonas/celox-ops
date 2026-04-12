@@ -232,6 +232,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Tabelle mit Farbcodes** — Performance, Barrierefreiheit, Best Practices, SEO pro Ergebnis farbcodiert (grün/gelb/rot)
 - Mobile und Desktop Analyse separat ausführbar
 - Gespeicherte PDFs jederzeit erneut abrufbar oder löschbar
+- **Automatische Ablage im Dokumente-Tab** — jeder generierte PageSpeed-Report erscheint zusätzlich als Dokument mit Beschreibung und URL-Notiz
 - Verfügbar auf Kundendetailseite (eigener Tab bei hinterlegter Website) und Lead-Formular
 - Optionaler API-Key für höheres Kontingent (PAGESPEED_API_KEY in .env)
 

@@ -236,27 +236,7 @@ export default function CustomerDetail() {
           {customer.website && (
             <div>
               <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Website</p>
-              <div className="flex items-center gap-2">
-                <a href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors">{customer.website}</a>
-                <button
-                  onClick={async () => {
-                    toast.loading('PageSpeed Analyse läuft...', { id: 'pagespeed' })
-                    try {
-                      const url = customer.website.startsWith('http') ? customer.website : `https://${customer.website}`
-                      const resp = await api.get('/pagespeed/analyze', { params: { url, strategy: 'mobile' }, responseType: 'blob' })
-                      const blobUrl = URL.createObjectURL(resp.data)
-                      window.open(blobUrl, '_blank')
-                      toast.success('PageSpeed Report erstellt.', { id: 'pagespeed' })
-                    } catch {
-                      toast.error('PageSpeed Analyse fehlgeschlagen.', { id: 'pagespeed' })
-                    }
-                  }}
-                  className="px-2 py-0.5 text-[10px] bg-surface-2 border border-border text-text-muted rounded hover:text-accent hover:border-accent transition-colors"
-                  title="Google PageSpeed Insights Report als PDF"
-                >
-                  PageSpeed
-                </button>
-              </div>
+              <a href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors">{customer.website}</a>
             </div>
           )}
           {customer.address && (
