@@ -332,7 +332,8 @@ async def download_pagespeed_pdf(
         pdf_data = f.read()
 
     domain = entry.url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
-    filename = f"PageSpeed_{domain}_{entry.created_at.strftime('%Y%m%d')}.pdf"
+    strategy_label = "Mobile" if entry.strategy == "mobile" else "Desktop"
+    filename = f"PageSpeed_{domain}_{strategy_label}_{entry.created_at.strftime('%Y-%m-%d')}.pdf"
 
     return Response(
         content=pdf_data,

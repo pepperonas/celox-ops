@@ -584,14 +584,45 @@ export default function CustomerDetail() {
                               onClick={async () => {
                                 try {
                                   const resp = await api.get(`/pagespeed/results/${r.id}/pdf`, { responseType: 'blob' })
-                                  const blobUrl = URL.createObjectURL(resp.data)
+                                  const blobUrl = URL.createObjectURL(new Blob([resp.data]))
                                   window.open(blobUrl, '_blank')
+                                  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
                                 } catch {
                                   toast.error('PDF konnte nicht geladen werden.')
                                 }
                               }}
-                              className="text-accent hover:text-accent-hover transition-colors"
+                              className="text-text-muted hover:text-accent transition-colors"
                               title="PDF anzeigen"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const resp = await api.get(`/pagespeed/results/${r.id}/pdf`, { responseType: 'blob' })
+                                  const cd = resp.headers['content-disposition'] || ''
+                                  const match = cd.match(/filename="?([^"]+)"?/)
+                                  const domain = r.url.replace(/^https?:\/\//, '').replace(/\//g, '_').replace(/_$/, '')
+                                  const mode = r.strategy === 'mobile' ? 'Mobile' : 'Desktop'
+                                  const datum = new Date(r.created_at).toISOString().slice(0, 10)
+                                  const filename = match?.[1] || `PageSpeed_${domain}_${mode}_${datum}.pdf`
+                                  const blobUrl = URL.createObjectURL(new Blob([resp.data]))
+                                  const link = document.createElement('a')
+                                  link.href = blobUrl
+                                  link.download = filename
+                                  document.body.appendChild(link)
+                                  link.click()
+                                  link.remove()
+                                  URL.revokeObjectURL(blobUrl)
+                                } catch {
+                                  toast.error('Download fehlgeschlagen.')
+                                }
+                              }}
+                              className="text-accent hover:text-accent-hover transition-colors"
+                              title="PDF herunterladen"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
