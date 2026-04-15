@@ -231,15 +231,16 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Result history** — all analyses are stored in the database and displayed in a dedicated tab on the customer detail page
 - **Color-coded score table** — Performance, Accessibility, Best Practices, SEO per result color-coded (green/yellow/red)
 - Mobile and Desktop analysis separately executable
-- Stored PDFs can be re-downloaded or deleted at any time
+- Stored PDFs can be viewed, downloaded, or deleted at any time
+- Download filename: `PageSpeed_<domain>_<Mobile|Desktop>_<YYYY-MM-DD>.pdf`
 - Available on customer detail page (dedicated tab when website is set) and lead form
 - Optional API key for higher quota (PAGESPEED_API_KEY in .env)
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest ~80 IT consulting services while typing
-- Position descriptions suggest ~80 detailed task descriptions (development, SEO, hosting, security, etc.)
+- Position descriptions suggest over 150 detailed task descriptions
 - Keyboard navigation (arrow keys + Enter), filtered as you type
-- Categories: Website, SEO, Hosting, Development, Consulting, Maintenance, Security, AI
+- Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 
 ### Design
 - **GitHub-inspired dark theme**

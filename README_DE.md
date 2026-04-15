@@ -231,15 +231,16 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Ergebnis-Historie** — alle Analysen werden in der Datenbank gespeichert und im eigenen Tab auf der Kundendetailseite angezeigt
 - **Tabelle mit Farbcodes** — Performance, Barrierefreiheit, Best Practices, SEO pro Ergebnis farbcodiert (grün/gelb/rot)
 - Mobile und Desktop Analyse separat ausführbar
-- Gespeicherte PDFs jederzeit erneut abrufbar oder löschbar
+- Gespeicherte PDFs jederzeit erneut abrufbar (Anzeigen + Herunterladen) oder löschbar
+- Download-Dateiname: `PageSpeed_<domain>_<Mobile|Desktop>_<YYYY-MM-DD>.pdf`
 - Verfügbar auf Kundendetailseite (eigener Tab bei hinterlegter Website) und Lead-Formular
 - Optionaler API-Key für höheres Kontingent (PAGESPEED_API_KEY in .env)
 
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
-- Positionsbeschreibungen schlagen ~80 detaillierte Tätigkeitsbeschreibungen vor (Entwicklung, SEO, Hosting, Sicherheit, etc.)
+- Positionsbeschreibungen schlagen über 150 detaillierte Tätigkeitsbeschreibungen vor
 - Tastaturnavigation (Pfeiltasten + Enter), gefiltert während der Eingabe
-- Kategorien: Website, SEO, Hosting, Entwicklung, Beratung, Wartung, Sicherheit, KI
+- Kategorien: Website-Konzeption, Entwicklung (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastruktur, Performance & Sicherheit, Wartung & Support, App & Software, Beratung, KI, Vor-Ort/Remote-Support, E-Mail-Konfiguration (Outlook/Apple Mail/Thunderbird/Mobile), Browser & Software (Chrome/Firefox/Edge/Office/Antivirus), Sicherheit am Kundenrechner (Firewall/Defender/2FA/Backup), Datenrettung & Fehlerdiagnose, Recherche & Dokumentation (techn./rechtl., Reports, Gutachten), Kommunikation & Schulung
 
 ### Design
 - **GitHub-inspiriertes Dark Theme**
