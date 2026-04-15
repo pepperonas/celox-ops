@@ -584,7 +584,7 @@ export default function CustomerDetail() {
                               onClick={async () => {
                                 try {
                                   const resp = await api.get(`/pagespeed/results/${r.id}/pdf`, { responseType: 'blob' })
-                                  const blobUrl = URL.createObjectURL(new Blob([resp.data]))
+                                  const blobUrl = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
                                   window.open(blobUrl, '_blank')
                                   setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
                                 } catch {
@@ -609,7 +609,7 @@ export default function CustomerDetail() {
                                   const mode = r.strategy === 'mobile' ? 'Mobile' : 'Desktop'
                                   const datum = new Date(r.created_at).toISOString().slice(0, 10)
                                   const filename = match?.[1] || `PageSpeed_${domain}_${mode}_${datum}.pdf`
-                                  const blobUrl = URL.createObjectURL(new Blob([resp.data]))
+                                  const blobUrl = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
                                   const link = document.createElement('a')
                                   link.href = blobUrl
                                   link.download = filename
