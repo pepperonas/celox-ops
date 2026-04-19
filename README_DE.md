@@ -68,11 +68,14 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Ein-Klick-Entwurf-Aktualisierung** — alle Entwürfe auf heute aktualisieren: Rechnungsdatum + Zahlungsziel setzen, KI-Zeit reimportieren (alte Auto-Positionen werden ersetzt, manuelle bleiben erhalten), Summen neuberechnen, PDFs regenerieren
 - **USt-Steuerung pro Rechnung** — Checkbox für USt inkl./exkl. (Kleinunternehmerregelung pro Rechnung, nicht nur global)
 - **Vollständige Detailansicht** — Rechnungsdetailseite zeigt Rabatt (Zwischensumme, Abzug, Grund), Sondervereinbarungen, Leistungsbeschreibung und Steuerbefreiungshinweis
+- **Automatische PDF-Regeneration** — bei jeder Bearbeitung wird ein vorhandenes PDF automatisch neu erstellt, damit Änderungen sofort sichtbar sind
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
 - Einzelposition mit Beschreibung und Betrag
 - Automatische Rechnungsnummer, 14 Tage Zahlungsziel
+- Autovervollständigung bei Beschreibung (>220 Tätigkeitsvorschläge)
+- Komma-Eingabe bei Menge und Einzelpreis (mobil mit Dezimal-Keyboard)
 
 ### Wiederkehrende Rechnungen
 - Automatische Entwurfserstellung aus aktiven Verträgen basierend auf Zahlungsturnus
@@ -185,6 +188,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### Kalender
 - Monatsraster mit allen Fristen und Terminen
 - Fällige Rechnungen (orange), überfällige (rot), Vertragsenden (lila), Zeiteinträge (grün)
+- Rechnungseinträge zeigen Rechnungsnummer **und Kundennamen**
 - Klick auf einen Tag zeigt alle Ereignisse
 - Monatsnavigation mit Pfeilen und Heute-Button
 
@@ -237,8 +241,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Optionaler API-Key für höheres Kontingent (PAGESPEED_API_KEY in .env)
 
 ### Intelligente Autovervollständigung
-- Titelfelder in Rechnungen und Aufträgen schlagen ~80 IT-Consulting-Leistungen während der Eingabe vor
-- Positionsbeschreibungen schlagen über 150 detaillierte Tätigkeitsbeschreibungen vor
+- Titelfelder in Rechnungen und Aufträgen schlagen über 190 IT-Consulting-Leistungen während der Eingabe vor (inkl. Website-Änderungen, Sicherheits-Anpassungen, IT-Betreuung, Recherche/Reports, DevOps, Cloud, E-Commerce, Monitoring)
+- Positionsbeschreibungen schlagen über 220 detaillierte Tätigkeitsbeschreibungen vor
 - Tastaturnavigation (Pfeiltasten + Enter), gefiltert während der Eingabe
 - Kategorien: Website-Konzeption, Entwicklung (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastruktur, Performance & Sicherheit, Wartung & Support, App & Software, Beratung, KI, Vor-Ort/Remote-Support, E-Mail-Konfiguration (Outlook/Apple Mail/Thunderbird/Mobile), Browser & Software (Chrome/Firefox/Edge/Office/Antivirus), Sicherheit am Kundenrechner (Firewall/Defender/2FA/Backup), Datenrettung & Fehlerdiagnose, Recherche & Dokumentation (techn./rechtl., Reports, Gutachten), Kommunikation & Schulung
 

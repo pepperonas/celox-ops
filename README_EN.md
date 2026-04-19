@@ -68,11 +68,14 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **One-click draft refresh** — update all drafts to today: set invoice date + payment term, re-import AI time (old auto-positions replaced, manual ones preserved), recalculate totals, regenerate PDFs
 - **Per-invoice tax control** — checkbox to include/exclude VAT (Kleinunternehmerregelung per invoice, not just globally)
 - **Complete detail view** — invoice detail page shows discount (subtotal, deduction, reason), special terms, service description, and tax exemption notice
+- **Automatic PDF regeneration** — on every edit, an existing PDF is regenerated so changes are immediately visible
 
 ### Quick Invoices
 - One-click creation from customer detail page
 - Single line item with description and amount
 - Auto invoice number, 14-day payment term
+- Autocomplete for description (>220 task suggestions)
+- Comma input for quantity and unit price (mobile shows decimal keyboard)
 
 ### Recurring Invoices
 - Auto-generate draft invoices from active contracts based on billing cycle
@@ -185,6 +188,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Calendar
 - Monthly grid view with all deadlines and events
 - Invoice due dates (orange), overdue invoices (red), contract end dates (purple), time entries (green)
+- Invoice entries show invoice number **and customer name**
 - Click on a day to see all events
 - Month navigation with prev/next arrows and today button
 
@@ -237,8 +241,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Optional API key for higher quota (PAGESPEED_API_KEY in .env)
 
 ### Smart Autocomplete
-- Title fields in invoices and orders suggest ~80 IT consulting services while typing
-- Position descriptions suggest over 150 detailed task descriptions
+- Title fields in invoices and orders suggest over 190 IT consulting services while typing (including website changes, security adjustments, IT support, research/reports, DevOps, Cloud, e-commerce, monitoring)
+- Position descriptions suggest over 220 detailed task descriptions
 - Keyboard navigation (arrow keys + Enter), filtered as you type
 - Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 
