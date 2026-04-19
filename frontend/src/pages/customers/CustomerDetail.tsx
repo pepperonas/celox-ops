@@ -12,6 +12,7 @@ import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import TokenUsage from '../../components/TokenUsage'
+import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 
@@ -676,26 +677,24 @@ export default function CustomerDetail() {
             <h3 className="text-lg font-semibold text-text mb-1">Schnellrechnung</h3>
             <p className="text-text-muted text-sm mb-6">Für {customer.name} — ohne Auftrag/Vertrag</p>
             <form onSubmit={handleQuickInvoice} className="space-y-4">
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Beschreibung *</label>
-                <input
-                  type="text"
-                  value={quickForm.beschreibung}
-                  onChange={(e) => setQuickForm({ ...quickForm, beschreibung: e.target.value })}
-                  placeholder="z.B. Sicherheitscheck Website"
-                  className="w-full"
-                  required
-                />
-              </div>
+              <AutocompleteInput
+                label="Beschreibung *"
+                name="beschreibung"
+                value={quickForm.beschreibung}
+                onChange={(e) => setQuickForm({ ...quickForm, beschreibung: e.target.value })}
+                placeholder="z.B. Sicherheitscheck Website"
+                required
+                suggestions={POSITION_SUGGESTIONS}
+              />
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Menge</label>
                   <input
-                    type="number"
-                    step="0.25"
-                    min="0.25"
+                    type="text"
+                    inputMode="decimal"
                     value={quickForm.menge}
-                    onChange={(e) => setQuickForm({ ...quickForm, menge: e.target.value })}
+                    onChange={(e) => setQuickForm({ ...quickForm, menge: e.target.value.replace(',', '.') })}
+                    placeholder="1"
                     className="w-full"
                   />
                 </div>
@@ -715,11 +714,10 @@ export default function CustomerDetail() {
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Einzelpreis (€) *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={quickForm.einzelpreis}
-                    onChange={(e) => setQuickForm({ ...quickForm, einzelpreis: e.target.value })}
+                    onChange={(e) => setQuickForm({ ...quickForm, einzelpreis: e.target.value.replace(',', '.') })}
                     placeholder="0,00"
                     className="w-full"
                     required
