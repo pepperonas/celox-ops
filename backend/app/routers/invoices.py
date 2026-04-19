@@ -225,6 +225,19 @@ async def update_invoice(
     )
     invoice = result.scalar_one()
 
+    # Regenerate PDF if one already exists, so edits are reflected immediately
+    if invoice.pdf_path:
+        try:
+            new_pdf_path = generate_invoice_pdf(invoice, invoice.customer)
+            invoice.pdf_path = new_pdf_path
+            await db.flush()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(
+                f"PDF-Regenerierung nach Update fehlgeschlagen für {invoice.invoice_number}: {e}",
+                exc_info=True,
+            )
+
     resp = InvoiceResponse.model_validate(invoice)
     resp.customer_name = invoice.customer.name if invoice.customer else ""
     return resp
