@@ -89,12 +89,13 @@ export default function Calendar() {
     for (const inv of invoices) {
       if (!inv.due_date) continue
       const dueKey = toDateKey(inv.due_date)
+      const customerPart = inv.customer_name ? ` — ${inv.customer_name}` : ''
       if (inv.status === 'ueberfaellig' || (inv.status === 'gestellt' && dueKey < todayStr)) {
         result.push({
           id: `inv-overdue-${inv.id}`,
           type: 'invoice-overdue',
           date: dueKey,
-          label: `RE ${inv.invoice_number} überfällig`,
+          label: `RE ${inv.invoice_number}${customerPart} überfällig`,
           link: `/rechnungen/${inv.id}`,
           color: 'bg-red-500',
         })
@@ -103,7 +104,7 @@ export default function Calendar() {
           id: `inv-due-${inv.id}`,
           type: 'invoice-due',
           date: dueKey,
-          label: `RE ${inv.invoice_number} fällig`,
+          label: `RE ${inv.invoice_number}${customerPart} fällig`,
           link: `/rechnungen/${inv.id}`,
           color: 'bg-orange-500',
         })
