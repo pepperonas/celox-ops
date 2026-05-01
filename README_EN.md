@@ -177,6 +177,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Monthly PDF reports** — downloadable business reports with KPIs, invoice list, time entries, open items
 
 ### Dashboard
+- **Overdue alert banner** — prominently shown in red at the top when overdue invoices exist (count, total sum, pulsing warning icon, click → filtered list)
+- **Overdue KPI card** as additional card (red, clickable → filtered invoice list)
 - 5 KPI cards: revenue (month/year), draft invoices (count + sum) with **one-click refresh** button, open invoices, active contracts
 - **Period toggle**: 30 days (daily bars, default) or 12 months (monthly bars)
 - **Data toggle**: paid invoices only or including drafts

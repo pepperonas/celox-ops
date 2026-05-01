@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import {
@@ -88,6 +89,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -127,6 +129,13 @@ export default function Dashboard() {
 
   const cards = stats
     ? [
+        ...(stats.overdue_invoices_count > 0 ? [{
+          label: 'Überfällig',
+          value: String(stats.overdue_invoices_count),
+          sub: formatCurrency(stats.overdue_invoices_sum),
+          valueColor: 'text-danger',
+          highlight: true,
+        }] : []),
         {
           label: 'Umsatz (Monat)',
           value: formatCurrency(stats.revenue_month),
@@ -170,6 +179,31 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-text">Dashboard</h2>
       </div>
 
+      {/* Overdue Alert Banner */}
+      {stats && stats.overdue_invoices_count > 0 && (
+        <button
+          onClick={() => navigate('/rechnungen?status=ueberfaellig')}
+          className="w-full mb-4 group flex items-center gap-4 p-4 rounded-[12px] border border-danger/40 bg-danger/10 hover:bg-danger/15 hover:border-danger/60 transition-colors text-left"
+        >
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center">
+            <svg className="w-5 h-5 text-danger animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-danger">
+              {stats.overdue_invoices_count} überfällige Rechnung{stats.overdue_invoices_count !== 1 ? 'en' : ''}
+            </p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {formatCurrency(stats.overdue_invoices_sum)} ausstehend — jetzt mahnen
+            </p>
+          </div>
+          <svg className="w-4 h-4 text-danger group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+
       {/* KPI Cards */}
       {loading ? (
         <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
@@ -182,11 +216,19 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+        <div className={`grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
           {cards.map((card) => (
-            <div key={card.label} className="bg-surface border border-border rounded-[12px] p-5">
+            <div
+              key={card.label}
+              onClick={card.highlight ? () => navigate('/rechnungen?status=ueberfaellig') : undefined}
+              className={`rounded-[12px] p-5 ${
+                card.highlight
+                  ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 cursor-pointer transition-colors'
+                  : 'bg-surface border border-border'
+              }`}
+            >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs uppercase tracking-wider text-text-muted">{card.label}</p>
+                <p className={`text-xs uppercase tracking-wider ${card.highlight ? 'text-danger font-semibold' : 'text-text-muted'}`}>{card.label}</p>
                 {card.label === 'Entwürfe' && parseInt(card.value) > 0 && (
                   <button
                     onClick={handleRefreshDrafts}

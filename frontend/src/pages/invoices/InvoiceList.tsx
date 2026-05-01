@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
 import { getInvoices } from '../../api/invoices'
@@ -17,9 +17,10 @@ const statusOptions = [
 
 export default function InvoiceList() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
 
@@ -79,8 +80,11 @@ export default function InvoiceList() {
         <select
           value={statusFilter}
           onChange={(e) => {
-            setStatusFilter(e.target.value)
+            const v = e.target.value
+            setStatusFilter(v)
             setPage(1)
+            if (v) setSearchParams({ status: v })
+            else setSearchParams({})
           }}
           className="input-field w-48"
         >

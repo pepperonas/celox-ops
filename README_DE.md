@@ -177,6 +177,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Monatsberichte als PDF** — herunterladbare Geschäftsberichte mit KPIs, Rechnungsliste, Zeitauswertung, offene Posten
 
 ### Dashboard
+- **Überfälligkeits-Banner** — prominent rot hervorgehoben am oberen Rand wenn überfällige Rechnungen existieren (mit Anzahl, Gesamtsumme, Pulsierendem Warn-Icon, Klick → gefilterte Liste)
+- **Überfällig-Karte** als zusätzliche KPI-Karte (rot, klickbar → gefilterte Rechnungsliste)
 - 5 KPI-Karten: Umsatz (Monat/Jahr), Entwürfe (Anzahl + Summe) mit **Ein-Klick-Aktualisierung**, offene Rechnungen, aktive Verträge
 - **Zeitraum-Umschalter**: 30 Tage (tägliche Balken, Standard) oder 12 Monate (monatlich)
 - **Daten-Umschalter**: nur bezahlte Rechnungen oder inklusive Entwürfe
