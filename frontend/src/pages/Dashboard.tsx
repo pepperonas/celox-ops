@@ -12,8 +12,8 @@ import {
   Legend,
 } from 'chart.js'
 import { api } from '../api/client'
-import type { DashboardStats } from '../types'
-import { formatCurrency } from '../utils/formatters'
+import type { DashboardStats, Invoice } from '../types'
+import { formatCurrency, formatDate } from '../utils/formatters'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
 
@@ -96,15 +96,18 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [chartPeriod, setChartPeriod] = useState<'30d' | '12m'>('30d')
   const [includeDrafts, setIncludeDrafts] = useState(false)
+  const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([])
 
   const loadData = useCallback(() => {
     Promise.all([
       api.get('/dashboard/stats'),
       api.get('/dashboard/charts', { params: { period: chartPeriod, include_drafts: includeDrafts } }),
+      api.get('/invoices', { params: { status: 'ueberfaellig', page_size: 100 } }),
     ])
-      .then(([statsRes, chartsRes]) => {
+      .then(([statsRes, chartsRes, overdueRes]) => {
         setStats(statsRes.data)
         setChartData(chartsRes.data)
+        setOverdueInvoices(overdueRes.data?.items || [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -179,29 +182,59 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-text">Dashboard</h2>
       </div>
 
-      {/* Overdue Alert Banner */}
+      {/* Overdue Alert Banner with Invoice List */}
       {stats && stats.overdue_invoices_count > 0 && (
-        <button
-          onClick={() => navigate('/rechnungen?status=ueberfaellig')}
-          className="w-full mb-4 group flex items-center gap-4 p-4 rounded-[12px] border border-danger/40 bg-danger/10 hover:bg-danger/15 hover:border-danger/60 transition-colors text-left"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center">
-            <svg className="w-5 h-5 text-danger animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+        <div className="mb-6 rounded-[12px] border-2 border-danger/60 bg-danger/10 overflow-hidden shadow-lg shadow-danger/10">
+          <div className="flex items-center gap-4 p-5 border-b border-danger/30">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-danger/25 flex items-center justify-center">
+              <svg className="w-7 h-7 text-danger animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-danger">
+                {stats.overdue_invoices_count} überfällige Rechnung{stats.overdue_invoices_count !== 1 ? 'en' : ''}
+              </p>
+              <p className="text-sm text-text-muted mt-0.5">
+                {formatCurrency(stats.overdue_invoices_sum)} ausstehend — bitte handeln
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/rechnungen?status=ueberfaellig')}
+              className="bg-danger hover:bg-danger/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex-shrink-0"
+            >
+              Alle anzeigen
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-danger">
-              {stats.overdue_invoices_count} überfällige Rechnung{stats.overdue_invoices_count !== 1 ? 'en' : ''}
-            </p>
-            <p className="text-xs text-text-muted mt-0.5">
-              {formatCurrency(stats.overdue_invoices_sum)} ausstehend — jetzt mahnen
-            </p>
-          </div>
-          <svg className="w-4 h-4 text-danger group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+          {overdueInvoices.length > 0 && (
+            <div className="divide-y divide-danger/20">
+              {overdueInvoices.slice(0, 5).map((inv) => {
+                const daysOverdue = Math.floor((new Date().getTime() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24))
+                return (
+                  <button
+                    key={inv.id}
+                    onClick={() => navigate(`/rechnungen/${inv.id}`)}
+                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-danger/5 transition-colors text-left"
+                  >
+                    <span className="text-xs font-mono text-text-muted">{inv.invoice_number}</span>
+                    <span className="text-sm text-text flex-1 truncate">{inv.customer_name || inv.title}</span>
+                    <span className="text-xs text-danger font-semibold">{daysOverdue} Tage</span>
+                    <span className="text-sm font-semibold text-text tabular-nums">{formatCurrency(inv.total)}</span>
+                    <span className="text-xs text-text-muted whitespace-nowrap">fällig {formatDate(inv.due_date)}</span>
+                  </button>
+                )
+              })}
+              {overdueInvoices.length > 5 && (
+                <button
+                  onClick={() => navigate('/rechnungen?status=ueberfaellig')}
+                  className="w-full text-center text-xs text-text-muted hover:text-danger px-5 py-2 transition-colors"
+                >
+                  + {overdueInvoices.length - 5} weitere überfällige Rechnungen
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* KPI Cards */}
