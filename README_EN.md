@@ -120,6 +120,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Email Sending
 - Send invoices, quotes, and reminders directly via SMTP
 - Configurable SMTP settings (host, port, TLS, credentials)
+- **Automatic SSL/TLS detection** — port 465 (SMTPS, implicit SSL) and port 587 (STARTTLS) handled automatically
+- **CC + BCC recipients** in email dialog (multiple addresses via comma/semicolon, toggle "+ CC / BCC")
 - Pre-filled recipient, subject, and message templates
 - Reusable email dialog with editable fields
 - PDF automatically attached

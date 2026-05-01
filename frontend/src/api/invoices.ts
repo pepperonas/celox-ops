@@ -73,14 +73,14 @@ export async function downloadReminderPdf(id: string): Promise<Blob> {
 
 export async function sendInvoiceEmail(
   id: string,
-  data: { to_email: string; subject?: string; message?: string },
+  data: { to_email: string; subject?: string; message?: string; cc?: string[]; bcc?: string[] },
 ): Promise<void> {
   await api.post(`/invoices/${id}/send-email`, data)
 }
 
 export async function sendReminderEmail(
   id: string,
-  data: { to_email: string; subject?: string; message?: string },
+  data: { to_email: string; subject?: string; message?: string; cc?: string[]; bcc?: string[] },
 ): Promise<void> {
   await api.post(`/invoices/${id}/send-reminder-email`, data)
 }

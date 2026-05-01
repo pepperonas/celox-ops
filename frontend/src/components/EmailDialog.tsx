@@ -8,7 +8,7 @@ interface EmailDialogProps {
   defaultTo: string
   defaultSubject: string
   defaultMessage: string
-  onSend: (data: { to_email: string; subject: string; message: string }) => Promise<void>
+  onSend: (data: { to_email: string; subject: string; message: string; cc?: string[]; bcc?: string[] }) => Promise<void>
   placeholders?: Record<string, string>
 }
 
@@ -22,6 +22,9 @@ export default function EmailDialog({
   placeholders,
 }: EmailDialogProps) {
   const [to, setTo] = useState(defaultTo)
+  const [cc, setCc] = useState('')
+  const [bcc, setBcc] = useState('')
+  const [showCcBcc, setShowCcBcc] = useState(false)
   const [subject, setSubject] = useState(defaultSubject)
   const [message, setMessage] = useState(defaultMessage)
   const [sending, setSending] = useState(false)
@@ -32,6 +35,9 @@ export default function EmailDialog({
   const [prevOpen, setPrevOpen] = useState(false)
   if (isOpen && !prevOpen) {
     setTo(defaultTo)
+    setCc('')
+    setBcc('')
+    setShowCcBcc(false)
     setSubject(defaultSubject)
     setMessage(defaultMessage)
     setSelectedTemplate('')
@@ -68,7 +74,15 @@ export default function EmailDialog({
   const handleSend = async () => {
     setSending(true)
     try {
-      await onSend({ to_email: to, subject, message })
+      const ccList = cc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean)
+      const bccList = bcc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean)
+      await onSend({
+        to_email: to,
+        subject,
+        message,
+        cc: ccList.length ? ccList : undefined,
+        bcc: bccList.length ? bccList : undefined,
+      })
       onClose()
     } finally {
       setSending(false)
@@ -101,7 +115,18 @@ export default function EmailDialog({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">An</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-text-muted">An</label>
+              {!showCcBcc && (
+                <button
+                  type="button"
+                  onClick={() => setShowCcBcc(true)}
+                  className="text-xs text-accent hover:text-accent-hover"
+                >
+                  + CC / BCC
+                </button>
+              )}
+            </div>
             <input
               type="email"
               value={to}
@@ -110,6 +135,31 @@ export default function EmailDialog({
               placeholder="email@beispiel.de"
             />
           </div>
+
+          {showCcBcc && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-1">CC</label>
+                <input
+                  type="text"
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  className="input w-full"
+                  placeholder="cc1@beispiel.de, cc2@beispiel.de"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-1">BCC</label>
+                <input
+                  type="text"
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  className="input w-full"
+                  placeholder="bcc@beispiel.de"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-text-muted mb-1">Betreff</label>

@@ -120,6 +120,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### E-Mail-Versand
 - Rechnungen, Angebote und Mahnungen direkt per SMTP versenden
 - Konfigurierbare SMTP-Einstellungen (Host, Port, TLS, Zugangsdaten)
+- **Automatische SSL/TLS-Erkennung** — Port 465 (SMTPS, implicit SSL) und Port 587 (STARTTLS) werden automatisch unterschieden
+- **CC + BCC Empfänger** im E-Mail-Dialog (Mehrfacheingabe per Komma/Semikolon, einblendbar via "+ CC / BCC")
 - Vorgefüllte Empfänger, Betreff und Nachrichtenvorlagen
 - Wiederverwendbarer E-Mail-Dialog mit bearbeitbaren Feldern
 - PDF wird automatisch angehängt

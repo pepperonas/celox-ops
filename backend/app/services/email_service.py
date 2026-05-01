@@ -12,6 +12,8 @@ async def send_email(
     subject: str,
     body_html: str,
     pdf_path: str | None = None,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
 ) -> bool:
     """Send an email with optional PDF attachment via SMTP.
 
@@ -21,6 +23,9 @@ async def send_email(
     if not settings.SMTP_HOST:
         raise RuntimeError("SMTP ist nicht konfiguriert. Bitte SMTP_HOST in .env setzen.")
 
+    cc_list = [c.strip() for c in (cc or []) if c and c.strip()]
+    bcc_list = [b.strip() for b in (bcc or []) if b and b.strip()]
+
     msg = MIMEMultipart()
     msg["From"] = (
         f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
@@ -28,6 +33,8 @@ async def send_email(
         else settings.SMTP_FROM_EMAIL
     )
     msg["To"] = to_email
+    if cc_list:
+        msg["Cc"] = ", ".join(cc_list)
     msg["Subject"] = subject
 
     msg.attach(MIMEText(body_html, "html", "utf-8"))
@@ -45,14 +52,20 @@ async def send_email(
             )
             msg.attach(attachment)
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
-        if settings.SMTP_USE_TLS:
+    recipients = [to_email] + cc_list + bcc_list
+
+    # Port 465 uses implicit SSL; other ports (587, 25) use STARTTLS or plain
+    use_ssl = settings.SMTP_PORT == 465
+    smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+
+    with smtp_class(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
+        if not use_ssl and settings.SMTP_USE_TLS:
             server.starttls()
         if settings.SMTP_USER and settings.SMTP_PASSWORD:
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(
             settings.SMTP_FROM_EMAIL,
-            [to_email],
+            recipients,
             msg.as_string(),
         )
 

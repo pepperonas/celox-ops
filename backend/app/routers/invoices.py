@@ -34,6 +34,8 @@ class EmailRequest(PydanticBaseModel):
     to_email: str
     subject: str | None = None
     message: str | None = None
+    cc: list[str] | None = None
+    bcc: list[str] | None = None
 
 router = APIRouter(
     prefix="/api/invoices",
@@ -468,6 +470,8 @@ async def send_invoice_email(
             subject=subject,
             body_html=body_html,
             pdf_path=invoice.pdf_path,
+            cc=data.cc,
+            bcc=data.bcc,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
@@ -534,6 +538,8 @@ async def send_reminder_email(
             subject=subject,
             body_html=body_html,
             pdf_path=invoice.reminder_pdf_path,
+            cc=data.cc,
+            bcc=data.bcc,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
