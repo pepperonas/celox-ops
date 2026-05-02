@@ -32,12 +32,14 @@ class Customer(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    # Relationships are NOT eager-loaded by default — opt-in via joinedload()
+    # in the specific endpoint that needs them.
     orders: Mapped[list["Order"]] = relationship(  # noqa: F821
-        "Order", back_populates="customer", lazy="selectin"
+        "Order", back_populates="customer", lazy="raise"
     )
     contracts: Mapped[list["Contract"]] = relationship(  # noqa: F821
-        "Contract", back_populates="customer", lazy="selectin"
+        "Contract", back_populates="customer", lazy="raise"
     )
     invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
-        "Invoice", back_populates="customer", lazy="selectin"
+        "Invoice", back_populates="customer", lazy="raise"
     )

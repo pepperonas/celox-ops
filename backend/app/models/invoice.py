@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -32,6 +33,11 @@ class InvoiceStatus(str, enum.Enum):
 
 class Invoice(Base):
     __tablename__ = "invoices"
+    __table_args__ = (
+        Index("idx_invoice_customer_id", "customer_id"),
+        Index("idx_invoice_status_due", "status", "due_date"),
+        Index("idx_invoice_invoice_date", "invoice_date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

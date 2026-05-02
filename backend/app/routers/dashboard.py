@@ -1,5 +1,6 @@
 import calendar
 import os
+import time
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -69,10 +70,18 @@ class DashboardStats(BaseModel):
     active_contracts_monthly_sum: Decimal
 
 
+# In-memory cache for /stats: 60-second TTL. Single-user app — no need for shared cache.
+_stats_cache: dict = {"data": None, "expires": 0.0}
+_STATS_CACHE_TTL = 60.0
+
+
 @router.get("/stats", response_model=DashboardStats)
 async def get_stats(
     db: AsyncSession = Depends(get_db),
 ) -> DashboardStats:
+    if _stats_cache["data"] is not None and time.monotonic() < _stats_cache["expires"]:
+        return _stats_cache["data"]
+
     now = datetime.now(timezone.utc)
     current_year = now.year
     current_month = now.month
@@ -139,7 +148,7 @@ async def get_stats(
     active_contracts_count = row[0]
     active_contracts_monthly_sum = row[1]
 
-    return DashboardStats(
+    stats = DashboardStats(
         revenue_month=revenue_month,
         revenue_year=revenue_year,
         draft_invoices_count=draft_invoices_count,
@@ -151,6 +160,15 @@ async def get_stats(
         active_contracts_count=active_contracts_count,
         active_contracts_monthly_sum=active_contracts_monthly_sum,
     )
+    _stats_cache["data"] = stats
+    _stats_cache["expires"] = time.monotonic() + _STATS_CACHE_TTL
+    return stats
+
+
+def invalidate_stats_cache() -> None:
+    """Invalidate the dashboard stats cache (call after invoice/contract mutations)."""
+    _stats_cache["data"] = None
+    _stats_cache["expires"] = 0.0
 
 
 @router.get("/charts")
