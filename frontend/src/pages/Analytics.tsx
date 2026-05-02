@@ -1,12 +1,4 @@
 import { useEffect, useState, useCallback } from 'react'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Legend,
-} from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import {
   getProfitability,
@@ -16,8 +8,6 @@ import {
 } from '../api/analytics'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const COLORS = {
   green: '#3fb950',

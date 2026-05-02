@@ -1,18 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Legend,
-} from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { getEuerOverview, exportEuerCsv, downloadMonthlyReport, type EuerOverview } from '../api/euer'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const CHART_COLORS = {
   green: '#3fb950',

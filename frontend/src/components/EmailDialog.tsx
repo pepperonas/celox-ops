@@ -50,6 +50,14 @@ export default function EmailDialog({
     }
   }, [isOpen])
 
+  // Esc closes the dialog
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
+
   const applyPlaceholders = (text: string): string => {
     if (!placeholders) return text
     let result = text

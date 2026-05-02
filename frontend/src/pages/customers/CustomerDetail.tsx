@@ -13,7 +13,7 @@ import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import TokenUsage from '../../components/TokenUsage'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
-import { formatDate, formatCurrency } from '../../utils/formatters'
+import { formatDate, formatCurrency, formatRelativeTime } from '../../utils/formatters'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 
 export default function CustomerDetail() {
@@ -127,20 +127,6 @@ export default function CustomerDetail() {
     }
   }
 
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMin = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMin < 1) return 'gerade eben'
-    if (diffMin < 60) return `vor ${diffMin} Minute${diffMin !== 1 ? 'n' : ''}`
-    if (diffHours < 24) return `vor ${diffHours} Stunde${diffHours !== 1 ? 'n' : ''}`
-    if (diffDays < 7) return `vor ${diffDays} Tag${diffDays !== 1 ? 'en' : ''}`
-    return formatDate(dateStr)
-  }
 
   const activityTypeConfig: Record<string, { label: string; color: string }> = {
     note: { label: 'Notiz', color: 'bg-gray-400' },

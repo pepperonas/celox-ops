@@ -1,21 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js'
 import { Bar, Line } from 'react-chartjs-2'
 import axios from 'axios'
 import { formatDate, formatCurrency } from '../utils/formatters'
 import type { TokenTrackerData } from '../types'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend, Filler)
 
 const CHART_COLORS = {
   accent: '#58a6ff',

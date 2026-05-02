@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 interface DeleteDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -13,6 +15,16 @@ export default function DeleteDialog({
   title,
   message,
 }: DeleteDialogProps) {
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'Enter') onConfirm()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose, onConfirm])
+
   if (!isOpen) return null
 
   return (

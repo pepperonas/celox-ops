@@ -2,20 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Bar, Doughnut } from 'react-chartjs-2'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js'
 import { api } from '../api/client'
 import type { DashboardStats, Invoice } from '../types'
-import { formatCurrency, formatDate } from '../utils/formatters'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
+import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters'
 
 const colors = {
   background: '#0d1117',
@@ -73,20 +62,6 @@ const activityDotColors: Record<string, string> = {
   expense: colors.red,
 }
 
-
-function timeAgo(dateStr: string): string {
-  const now = new Date()
-  const d = new Date(dateStr)
-  const diffMs = now.getTime() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'gerade eben'
-  if (diffMin < 60) return `vor ${diffMin} Min.`
-  const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `vor ${diffH} Std.`
-  const diffD = Math.floor(diffH / 24)
-  if (diffD < 30) return `vor ${diffD} Tag${diffD > 1 ? 'en' : ''}`
-  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -497,7 +472,7 @@ export default function Dashboard() {
                           {activity.customer_name}
                         </span>
                         <span className="text-xs text-text-muted shrink-0 ml-2">
-                          {activity.created_at ? timeAgo(activity.created_at) : ''}
+                          {activity.created_at ? formatRelativeTime(activity.created_at) : ''}
                         </span>
                       </div>
                     </div>
