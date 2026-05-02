@@ -77,6 +77,11 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Autocomplete for description (>220 task suggestions)
 - Comma input for quantity and unit price (mobile shows decimal keyboard)
 
+### Keyboard Shortcuts
+- **Ctrl+S / ⌘S** — save form (in all 6 forms: invoice, customer, order, contract, expense, lead)
+- **Esc** — leave form / close dialog
+- **Enter** in delete dialog — confirm
+
 ### Recurring Invoices
 - Auto-generate draft invoices from active contracts based on billing cycle
 - Calculates due dates from billing_cycle + last_invoiced_date
@@ -673,12 +678,23 @@ CO-2026-0001
 ## Database Optimization
 
 - PostgreSQL indexes on all foreign keys (customer_id on orders/contracts/invoices)
+- Composite indexes on `invoices(customer_id)`, `invoices(status, due_date)`, `invoices(invoice_date)` for fast dashboard/filter queries
 - Status indexes for filtered queries
 - Partial index for open invoices (dashboard performance)
 - Composite index on customer name+company for search
 - Connection pooling: pool_size=5, max_overflow=10, pre_ping enabled, 5-min recycle
+- Customer relationships use `lazy="raise"` (was `selectin`) — eager-loading explicit via `joinedload()` only where needed
 - Token Tracker aggregator cached with 5-min TTL (eliminates repeated full-table scans)
 - GitHub repos cached with 10-min TTL (eliminates repeated API calls)
+- `/api/dashboard/stats` cached with 60s in-memory TTL
+- WeasyPrint PDF generation via `asyncio.to_thread()` — no longer blocks the event loop
+
+## Security (technical)
+
+- **CORS** restricted to configured origins (`CORS_ORIGINS` env var, default: blocks all)
+- **JWT_SECRET validation** at startup (min. 32 characters, default value blocks startup)
+- **File upload MIME whitelist**: only PDF, images, Office documents, ZIP allowed
+- **Path traversal protection** on file uploads (filename via `PurePosixPath.name`)
 
 ---
 

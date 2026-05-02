@@ -77,6 +77,11 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Autovervollständigung bei Beschreibung (>220 Tätigkeitsvorschläge)
 - Komma-Eingabe bei Menge und Einzelpreis (mobil mit Dezimal-Keyboard)
 
+### Tastatur-Shortcuts
+- **Ctrl+S / ⌘S** — Form speichern (alle 6 Forms: Rechnung, Kunde, Auftrag, Vertrag, Ausgabe, Lead)
+- **Esc** — Form verlassen / Dialog schließen
+- **Enter** im Lösch-Dialog — bestätigt
+
 ### Wiederkehrende Rechnungen
 - Automatische Entwurfserstellung aus aktiven Verträgen basierend auf Zahlungsturnus
 - Berechnet Fälligkeit aus Turnus + letztem Rechnungsdatum
@@ -677,12 +682,23 @@ CO-2026-0001
 ## Datenbankoptimierung
 
 - PostgreSQL-Indizes auf allen Fremdschlüsseln (customer_id auf orders/contracts/invoices)
+- Composite Indexes auf `invoices(customer_id)`, `invoices(status, due_date)`, `invoices(invoice_date)` für schnelle Dashboard-/Filter-Queries
 - Status-Indizes für gefilterte Abfragen
 - Partial Index für offene Rechnungen (Dashboard-Performance)
 - Composite Index auf Kundenname+Firma für Suche
 - Connection Pooling: pool_size=5, max_overflow=10, pre_ping aktiviert, 5-Min-Recycle
+- Customer-Relationships nutzen `lazy="raise"` (vorher `selectin`) — Eager-Loading nur explizit per `joinedload()` wo nötig
 - Token Tracker Aggregator mit 5-Min-TTL gecacht (eliminiert wiederholte Full-Table-Scans)
 - GitHub-Repos mit 10-Min-TTL gecacht (eliminiert wiederholte API-Aufrufe)
+- `/api/dashboard/stats` mit 60s In-Memory-TTL gecacht
+- WeasyPrint-PDF-Generierung via `asyncio.to_thread()` — blockt Event-Loop nicht mehr
+
+## Sicherheit (technisch)
+
+- **CORS** auf konfigurierte Origins beschränkt (`CORS_ORIGINS` env-var, Default: blockiert alle)
+- **JWT_SECRET-Validierung** beim Startup (mind. 32 Zeichen, Default-Wert blockiert Start)
+- **File-Upload MIME-Whitelist**: nur PDF, Bilder, Office-Dokumente, ZIP erlaubt
+- **Path-Traversal-Schutz** bei Datei-Uploads (Filename via `PurePosixPath.name`)
 
 ---
 

@@ -108,6 +108,12 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Discount storage**: Stored as `discount_type` (percent/fixed), `discount_value`, `discount_reason` on Invoice model — NOT as negative positions. Guard: `discount_value is not None and discount_value != 0`.
 - **Special terms**: Stored as JSON array string in `special_terms` field. Single string also supported (backward compatible).
 - **Async httpx in refresh-drafts**: Uses `httpx.AsyncClient` (not sync `httpx.get`) to avoid blocking the event loop.
+- **PDF generation in threads**: All `generate_*_pdf()` calls wrapped via `asyncio.to_thread()` since WeasyPrint is sync and would block the event loop for 2-5s per render.
+- **CORS_ORIGINS env var required**: Empty value blocks all cross-origin requests. Set to `https://ops.celox.io` (or local dev origin) in `.env`.
+- **JWT_SECRET startup validation**: Server refuses to start if `JWT_SECRET` is the default `"change-me-in-production"` or shorter than 32 chars. Generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+- **Stats cache**: `/api/dashboard/stats` cached in-memory for 60s. No explicit invalidation — TTL-only. New mutations show up within 60s.
+- **Customer relationships are `lazy="raise"`**: Don't access `customer.orders/contracts/invoices` without explicit `joinedload()` in the query — will throw at runtime.
+- **Attachment MIME whitelist**: Only PDF, images, Office, ZIP accepted. Other types → 415. Whitelist in `routers/attachments.py`.
 - **Axios FormData uploads**: The default `Content-Type: application/json` on the axios client (`api/client.ts`) prevents Axios from auto-detecting FormData and setting the multipart boundary. For file uploads, pass `headers: { 'Content-Type': undefined }` to override the default — otherwise backend gets 422.
 - **Refresh-drafts position detection**: Auto-generated positions are marked with `"auto": true`. Legacy data detected via regex `\(\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}\)$`. Title-based matching was removed because renaming the invoice caused duplication.
 - **Invoice detail display**: `positions[].gesamt` values from JSON may be strings — always wrap in `Number()` before arithmetic.
