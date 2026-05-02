@@ -7,6 +7,7 @@ import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../
 import { getGithubRepos } from '../../api/github'
 import type { GithubRepo } from '../../types'
 import type { CustomerCreate } from '../../types'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 
 interface LinkedProject {
   url: string
@@ -124,6 +125,15 @@ export default function CustomerForm() {
   const handleRemoveProject = (url: string) => {
     setLinkedProjects(getLinkedProjects().filter(p => p.url !== url))
   }
+
+  useFormShortcuts({
+    onSubmit: () => {
+      if (loading) return
+      const formEl = document.querySelector('form') as HTMLFormElement | null
+      formEl?.requestSubmit()
+    },
+    onCancel: () => navigate(-1),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -252,7 +262,7 @@ export default function CustomerForm() {
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
             Abbrechen
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
             {loading ? 'Speichern...' : 'Speichern'}
           </button>
         </div>

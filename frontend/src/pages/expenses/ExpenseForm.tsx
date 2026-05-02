@@ -5,6 +5,7 @@ import FormField from '../../components/FormField'
 import DeleteDialog from '../../components/DeleteDialog'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
 import type { ExpenseCreate } from '../../types'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 
 const categoryOptions = [
   { value: 'hosting', label: 'Hosting' },
@@ -65,6 +66,15 @@ export default function ExpenseForm() {
       setForm({ ...form, [target.name]: target.value })
     }
   }
+
+  useFormShortcuts({
+    onSubmit: () => {
+      if (loading) return
+      const formEl = document.querySelector('form') as HTMLFormElement | null
+      formEl?.requestSubmit()
+    },
+    onCancel: () => navigate(-1),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -187,7 +197,7 @@ export default function ExpenseForm() {
           >
             Abbrechen
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
             {loading ? 'Speichern...' : 'Speichern'}
           </button>
         </div>

@@ -10,6 +10,7 @@ import axiosRaw from 'axios'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { formatCurrency } from '../../utils/formatters'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
 const emptyPosition: InvoicePosition = {
@@ -337,8 +338,20 @@ export default function InvoiceForm() {
   const taxAmount = netto * (taxRate / 100)
   const brutto = netto + taxAmount
 
+  const submitForm = () => {
+    if (loading) return
+    const formEl = document.querySelector('form') as HTMLFormElement | null
+    formEl?.requestSubmit()
+  }
+
+  useFormShortcuts({
+    onSubmit: submitForm,
+    onCancel: () => navigate(-1),
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setLoading(true)
 
     const allPositions = form.positions.map((p, i) => ({
@@ -532,11 +545,10 @@ export default function InvoiceForm() {
                 <div className="md:col-span-2">
                   <label className="md:hidden text-xs text-text-muted mb-1 block">Menge</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={pos.menge}
-                    onChange={(e) => updatePosition(idx, 'menge', parseFloat(e.target.value) || 0)}
-                    step="0.01"
-                    min="0"
+                    onChange={(e) => updatePosition(idx, 'menge', parseFloat(e.target.value.replace(',', '.')) || 0)}
                     className="input-field text-sm"
                   />
                 </div>
@@ -553,11 +565,10 @@ export default function InvoiceForm() {
                 <div className="md:col-span-2">
                   <label className="md:hidden text-xs text-text-muted mb-1 block">Einzelpreis</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={pos.einzelpreis}
-                    onChange={(e) => updatePosition(idx, 'einzelpreis', parseFloat(e.target.value) || 0)}
-                    step="0.01"
-                    min="0"
+                    onChange={(e) => updatePosition(idx, 'einzelpreis', parseFloat(e.target.value.replace(',', '.')) || 0)}
                     className="input-field text-sm"
                   />
                 </div>
@@ -935,7 +946,7 @@ export default function InvoiceForm() {
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
             Abbrechen
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
             {loading ? 'Speichern...' : 'Speichern'}
           </button>
         </div>

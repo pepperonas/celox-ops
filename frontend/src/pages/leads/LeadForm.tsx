@@ -5,6 +5,7 @@ import FormField from '../../components/FormField'
 import { api } from '../../api/client'
 import { getLead, createLead, updateLead, analyzeWebsite, type AnalyzeResult } from '../../api/leads'
 import type { LeadCreate } from '../../types'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 
 const statusOptions = [
   { value: 'neu', label: 'Neu' },
@@ -83,6 +84,15 @@ export default function LeadForm() {
     }
     setAnalyzing(false)
   }
+
+  useFormShortcuts({
+    onSubmit: () => {
+      if (loading) return
+      const formEl = document.querySelector('form') as HTMLFormElement | null
+      formEl?.requestSubmit()
+    },
+    onCancel: () => navigate(-1),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -206,7 +216,7 @@ export default function LeadForm() {
             <button type="button" onClick={() => navigate('/vorgemerkt')} className="btn-secondary">
               Abbrechen
             </button>
-            <button type="submit" disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
               {loading ? 'Speichern...' : 'Speichern'}
             </button>
           </div>

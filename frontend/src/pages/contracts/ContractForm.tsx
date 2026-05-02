@@ -5,6 +5,7 @@ import FormField from '../../components/FormField'
 import { getContract, createContract, updateContract } from '../../api/contracts'
 import { getCustomers } from '../../api/customers'
 import type { ContractCreate, Customer } from '../../types'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 
 const typeOptions = [
   { value: 'hosting', label: 'Hosting' },
@@ -82,6 +83,15 @@ export default function ContractForm() {
       })
     }
   }
+
+  useFormShortcuts({
+    onSubmit: () => {
+      if (loading) return
+      const formEl = document.querySelector('form') as HTMLFormElement | null
+      formEl?.requestSubmit()
+    },
+    onCancel: () => navigate(-1),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -207,7 +217,7 @@ export default function ContractForm() {
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
             Abbrechen
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
             {loading ? 'Speichern...' : 'Speichern'}
           </button>
         </div>

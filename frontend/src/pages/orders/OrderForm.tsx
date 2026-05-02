@@ -6,6 +6,7 @@ import AutocompleteInput from '../../components/AutocompleteInput'
 import { getOrder, createOrder, updateOrder } from '../../api/orders'
 import { getCustomers } from '../../api/customers'
 import type { OrderCreate, Customer, InvoicePosition } from '../../types'
+import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 
 const statusOptions = [
   { value: 'angebot', label: 'Angebot' },
@@ -65,6 +66,15 @@ export default function OrderForm() {
       [name]: type === 'number' ? parseFloat(value) || 0 : value,
     })
   }
+
+  useFormShortcuts({
+    onSubmit: () => {
+      if (loading) return
+      const formEl = document.querySelector('form') as HTMLFormElement | null
+      formEl?.requestSubmit()
+    },
+    onCancel: () => navigate(-1),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -280,7 +290,7 @@ export default function OrderForm() {
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
             Abbrechen
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary" title="Ctrl+S / ⌘S">
             {loading ? 'Speichern...' : 'Speichern'}
           </button>
         </div>
