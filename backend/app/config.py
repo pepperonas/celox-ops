@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
 
+    # Comma-separated list of allowed origins (CORS). Empty = block all.
+    CORS_ORIGINS: str = ""
+
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD_HASH: str = ""
 

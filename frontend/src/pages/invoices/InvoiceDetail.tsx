@@ -43,7 +43,7 @@ export default function InvoiceDetail() {
     getInvoice(id).then((inv) => {
       setInvoice(inv)
       if (inv.customer_id) {
-        getCustomer(inv.customer_id).then((c) => setCustomerEmail(c.email || '')).catch(() => {})
+        getCustomer(inv.customer_id).then((c) => setCustomerEmail(c.email || '')).catch((err) => console.warn('Kunden-Email konnte nicht geladen werden:', err))
       }
     })
   }, [id])

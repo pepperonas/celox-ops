@@ -160,7 +160,7 @@ export default function InvoiceForm() {
                     if (updated[i]) updated[i] = { ...updated[i], label: res.data?.label || '' }
                     return updated
                   })
-                }).catch(() => {})
+                }).catch((err) => console.warn('Token-Tracker-Daten konnten nicht geladen werden:', err))
               }
             })
           } catch {

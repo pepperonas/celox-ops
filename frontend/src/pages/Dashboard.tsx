@@ -109,7 +109,10 @@ export default function Dashboard() {
         setChartData(chartsRes.data)
         setOverdueInvoices(overdueRes.data?.items || [])
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Dashboard-Daten konnten nicht geladen werden:', err)
+        toast.error('Dashboard konnte nicht geladen werden.')
+      })
       .finally(() => setLoading(false))
   }, [chartPeriod, includeDrafts])
 

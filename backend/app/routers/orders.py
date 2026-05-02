@@ -1,7 +1,7 @@
+import asyncio
 import math
-import uuid
-
 import os
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
@@ -195,7 +195,7 @@ async def generate_quote_pdf_endpoint(
     if not customer:
         raise HTTPException(status_code=400, detail="Kein Kunde zugeordnet")
 
-    pdf_path = generate_quote_pdf(order, customer)
+    pdf_path = await asyncio.to_thread(generate_quote_pdf, order, customer)
     order.quote_pdf_path = pdf_path
     await db.flush()
     await db.refresh(order)

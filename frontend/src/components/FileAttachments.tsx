@@ -45,7 +45,7 @@ export default function FileAttachments({ customer_id, order_id, contract_id, on
     listAttachments(params).then((data) => {
       setAttachments(data)
       onCountChange?.(data.length)
-    }).catch(() => {})
+    }).catch((err) => console.warn('Anhänge konnten nicht geladen werden:', err))
   }, [customer_id, order_id, contract_id, onCountChange])
 
   useEffect(() => {

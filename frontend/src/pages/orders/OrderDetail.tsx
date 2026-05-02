@@ -26,10 +26,10 @@ export default function OrderDetail() {
     getOrder(id).then((o) => {
       setOrder(o)
       if (o.customer_id) {
-        getCustomer(o.customer_id).then((c) => setCustomerEmail(c.email || '')).catch(() => {})
+        getCustomer(o.customer_id).then((c) => setCustomerEmail(c.email || '')).catch((err) => console.warn("Daten konnten nicht geladen werden:", err))
       }
     })
-    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch(() => {})
+    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch((err) => console.warn("Daten konnten nicht geladen werden:", err))
   }, [id])
 
   const handleGenerateQuotePdf = async () => {

@@ -38,7 +38,7 @@ export default function Tasks() {
         setTasks(r.data.tasks)
         setCount(r.data.count)
       })
-      .catch(() => {})
+      .catch((err) => console.warn("Daten konnten nicht geladen werden:", err))
       .finally(() => setLoading(false))
   }, [])
 

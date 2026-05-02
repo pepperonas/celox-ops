@@ -15,6 +15,22 @@ from app.models.attachment import Attachment
 ATTACHMENTS_DIR = "/data/attachments"
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
+# Whitelist of allowed MIME types for uploads.
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "text/plain", "text/csv", "text/markdown",
+    "application/zip", "application/x-zip-compressed",
+}
+
 router = APIRouter(
     prefix="/api/attachments",
     tags=["attachments"],
@@ -63,6 +79,13 @@ async def upload_attachment(
     stored_name = f"{file_id}_{original_name}"
     file_path = os.path.join(ATTACHMENTS_DIR, stored_name)
 
+    content_type = (file.content_type or "application/octet-stream").lower().split(";")[0].strip()
+    if content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Dateityp '{content_type}' nicht erlaubt.",
+        )
+
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
@@ -80,7 +103,7 @@ async def upload_attachment(
         contract_id=uuid.UUID(contract_id) if contract_id else None,
         filename=stored_name,
         original_name=original_name,
-        content_type=file.content_type or "application/octet-stream",
+        content_type=content_type,
         size=len(content),
         description=description,
     )

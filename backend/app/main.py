@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 from app.database import async_session_factory, engine
 from app.models.customer import Base
 import app.models.pagespeed_result  # noqa: F401 — register for create_all
@@ -34,6 +35,18 @@ async def run_cron() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Validate critical secrets
+    if settings.JWT_SECRET == "change-me-in-production" or len(settings.JWT_SECRET) < 32:
+        raise RuntimeError(
+            "JWT_SECRET ist nicht oder unsicher konfiguriert. "
+            "Setze einen mindestens 32 Zeichen langen, zufälligen Wert in .env."
+        )
+    if not settings.CORS_ORIGINS.strip():
+        logger.warning(
+            "CORS_ORIGINS leer — alle Cross-Origin-Requests werden blockiert. "
+            "Setze CORS_ORIGINS=https://deine-domain.de in .env."
+        )
+
     # Create all tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -59,12 +72,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_origins_raw = (settings.CORS_ORIGINS or "").strip()
+_allowed_origins = [o.strip() for o in _origins_raw.split(",") if o.strip()] if _origins_raw else []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Import routers after app creation to avoid circular imports

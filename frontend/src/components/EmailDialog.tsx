@@ -46,7 +46,7 @@ export default function EmailDialog({
 
   useEffect(() => {
     if (isOpen) {
-      getEmailTemplates().then(setTemplates).catch(() => {})
+      getEmailTemplates().then(setTemplates).catch((err) => console.warn('Email-Vorlagen konnten nicht geladen werden:', err))
     }
   }, [isOpen])
 

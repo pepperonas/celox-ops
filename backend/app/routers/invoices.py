@@ -1,3 +1,4 @@
+import asyncio
 import math
 import uuid
 from decimal import Decimal
@@ -230,7 +231,7 @@ async def update_invoice(
     # Regenerate PDF if one already exists, so edits are reflected immediately
     if invoice.pdf_path:
         try:
-            new_pdf_path = generate_invoice_pdf(invoice, invoice.customer)
+            new_pdf_path = await asyncio.to_thread(generate_invoice_pdf, invoice, invoice.customer)
             invoice.pdf_path = new_pdf_path
             await db.flush()
         except Exception as e:
@@ -283,7 +284,7 @@ async def generate_pdf(
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
 
-    pdf_path = generate_invoice_pdf(invoice, invoice.customer)
+    pdf_path = await asyncio.to_thread(generate_invoice_pdf, invoice, invoice.customer)
     invoice.pdf_path = pdf_path
     await db.flush()
     await db.refresh(invoice)
@@ -390,7 +391,7 @@ async def generate_reminder_pdf_endpoint(
             detail="Keine Mahnung vorhanden. Bitte zuerst eine Mahnung senden.",
         )
 
-    pdf_path = generate_reminder_pdf(invoice, invoice.customer, invoice.reminder_level)
+    pdf_path = await asyncio.to_thread(generate_reminder_pdf, invoice, invoice.customer, invoice.reminder_level)
     invoice.reminder_pdf_path = pdf_path
     await db.flush()
     await db.refresh(invoice)
@@ -706,7 +707,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
             # Regenerate PDF
             try:
                 from app.services.pdf_service import generate_invoice_pdf
-                pdf_path = generate_invoice_pdf(inv, inv.customer)
+                pdf_path = await asyncio.to_thread(generate_invoice_pdf, inv, inv.customer)
                 inv.pdf_path = pdf_path
                 pdf_count += 1
             except Exception as e:

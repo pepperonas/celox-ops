@@ -56,7 +56,7 @@ export default function CustomerDetail() {
     getContracts({ customer_id: id }).then((r) => setContracts(r.items))
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
     getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
-    listAttachments({ customer_id: id }).then((a) => setAttachmentsCount(a.length)).catch(() => {})
+    listAttachments({ customer_id: id }).then((a) => setAttachmentsCount(a.length)).catch((err) => console.warn('Anhang-Anzahl konnte nicht geladen werden:', err))
     api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
   }, [id])
 

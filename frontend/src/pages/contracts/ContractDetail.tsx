@@ -19,7 +19,7 @@ export default function ContractDetail() {
   useEffect(() => {
     if (!id) return
     getContract(id).then(setContract)
-    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch(() => {})
+    getInvoices({ customer_id: id }).then((r) => setInvoices(r.items)).catch((err) => console.warn("Daten konnten nicht geladen werden:", err))
   }, [id])
 
   const handleDelete = async () => {
