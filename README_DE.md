@@ -116,7 +116,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Generiert mit **WeasyPrint** und Jinja2-Templates
 - Beinhaltet: Absender, Empfänger, Positionen, Summen, Bankdaten, Steuerinfo
 - **Unterschrift** als eingebettetes Bild (Base64, konfigurierbarer Pfad)
+- **Optionales Logo** im Header (`LOGO_PATH` in .env)
 - **Zahlungsoptionen**: Banküberweisung (IBAN/BIC) und PayPal (konfigurierbar)
+- **Online-Bezahllink + QR-Code** im PDF (`PAYMENT_LINK_TEMPLATE` mit `{amount}` + `{invoice_number}` Platzhaltern, z.B. PayPal.me oder Stripe-Link)
 - **Steuernummer** im Footer (gemäß § 14 Abs. 4 UStG)
 - Bis zu 3 optionale PDF-Anlagen: KI-Nutzungsbericht, GitHub-Commit-Verlauf, oder beides — jeweils mit unabhängigem Zeitraum
 - **PDF-Anzeige im Browser** — Rechnungen, Angebote und Mahnungen direkt in neuem Tab anzeigen
@@ -129,6 +131,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **CC + BCC Empfänger** im E-Mail-Dialog (Mehrfacheingabe per Komma/Semikolon, einblendbar via "+ CC / BCC")
 - Vorgefüllte Empfänger, Betreff und Nachrichtenvorlagen
 - Wiederverwendbarer E-Mail-Dialog mit bearbeitbaren Feldern
+- **Erweiterte Variablen** in Vorlagen: `{nr}`, `{kunde}`, `{betrag}`, `{firma}`, `{rechnungsdatum}`, `{faelligkeit}`, `{netto}`, `{ust}`, `{verzugstage}`, `{mahnstufe}` — Variablen-Hint im Dialog
 - PDF wird automatisch angehängt
 
 ### Kontakthistorie
@@ -182,6 +185,25 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Ausgabenaufschlüsselung nach Kategorie mit Fortschrittsbalken
 - CSV-Export für Steuerberater
 - **Monatsberichte als PDF** — herunterladbare Geschäftsberichte mit KPIs, Rechnungsliste, Zeitauswertung, offene Posten
+- **Steuerprognose** (`/api/euer/forecast`) — Hochrechnung Jahresende basierend auf YTD-Daten + ESt-Schätzung nach § 32a EStG (Grundtarif)
+
+### Stundennachweise
+- **Stundennachweis-PDF** pro Kunde + Zeitraum (`/api/time-entries/timesheet-pdf`)
+- Nur unfakturierte Stunden filterbar
+- Professionelles A4-Layout mit Datum, Beschreibung, Stunden, Stundensatz, Betrag
+
+### Globale Suche (Cmd+K / Ctrl+K)
+- **Cmd+K / Ctrl+K** öffnet Suchmodal von überall in der App
+- Findet Kunden, Rechnungen, Aufträge, Verträge, Leads (Volltextsuche, max 5 pro Typ)
+- Action-Shortcuts: "Neue Rechnung", "Neuer Kunde", "Kalender öffnen", etc.
+- Tastatur-Navigation (↑↓ Enter Esc), debounced (200ms)
+
+### Workflow-Optimierungen
+- **Inline-Status-Toggle** in Rechnungsliste: → Gestellt / ✓ Bezahlt direkt ohne Detail-Page
+- **Rechnung duplizieren** — als Vorlage für wiederkehrende Standard-Rechnungen
+- **Bulk-Aktionen** in Rechnungsliste: mehrere markieren → "Als bezahlt" / "PDFs laden"
+- **Customer Quick-Actions** in Kundenliste: + Rechnung / + Auftrag direkt ohne erst auf Detail klicken
+- **URL-Parameter-Vorbefüllung**: `?customer_id=…` in Form-Routes
 
 ### Dashboard
 - **Überfälligkeits-Banner** — prominent rot hervorgehoben am oberen Rand wenn überfällige Rechnungen existieren (mit Anzahl, Gesamtsumme, Pulsierendem Warn-Icon, Klick → gefilterte Liste)
@@ -542,6 +564,12 @@ Die aktive Arbeitszeit wird aus Nachrichtenzeitstempeln berechnet: Intervalle zw
 | `SMTP_PASSWORD` | SMTP-Passwort | (App-Passwort) |
 | `SMTP_FROM_EMAIL` | Absender-E-Mail | `info@example.com` |
 | `SMTP_FROM_NAME` | Absendername | `Ihre Firma` |
+| `CORS_ORIGINS` | Erlaubte Cross-Origin-Domains (komma-getrennt) | `https://ops.example.com` |
+| `TOTP_SECRET` | 2FA TOTP-Secret (optional, aktiviert 2FA) | (Base32) |
+| `SENTRY_DSN` | Sentry/GlitchTip DSN (optional, Error-Tracking) | `https://...@sentry.io/...` |
+| `LOGO_PATH` | Pfad zum Logo-Bild (optional, im PDF-Header) | `/data/assets/logo.png` |
+| `PAYMENT_LINK_TEMPLATE` | Bezahllink-Vorlage (optional, im PDF) | `https://paypal.me/du/{amount}EUR` |
+| `ICAL_TOKEN` | Token für iCal-Feed (optional, ohne Auth) | (zufällig 32+ Zeichen) |
 
 **Sicherheitshinweise:**
 - `.env` niemals committen — ist in `.gitignore` eingetragen
@@ -699,6 +727,37 @@ CO-2026-0001
 - **JWT_SECRET-Validierung** beim Startup (mind. 32 Zeichen, Default-Wert blockiert Start)
 - **File-Upload MIME-Whitelist**: nur PDF, Bilder, Office-Dokumente, ZIP erlaubt
 - **Path-Traversal-Schutz** bei Datei-Uploads (Filename via `PurePosixPath.name`)
+- **Login-Rate-Limit** (slowapi): 5 Versuche pro Minute pro IP — Brute-Force-Schutz
+- **2FA / TOTP-Authentifizierung** (`TOTP_SECRET` in .env aktiviert) — optional, kompatibel mit Google Authenticator/1Password/Authy/etc.
+- **Audit-Log** — alle mutierenden Requests (POST/PUT/PATCH/DELETE) werden in `audit_log`-Tabelle protokolliert (User, IP, User-Agent, Pfad, Status, Entity-Typ + ID)
+- **Sentry/GlitchTip Error-Tracking** (optional, `SENTRY_DSN` in .env)
+
+## Backup-Strategie
+
+- **Tägliches automatisches Backup** auf VPS: `scripts/backup.sh` läuft via cron um 03:00
+  - DB-Dump (`pg_dump | gzip`) + Volume-Inhalt (PDFs, Anhänge) als tar.gz
+  - Speicherort: `/var/backups/celox-ops/`
+  - Retention: 30 Tage
+  - Logs in `backup.log`
+- **Off-Site-Backup** (optional): rclone-Hook im Backup-Script
+  - Konfigurieren via `rclone config` (Backblaze B2, Hetzner Storage Box, S3-kompatibel)
+  - Remote-Name muss `celox-backup` heißen
+  - Manuelles Backup zusätzlich via `GET /api/backup/export` (JSON + Base64-PDFs)
+
+## DevOps & Auto-Deploy
+
+- **GitHub Actions CI** (`.github/workflows/ci.yml`):
+  - Backend: ruff lint + Smoke-Import aller Router
+  - Frontend: tsc --noEmit + npm run build
+- **Pre-commit Hooks** (`.pre-commit-config.yaml`):
+  - ruff für Backend, tsc für Frontend, Secret-Scan
+  - Installation: `pip install pre-commit && pre-commit install`
+- **Auto-Deploy** auf VPS (5-Min-Cron):
+  - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
+  - Logs in `/var/log/celox-auto-deploy.log`
+  - Smoke-Test (Health-Check) nach Backend-Rebuild
+- **Smoke-Tests** (`backend/tests/test_smoke.py`):
+  - 8 Tests: Router-Imports, JWT, Invoice-Berechnung (mit Discount-Edge-Cases), Path-Traversal, Auto-Position-Pattern
 
 ---
 

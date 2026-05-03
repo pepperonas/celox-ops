@@ -116,7 +116,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Generated via **WeasyPrint** with Jinja2 templates
 - Includes: sender, recipient, line items, totals, bank details, tax info
 - **Signature image** embedded (base64, configurable path)
+- **Optional logo** in header (`LOGO_PATH` env var)
 - **Payment options**: bank transfer (IBAN/BIC) and PayPal (configurable)
+- **Online payment link + QR code** in PDF (`PAYMENT_LINK_TEMPLATE` with `{amount}` + `{invoice_number}` placeholders, e.g. PayPal.me or Stripe link)
 - **Tax number** in footer (Steuernummer, as required by German tax law)
 - Up to 3 optional PDF attachments: AI usage report, GitHub commit history, or both — each with independent date range
 - **In-browser PDF viewer** — view invoices, quotes, and reminders directly in a new tab
@@ -182,6 +184,25 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Expense breakdown by category with progress bars
 - CSV export for tax advisor
 - **Monthly PDF reports** — downloadable business reports with KPIs, invoice list, time entries, open items
+- **Tax forecast** (`/api/euer/forecast`) — year-end projection from YTD data + income tax estimate (German § 32a EStG basic rate)
+
+### Timesheets
+- **Per-customer timesheet PDF** for any date range (`/api/time-entries/timesheet-pdf`)
+- Optional filter for uninvoiced entries only
+- Professional A4 layout with date, description, hours, rate, amount
+
+### Global Search (Cmd+K / Ctrl+K)
+- **Cmd+K / Ctrl+K** opens search modal from anywhere
+- Finds customers, invoices, orders, contracts, leads (full-text, max 5 per type)
+- Action shortcuts: "New invoice", "New customer", "Open calendar", etc.
+- Keyboard navigation (↑↓ Enter Esc), debounced 200ms
+
+### Workflow Optimizations
+- **Inline status toggle** in invoice list: → Issued / ✓ Paid without opening detail page
+- **Duplicate invoice** — as template for recurring standard invoices
+- **Bulk actions** in invoice list: select multiple → "Mark as paid" / "Download PDFs"
+- **Customer quick-actions** in customer list: + Invoice / + Order without opening detail
+- **URL parameter prefill**: `?customer_id=…` in form routes
 
 ### Dashboard
 - **Overdue alert banner** — prominently shown in red at the top when overdue invoices exist (count, total sum, pulsing warning icon, click → filtered list)
@@ -538,6 +559,12 @@ Active working time is calculated from message timestamps: intervals between con
 | `SMTP_PASSWORD` | SMTP password | (app password) |
 | `SMTP_FROM_EMAIL` | Sender email | `info@example.com` |
 | `SMTP_FROM_NAME` | Sender name | `Your Company` |
+| `CORS_ORIGINS` | Allowed cross-origin domains (comma-sep) | `https://ops.example.com` |
+| `TOTP_SECRET` | 2FA TOTP secret (optional, enables 2FA) | (Base32) |
+| `SENTRY_DSN` | Sentry/GlitchTip DSN (optional, error tracking) | `https://...@sentry.io/...` |
+| `LOGO_PATH` | Path to logo image (optional, in PDF header) | `/data/assets/logo.png` |
+| `PAYMENT_LINK_TEMPLATE` | Payment link template (optional, in PDF) | `https://paypal.me/you/{amount}EUR` |
+| `ICAL_TOKEN` | Token for iCal feed (optional, no auth) | (random 32+ chars) |
 
 **Security notes:**
 - Never commit `.env` — it is in `.gitignore`
@@ -695,6 +722,33 @@ CO-2026-0001
 - **JWT_SECRET validation** at startup (min. 32 characters, default value blocks startup)
 - **File upload MIME whitelist**: only PDF, images, Office documents, ZIP allowed
 - **Path traversal protection** on file uploads (filename via `PurePosixPath.name`)
+- **Login rate limit** (slowapi): 5 attempts/min per IP — brute-force protection
+- **2FA / TOTP authentication** (`TOTP_SECRET` env var enables it) — optional, compatible with Google Authenticator/1Password/Authy/etc.
+- **Audit log** — all mutating requests (POST/PUT/PATCH/DELETE) logged to `audit_log` table (user, IP, UA, path, status, entity type+id)
+- **Sentry/GlitchTip error tracking** (optional, `SENTRY_DSN` env var)
+
+## Backup Strategy
+
+- **Daily automatic backup** on VPS: `scripts/backup.sh` runs via cron at 03:00
+  - DB dump (`pg_dump | gzip`) + volume contents (PDFs, attachments) as tar.gz
+  - Location: `/var/backups/celox-ops/`
+  - Retention: 30 days
+- **Off-site backup** (optional): rclone hook in backup script
+  - Configure via `rclone config` (Backblaze B2, Hetzner Storage Box, S3-compatible)
+  - Remote name must be `celox-backup`
+
+## DevOps & Auto-Deploy
+
+- **GitHub Actions CI** (`.github/workflows/ci.yml`):
+  - Backend: ruff lint + smoke-import of all routers
+  - Frontend: tsc --noEmit + npm run build
+- **Pre-commit hooks** (`.pre-commit-config.yaml`):
+  - ruff for backend, tsc for frontend, secret scan
+  - Install: `pip install pre-commit && pre-commit install`
+- **Auto-deploy** on VPS (5-min cron):
+  - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
+  - Logs to `/var/log/celox-auto-deploy.log`
+- **Smoke tests** (`backend/tests/test_smoke.py`): 8 tests covering router imports, JWT, invoice calculation (incl. discount edge cases), path traversal, auto-position pattern
 
 ---
 

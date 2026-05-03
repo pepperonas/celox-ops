@@ -114,6 +114,13 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Stats cache**: `/api/dashboard/stats` cached in-memory for 60s. No explicit invalidation — TTL-only. New mutations show up within 60s.
 - **Customer relationships are `lazy="raise"`**: Don't access `customer.orders/contracts/invoices` without explicit `joinedload()` in the query — will throw at runtime.
 - **Attachment MIME whitelist**: Only PDF, images, Office, ZIP accepted. Other types → 415. Whitelist in `routers/attachments.py`.
+- **Login rate limit**: 5/min/IP via `slowapi`. Decorator on `auth.login`, exception handler in `main.py`.
+- **2FA**: TOTP via `pyotp`. If `TOTP_SECRET` set, login requires 6-digit code in `scope` field of OAuth2 form. Frontend Login.tsx shows TOTP input on first 401 with detail "2FA-Code erforderlich".
+- **Audit log**: Middleware in `app/middleware/audit.py` logs all mutating requests to `audit_log` table. Best-effort — never blocks/breaks the response.
+- **Auto-deploy**: VPS runs `scripts/auto-deploy.sh` every 5 minutes (cron). Polls `origin/main`, rebuilds only what changed. Repo at `/opt/celox-ops` was initialized with `git init && git remote add && git checkout -f main` (preserved `.env` via `/tmp/.env.backup`).
+- **Backup**: `scripts/backup.sh` runs via cron at 03:00 daily. Outputs to `/var/backups/celox-ops/`. Optional rclone push to remote `celox-backup:`.
+- **iCal feed**: `/api/ical?token=…` is PUBLIC (no JWT auth) — secured only by `ICAL_TOKEN` env var. Don't share the URL.
+- **Smoke tests**: `backend/tests/test_smoke.py` — run inside container: `docker exec celox-ops-backend-1 python3 -m pytest test_smoke.py`. CI runs on every push.
 - **Axios FormData uploads**: The default `Content-Type: application/json` on the axios client (`api/client.ts`) prevents Axios from auto-detecting FormData and setting the multipart boundary. For file uploads, pass `headers: { 'Content-Type': undefined }` to override the default — otherwise backend gets 422.
 - **Refresh-drafts position detection**: Auto-generated positions are marked with `"auto": true`. Legacy data detected via regex `\(\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}\)$`. Title-based matching was removed because renaming the invoice caused duplication.
 - **Invoice detail display**: `positions[].gesamt` values from JSON may be strings — always wrap in `Number()` before arithmetic.

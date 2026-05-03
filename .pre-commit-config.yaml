@@ -12,13 +12,13 @@ repos:
     hooks:
       - id: tsc
         name: TypeScript Type-Check (frontend)
-        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        entry: bash -c "cd frontend && npx tsc --noEmit"
         language: system
         files: ^frontend/.*\.(ts|tsx)$
         pass_filenames: false
 
       - id: no-secrets
-        name: Block .env / secrets accidentally committed
-        entry: bash -c 'if grep -lE "(JWT_SECRET|TOTP_SECRET|SMTP_PASSWORD|GITHUB_TOKEN|ADMIN_PASSWORD_HASH)\s*=\s*[^$]" "$@" 2>/dev/null; then echo "ABORT: Secret-looking values found in staged files."; exit 1; fi'
+        name: Block accidentally committed secrets
+        entry: scripts/check-no-secrets.sh
         language: system
         files: \.(env|sh|md|txt|json|yaml|yml)$
