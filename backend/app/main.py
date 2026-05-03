@@ -3,16 +3,29 @@ import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+import sentry_sdk
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import async_session_factory, engine
 from app.models.customer import Base
 import app.models.pagespeed_result  # noqa: F401 — register for create_all
+import app.models.audit_log  # noqa: F401 — register for create_all
+from app.middleware.audit import AuditMiddleware
 from app.services.cron_service import check_overdue_invoices
 
 logger = logging.getLogger(__name__)
+
+# Initialize Sentry if DSN configured
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
 
 
 async def run_cron() -> None:
@@ -75,6 +88,8 @@ app = FastAPI(
 _origins_raw = (settings.CORS_ORIGINS or "").strip()
 _allowed_origins = [o.strip() for o in _origins_raw.split(",") if o.strip()] if _origins_raw else []
 
+app.add_middleware(AuditMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
@@ -82,6 +97,18 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+# Wire up the rate limiter (login endpoint is decorated)
+from app.auth import limiter  # noqa: E402
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(_request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Zu viele Anfragen — bitte warten. ({exc.detail})"},
+    )
 
 # Import routers after app creation to avoid circular imports
 from app.auth import router as auth_router  # noqa: E402
@@ -128,5 +155,21 @@ app.include_router(search_router)
 
 
 @app.get("/api/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+async def health_check() -> JSONResponse:
+    """Liveness + DB-Connection check. Used by monitoring."""
+    from sqlalchemy import text
+    db_ok = False
+    try:
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception as e:
+        logger.error(f"Health-Check DB-Fehler: {e}")
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "db": "ok" if db_ok else "error",
+        "sentry": "configured" if settings.SENTRY_DSN else "off",
+        "totp": "enabled" if settings.TOTP_SECRET else "disabled",
+        "smtp": "configured" if settings.SMTP_HOST else "off",
+    }
+    return JSONResponse(content=payload, status_code=200 if db_ok else 503)

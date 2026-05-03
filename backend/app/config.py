@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     # Comma-separated list of allowed origins (CORS). Empty = block all.
     CORS_ORIGINS: str = ""
 
+    # Optional 2FA: if set, login requires TOTP code (use scope field)
+    TOTP_SECRET: str = ""
+
+    # Optional Sentry error tracking
+    SENTRY_DSN: str = ""
+
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD_HASH: str = ""
 

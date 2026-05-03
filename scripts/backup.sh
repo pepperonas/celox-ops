@@ -46,7 +46,21 @@ if [ "$DELETED" -gt 0 ]; then
   log "Rotated: $DELETED old backup file(s) removed"
 fi
 
-# 4. Final report
+# 4. Off-site sync (optional — only if rclone is installed and configured)
+# Configure with: rclone config (create remote named 'celox-backup')
+# Then this will sync to e.g. Backblaze B2 / Hetzner Storage Box / Strato HiDrive
+if command -v rclone >/dev/null && rclone listremotes | grep -q '^celox-backup:'; then
+  if rclone sync "$BACKUP_DIR" celox-backup:celox-ops/ \
+       --exclude '*.log' --transfers 4 --quiet 2>>"$LOG_FILE"; then
+    log "Off-site sync OK (celox-backup:celox-ops/)"
+  else
+    log "Off-site sync FAILED (continuing)"
+  fi
+else
+  log "Off-site sync skipped (rclone or remote 'celox-backup' not configured)"
+fi
+
+# 5. Final report
 TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
 COUNT=$(find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'db-*.sql.gz' -o -name 'data-*.tar.gz' \) | wc -l)
 log "=== Backup done: $COUNT files, $TOTAL_SIZE total ==="

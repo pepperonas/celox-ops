@@ -17,3 +17,7 @@ python-dateutil==2.9.0.post0
 pytest==8.3.4
 pytest-asyncio==0.25.0
 ruff==0.8.6
+slowapi==0.1.9
+pyotp==2.9.0
+qrcode[pil]==8.0
+sentry-sdk[fastapi]==2.19.2
