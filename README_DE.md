@@ -728,7 +728,7 @@ CO-2026-0001
 - **File-Upload MIME-Whitelist**: nur PDF, Bilder, Office-Dokumente, ZIP erlaubt
 - **Path-Traversal-Schutz** bei Datei-Uploads (Filename via `PurePosixPath.name`)
 - **Login-Rate-Limit** (slowapi): 5 Versuche pro Minute pro IP — Brute-Force-Schutz
-- **2FA / TOTP-Authentifizierung** (`TOTP_SECRET` in .env aktiviert) — optional, kompatibel mit Google Authenticator/1Password/Authy/etc.
+- **2FA / TOTP-Authentifizierung** (optional) — Setup via `GET /api/auth/2fa/setup` (liefert QR-Code), Secret in `TOTP_SECRET` in .env eintragen → Backend-Neustart aktiviert es. Kompatibel mit Google Authenticator/1Password/Authy/etc.
 - **Audit-Log** — alle mutierenden Requests (POST/PUT/PATCH/DELETE) werden in `audit_log`-Tabelle protokolliert (User, IP, User-Agent, Pfad, Status, Entity-Typ + ID)
 - **Sentry/GlitchTip Error-Tracking** (optional, `SENTRY_DSN` in .env)
 

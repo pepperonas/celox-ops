@@ -118,6 +118,12 @@ async def me(current_user: str = Depends(get_current_user)) -> UserInfo:
     return UserInfo(username=current_user, totp_enabled=bool(settings.TOTP_SECRET))
 
 
+@router.get("/info")
+async def auth_info() -> dict:
+    """Public endpoint for the login page — tells frontend if 2FA is required."""
+    return {"totp_enabled": bool(settings.TOTP_SECRET)}
+
+
 @router.get("/2fa/setup")
 async def setup_2fa(current_user: str = Depends(get_current_user)) -> Response:
     """Generates a new TOTP secret + QR code as PNG.

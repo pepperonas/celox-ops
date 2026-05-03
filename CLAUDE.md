@@ -115,7 +115,10 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Customer relationships are `lazy="raise"`**: Don't access `customer.orders/contracts/invoices` without explicit `joinedload()` in the query — will throw at runtime.
 - **Attachment MIME whitelist**: Only PDF, images, Office, ZIP accepted. Other types → 415. Whitelist in `routers/attachments.py`.
 - **Login rate limit**: 5/min/IP via `slowapi`. Decorator on `auth.login`, exception handler in `main.py`.
-- **2FA**: TOTP via `pyotp`. If `TOTP_SECRET` set, login requires 6-digit code in `scope` field of OAuth2 form. Frontend Login.tsx shows TOTP input on first 401 with detail "2FA-Code erforderlich".
+- **2FA**: TOTP via `pyotp`. If `TOTP_SECRET` set, login requires 6-digit code in `scope` field of OAuth2 form. Frontend Login.tsx shows TOTP input on first 401 with detail "2FA-Code erforderlich". Default: empty (2FA off). To re-enable: scan QR from `/api/auth/2fa/setup`, save secret to `TOTP_SECRET` in `.env`, restart backend.
+- **401 interceptor exception**: `api/client.ts` redirects to `/login` on 401 ONLY when the request is NOT to `/auth/login` AND the user is NOT already on `/login`. Otherwise the user gets bounced before seeing form errors (e.g. wrong password, 2FA required).
+- **ServiceWorker is network-first**: `frontend/public/sw.js` always fetches from network, falls back to cache only offline. Cache name `celox-ops-v3` — bump to force purge. Avoids stale bundles after auto-deploy.
+- **Public auth info endpoint**: `GET /api/auth/info` returns `{totp_enabled: bool}` without auth — frontend can pre-render the 2FA field if 2FA is active.
 - **Audit log**: Middleware in `app/middleware/audit.py` logs all mutating requests to `audit_log` table. Best-effort — never blocks/breaks the response.
 - **Auto-deploy**: VPS runs `scripts/auto-deploy.sh` every 5 minutes (cron). Polls `origin/main`, rebuilds only what changed. Repo at `/opt/celox-ops` was initialized with `git init && git remote add && git checkout -f main` (preserved `.env` via `/tmp/.env.backup`).
 - **Backup**: `scripts/backup.sh` runs via cron at 03:00 daily. Outputs to `/var/backups/celox-ops/`. Optional rclone push to remote `celox-backup:`.
