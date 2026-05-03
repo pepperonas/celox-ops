@@ -1,14 +1,21 @@
+import asyncio
 import math
+import os
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
+from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from weasyprint import HTML
 
 from app.auth import get_current_user
+from app.config import settings
 from app.database import get_db
 from app.models.customer import Customer
 from app.models.time_entry import TimeEntry
@@ -184,3 +191,62 @@ async def delete_time_entry(
         raise HTTPException(status_code=404, detail="Zeiteintrag nicht gefunden")
 
     await db.delete(entry)
+
+
+def _render_timesheet(customer, entries, date_from: date, date_to: date) -> bytes:
+    """Render timesheet PDF for a customer + date range."""
+    env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / "templates")))
+    template = env.get_template("timesheet.html")
+    total_hours = sum(float(e.hours) for e in entries)
+    total_amount = sum(float(e.hours) * float(e.hourly_rate) for e in entries if e.hourly_rate)
+    html_content = template.render(
+        customer=customer,
+        entries=entries,
+        date_from=date_from,
+        date_to=date_to,
+        total_hours=total_hours,
+        total_amount=total_amount,
+        generated_at=datetime.now(),
+        settings=settings,
+    )
+    pdf_bytes_holder: list[bytes] = []
+    def _build():
+        pdf_bytes_holder.append(HTML(string=html_content).write_pdf())
+    _build()
+    return pdf_bytes_holder[0]
+
+
+@router.get("/timesheet-pdf")
+async def timesheet_pdf(
+    customer_id: uuid.UUID = Query(...),
+    date_from: date = Query(...),
+    date_to: date = Query(...),
+    only_uninvoiced: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Generates a timesheet PDF for one customer + date range."""
+    cust_res = await db.execute(select(Customer).where(Customer.id == customer_id))
+    customer = cust_res.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    q = (
+        select(TimeEntry)
+        .where(TimeEntry.customer_id == customer_id)
+        .where(TimeEntry.date >= date_from)
+        .where(TimeEntry.date <= date_to)
+        .order_by(TimeEntry.date.asc())
+    )
+    if only_uninvoiced:
+        q = q.where(TimeEntry.invoiced.is_(False))
+    res = await db.execute(q)
+    entries = res.scalars().all()
+
+    pdf = await asyncio.to_thread(_render_timesheet, customer, entries, date_from, date_to)
+    safe = customer.name.replace("/", "_").replace(" ", "_")
+    filename = f"Stundennachweis_{safe}_{date_from.isoformat()}_{date_to.isoformat()}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

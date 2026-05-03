@@ -245,6 +245,34 @@ def generate_invoice_pdf(
         except (_json2.JSONDecodeError, TypeError):
             special_terms_list = [invoice.special_terms]
 
+    # Optional logo as base64
+    logo_b64 = None
+    if settings.LOGO_PATH and os.path.isfile(settings.LOGO_PATH):
+        with open(settings.LOGO_PATH, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    # Optional payment link (replace {amount} + {invoice_number})
+    payment_link = None
+    payment_qr_b64 = None
+    if settings.PAYMENT_LINK_TEMPLATE:
+        payment_link = (
+            settings.PAYMENT_LINK_TEMPLATE
+            .replace("{amount}", f"{float(invoice.total):.2f}")
+            .replace("{invoice_number}", invoice.invoice_number)
+        )
+        try:
+            import qrcode
+            from io import BytesIO
+            qr = qrcode.QRCode(box_size=4, border=2)
+            qr.add_data(payment_link)
+            qr.make(fit=True)
+            img = qr.make_image()
+            buf = BytesIO()
+            img.save(buf, format="PNG")
+            payment_qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        except Exception:
+            pass
+
     html_content = template.render(
         invoice=invoice,
         customer=customer,
@@ -258,6 +286,9 @@ def generate_invoice_pdf(
         github_commits=github_commits,
         activity_chart_data=activity_chart_data,
         signature_b64=signature_b64,
+        logo_b64=logo_b64,
+        payment_link=payment_link,
+        payment_qr_b64=payment_qr_b64,
     )
 
     os.makedirs(settings.PDF_STORAGE_PATH, exist_ok=True)

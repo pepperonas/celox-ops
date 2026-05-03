@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     # Optional Sentry error tracking
     SENTRY_DSN: str = ""
 
+    # Optional logo path for invoice/quote PDF header
+    LOGO_PATH: str = ""
+
+    # Optional payment link templates with {invoice_number} + {amount} placeholders
+    # e.g. "https://paypal.me/yourname/{amount}EUR" or Stripe payment link
+    PAYMENT_LINK_TEMPLATE: str = ""
+
+    # Token for the iCal feed (passed as ?token=). Public endpoint, secured by token.
+    ICAL_TOKEN: str = ""
+
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD_HASH: str = ""
 

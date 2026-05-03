@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+@page { size: A4; margin: 2cm 2.5cm 3cm 2.5cm;
+  @bottom-center { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #888; }
+}
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.5; }
+h1 { font-size: 18pt; color: #1a1a2e; margin: 0 0 5px 0; }
+h2 { font-size: 11pt; color: #1a1a2e; margin: 25px 0 8px 0; }
+.meta { font-size: 9pt; color: #666; margin-bottom: 25px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 9pt; color: #666; border-bottom: 2px solid #1a1a2e; padding: 8px 6px; }
+td { padding: 6px; font-size: 9.5pt; border-bottom: 1px solid #eee; }
+tr:hover td { background: #f8f8f8; }
+.right { text-align: right; }
+.totals { margin-top: 15px; border-top: 2px solid #1a1a2e; padding-top: 10px; }
+.totals .row { display: flex; justify-content: space-between; padding: 4px 0; }
+.totals .total { font-weight: bold; font-size: 11pt; color: #1a1a2e; border-top: 1px solid #ccc; padding-top: 8px; margin-top: 4px; }
+.footer-meta { margin-top: 30px; font-size: 8pt; color: #999; }
+</style>
+</head>
+<body>
+<h1>Stundennachweis</h1>
+<div class="meta">
+  <strong>Kunde:</strong> {{ customer.name }}{% if customer.company %} ({{ customer.company }}){% endif %}<br>
+  <strong>Zeitraum:</strong> {{ date_from.strftime('%d.%m.%Y') }} – {{ date_to.strftime('%d.%m.%Y') }}<br>
+  <strong>Erstellt am:</strong> {{ generated_at.strftime('%d.%m.%Y') }}
+</div>
+
+{% if entries %}
+<table>
+  <thead>
+    <tr>
+      <th style="width: 80px;">Datum</th>
+      <th>Beschreibung</th>
+      <th class="right" style="width: 70px;">Stunden</th>
+      <th class="right" style="width: 90px;">Stundensatz</th>
+      <th class="right" style="width: 90px;">Betrag</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr>
+      <td>{{ e.date.strftime('%d.%m.%Y') }}</td>
+      <td>{{ e.description }}{% if e.notes %}<br><span style="color:#888; font-size: 8.5pt;">{{ e.notes }}</span>{% endif %}</td>
+      <td class="right">{{ "%.2f"|format(e.hours|float) }}</td>
+      <td class="right">{% if e.hourly_rate %}{{ "%.2f"|format(e.hourly_rate|float) }}&nbsp;&euro;{% else %}—{% endif %}</td>
+      <td class="right">{% if e.hourly_rate %}{{ "%.2f"|format((e.hours|float) * (e.hourly_rate|float)) }}&nbsp;&euro;{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="totals">
+  <div class="row"><span>Gesamtstunden:</span><span>{{ "%.2f"|format(total_hours) }} h</span></div>
+  <div class="row total"><span>Gesamtbetrag:</span><span>{{ "%.2f"|format(total_amount) }}&nbsp;&euro;</span></div>
+</div>
+{% else %}
+<p style="color: #888; font-style: italic;">Keine Zeiteinträge im gewählten Zeitraum.</p>
+{% endif %}
+
+<div class="footer-meta">
+  {{ settings.BUSINESS_NAME }} · {{ settings.BUSINESS_OWNER }} · {{ settings.BUSINESS_ADDRESS }}
+</div>
+</body>
+</html>

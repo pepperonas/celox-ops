@@ -175,3 +175,91 @@ async def euer_export(
             "Content-Disposition": f'attachment; filename="euer_{year}.csv"',
         },
     )
+
+
+@router.get("/forecast")
+async def tax_forecast(
+    year: int = Query(default=date.today().year),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Steuerprognose: hochrechnung Jahresende basierend auf YTD-Daten + simple Steuersatz-Schätzung.
+    Annahmen:
+    - YTD-Profit linear hochgerechnet auf Jahresende
+    - Vereinfachte ESt-Schätzung mit progressivem Tarif
+    - Solidaritätszuschlag entfällt (über Bagatellgrenze)
+    """
+    today = date.today()
+    is_current_year = year == today.year
+
+    # YTD revenue (paid)
+    res = await db.execute(
+        select(func.coalesce(func.sum(Invoice.total), 0)).where(
+            Invoice.status == InvoiceStatus.bezahlt,
+            extract("year", Invoice.invoice_date) == year,
+        )
+    )
+    revenue_ytd = float(res.scalar_one() or 0)
+
+    # YTD expenses
+    res = await db.execute(
+        select(func.coalesce(func.sum(Expense.amount), 0)).where(
+            extract("year", Expense.date) == year,
+        )
+    )
+    expenses_ytd = float(res.scalar_one() or 0)
+
+    profit_ytd = revenue_ytd - expenses_ytd
+
+    # Linear projection to end-of-year
+    if is_current_year:
+        days_passed = today.timetuple().tm_yday
+        days_in_year = 366 if (year % 4 == 0 and year % 100 != 0) or year % 400 == 0 else 365
+        factor = days_in_year / max(days_passed, 1)
+    else:
+        factor = 1.0
+
+    revenue_projected = revenue_ytd * factor
+    expenses_projected = expenses_ytd * factor
+    profit_projected = profit_ytd * factor
+
+    # Simplified German income tax (Grundtarif 2024/2025 — for prognose only, NO tax advice!)
+    # Source: § 32a EStG (Tarif 2024)
+    grundfreibetrag = 11604.0
+    def estimate_est(profit: float) -> float:
+        if profit <= grundfreibetrag:
+            return 0.0
+        if profit <= 17005:
+            y = (profit - grundfreibetrag) / 10000.0
+            return (922.98 * y + 1400.0) * y
+        if profit <= 66760:
+            z = (profit - 17005) / 10000.0
+            return (181.19 * z + 2397.0) * z + 1025.38
+        if profit <= 277825:
+            return 0.42 * profit - 10602.13
+        return 0.45 * profit - 18936.88
+
+    est_estimated = estimate_est(profit_projected)
+    # USt-Pre-payment liability (only relevant if not Kleinunternehmer)
+    # Vereinfachung: Brutto-Rechnungs-Sum minus 100/119 = USt-Anteil; minus Vorsteuer aus Ausgaben
+    # Nicht implementiert — erfordert detaillierte Erfassung mit/ohne USt-Ausweis
+    return {
+        "year": year,
+        "ytd": {
+            "revenue": round(revenue_ytd, 2),
+            "expenses": round(expenses_ytd, 2),
+            "profit": round(profit_ytd, 2),
+        },
+        "projected": {
+            "revenue": round(revenue_projected, 2),
+            "expenses": round(expenses_projected, 2),
+            "profit": round(profit_projected, 2),
+            "income_tax_estimate": round(est_estimated, 2),
+            "after_tax": round(profit_projected - est_estimated, 2),
+        },
+        "factor": round(factor, 3),
+        "is_current_year": is_current_year,
+        "disclaimer": (
+            "Schätzung nach Grundtarif § 32a EStG ohne Werbungskosten/Sonderausgaben/Vorsorge. "
+            "Keine Steuerberatung — bei tatsächlicher Steuerlast Steuerberater konsultieren."
+        ),
+    }
