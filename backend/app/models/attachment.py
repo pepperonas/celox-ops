@@ -23,6 +23,9 @@ class Attachment(Base):
     contract_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("contracts.id"), nullable=True
     )
+    expense_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("expenses.id"), nullable=True
+    )
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     original_name: Mapped[str] = mapped_column(String(500), nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)

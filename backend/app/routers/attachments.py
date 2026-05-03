@@ -53,6 +53,7 @@ def _attachment_to_dict(a: Attachment) -> dict:
         "customer_id": str(a.customer_id) if a.customer_id else None,
         "order_id": str(a.order_id) if a.order_id else None,
         "contract_id": str(a.contract_id) if a.contract_id else None,
+        "expense_id": str(a.expense_id) if a.expense_id else None,
         "filename": a.filename,
         "original_name": a.original_name,
         "content_type": a.content_type,
@@ -69,6 +70,7 @@ async def upload_attachment(
     customer_id: str | None = Form(None),
     order_id: str | None = Form(None),
     contract_id: str | None = Form(None),
+    expense_id: str | None = Form(None),
     description: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -101,6 +103,7 @@ async def upload_attachment(
         customer_id=uuid.UUID(customer_id) if customer_id else None,
         order_id=uuid.UUID(order_id) if order_id else None,
         contract_id=uuid.UUID(contract_id) if contract_id else None,
+        expense_id=uuid.UUID(expense_id) if expense_id else None,
         filename=stored_name,
         original_name=original_name,
         content_type=content_type,
@@ -124,6 +127,7 @@ async def list_attachments(
     customer_id: str | None = Query(None),
     order_id: str | None = Query(None),
     contract_id: str | None = Query(None),
+    expense_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     query = select(Attachment)
@@ -134,6 +138,8 @@ async def list_attachments(
         query = query.where(Attachment.order_id == uuid.UUID(order_id))
     if contract_id:
         query = query.where(Attachment.contract_id == uuid.UUID(contract_id))
+    if expense_id:
+        query = query.where(Attachment.expense_id == uuid.UUID(expense_id))
 
     query = query.order_by(Attachment.created_at.desc())
     result = await db.execute(query)

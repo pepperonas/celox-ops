@@ -7,7 +7,9 @@ interface Props {
   customer_id?: string
   order_id?: string
   contract_id?: string
+  expense_id?: string
   onCountChange?: (count: number) => void
+  showCamera?: boolean
 }
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
@@ -28,13 +30,14 @@ function formatDate(dateStr: string): string {
   })
 }
 
-export default function FileAttachments({ customer_id, order_id, contract_id, onCountChange }: Props) {
+export default function FileAttachments({ customer_id, order_id, contract_id, expense_id, onCountChange, showCamera }: Props) {
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ description: '', notes: '' })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
   const loadAttachments = useCallback(() => {
@@ -42,11 +45,12 @@ export default function FileAttachments({ customer_id, order_id, contract_id, on
     if (customer_id) params.customer_id = customer_id
     if (order_id) params.order_id = order_id
     if (contract_id) params.contract_id = contract_id
+    if (expense_id) params.expense_id = expense_id
     listAttachments(params).then((data) => {
       setAttachments(data)
       onCountChange?.(data.length)
     }).catch((err) => console.warn('Anhänge konnten nicht geladen werden:', err))
-  }, [customer_id, order_id, contract_id, onCountChange])
+  }, [customer_id, order_id, contract_id, expense_id, onCountChange])
 
   useEffect(() => {
     loadAttachments()
@@ -62,7 +66,7 @@ export default function FileAttachments({ customer_id, order_id, contract_id, on
     setUploading(true)
     try {
       for (const file of files) {
-        await uploadAttachment(file, { customer_id, order_id, contract_id })
+        await uploadAttachment(file, { customer_id, order_id, contract_id, expense_id })
       }
       toast.success(files.length === 1 ? 'Datei hochgeladen.' : `${files.length} Dateien hochgeladen.`)
       loadAttachments()
@@ -172,6 +176,24 @@ export default function FileAttachments({ customer_id, order_id, contract_id, on
             disabled={uploading}
           />
         </label>
+        {showCamera && (
+          <label className="btn-secondary cursor-pointer text-sm ml-2 inline-flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Foto
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileInput}
+              disabled={uploading}
+            />
+          </label>
+        )}
         <p className="text-xs text-text-muted mt-2">Max. 20 MB pro Datei</p>
       </div>
 

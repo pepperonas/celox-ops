@@ -12,3 +12,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </React.StrictMode>,
 )
+
+// Register service worker for PWA / "Add to Home Screen"
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) =>
+      console.warn('Service Worker registration failed:', err)
+    )
+  })
+}

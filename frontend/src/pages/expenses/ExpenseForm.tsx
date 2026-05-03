@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import DeleteDialog from '../../components/DeleteDialog'
+import FileAttachments from '../../components/FileAttachments'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
 import type { ExpenseCreate } from '../../types'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
@@ -202,6 +203,13 @@ export default function ExpenseForm() {
           </button>
         </div>
       </form>
+
+      {isEdit && id && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-3">Belege</h3>
+          <FileAttachments expense_id={id} showCamera />
+        </div>
+      )}
 
       <DeleteDialog
         isOpen={showDelete}

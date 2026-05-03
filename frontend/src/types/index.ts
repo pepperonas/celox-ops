@@ -408,6 +408,7 @@ export interface Attachment {
   customer_id: string | null
   order_id: string | null
   contract_id: string | null
+  expense_id: string | null
   filename: string
   original_name: string
   content_type: string
