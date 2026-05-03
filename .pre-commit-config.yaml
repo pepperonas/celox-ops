@@ -1,0 +1,24 @@
+# Pre-commit hooks: install via `pip install pre-commit && pre-commit install`
+# Runs lint + type-check before each commit.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: local
+    hooks:
+      - id: tsc
+        name: TypeScript Type-Check (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: no-secrets
+        name: Block .env / secrets accidentally committed
+        entry: bash -c 'if grep -lE "(JWT_SECRET|TOTP_SECRET|SMTP_PASSWORD|GITHUB_TOKEN|ADMIN_PASSWORD_HASH)\s*=\s*[^$]" "$@" 2>/dev/null; then echo "ABORT: Secret-looking values found in staged files."; exit 1; fi'
+        language: system
+        files: \.(env|sh|md|txt|json|yaml|yml)$
