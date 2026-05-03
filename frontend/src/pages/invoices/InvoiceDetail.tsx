@@ -14,6 +14,7 @@ import {
   sendReminderEmail,
   recordPayment,
   createCreditNote,
+  duplicateInvoice,
 } from '../../api/invoices'
 import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
@@ -339,6 +340,21 @@ export default function InvoiceDetail() {
 </button>
             </>
           )}
+          <button
+            onClick={async () => {
+              try {
+                const dup = await duplicateInvoice(id!)
+                toast.success(`Kopie ${dup.invoice_number} erstellt.`)
+                navigate(`/rechnungen/${dup.id}`)
+              } catch {
+                toast.error('Fehler beim Duplizieren.')
+              }
+            }}
+            className="btn-secondary text-sm"
+            title="Als Vorlage für neue Rechnung nutzen"
+          >
+            Duplizieren
+          </button>
         </div>
       </div>
 
@@ -567,6 +583,10 @@ export default function InvoiceDetail() {
           kunde: invoice.customer_name || '',
           betrag: formatCurrency(invoice.total),
           firma: invoice.customer_name || '',
+          rechnungsdatum: formatDate(invoice.invoice_date),
+          faelligkeit: formatDate(invoice.due_date),
+          netto: formatCurrency(invoice.subtotal),
+          ust: formatCurrency(invoice.tax_amount),
         }}
         onSend={async (data) => {
           try {
@@ -591,6 +611,10 @@ export default function InvoiceDetail() {
           kunde: invoice.customer_name || '',
           betrag: formatCurrency(invoice.total),
           firma: invoice.customer_name || '',
+          rechnungsdatum: formatDate(invoice.invoice_date),
+          faelligkeit: formatDate(invoice.due_date),
+          verzugstage: String(Math.max(0, Math.floor((Date.now() - new Date(invoice.due_date).getTime()) / 86400000))),
+          mahnstufe: reminderLevelLabel(invoice.reminder_level),
         }}
         onSend={async (data) => {
           try {

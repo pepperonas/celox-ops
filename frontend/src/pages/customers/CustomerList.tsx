@@ -46,8 +46,30 @@ export default function CustomerList() {
         label: 'Erstellt am',
         render: (c) => formatDate(c.created_at),
       },
+      {
+        key: 'actions',
+        label: 'Aktionen',
+        render: (c) => (
+          <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => navigate(`/rechnungen/neu?customer_id=${c.id}`)}
+              className="text-[10px] text-text-muted hover:text-accent border border-border rounded px-2 py-1"
+              title="Neue Rechnung für diesen Kunden"
+            >
+              + Rechnung
+            </button>
+            <button
+              onClick={() => navigate(`/auftraege/neu?customer_id=${c.id}`)}
+              className="text-[10px] text-text-muted hover:text-accent border border-border rounded px-2 py-1"
+              title="Neuer Auftrag für diesen Kunden"
+            >
+              + Auftrag
+            </button>
+          </div>
+        ),
+      },
     ],
-    [],
+    [navigate],
   )
 
   return (

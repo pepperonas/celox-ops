@@ -187,6 +187,11 @@ export default function EmailDialog({
               rows={8}
               className="input w-full resize-y"
             />
+            {placeholders && Object.keys(placeholders).length > 0 && (
+              <p className="text-[10px] text-text-muted mt-1.5">
+                Variablen: {Object.keys(placeholders).map(k => `{${k}}`).join(' · ')}
+              </p>
+            )}
           </div>
         </div>
 

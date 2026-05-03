@@ -970,6 +970,60 @@ async def record_payment(
     return resp
 
 
+@router.post("/{invoice_id}/duplicate", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
+async def duplicate_invoice(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Erstellt eine Kopie einer Rechnung als neuer Entwurf."""
+    from datetime import date as date_type, timedelta
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    src = result.scalar_one_or_none()
+    if not src:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+
+    new_number = await generate_invoice_number(db)
+    today = date_type.today()
+    new = Invoice(
+        customer_id=src.customer_id,
+        order_id=src.order_id,
+        contract_id=src.contract_id,
+        invoice_number=new_number,
+        title=src.title,
+        positions=src.positions,
+        subtotal=src.subtotal,
+        tax_rate=src.tax_rate,
+        tax_exempt=src.tax_exempt,
+        tax_amount=src.tax_amount,
+        total=src.total,
+        invoice_date=today,
+        due_date=today + timedelta(days=14),
+        status=InvoiceStatus.entwurf,
+        notes=src.notes,
+        special_terms=src.special_terms,
+        service_description=src.service_description,
+        discount_type=src.discount_type,
+        discount_value=src.discount_value,
+        discount_reason=src.discount_reason,
+    )
+    db.add(new)
+    await db.flush()
+    await db.refresh(new)
+
+    result = await db.execute(
+        select(Invoice).options(joinedload(Invoice.customer)).where(Invoice.id == new.id)
+    )
+    new = result.scalar_one()
+    resp = InvoiceResponse.model_validate(new)
+    resp.customer_name = new.customer.name if new.customer else ""
+    return resp
+
+
 @router.post("/{invoice_id}/credit-note", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def create_credit_note(
     invoice_id: uuid.UUID,

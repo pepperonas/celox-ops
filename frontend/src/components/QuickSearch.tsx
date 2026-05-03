@@ -4,7 +4,7 @@ import { api } from '../api/client'
 
 interface SearchHit {
   id: string
-  type: 'customer' | 'invoice' | 'order' | 'contract' | 'lead'
+  type: 'customer' | 'invoice' | 'order' | 'contract' | 'lead' | 'action'
   title: string
   subtitle: string | null
   url: string
@@ -16,6 +16,7 @@ const typeLabel: Record<SearchHit['type'], string> = {
   order: 'Auftrag',
   contract: 'Vertrag',
   lead: 'Lead',
+  action: 'Aktion',
 }
 
 const typeIcon: Record<SearchHit['type'], string> = {
@@ -24,7 +25,26 @@ const typeIcon: Record<SearchHit['type'], string> = {
   order: '📋',
   contract: '📄',
   lead: '🎯',
+  action: '⚡',
 }
+
+// Static action shortcuts — match against query, prepend to results
+const ACTIONS: { keywords: string; title: string; subtitle: string; url: string }[] = [
+  { keywords: 'neue rechnung create invoice', title: 'Neue Rechnung erstellen', subtitle: 'Rechnungs-Formular öffnen', url: '/rechnungen/neu' },
+  { keywords: 'neuer kunde create customer', title: 'Neuen Kunden anlegen', subtitle: 'Kunden-Formular öffnen', url: '/kunden/neu' },
+  { keywords: 'neuer auftrag create order angebot', title: 'Neuen Auftrag anlegen', subtitle: 'Auftrags-Formular öffnen', url: '/auftraege/neu' },
+  { keywords: 'neuer vertrag create contract', title: 'Neuen Vertrag anlegen', subtitle: 'Vertrags-Formular öffnen', url: '/vertraege/neu' },
+  { keywords: 'neue ausgabe create expense spese beleg', title: 'Neue Ausgabe', subtitle: 'Ausgaben-Formular öffnen', url: '/ausgaben/neu' },
+  { keywords: 'neuer lead create lead vorgemerkt', title: 'Neuen Lead anlegen', subtitle: 'Lead-Formular öffnen', url: '/vorgemerkt/neu' },
+  { keywords: 'kalender termine fristen', title: 'Kalender öffnen', subtitle: 'Termine und Fristen', url: '/kalender' },
+  { keywords: 'kanban board', title: 'Kanban-Board öffnen', subtitle: 'Aufträge visuell', url: '/kanban' },
+  { keywords: 'aufgaben tasks todo', title: 'Aufgaben anzeigen', subtitle: 'Anstehende Aktionen', url: '/aufgaben' },
+  { keywords: 'einstellungen settings', title: 'Einstellungen', subtitle: 'App-Konfiguration', url: '/einstellungen' },
+  { keywords: 'analyse analytics rentabilität forecast', title: 'Analyse', subtitle: 'Kunden-Rentabilität + Forecast', url: '/analyse' },
+  { keywords: 'eür euer steuerberater export', title: 'EÜR-Übersicht', subtitle: 'Einnahmen-Überschuss-Rechnung', url: '/euer' },
+  { keywords: 'zeiterfassung time tracking stunden', title: 'Zeiterfassung', subtitle: 'Stunden-Timer + Liste', url: '/zeiterfassung' },
+  { keywords: 'dokumente documents anhänge', title: 'Vertragsdokumente', subtitle: 'Rechtsvorlagen-Bibliothek', url: '/dokumente' },
+]
 
 export default function QuickSearch() {
   const navigate = useNavigate()
@@ -70,13 +90,20 @@ export default function QuickSearch() {
     }
     setLoading(true)
     debounceRef.current = window.setTimeout(async () => {
+      const q = query.trim().toLowerCase()
+      // Action shortcuts (instant, client-side)
+      const actionHits: SearchHit[] = ACTIONS
+        .filter((a) => a.title.toLowerCase().includes(q) || a.keywords.includes(q))
+        .slice(0, 5)
+        .map((a, i) => ({ id: `action-${i}`, type: 'action', title: a.title, subtitle: a.subtitle, url: a.url }))
       try {
         const res = await api.get('/search', { params: { q: query.trim() } })
-        setHits(res.data?.hits || [])
+        const entityHits = res.data?.hits || []
+        setHits([...actionHits, ...entityHits])
         setSelected(0)
       } catch (err) {
         console.warn('Suche fehlgeschlagen:', err)
-        setHits([])
+        setHits(actionHits)
       }
       setLoading(false)
     }, 200)

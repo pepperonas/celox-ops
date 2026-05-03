@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 export interface Column<T> {
   key: string
-  label: string
+  label: React.ReactNode
   render?: (item: T) => React.ReactNode
   sortable?: boolean
 }

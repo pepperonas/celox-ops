@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import FormField from '../../components/FormField'
@@ -42,8 +42,12 @@ const emptyForm: InvoiceCreate = {
 export default function InvoiceForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
-  const [form, setForm] = useState<InvoiceCreate>(emptyForm)
+  const prefilledCustomerId = searchParams.get('customer_id') || ''
+  const [form, setForm] = useState<InvoiceCreate>(
+    prefilledCustomerId ? { ...emptyForm, customer_id: prefilledCustomerId } : emptyForm
+  )
   const [customers, setCustomers] = useState<Customer[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])

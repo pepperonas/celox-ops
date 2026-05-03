@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import AutocompleteInput from '../../components/AutocompleteInput'
@@ -32,8 +32,12 @@ const emptyForm: OrderCreate = {
 export default function OrderForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
-  const [form, setForm] = useState<OrderCreate>(emptyForm)
+  const prefilledCustomerId = searchParams.get('customer_id') || ''
+  const [form, setForm] = useState<OrderCreate>(
+    prefilledCustomerId ? { ...emptyForm, customer_id: prefilledCustomerId } : emptyForm
+  )
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(false)
 
