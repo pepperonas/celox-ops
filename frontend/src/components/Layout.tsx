@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import QuickSearch from './QuickSearch'
 
 const navItems = [
   {
@@ -205,10 +206,21 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 flex-shrink-0 bg-surface border-b border-border flex items-center justify-between px-6">
+        <header className="h-16 flex-shrink-0 bg-surface border-b border-border flex items-center justify-between px-6 gap-4">
           <h1 className="text-sm font-medium text-text-muted">
             Verwaltung
           </h1>
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className="flex-1 max-w-md flex items-center gap-2 text-xs py-1.5 px-3 bg-surface-2 border border-border rounded-lg text-text-muted hover:border-text-muted transition-colors"
+            title="Globale Suche (Ctrl+K / ⌘K)"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span className="flex-1 text-left">Suchen…</span>
+            <kbd className="text-[10px] bg-bg px-1.5 py-0.5 rounded border border-border">⌘K</kbd>
+          </button>
           <button
             onClick={handleLogout}
             className="btn-secondary flex items-center gap-2 text-xs py-1.5 px-3"
@@ -225,6 +237,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <QuickSearch />
     </div>
   )
 }

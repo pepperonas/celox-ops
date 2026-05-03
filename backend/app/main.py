@@ -103,6 +103,7 @@ from app.routers.github import router as github_router  # noqa: E402
 from app.routers.email_templates import router as email_templates_router  # noqa: E402
 from app.routers.documents import router as documents_router  # noqa: E402
 from app.routers.pagespeed import router as pagespeed_router  # noqa: E402
+from app.routers.search import router as search_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -123,6 +124,7 @@ app.include_router(github_router)
 app.include_router(email_templates_router)
 app.include_router(documents_router)
 app.include_router(pagespeed_router)
+app.include_router(search_router)
 
 
 @app.get("/api/health")
