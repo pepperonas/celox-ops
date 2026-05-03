@@ -19,14 +19,19 @@ export default function Login() {
       await login(username, password, totp || undefined)
       navigate('/')
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || ''
-      if (detail.toLowerCase().includes('2fa')) {
+      const e = err as { response?: { status?: number; data?: { detail?: string } } }
+      const detail = e?.response?.data?.detail || ''
+      const status = e?.response?.status
+      console.warn('[Login] failed:', status, detail)
+      if (detail.toLowerCase().includes('2fa') || detail.toLowerCase().includes('totp')) {
         setShowTotp(true)
-        setError(detail)
-      } else if (detail.includes('viele Anfragen')) {
-        setError(detail)
+        setError(detail || 'Bitte 2FA-Code eingeben.')
+      } else if (status === 429) {
+        setError('Zu viele Login-Versuche. Bitte 1 Minute warten.')
+      } else if (status === 401) {
+        setError('Benutzername oder Passwort falsch.')
       } else {
-        setError('Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.')
+        setError(detail || `Fehler ${status || ''}: Anmeldung fehlgeschlagen.`)
       }
     }
   }
@@ -54,6 +59,7 @@ export default function Login() {
               className="input-field w-full"
               required
               autoFocus
+              autoComplete="username"
             />
           </div>
 
@@ -69,6 +75,7 @@ export default function Login() {
               placeholder="Passwort eingeben"
               className="input-field w-full"
               required
+              autoComplete="current-password"
             />
           </div>
 
@@ -88,6 +95,7 @@ export default function Login() {
                 className="input-field w-full font-mono tracking-wider"
                 maxLength={6}
                 autoFocus
+                autoComplete="one-time-code"
               />
             </div>
           )}
