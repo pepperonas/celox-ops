@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore'
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [totp, setTotp] = useState('')
+  const [showTotp, setShowTotp] = useState(false)
   const [error, setError] = useState('')
   const login = useAuthStore((s) => s.login)
   const loading = useAuthStore((s) => s.loading)
@@ -14,10 +16,18 @@ export default function Login() {
     e.preventDefault()
     setError('')
     try {
-      await login(username, password)
+      await login(username, password, totp || undefined)
       navigate('/')
-    } catch {
-      setError('Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || ''
+      if (detail.toLowerCase().includes('2fa')) {
+        setShowTotp(true)
+        setError(detail)
+      } else if (detail.includes('viele Anfragen')) {
+        setError(detail)
+      } else {
+        setError('Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.')
+      }
     }
   }
 
@@ -61,6 +71,26 @@ export default function Login() {
               required
             />
           </div>
+
+          {showTotp && (
+            <div className="text-left">
+              <label htmlFor="totp" className="block text-xs uppercase tracking-wider text-text-muted mb-1.5">
+                2FA-Code
+              </label>
+              <input
+                id="totp"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={totp}
+                onChange={(e) => setTotp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-stelliger Code aus Authenticator"
+                className="input-field w-full font-mono tracking-wider"
+                maxLength={6}
+                autoFocus
+              />
+            </div>
+          )}
 
           {error && (
             <p className="text-danger text-xs mt-2">{error}</p>

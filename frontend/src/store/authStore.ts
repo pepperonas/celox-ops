@@ -7,7 +7,7 @@ interface AuthState {
   isAuthenticated: boolean
   loading: boolean
   error: string | null
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string, totp?: string) => Promise<void>
   logout: () => void
   initialize: () => void
 }
@@ -18,12 +18,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
   error: null,
 
-  login: async (username: string, password: string) => {
+  login: async (username: string, password: string, totp?: string) => {
     set({ loading: true, error: null })
     try {
       const formData = new URLSearchParams()
       formData.append('username', username)
       formData.append('password', password)
+      if (totp) formData.append('scope', totp)
 
       const response = await api.post<AuthResponse>('/auth/login', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
