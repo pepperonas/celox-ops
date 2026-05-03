@@ -18,7 +18,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect on session-expired 401s — NOT on login attempts (so 2FA/wrong-pw
+    // errors stay visible in the form) and not on already-being-on /login.
+    const url: string = error?.config?.url || ''
+    const isLoginRequest = url.includes('/auth/login')
+    const onLoginPage = window.location.pathname === '/login'
+    if (error.response?.status === 401 && !isLoginRequest && !onLoginPage) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
