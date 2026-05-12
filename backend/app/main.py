@@ -38,6 +38,8 @@ async def run_cron() -> None:
                     count = await check_overdue_invoices(db)
                     await db.commit()
                     if count > 0:
+                        from app.routers.dashboard import invalidate_stats_cache
+                        invalidate_stats_cache()
                         logger.info("Cron: %d Rechnungen als überfällig markiert", count)
                 except Exception:
                     await db.rollback()

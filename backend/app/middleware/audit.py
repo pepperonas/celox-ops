@@ -29,6 +29,16 @@ class AuditMiddleware(BaseHTTPMiddleware):
         ):
             return response
 
+        # Invalidate the dashboard stats cache after any successful mutation
+        # (cheap — just resets an in-memory dict). Without this, marking an
+        # invoice paid leaves the dashboard showing it as overdue for up to 60s.
+        if 200 <= response.status_code < 400 and not request.url.path.startswith("/api/dashboard"):
+            try:
+                from app.routers.dashboard import invalidate_stats_cache
+                invalidate_stats_cache()
+            except Exception as e:  # pragma: no cover — never break the response
+                logger.warning(f"Stats-Cache-Invalidierung fehlgeschlagen: {e}")
+
         # Best-effort logging — never block / break the response
         try:
             # Reconstruct user from JWT (already validated by route)
