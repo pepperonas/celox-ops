@@ -221,14 +221,11 @@ async def send_quote_email(
     if not order.quote_pdf_path or not os.path.isfile(order.quote_pdf_path):
         raise HTTPException(status_code=400, detail="Angebots-PDF wurde noch nicht generiert.")
 
-    customer = order.customer
-
     subject = data.subject or f"Angebot — {order.title} — {settings.BUSINESS_NAME}"
 
     if data.message:
         body_html = data.message.replace("\n", "<br>")
     else:
-        customer_name = customer.name if customer else "Kunde"
         body_html = (
             f"Sehr geehrte Damen und Herren,<br><br>"
             f"anbei erhalten Sie unser Angebot <strong>{order.title}</strong>.<br><br>"

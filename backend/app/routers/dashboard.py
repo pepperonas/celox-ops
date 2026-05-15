@@ -1,5 +1,4 @@
 import calendar
-import os
 import time
 from datetime import date, datetime, timezone
 from decimal import Decimal

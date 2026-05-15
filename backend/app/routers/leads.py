@@ -66,7 +66,7 @@ async def list_leads(
     leads = result.scalars().all()
 
     return {
-        "items": [LeadResponse.model_validate(l) for l in leads],
+        "items": [LeadResponse.model_validate(lead) for lead in leads],
         "total": total,
         "page": page,
         "page_size": page_size,

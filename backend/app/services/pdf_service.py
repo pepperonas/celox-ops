@@ -197,7 +197,7 @@ def generate_invoice_pdf(
     # Prepare activity chart data from token_usage daily data
     activity_chart_data = None
     if invoice.include_activity_chart and token_usage and token_usage.get("daily"):
-        from datetime import date as date_type, timedelta
+        from datetime import timedelta
         daily = token_usage["daily"]
         daily_map = {d["date"]: d for d in daily}
 

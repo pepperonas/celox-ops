@@ -442,14 +442,11 @@ async def send_invoice_email(
     if not invoice.pdf_path:
         raise HTTPException(status_code=400, detail="PDF wurde noch nicht generiert. Bitte zuerst PDF erstellen.")
 
-    customer = invoice.customer
-
     subject = data.subject or f"Rechnung {invoice.invoice_number} — {settings.BUSINESS_NAME}"
 
     if data.message:
         body_html = data.message.replace("\n", "<br>")
     else:
-        customer_name = customer.name if customer else "Kunde"
         body_html = (
             f"Sehr geehrte Damen und Herren,<br><br>"
             f"anbei erhalten Sie die Rechnung <strong>{invoice.invoice_number}</strong> "
@@ -1030,8 +1027,7 @@ async def create_credit_note(
     db: AsyncSession = Depends(get_db),
 ) -> InvoiceResponse:
     """Gutschrift für eine Rechnung erstellen."""
-    from datetime import date as date_type, timedelta
-    from decimal import Decimal
+    from datetime import date as date_type
 
     result = await db.execute(
         select(Invoice)

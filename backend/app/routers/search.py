@@ -134,7 +134,7 @@ async def global_search(
             type="lead",
             title=lead.name or lead.url,
             subtitle=lead.company or "Lead",
-            url=f"/vorgemerkt",
+            url="/vorgemerkt",
         ))
 
     return SearchResponse(query=q, hits=hits, total=len(hits))
