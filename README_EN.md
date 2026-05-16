@@ -713,7 +713,7 @@ CO-2026-0001
 - Customer relationships use `lazy="raise"` (was `selectin`) — eager-loading explicit via `joinedload()` only where needed
 - Token Tracker aggregator cached with 5-min TTL (eliminates repeated full-table scans)
 - GitHub repos cached with 10-min TTL (eliminates repeated API calls)
-- `/api/dashboard/stats` cached with 60s in-memory TTL
+- `/api/dashboard/stats` cached with 60s in-memory TTL — automatically invalidated after every mutating API request (audit middleware) and by the overdue cron, so status changes (e.g. mark-paid) show up on the dashboard instantly
 - WeasyPrint PDF generation via `asyncio.to_thread()` — no longer blocks the event loop
 
 ## Security (technical)
@@ -743,8 +743,9 @@ CO-2026-0001
   - Backend: ruff lint + smoke-import of all routers
   - Frontend: tsc --noEmit + npm run build
 - **Pre-commit hooks** (`.pre-commit-config.yaml`):
-  - ruff for backend, tsc for frontend, secret scan
+  - ruff for backend (staged files only, with `--fix`), tsc for frontend, secret scan
   - Install: `pip install pre-commit && pre-commit install`
+  - **Note**: Pre-commit only checks changed files — CI lints all of `backend/`. Run `ruff check backend/` locally before larger pushes.
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`

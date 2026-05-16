@@ -111,7 +111,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **PDF generation in threads**: All `generate_*_pdf()` calls wrapped via `asyncio.to_thread()` since WeasyPrint is sync and would block the event loop for 2-5s per render.
 - **CORS_ORIGINS env var required**: Empty value blocks all cross-origin requests. Set to `https://ops.celox.io` (or local dev origin) in `.env`.
 - **JWT_SECRET startup validation**: Server refuses to start if `JWT_SECRET` is the default `"change-me-in-production"` or shorter than 32 chars. Generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-- **Stats cache**: `/api/dashboard/stats` cached in-memory for 60s. No explicit invalidation — TTL-only. New mutations show up within 60s.
+- **Stats cache**: `/api/dashboard/stats` cached in-memory for 60s (`_stats_cache` in `routers/dashboard.py`). **AuditMiddleware** calls `invalidate_stats_cache()` after every successful mutating `/api/` request (2xx/3xx, excluding `/api/dashboard/*`) — so mark-paid/edit/delete reflects on the dashboard instantly, not after 60s. Overdue-Cron invalidates too when it flips statuses. Container restart also clears the cache (in-memory).
 - **Customer relationships are `lazy="raise"`**: Don't access `customer.orders/contracts/invoices` without explicit `joinedload()` in the query — will throw at runtime.
 - **Attachment MIME whitelist**: Only PDF, images, Office, ZIP accepted. Other types → 415. Whitelist in `routers/attachments.py`.
 - **Login rate limit**: 5/min/IP via `slowapi`. Decorator on `auth.login`, exception handler in `main.py`.
@@ -119,18 +119,19 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **401 interceptor exception**: `api/client.ts` redirects to `/login` on 401 ONLY when the request is NOT to `/auth/login` AND the user is NOT already on `/login`. Otherwise the user gets bounced before seeing form errors (e.g. wrong password, 2FA required).
 - **ServiceWorker is network-first**: `frontend/public/sw.js` always fetches from network, falls back to cache only offline. Cache name `celox-ops-v3` — bump to force purge. Avoids stale bundles after auto-deploy.
 - **Public auth info endpoint**: `GET /api/auth/info` returns `{totp_enabled: bool}` without auth — frontend can pre-render the 2FA field if 2FA is active.
-- **Audit log**: Middleware in `app/middleware/audit.py` logs all mutating requests to `audit_log` table. Best-effort — never blocks/breaks the response.
+- **Audit log + cache invalidation**: Middleware in `app/middleware/audit.py` (1) logs all mutating requests to `audit_log` (best-effort — never blocks the response), (2) invalidates the dashboard stats cache after every successful mutating `/api/` request. Both run only for POST/PUT/PATCH/DELETE on `/api/*`, with `/api/auth/login` + `/api/health` skipped.
 - **Auto-deploy**: VPS runs `scripts/auto-deploy.sh` every 5 minutes (cron). Polls `origin/main`, rebuilds only what changed. Repo at `/opt/celox-ops` was initialized with `git init && git remote add && git checkout -f main` (preserved `.env` via `/tmp/.env.backup`).
 - **Backup**: `scripts/backup.sh` runs via cron at 03:00 daily. Outputs to `/var/backups/celox-ops/`. Optional rclone push to remote `celox-backup:`.
 - **iCal feed**: `/api/ical?token=…` is PUBLIC (no JWT auth) — secured only by `ICAL_TOKEN` env var. Don't share the URL.
 - **Smoke tests**: `backend/tests/test_smoke.py` — run inside container: `docker exec celox-ops-backend-1 python3 -m pytest test_smoke.py`. CI runs on every push.
+- **Pre-commit vs CI scope**: `.pre-commit-config.yaml` runs `ruff --fix` only on **staged** files; GitHub Actions runs `ruff check backend/` over the **whole** backend tree. Always run `ruff check backend/` locally before pushing larger changes to catch pre-existing lint debt that the hook misses.
 - **Axios FormData uploads**: The default `Content-Type: application/json` on the axios client (`api/client.ts`) prevents Axios from auto-detecting FormData and setting the multipart boundary. For file uploads, pass `headers: { 'Content-Type': undefined }` to override the default — otherwise backend gets 422.
 - **Refresh-drafts position detection**: Auto-generated positions are marked with `"auto": true`. Legacy data detected via regex `\(\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}\)$`. Title-based matching was removed because renaming the invoice caused duplication.
 - **Invoice detail display**: `positions[].gesamt` values from JSON may be strings — always wrap in `Number()` before arithmetic.
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (12)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results
+## Database Tables (13)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log
 
 Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.
