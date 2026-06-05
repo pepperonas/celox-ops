@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import FilterChips from '../../components/FilterChips'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getContracts } from '../../api/contracts'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Contract } from '../../types'
@@ -80,28 +84,17 @@ export default function ContractList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Verträge</h2>
-        <button onClick={() => navigate('/vertraege/neu')} className="btn-primary">
-          Neuer Vertrag
-        </button>
-      </div>
+      <PageHeader title="Verträge" />
 
-      <div className="flex gap-3 items-center mb-4">
-        <select
+      <div className="flex flex-col gap-3 mb-5">
+        <FilterChips
+          options={statusOptions}
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value)
+          onChange={(v) => {
+            setStatusFilter(v)
             setPage(1)
           }}
-          className="input-field w-48"
-        >
-          {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        />
         <select
           value={typeFilter}
           onChange={(e) => {
@@ -119,7 +112,7 @@ export default function ContractList() {
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -130,6 +123,8 @@ export default function ContractList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/vertraege/neu')} label="Neuer Vertrag" />
     </div>
   )
 }

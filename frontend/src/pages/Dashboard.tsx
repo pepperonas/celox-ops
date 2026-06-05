@@ -8,15 +8,15 @@ import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatt
 
 const colors = {
   background: '#0d1117',
-  surface: '#161b22',
-  border: '#30363d',
-  text: '#e6edf3',
-  muted: '#8b949e',
-  accent: '#58a6ff',
-  green: '#3fb950',
-  red: '#f85149',
-  orange: '#d29922',
-  purple: '#bc8cff',
+  surface: '#1a2028',
+  border: '#2c333d',
+  text: '#e3e7ee',
+  muted: '#9aa6b5',
+  accent: '#7cb0ff',
+  green: '#74d98a',
+  red: '#ff6b62',
+  orange: '#e9c46a',
+  purple: '#c4abff',
 }
 
 interface ChartData {
@@ -156,13 +156,13 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Dashboard</h2>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">Dashboard</h2>
       </div>
 
       {/* Overdue Alert Banner with Invoice List */}
       {stats && stats.overdue_invoices_count > 0 && (
-        <div className="mb-6 rounded-[12px] border-2 border-danger/60 bg-danger/10 overflow-hidden shadow-lg shadow-danger/10">
+        <div className="mb-6 rounded-card border-2 border-danger/60 bg-danger/10 overflow-hidden shadow-lg shadow-danger/10">
           <div className="flex items-center gap-4 p-5 border-b border-danger/30">
             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-danger/25 flex items-center justify-center">
               <svg className="w-7 h-7 text-danger animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,27 +219,27 @@ export default function Dashboard() {
       {loading ? (
         <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-surface border border-border rounded-[12px] p-5 animate-pulse">
-              <div className="h-3 bg-surface-2 rounded w-1/2 mb-3" />
-              <div className="h-7 bg-surface-2 rounded w-2/3 mb-2" />
-              <div className="h-3 bg-surface-2 rounded w-1/3" />
+            <div key={i} className="bg-surface-container border border-border rounded-md p-5">
+              <div className="h-3 md-skeleton rounded-full w-1/2 mb-3" />
+              <div className="h-7 md-skeleton rounded-md w-2/3 mb-2" />
+              <div className="h-3 md-skeleton rounded-full w-1/3" />
             </div>
           ))}
         </div>
       ) : (
-        <div className={`grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
+        <div className={`md-stagger grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
           {cards.map((card) => (
             <div
               key={card.label}
               onClick={card.highlight ? () => navigate('/rechnungen?status=ueberfaellig') : undefined}
-              className={`rounded-[12px] p-5 ${
+              className={`rounded-md p-5 transition-all duration-medium ease-spring hover:-translate-y-0.5 ${
                 card.highlight
-                  ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 cursor-pointer transition-colors'
-                  : 'bg-surface border border-border'
+                  ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 hover:shadow-elev-2 cursor-pointer'
+                  : 'bg-surface-container border border-border hover:shadow-elev-2'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className={`text-xs uppercase tracking-wider ${card.highlight ? 'text-danger font-semibold' : 'text-text-muted'}`}>{card.label}</p>
+                <p className={`text-xs ${card.highlight ? 'text-danger font-semibold' : 'text-text-muted'}`}>{card.label}</p>
                 {card.label === 'Entwürfe' && parseInt(card.value) > 0 && (
                   <button
                     onClick={handleRefreshDrafts}
@@ -264,13 +264,13 @@ export default function Dashboard() {
       {chartData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Revenue & Expenses Bar Chart */}
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-text">Umsatz & Ausgaben</h3>
               <div className="flex gap-2">
                 <div className="flex rounded-[6px] overflow-hidden border border-border">
                   {(['30d', '12m'] as const).map((p) => (
-                    <button key={p} onClick={() => setChartPeriod(p)} className={`px-2.5 py-1 text-[11px] transition-all ${chartPeriod === p ? 'bg-accent text-white' : 'bg-surface-2 text-text-muted hover:text-text'}`}>
+                    <button key={p} onClick={() => setChartPeriod(p)} className={`px-2.5 py-1 text-[11px] transition-all ${chartPeriod === p ? 'bg-accent text-on-primary' : 'bg-surface-2 text-text-muted hover:text-text'}`}>
                       {p === '30d' ? '30 Tage' : '12 Monate'}
                     </button>
                   ))}
@@ -350,7 +350,7 @@ export default function Dashboard() {
           </div>
 
           {/* Invoice Status Doughnut */}
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <h3 className="text-sm font-semibold text-text mb-4">Rechnungsstatus-Verteilung</h3>
             <div className="flex items-center justify-center" style={{ height: 280 }}>
               <div style={{ width: 240, height: 240 }}>
@@ -411,7 +411,7 @@ export default function Dashboard() {
       {chartData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top 5 Customers */}
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <h3 className="text-sm font-semibold text-text mb-4">Top 5 Kunden nach Umsatz</h3>
             {chartData.top_customers.length === 0 ? (
               <p className="text-text-muted text-sm">Keine Daten vorhanden</p>
@@ -451,7 +451,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Activities */}
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <h3 className="text-sm font-semibold text-text mb-4">Letzte Aktivitäten</h3>
             {chartData.recent_activities.length === 0 ? (
               <p className="text-text-muted text-sm">Keine Aktivitäten vorhanden</p>

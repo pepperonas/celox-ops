@@ -25,7 +25,7 @@ const emptyForm: LeadCreate = {
 }
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 70 ? '#3fb950' : score >= 40 ? '#d29922' : '#f85149'
+  const color = score >= 70 ? '#74d98a' : score >= 40 ? '#e9c46a' : '#ff6b62'
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 h-3 bg-surface-2 rounded-full overflow-hidden">
@@ -37,7 +37,7 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 function SeverityDot({ severity }: { severity: string }) {
-  const color = severity === 'critical' ? '#f85149' : severity === 'warning' ? '#d29922' : '#8b949e'
+  const color = severity === 'critical' ? '#ff6b62' : severity === 'warning' ? '#e9c46a' : '#9aa6b5'
   return <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: color, display: 'inline-block' }} />
 }
 
@@ -118,16 +118,16 @@ export default function LeadForm() {
   return (
     <div className="max-w-4xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">
           {isEdit ? 'Lead bearbeiten' : 'Neue Website vormerken'}
         </h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[12px] p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-card p-6 space-y-5">
           <div>
-            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Website-URL *</label>
+            <label className="block text-xs text-text-muted mb-2">Website-URL *</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -171,22 +171,22 @@ export default function LeadForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Name</label>
+              <label className="block text-xs text-text-muted mb-2">Name</label>
               <input type="text" name="name" value={form.name || ''} onChange={handleChange} className="w-full !py-2.5" placeholder="Ansprechpartner" />
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Firma</label>
+              <label className="block text-xs text-text-muted mb-2">Firma</label>
               <input type="text" name="company" value={form.company || ''} onChange={handleChange} className="w-full !py-2.5" placeholder="Firmenname" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">E-Mail</label>
+              <label className="block text-xs text-text-muted mb-2">E-Mail</label>
               <input type="email" name="email" value={form.email || ''} onChange={handleChange} className="w-full !py-2.5" placeholder="info@example.de" />
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Telefon</label>
+              <label className="block text-xs text-text-muted mb-2">Telefon</label>
               <input type="tel" name="phone" value={form.phone || ''} onChange={handleChange} className="w-full !py-2.5" placeholder="0123 / 456789" />
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function LeadForm() {
           />
 
           <div>
-            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Notizen</label>
+            <label className="block text-xs text-text-muted mb-2">Notizen</label>
             <textarea
               name="notes"
               value={form.notes || ''}
@@ -225,7 +225,7 @@ export default function LeadForm() {
         {/* Analysis Panel */}
         <div className="space-y-4">
           {analyzing && (
-            <div className="bg-surface border border-border rounded-[12px] p-6 text-center">
+            <div className="bg-surface border border-border rounded-card p-6 text-center">
               <div className="inline-block w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3"></div>
               <p className="text-text-muted text-sm">Website wird analysiert...</p>
             </div>
@@ -234,9 +234,9 @@ export default function LeadForm() {
           {analysis && !analyzing && (
             <>
               {/* Score */}
-              <div className="bg-surface border border-border rounded-[12px] p-6">
+              <div className="bg-surface border border-border rounded-card p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Website-Qualität</h3>
+                  <h3 className="text-sm font-semibold text-text">Website-Qualität</h3>
                   <span className="text-xs text-text-muted">{analysis.load_time_ms}ms Ladezeit</span>
                 </div>
                 <ScoreBar score={analysis.score} />
@@ -248,14 +248,14 @@ export default function LeadForm() {
               </div>
 
               {/* Findings */}
-              <div className="bg-surface border border-border rounded-[12px] p-6">
-                <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Analyse-Ergebnisse</h3>
+              <div className="bg-surface border border-border rounded-card p-6">
+                <h3 className="text-sm font-semibold text-text mb-4">Analyse-Ergebnisse</h3>
                 <div className="space-y-3">
                   {analysis.findings.map((f, i) => (
                     <div key={i} className="flex gap-2.5">
                       <SeverityDot severity={f.severity} />
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs uppercase tracking-wider text-text-muted">{f.category}</span>
+                        <span className="text-xs text-text-muted">{f.category}</span>
                         <p className="text-sm text-text mt-0.5">{f.issue}</p>
                       </div>
                     </div>
@@ -265,8 +265,8 @@ export default function LeadForm() {
 
               {/* Quick Arguments */}
               {(criticalCount > 0 || warningCount > 0) && (
-                <div className="bg-surface border border-accent/30 rounded-[12px] p-6">
-                  <h3 className="text-sm font-semibold text-accent uppercase tracking-wider mb-3">Gesprächsargumente</h3>
+                <div className="bg-surface border border-accent/30 rounded-card p-6">
+                  <h3 className="text-sm font-semibold text-accent mb-3">Gesprächsargumente</h3>
                   <ul className="space-y-2 text-sm text-text">
                     {analysis.findings.filter(f => f.severity !== 'info').map((f, i) => (
                       <li key={i} className="flex gap-2">
@@ -281,7 +281,7 @@ export default function LeadForm() {
           )}
 
           {!analysis && !analyzing && (
-            <div className="bg-surface border border-border rounded-[12px] p-6 text-center">
+            <div className="bg-surface border border-border rounded-card p-6 text-center">
               <svg className="w-12 h-12 mx-auto text-text-muted mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>

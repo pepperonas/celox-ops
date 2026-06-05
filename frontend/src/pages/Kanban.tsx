@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import LoadingIndicator from '../components/LoadingIndicator'
 import { getOrders, updateOrder } from '../api/orders'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
@@ -13,9 +14,9 @@ interface KanbanColumn {
 
 const COLUMNS: KanbanColumn[] = [
   { status: 'angebot', label: 'Angebot', color: '#c9a227', borderColor: '#c9a227' },
-  { status: 'beauftragt', label: 'Beauftragt', color: '#58a6ff', borderColor: '#58a6ff' },
+  { status: 'beauftragt', label: 'Beauftragt', color: '#7cb0ff', borderColor: '#7cb0ff' },
   { status: 'in_arbeit', label: 'In Arbeit', color: '#a371f7', borderColor: '#a371f7' },
-  { status: 'abgeschlossen', label: 'Abgeschlossen', color: '#3fb950', borderColor: '#3fb950' },
+  { status: 'abgeschlossen', label: 'Abgeschlossen', color: '#74d98a', borderColor: '#74d98a' },
 ]
 
 export default function Kanban() {
@@ -86,13 +87,13 @@ export default function Kanban() {
     orders.filter((o) => o.status === status)
 
   if (loading) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Kanban-Board</h2>
+        <h2 className="text-2xl font-semibold text-text tracking-tight">Kanban-Board</h2>
         <span className="text-sm text-text-muted">{orders.length} Aufträge</span>
       </div>
 
@@ -128,7 +129,7 @@ export default function Kanban() {
               {/* Column body */}
               <div
                 className={`flex-1 bg-surface border border-border rounded-b-[8px] p-3 space-y-3 transition-all duration-150 ${
-                  isDragOver ? 'border-accent border-dashed bg-[#58a6ff08]' : ''
+                  isDragOver ? 'border-accent border-dashed bg-accent/5' : ''
                 }`}
               >
                 {colOrders.length === 0 && (

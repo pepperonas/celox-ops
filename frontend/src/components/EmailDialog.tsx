@@ -98,10 +98,10 @@ export default function EmailDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative bg-surface border border-border rounded-[16px] p-8 max-w-[520px] w-full mx-4">
-        <h3 className="text-lg font-semibold text-text mb-5">E-Mail senden</h3>
+      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-8 max-w-[520px] w-full mx-4 animate-md-scale max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-semibold text-text mb-5">E-Mail senden</h3>
 
         <div className="space-y-4">
           {templates.length > 0 && (

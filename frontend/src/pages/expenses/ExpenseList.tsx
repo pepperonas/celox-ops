@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getExpenses, getExpenseSummary, deleteExpense } from '../../api/expenses'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
@@ -144,33 +147,28 @@ export default function ExpenseList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Ausgaben</h2>
-        <button onClick={() => navigate('/ausgaben/neu')} className="btn-primary">
-          Neue Ausgabe
-        </button>
-      </div>
+      <PageHeader title="Ausgaben" />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+      <div className="md-stagger grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Gesamt {currentYear}
           </div>
           <div className="text-xl font-semibold text-text tabular-nums">
             {formatCurrency(summary?.total || 0)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Diesen Monat
           </div>
           <div className="text-xl font-semibold text-text tabular-nums">
             {formatCurrency(monthTotal)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Top-Kategorie
           </div>
           <div className="text-xl font-semibold text-text">
@@ -233,7 +231,7 @@ export default function ExpenseList() {
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -244,6 +242,8 @@ export default function ExpenseList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/ausgaben/neu')} label="Neue Ausgabe" />
 
       <DeleteDialog
         isOpen={!!deleteId}

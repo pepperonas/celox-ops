@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import QuickSearch from './QuickSearch'
 
@@ -146,6 +146,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const logout = useAuthStore((s) => s.logout)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = () => {
     logout()
@@ -154,22 +155,23 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
-      {/* Sidebar */}
+      {/* Navigation drawer (MD3) */}
       <aside
         className={`${
-          collapsed ? 'w-16' : 'w-60'
-        } flex-shrink-0 bg-surface border-r border-border flex flex-col transition-all duration-200`}
+          collapsed ? 'w-[76px]' : 'w-60'
+        } flex-shrink-0 bg-surface-low flex flex-col transition-[width] duration-medium ease-emphasized`}
       >
         {/* Logo / Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+        <div className="h-16 flex items-center justify-between px-4">
           {!collapsed && (
-            <span className="text-lg font-semibold text-accent tracking-tight">
+            <span className="text-lg font-semibold text-accent tracking-tight pl-2">
               celox ops
             </span>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-[6px] hover:bg-surface-2 text-text-muted hover:text-text transition-all duration-150"
+            className="md-state grid place-items-center w-11 h-11 rounded-full text-text-muted hover:text-text transition-colors duration-short"
+            title={collapsed ? 'Menü ausklappen' : 'Menü einklappen'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {collapsed ? (
@@ -181,23 +183,26 @@ export default function Layout() {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
+        {/* Nav — MD3 pill indicators + state layers */}
+        <nav className="flex-1 py-3 space-y-1 px-3 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              title={collapsed ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-[6px] text-sm font-medium transition-all duration-150 ${
+                `md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
                   isActive
-                    ? 'bg-[#58a6ff15] text-accent border-l-2 border-accent'
-                    : 'text-text-muted hover:text-text hover:bg-surface-2'
-                } ${collapsed ? 'justify-center' : ''}`
+                    ? 'bg-md-primary-container text-on-primary-container'
+                    : 'text-text-muted hover:text-text'
+                } ${collapsed ? 'justify-center px-0' : ''}`
               }
             >
-              {item.icon}
-              {!collapsed && <span>{item.label}</span>}
+              <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
+                {item.icon}
+              </span>
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -205,25 +210,25 @@ export default function Layout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-16 flex-shrink-0 bg-surface border-b border-border flex items-center justify-between px-6 gap-4">
-          <h1 className="text-sm font-medium text-text-muted">
+        {/* Top app bar (MD3) */}
+        <header className="h-16 flex-shrink-0 bg-surface flex items-center justify-between px-6 gap-4">
+          <h1 className="text-base font-semibold text-text hidden sm:block">
             Verwaltung
           </h1>
           <button
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-            className="flex-1 max-w-md flex items-center gap-2 text-xs py-1.5 px-3 bg-surface-2 border border-border rounded-lg text-text-muted hover:border-text-muted transition-colors"
+            className="md-state flex-1 max-w-md flex items-center gap-2 text-xs h-10 px-4 bg-surface-high rounded-full text-text-muted transition-colors duration-short"
             title="Globale Suche (Ctrl+K / ⌘K)"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <span className="flex-1 text-left">Suchen…</span>
-            <kbd className="text-[10px] bg-bg px-1.5 py-0.5 rounded border border-border">⌘K</kbd>
+            <kbd className="text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
           </button>
           <button
             onClick={handleLogout}
-            className="btn-secondary flex items-center gap-2 text-xs py-1.5 px-3"
+            className="btn-secondary text-xs !py-2 !px-4"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -232,9 +237,11 @@ export default function Layout() {
           </button>
         </header>
 
-        {/* Page content */}
+        {/* Page content — re-keyed per route for MD3 enter transition */}
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
       <QuickSearch />

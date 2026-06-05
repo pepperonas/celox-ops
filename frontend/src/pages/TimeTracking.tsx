@@ -236,7 +236,7 @@ export default function TimeTracking() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        <span className="md-spinner" />
       </div>
     )
   }
@@ -247,7 +247,7 @@ export default function TimeTracking() {
 
       {/* Timer Section */}
       <div className="card p-6">
-        <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
+        <h2 className="text-sm font-medium text-text-muted mb-4">
           Timer
         </h2>
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
@@ -546,7 +546,7 @@ export default function TimeTracking() {
                           Abgerechnet
                         </span>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[#d2992233] text-warning">
+                        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-warning/20 text-warning">
                           Offen
                         </span>
                       )}

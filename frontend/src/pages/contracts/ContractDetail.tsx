@@ -6,6 +6,7 @@ import { getInvoices } from '../../api/invoices'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Contract, Invoice } from '../../types'
 
@@ -33,19 +34,19 @@ export default function ContractDetail() {
   }
 
   if (!contract) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/vertraege')} className="text-text-muted hover:text-text">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/vertraege')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-text">{contract.title}</h2>
+          <h2 className="text-2xl font-semibold text-text tracking-tight">{contract.title}</h2>
           <StatusBadge status={contract.status} />
           <StatusBadge status={contract.type} />
         </div>
@@ -59,44 +60,44 @@ export default function ContractDetail() {
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {contract.customer_name && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Kunde</p>
+              <p className="text-xs text-text-muted mb-2">Kunde</p>
               <p className="text-text">{contract.customer_name}</p>
             </div>
           )}
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Monatlicher Betrag</p>
+            <p className="text-xs text-text-muted mb-2">Monatlicher Betrag</p>
             <p className="text-text">{formatCurrency(contract.monthly_amount)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Zahlungsturnus</p>
+            <p className="text-xs text-text-muted mb-2">Zahlungsturnus</p>
             <p className="text-text">
               {{ monatlich: 'Monatlich', quartalsweise: 'Quartalsweise', halbjaehrlich: 'Halbjährlich', jaehrlich: 'Jährlich' }[contract.billing_cycle] || contract.billing_cycle || 'Monatlich'}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Startdatum</p>
+            <p className="text-xs text-text-muted mb-2">Startdatum</p>
             <p className="text-text">{formatDate(contract.start_date)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Enddatum</p>
+            <p className="text-xs text-text-muted mb-2">Enddatum</p>
             <p className="text-text">{formatDate(contract.end_date)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Auto-Verlängerung</p>
+            <p className="text-xs text-text-muted mb-2">Auto-Verlängerung</p>
             <p className="text-text">{contract.auto_renew ? 'Ja' : 'Nein'}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Kündigungsfrist</p>
+            <p className="text-xs text-text-muted mb-2">Kündigungsfrist</p>
             <p className="text-text">{contract.notice_period_days} Tage</p>
           </div>
         </div>
         {contract.description && (
           <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Beschreibung</p>
+            <p className="text-xs text-text-muted mb-1">Beschreibung</p>
             <p className="text-text text-sm whitespace-pre-wrap">{contract.description}</p>
           </div>
         )}
@@ -108,14 +109,14 @@ export default function ContractDetail() {
       </div>
 
       <h3 className="text-lg font-semibold text-text mb-3">Zugehörige Rechnungen</h3>
-      <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+      <div className="overflow-x-auto bg-surface border border-border rounded-card">
         <table className="w-full">
           <thead>
             <tr className="bg-surface-2 border-b border-border">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Nr.</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Titel</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Brutto</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Nr.</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Titel</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Brutto</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

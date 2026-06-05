@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import LoadingIndicator from '../components/LoadingIndicator'
 import toast from 'react-hot-toast'
 import { api } from '../api/client'
 import { getDocumentTemplates, seedDocumentTemplates, generateDocument, previewDocument, type DocumentTemplate } from '../api/documents'
@@ -6,8 +7,8 @@ import { getCustomers } from '../api/customers'
 import type { Customer } from '../types'
 
 const categoryColors: Record<string, string> = {
-  datenschutz: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  dienstleistung: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
+  datenschutz: 'bg-accent/10 text-accent border border-accent/30',
+  dienstleistung: 'bg-purple/10 text-purple border border-purple/30',
   allgemein: 'bg-surface-2 text-text-muted border border-border',
 }
 
@@ -94,18 +95,18 @@ export default function Documents() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Vertragsdokumente</h2>
+        <h2 className="text-2xl font-semibold text-text tracking-tight">Vertragsdokumente</h2>
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Template List */}
           <div className="space-y-4">
             {Object.entries(grouped).map(([category, tmpls]) => (
               <div key={category}>
-                <p className="text-xs uppercase tracking-wider text-text-muted mb-2">{categoryLabels[category] || category}</p>
+                <p className="text-xs text-text-muted mb-2">{categoryLabels[category] || category}</p>
                 <div className="space-y-1">
                   {tmpls.map((tmpl) => (
                     <button
@@ -137,12 +138,12 @@ export default function Documents() {
           <div className="lg:col-span-2">
             {selectedTemplate ? (
               <div className="space-y-4">
-                <div className="bg-surface border border-border rounded-[12px] p-5">
+                <div className="bg-surface border border-border rounded-card p-5">
                   <h3 className="text-sm font-semibold text-text mb-1">{selectedTemplate.name}</h3>
                   <p className="text-xs text-text-muted mb-4">{selectedTemplate.description}</p>
                   <div className="flex gap-3 items-end">
                     <div className="flex-1">
-                      <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Kunde auswählen</label>
+                      <label className="block text-xs text-text-muted mb-2">Kunde auswählen</label>
                       <select
                         value={selectedCustomerId}
                         onChange={(e) => setSelectedCustomerId(e.target.value)}
@@ -196,7 +197,7 @@ export default function Documents() {
                 )}
 
                 {preview && !previewLoading && (
-                  <div className="bg-white rounded-[12px] overflow-hidden border border-border">
+                  <div className="bg-white rounded-card overflow-hidden border border-border">
                     <iframe
                       ref={iframeRef}
                       title="Dokumentvorschau"
@@ -208,7 +209,7 @@ export default function Documents() {
                 )}
               </div>
             ) : (
-              <div className="bg-surface border border-border rounded-[12px] p-12 text-center">
+              <div className="bg-surface border border-border rounded-card p-12 text-center">
                 <svg className="w-12 h-12 mx-auto text-text-muted mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>

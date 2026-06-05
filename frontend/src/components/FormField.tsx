@@ -44,9 +44,10 @@ export default function FormField({
           checked={value as boolean}
           onChange={onChange}
           disabled={disabled}
-          className="w-4 h-4 rounded-[6px] border-border bg-surface text-accent focus:ring-accent focus:ring-offset-bg"
+          style={{ accentColor: 'var(--md-primary)' }}
+          className="w-[18px] h-[18px] rounded cursor-pointer"
         />
-        <label htmlFor={id} className="text-xs uppercase tracking-wider text-text-muted">
+        <label htmlFor={id} className="text-xs text-text-muted">
           {label}
           {required && <span className="text-danger ml-1">*</span>}
         </label>
@@ -57,7 +58,7 @@ export default function FormField({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-xs uppercase tracking-wider text-text-muted mb-2">
+      <label htmlFor={id} className="block text-xs text-text-muted mb-2">
         {label}
         {required && <span className="text-danger ml-1">*</span>}
       </label>

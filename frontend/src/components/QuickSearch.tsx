@@ -132,7 +132,7 @@ export default function QuickSearch() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="bg-surface border border-border rounded-[12px] w-full max-w-xl mx-4 overflow-hidden shadow-2xl"
+        className="bg-surface border border-border rounded-card w-full max-w-xl mx-4 overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
@@ -180,7 +180,7 @@ export default function QuickSearch() {
                   <p className="text-xs text-text-muted truncate mt-0.5">{hit.subtitle}</p>
                 )}
               </div>
-              <span className="text-[10px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded uppercase tracking-wider flex-shrink-0">
+              <span className="text-[10px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded flex-shrink-0">
                 {typeLabel[hit.type]}
               </span>
             </button>

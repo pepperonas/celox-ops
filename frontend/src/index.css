@@ -2,19 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Material Design 3 — Expressive  ·  celox ops (dark scheme)
+   Seed: celox blue.  Tonal surfaces, expressive shape & motion.
+   Legacy semantic var names (--bg, --surface, --accent, …) are
+   kept so the whole app cascades onto the new palette.
+   ============================================================ */
+
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #1c2128;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --accent: #58a6ff;
-  --green: #3fb950;
-  --orange: #d29922;
-  --red: #f85149;
-  --purple: #bc8cff;
-  --cyan: #39d2c0;
+  /* ---- Tonal palette (dark) ---- */
+  --md-primary: #7cb0ff;
+  --md-on-primary: #00315f;
+  --md-primary-container: #194679;
+  --md-on-primary-container: #d4e3ff;
+
+  --md-secondary: #c4abff;      /* purple — expressive secondary accent */
+  --md-on-secondary: #361b6a;
+  --md-secondary-container: #3a2870;
+  --md-on-secondary-container: #e9ddff;
+
+  --md-tertiary: #57dccb;       /* teal — expressive tertiary accent */
+  --md-on-tertiary: #00382f;
+
+  --md-error: #ffb4ab;
+  --md-on-error: #690005;
+  --md-error-container: #5a1a1a;
+  --md-on-error-container: #ffdad6;
+
+  --md-success: #74d98a;
+  --md-warning: #e9c46a;
+
+  /* ---- Neutral surfaces (tonal elevation) ---- */
+  --md-surface-dim:  #0d1117;
+  --md-surface:      #0e1318;
+  --md-surface-container-lowest: #090c10;
+  --md-surface-container-low:    #161b22;
+  --md-surface-container:        #1a2028;
+  --md-surface-container-high:   #232a33;
+  --md-surface-container-highest:#2d343e;
+
+  --md-outline:         #8b97a6;
+  --md-outline-variant: #2c333d;
+
+  /* ---- RGB channels (consumed by Tailwind as rgb(var() / <alpha>)) ---- */
+  --c-bg: 13 17 23;
+  --c-surface: 26 32 40;
+  --c-surface2: 35 42 51;
+  --c-border: 44 51 61;
+  --c-text: 227 231 238;
+  --c-text-muted: 154 166 181;
+  --c-accent: 124 176 255;
+  --c-accent-hover: 163 200 255;
+  --c-success: 116 217 138;
+  --c-warning: 233 196 106;
+  --c-danger: 255 107 98;
+  --c-purple: 196 171 255;
+  --c-cyan: 87 220 203;
+
+  /* ---- Legacy semantic aliases (used in raw CSS below) ---- */
+  --bg: rgb(var(--c-bg));
+  --surface: rgb(var(--c-surface));
+  --surface2: rgb(var(--c-surface2));
+  --border: rgb(var(--c-border));
+  --text: rgb(var(--c-text));
+  --text-muted: rgb(var(--c-text-muted));
+  --accent: rgb(var(--c-accent));
+  --accent-hover: rgb(var(--c-accent-hover));
+  --green: rgb(var(--c-success));
+  --orange: rgb(var(--c-warning));
+  --red: rgb(var(--c-danger));
+  --purple: rgb(var(--c-purple));
+  --cyan: rgb(var(--c-cyan));
+
+  /* ---- Expressive shape scale ---- */
+  --md-shape-xs: 8px;
+  --md-shape-sm: 12px;
+  --md-shape-md: 16px;
+  --md-shape-lg: 24px;
+  --md-shape-xl: 28px;
+  --md-shape-full: 999px;
+
+  /* ---- Motion: MD3 Expressive easing & duration ---- */
+  --md-ease-standard:      cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-emphasized:    cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-decelerate:    cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-ease-accelerate:    cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-ease-spring:        cubic-bezier(0.34, 1.45, 0.5, 1); /* expressive overshoot */
+  --md-dur-short:  0.18s;
+  --md-dur-medium: 0.32s;
+  --md-dur-long:   0.5s;
+
+  /* ---- Elevation (dark) ---- */
+  --md-elev-1: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px 1px rgba(0,0,0,.22);
+  --md-elev-2: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px 2px rgba(0,0,0,.22);
+  --md-elev-3: 0 4px 8px 3px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.4);
 }
 
 * {
@@ -24,139 +105,400 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  letter-spacing: 0.01em;
   margin: 0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus styles */
+/* MD3 focus ring */
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
 
-/* Selection */
 ::selection {
-  background: rgba(88, 166, 255, 0.3);
+  background: rgba(124, 176, 255, 0.28);
   color: var(--text);
 }
 
-/* Input autofill fix */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #1c2128 inset;
-  -webkit-text-fill-color: #e6edf3;
-  caret-color: #e6edf3;
+  -webkit-box-shadow: 0 0 0px 1000px var(--md-surface-container-low) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
 }
 
 @layer base {
+  /* MD3 outlined text field (default for bare inputs/selects/textareas) */
   input, select, textarea {
     width: 100%;
-    background: #1c2128;
-    border: 1px solid #30363d;
-    color: #e6edf3;
-    border-radius: 6px;
-    padding: 8px 12px;
+    background: var(--md-surface-container-low);
+    border: 1px solid var(--md-outline-variant);
+    color: var(--text);
+    border-radius: var(--md-shape-sm);
+    padding: 10px 14px;
     font-size: 13px;
+    font-family: inherit;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color var(--md-dur-short) var(--md-ease-standard),
+                box-shadow var(--md-dur-short) var(--md-ease-standard),
+                background-color var(--md-dur-short) var(--md-ease-standard);
+  }
+
+  input:hover, select:hover, textarea:hover {
+    border-color: var(--md-outline);
   }
 
   input:focus, select:focus, textarea:focus {
-    border-color: #58a6ff;
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 1px var(--md-primary);
     outline: none;
-    box-shadow: none;
   }
 
   input::placeholder, textarea::placeholder {
-    color: #8b949e;
+    color: var(--text-muted);
+  }
+
+  /* checkboxes keep native sizing — let utility classes win */
+  input[type="checkbox"], input[type="radio"] {
+    width: auto;
   }
 }
 
 @layer components {
+  /* ---------- Buttons (MD3 pill-shaped) ---------- */
   .btn-primary {
-    background: #58a6ff;
-    color: #fff;
-    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+    font-weight: 600;
     font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 6px;
+    letter-spacing: 0.02em;
+    padding: 10px 22px;
+    border-radius: var(--md-shape-full);
     border: none;
     cursor: pointer;
-    transition: all 0.15s;
-    box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+    transition: box-shadow var(--md-dur-short) var(--md-ease-standard),
+                transform var(--md-dur-short) var(--md-ease-spring),
+                border-radius var(--md-dur-medium) var(--md-ease-spring),
+                filter var(--md-dur-short) var(--md-ease-standard);
   }
-  .btn-primary:hover {
-    background: #79b8ff;
-    box-shadow: 0 4px 16px rgba(88, 166, 255, 0.4);
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    transition: opacity var(--md-dur-short) var(--md-ease-standard);
   }
+  .btn-primary:hover { box-shadow: var(--md-elev-1); }
+  .btn-primary:hover::after { opacity: 0.10; }   /* MD3 state layer */
+  /* MD3 Expressive shape-morph: pill → squircle on press */
+  .btn-primary:active { transform: scale(0.96); border-radius: var(--md-shape-sm); }
+  .btn-primary:active::after { opacity: 0.16; }
   .btn-primary:disabled {
-    opacity: 0.5;
+    opacity: 0.38;
     cursor: not-allowed;
+    box-shadow: none;
   }
+  .btn-primary:disabled::after { opacity: 0; }
 
+  /* Tonal secondary button */
   .btn-secondary {
-    background: #1c2128;
-    color: #8b949e;
-    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--md-surface-container-highest);
+    color: var(--text);
+    font-weight: 600;
     font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #30363d;
+    letter-spacing: 0.02em;
+    padding: 10px 22px;
+    border-radius: var(--md-shape-full);
+    border: none;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: box-shadow var(--md-dur-short) var(--md-ease-standard),
+                transform var(--md-dur-short) var(--md-ease-spring);
   }
-  .btn-secondary:hover {
-    color: #e6edf3;
-    border-color: #58a6ff;
+  .btn-secondary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--md-primary);
+    opacity: 0;
+    transition: opacity var(--md-dur-short) var(--md-ease-standard);
   }
+  .btn-secondary:hover::after { opacity: 0.10; }
+  .btn-secondary:active { transform: scale(0.97); }
+  .btn-secondary:active::after { opacity: 0.16; }
+  .btn-secondary:disabled { opacity: 0.38; cursor: not-allowed; }
 
+  /* Danger — text/tonal, error state layer */
   .btn-danger {
-    background: #1c2128;
-    color: #8b949e;
-    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--md-surface-container-highest);
+    color: var(--md-error);
+    font-weight: 600;
     font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #30363d;
+    letter-spacing: 0.02em;
+    padding: 10px 22px;
+    border-radius: var(--md-shape-full);
+    border: none;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: box-shadow var(--md-dur-short) var(--md-ease-standard),
+                transform var(--md-dur-short) var(--md-ease-spring);
   }
-  .btn-danger:hover {
-    color: #f85149;
-    border-color: #f85149;
+  .btn-danger::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--md-error);
+    opacity: 0;
+    transition: opacity var(--md-dur-short) var(--md-ease-standard);
+  }
+  .btn-danger:hover::after { opacity: 0.14; }
+  .btn-danger:active { transform: scale(0.97); }
+  .btn-danger:active::after { opacity: 0.2; }
+
+  /* ---------- Surfaces ---------- */
+  .card {
+    background: var(--md-surface-container);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--md-shape-md);
+    padding: 20px;
+    transition: box-shadow var(--md-dur-medium) var(--md-ease-standard),
+                border-color var(--md-dur-medium) var(--md-ease-standard),
+                transform var(--md-dur-medium) var(--md-ease-spring);
   }
 
-  .card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 20px;
+  /* ---------- Text fields (explicit helpers used across app) ---------- */
+  .input-field, .input {
+    width: 100%;
+    background: var(--md-surface-container-low);
+    border: 1px solid var(--md-outline-variant);
+    color: var(--text);
+    border-radius: var(--md-shape-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color var(--md-dur-short) var(--md-ease-standard),
+                box-shadow var(--md-dur-short) var(--md-ease-standard);
+  }
+  .input-field:hover, .input:hover { border-color: var(--md-outline); }
+  .input-field:focus, .input:focus {
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 1px var(--md-primary);
+  }
+
+  /* ---------- FAB (MD3 Expressive floating action button) ---------- */
+  .fab {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--md-elev-3);
+    border-radius: var(--md-shape-md);
+    transition: box-shadow var(--md-dur-short) var(--md-ease-standard),
+                transform var(--md-dur-medium) var(--md-ease-spring),
+                border-radius var(--md-dur-medium) var(--md-ease-spring);
+  }
+  .fab::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--md-on-primary-container);
+    opacity: 0;
+    transition: opacity var(--md-dur-short) var(--md-ease-standard);
+  }
+  .fab:hover { box-shadow: var(--md-elev-3), 0 0 0 4px rgb(var(--c-accent) / 0.08); transform: translateY(-1px); }
+  .fab:hover::after { opacity: 0.08; }
+  /* shape-morph: squircle → rounder on press */
+  .fab:active { transform: scale(0.94); border-radius: var(--md-shape-lg); }
+  .fab:active::after { opacity: 0.12; }
+
+  /* ---------- MD3 circular loading indicator ---------- */
+  .md-spinner {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid var(--md-surface-container-highest);
+    border-top-color: var(--md-primary);
+    animation: md-spin 0.8s linear infinite;
+  }
+
+  /* ---------- MD3 indeterminate linear progress ---------- */
+  .md-linear {
+    position: relative;
+    height: 4px;
+    width: 100%;
+    border-radius: var(--md-shape-full);
+    background: var(--md-surface-container-highest);
+    overflow: hidden;
+  }
+  .md-linear::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    border-radius: var(--md-shape-full);
+    background: var(--md-primary);
+    animation: md-linear-slide 1.3s var(--md-ease-emphasized) infinite;
+  }
+
+  /* ---------- State-layer helper (interactive rows / nav / icon btns) ---------- */
+  .md-state {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .md-state::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--md-dur-short) var(--md-ease-standard);
+    z-index: -1;
+  }
+  .md-state:hover::before { opacity: 0.08; }
+  .md-state:active::before { opacity: 0.12; }
+}
+
+@layer utilities {
+  /* ---------- MD3 Expressive motion ---------- */
+  @keyframes md-fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes md-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes md-scale-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes md-slide-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes md-shimmer {
+    0%   { background-position: -480px 0; }
+    100% { background-position: 480px 0; }
+  }
+  @keyframes md-pop {
+    0%   { transform: scale(0.8); opacity: 0; }
+    60%  { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes md-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes md-linear-slide {
+    0%   { left: -40%; }
+    100% { left: 100%; }
+  }
+
+  .animate-md-enter {
+    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
+  }
+  .animate-md-scale {
+    animation: md-scale-in var(--md-dur-medium) var(--md-ease-spring) both;
+  }
+  .animate-md-fade {
+    animation: md-fade-in var(--md-dur-medium) var(--md-ease-standard) both;
+  }
+  .animate-md-pop {
+    animation: md-pop var(--md-dur-medium) var(--md-ease-spring) both;
+  }
+
+  /* Page transition wrapper (re-keyed per route) */
+  .page-enter {
+    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
+  }
+
+  /* Staggered list/grid entrance: parent gets .md-stagger, children animate */
+  .md-stagger > * {
+    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
+  }
+  .md-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+  .md-stagger > *:nth-child(2)  { animation-delay: 40ms; }
+  .md-stagger > *:nth-child(3)  { animation-delay: 80ms; }
+  .md-stagger > *:nth-child(4)  { animation-delay: 120ms; }
+  .md-stagger > *:nth-child(5)  { animation-delay: 160ms; }
+  .md-stagger > *:nth-child(6)  { animation-delay: 200ms; }
+  .md-stagger > *:nth-child(7)  { animation-delay: 240ms; }
+  .md-stagger > *:nth-child(8)  { animation-delay: 280ms; }
+  .md-stagger > *:nth-child(9)  { animation-delay: 320ms; }
+  .md-stagger > *:nth-child(n+10) { animation-delay: 360ms; }
+
+  /* Skeleton shimmer */
+  .md-skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--md-surface-container-high) 25%,
+      var(--md-surface-container-highest) 50%,
+      var(--md-surface-container-high) 75%
+    );
+    background-size: 960px 100%;
+    animation: md-shimmer 1.4s linear infinite;
   }
 }
 
-/* Scrollbar */
+/* ---------- Scrollbar ---------- */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 4px;
+  background: var(--md-surface-container-highest);
+  border-radius: var(--md-shape-full);
+  border: 2px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8b949e;
+  background: var(--md-outline);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #30363d #0d1117;
+  scrollbar-color: var(--md-surface-container-highest) transparent;
+}
+
+/* ---------- Respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

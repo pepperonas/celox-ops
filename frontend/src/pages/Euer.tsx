@@ -1,19 +1,20 @@
 import { useEffect, useState, useCallback } from 'react'
+import LoadingIndicator from '../components/LoadingIndicator'
 import { Bar } from 'react-chartjs-2'
 import { getEuerOverview, exportEuerCsv, downloadMonthlyReport, type EuerOverview } from '../api/euer'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
 const CHART_COLORS = {
-  green: '#3fb950',
+  green: '#74d98a',
   greenAlpha: 'rgba(63, 185, 80, 0.15)',
-  red: '#f85149',
+  red: '#ff6b62',
   redAlpha: 'rgba(248, 81, 73, 0.15)',
-  accent: '#58a6ff',
+  accent: '#7cb0ff',
   accentAlpha: 'rgba(88, 166, 255, 0.15)',
-  border: '#30363d',
-  surface: '#161b22',
-  textMuted: '#8b949e',
+  border: '#2c333d',
+  surface: '#1a2028',
+  textMuted: '#9aa6b5',
 }
 
 const MONTH_NAMES = [
@@ -69,7 +70,7 @@ export default function Euer() {
   }
 
   if (loading || !data) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   const monthLabels = data.revenue_by_month.map((m) => m.label.substring(0, 3))
@@ -104,11 +105,11 @@ export default function Euer() {
         labels: { color: CHART_COLORS.textMuted, usePointStyle: true, pointStyle: 'circle' as const },
       },
       tooltip: {
-        backgroundColor: '#1c2128',
+        backgroundColor: '#232a33',
         borderColor: CHART_COLORS.border,
         borderWidth: 1,
-        titleColor: '#e6edf3',
-        bodyColor: '#e6edf3',
+        titleColor: '#e3e7ee',
+        bodyColor: '#e3e7ee',
         callbacks: {
           label: (ctx: { dataset: { label?: string }; parsed: { y: number } }) =>
             `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`,
@@ -139,7 +140,7 @@ export default function Euer() {
     <div>
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-        <h2 className="text-lg font-semibold text-text">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">
           Einnahmen-Überschuss-Rechnung
         </h2>
         <div className="flex items-center gap-3">
@@ -165,24 +166,24 @@ export default function Euer() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Einnahmen
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: CHART_COLORS.green }}>
             {formatCurrency(data.revenue_total)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Ausgaben
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: CHART_COLORS.red }}>
             {formatCurrency(data.expenses_total)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Gewinn
           </div>
           <div
@@ -195,7 +196,7 @@ export default function Euer() {
       </div>
 
       {/* Monthly Bar Chart */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <h3 className="text-sm font-medium text-text mb-4">Monatsübersicht</h3>
         <div style={{ height: '300px' }}>
           <Bar data={barChartData} options={barChartOptions as any} />
@@ -207,9 +208,9 @@ export default function Euer() {
         {data.quarterly.map((q) => (
           <div
             key={q.quarter}
-            className="bg-surface border border-border rounded-[12px] p-4"
+            className="bg-surface border border-border rounded-card p-4"
           >
-            <div className="text-xs uppercase tracking-wider text-text-muted mb-3">
+            <div className="text-xs text-text-muted mb-3">
               {q.label}
             </div>
             <div className="space-y-1.5 text-sm">
@@ -240,7 +241,7 @@ export default function Euer() {
       </div>
 
       {/* Monthly Table */}
-      <div className="bg-surface border border-border rounded-[12px] overflow-hidden mb-6">
+      <div className="bg-surface border border-border rounded-card overflow-hidden mb-6">
         <div className="px-5 py-3 border-b border-border">
           <h3 className="text-sm font-medium text-text">Monatliche Aufstellung</h3>
         </div>
@@ -297,7 +298,7 @@ export default function Euer() {
 
       {/* Expenses by Category */}
       {data.expenses_by_category.length > 0 && (
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h3 className="text-sm font-medium text-text mb-4">Ausgaben nach Kategorie</h3>
           <div className="space-y-3">
             {data.expenses_by_category.map((cat) => (
@@ -323,7 +324,7 @@ export default function Euer() {
       )}
 
       {/* Monthly Report */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mt-6">
+      <div className="bg-surface border border-border rounded-card p-5 mt-6">
         <h3 className="text-sm font-medium text-text mb-4">Monatsbericht generieren</h3>
         <div className="flex flex-wrap items-end gap-3">
           <div>

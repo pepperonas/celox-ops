@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getCustomers } from '../../api/customers'
 import { formatDate } from '../../utils/formatters'
 import type { Customer } from '../../types'
@@ -53,14 +56,14 @@ export default function CustomerList() {
           <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => navigate(`/rechnungen/neu?customer_id=${c.id}`)}
-              className="text-[10px] text-text-muted hover:text-accent border border-border rounded px-2 py-1"
+              className="md-state text-[10px] text-text-muted hover:text-accent border border-border rounded-full px-3 py-1 transition-colors duration-short"
               title="Neue Rechnung für diesen Kunden"
             >
               + Rechnung
             </button>
             <button
               onClick={() => navigate(`/auftraege/neu?customer_id=${c.id}`)}
-              className="text-[10px] text-text-muted hover:text-accent border border-border rounded px-2 py-1"
+              className="md-state text-[10px] text-text-muted hover:text-accent border border-border rounded-full px-3 py-1 transition-colors duration-short"
               title="Neuer Auftrag für diesen Kunden"
             >
               + Auftrag
@@ -74,17 +77,12 @@ export default function CustomerList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Kunden</h2>
-        <button onClick={() => navigate('/kunden/neu')} className="btn-primary">
-          Neuer Kunde
-        </button>
-      </div>
+      <PageHeader title="Kunden" />
 
-      <div className="flex gap-3 items-center mb-4">
+      <div className="flex gap-3 items-center mb-5">
         <input
           type="text"
-          placeholder="Kunden suchen..."
+          placeholder="Kunden suchen…"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
@@ -95,7 +93,7 @@ export default function CustomerList() {
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -106,6 +104,8 @@ export default function CustomerList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/kunden/neu')} label="Neuer Kunde" />
     </div>
   )
 }

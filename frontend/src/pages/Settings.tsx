@@ -147,9 +147,9 @@ export default function Settings() {
 
   return (
     <div className="max-w-3xl">
-      <h2 className="text-lg font-semibold text-text mb-6">Einstellungen</h2>
+      <h2 className="text-2xl font-semibold text-text tracking-tight mb-6">Einstellungen</h2>
 
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <h3 className="text-sm font-semibold text-text mb-4">Token Tracker Verbindung</h3>
         <p className="text-text-muted text-sm mb-4">
           Der Token Tracker liefert KI-Nutzungsdaten für die Kundenansicht.
@@ -166,16 +166,16 @@ export default function Settings() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-2 rounded-lg p-3">
-                <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Projekte</p>
+                <p className="text-xs text-text-muted mb-1">Projekte</p>
                 <p className="text-xl font-bold tabular-nums text-text">{config.projects_count}</p>
               </div>
               <div className="bg-surface-2 rounded-lg p-3">
-                <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Aktive Shares</p>
+                <p className="text-xs text-text-muted mb-1">Aktive Shares</p>
                 <p className="text-xl font-bold tabular-nums text-text">{config.shares_count}</p>
               </div>
             </div>
             <div className="bg-surface-2 border border-border rounded-lg p-3 mt-3">
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Konfiguration</p>
+              <p className="text-xs text-text-muted mb-2">Konfiguration</p>
               <p className="text-xs text-text-muted">
                 <code className="text-text">TOKEN_TRACKER_BASE_URL</code> und <code className="text-text">TOKEN_TRACKER_ADMIN_KEY</code> sind in der <code className="text-text">.env</code> konfiguriert.
               </p>
@@ -208,7 +208,7 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
         )}
       </div>
       {/* Database Backup */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <h3 className="text-sm font-semibold text-text mb-4">Datenbank-Backup</h3>
         <p className="text-text-muted text-sm mb-4">
           Exportiert die gesamte Datenbank als JSON-Datei: Kunden, Aufträge, Verträge, Rechnungen, Leads, Zeiteinträge, Ausgaben und Aktivitäten.
@@ -219,7 +219,7 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
       </div>
 
       {/* Email Templates */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-text">E-Mail-Vorlagen</h3>
           <div className="flex gap-2">

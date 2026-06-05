@@ -400,15 +400,15 @@ export default function InvoiceForm() {
   return (
     <div className="max-w-4xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">
           {isEdit ? 'Rechnung bearbeiten' : 'Neue Rechnung'}
         </h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Allgemein</h3>
+        <div className="bg-surface border border-border rounded-card p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-text">Allgemein</h3>
 
           <FormField
             label="Kunde"
@@ -448,7 +448,7 @@ export default function InvoiceForm() {
           <AutocompleteInput label="Titel" name="title" value={form.title} onChange={handleChange} required placeholder="z.B. Website-Erstellung, SEO-Optimierung..." />
 
           <div>
-            <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Leistungsbeschreibung (optional)</label>
+            <label className="block text-xs text-text-muted mb-2">Leistungsbeschreibung (optional)</label>
             <textarea
               name="service_description"
               value={form.service_description || ''}
@@ -479,9 +479,9 @@ export default function InvoiceForm() {
         </div>
 
         {/* Positions */}
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-text uppercase tracking-wider">Positionen</h3>
+            <h3 className="text-sm font-semibold text-text">Positionen</h3>
             <div className="flex gap-2">
               {selectedCustomerHasTracker && (
                 <button type="button" onClick={() => setShowAiImport(!showAiImport)} className="btn-primary !text-xs !py-1.5 !px-3">
@@ -501,15 +501,15 @@ export default function InvoiceForm() {
               <p className="text-xs text-text-muted mb-3">Importiert die aktive KI-Arbeitszeit und API-Kosten als Rechnungspositionen.</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Von</label>
+                  <label className="block text-xs text-text-muted mb-1">Von</label>
                   <input type="date" value={aiImportFrom} onChange={e => setAiImportFrom(e.target.value)} className="w-full !py-1.5 !text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Bis</label>
+                  <label className="block text-xs text-text-muted mb-1">Bis</label>
                   <input type="date" value={aiImportTo} onChange={e => setAiImportTo(e.target.value)} className="w-full !py-1.5 !text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-1">Stundensatz (€)</label>
+                  <label className="block text-xs text-text-muted mb-1">Stundensatz (€)</label>
                   <input type="number" value={aiHourlyRate} onChange={e => setAiHourlyRate(parseFloat(e.target.value) || 0)} min="0" step="5" className="w-full !py-1.5 !text-sm" />
                 </div>
                 <div className="flex items-end">
@@ -524,7 +524,7 @@ export default function InvoiceForm() {
 
           <div className="space-y-3">
             {/* Header */}
-            <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-semibold text-text-muted uppercase tracking-wider px-1">
+            <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-semibold text-text-muted px-1">
               <div className="col-span-4">Beschreibung</div>
               <div className="col-span-2">Menge</div>
               <div className="col-span-2">Einheit</div>
@@ -607,9 +607,9 @@ export default function InvoiceForm() {
                 id="tax-exempt"
                 checked={form.tax_exempt || false}
                 onChange={(e) => setForm({ ...form, tax_exempt: e.target.checked })}
-                className="w-4 h-4 accent-[#58a6ff]"
+                className="w-4 h-4 accent-[#7cb0ff]"
               />
-              <label htmlFor="tax-exempt" className="text-xs uppercase tracking-wider text-text-muted cursor-pointer">
+              <label htmlFor="tax-exempt" className="text-xs text-text-muted cursor-pointer">
                 Keine USt. (Kleinunternehmerregelung §19 UStG)
               </label>
               {!form.tax_exempt && (
@@ -635,9 +635,9 @@ export default function InvoiceForm() {
                 id="discount-toggle"
                 checked={discountEnabled}
                 onChange={(e) => setDiscountEnabled(e.target.checked)}
-                className="w-4 h-4 accent-[#58a6ff]"
+                className="w-4 h-4 accent-[#7cb0ff]"
               />
-              <label htmlFor="discount-toggle" className="text-xs uppercase tracking-wider text-text-muted cursor-pointer">Rabatt gewähren</label>
+              <label htmlFor="discount-toggle" className="text-xs text-text-muted cursor-pointer">Rabatt gewähren</label>
             </div>
             {discountEnabled && (
               <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-surface-2 rounded-lg">
@@ -715,7 +715,7 @@ export default function InvoiceForm() {
         </div>
 
         {/* Notes + Special Terms */}
-        <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-card p-5 space-y-4">
           <FormField
             label="Notizen"
             name="notes"
@@ -726,7 +726,7 @@ export default function InvoiceForm() {
           />
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs uppercase tracking-wider text-text-muted">Sondervereinbarungen</label>
+              <label className="text-xs text-text-muted">Sondervereinbarungen</label>
               <button
                 type="button"
                 onClick={() => {
@@ -804,7 +804,7 @@ export default function InvoiceForm() {
 
         {/* KI-Nutzungsbericht */}
         {selectedCustomerHasTracker && (
-          <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+          <div className="bg-surface border border-border rounded-card p-5 space-y-4">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -824,7 +824,7 @@ export default function InvoiceForm() {
                     setForm({ ...form, token_usage_from: null, token_usage_to: null })
                   }
                 }}
-                className="w-4 h-4 accent-[#58a6ff]"
+                className="w-4 h-4 accent-[#7cb0ff]"
               />
               <label htmlFor="attach-token-usage" className="text-sm font-semibold text-text cursor-pointer">
                 KI-Nutzungsbericht an Rechnung anhängen
@@ -837,7 +837,7 @@ export default function InvoiceForm() {
                 </p>
                 {customerTrackerProjects.length > 1 && (
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Projekte auswählen</label>
+                    <label className="block text-xs text-text-muted mb-2">Projekte auswählen</label>
                     <div className="space-y-1">
                       {customerTrackerProjects.map((p) => (
                         <label key={p.url} className="flex items-center gap-2 text-sm text-text cursor-pointer hover:text-accent transition-colors">
@@ -848,7 +848,7 @@ export default function InvoiceForm() {
                               if (e.target.checked) setSelectedTrackerUrls([...selectedTrackerUrls, p.url])
                               else setSelectedTrackerUrls(selectedTrackerUrls.filter(u => u !== p.url))
                             }}
-                            className="w-3.5 h-3.5 accent-[#58a6ff]"
+                            className="w-3.5 h-3.5 accent-[#7cb0ff]"
                           />
                           {p.label || p.url.replace(/.*\/share\//, '').slice(0, 12) + '...'}
                         </label>
@@ -858,11 +858,11 @@ export default function InvoiceForm() {
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum von</label>
+                    <label className="block text-xs text-text-muted mb-2">Zeitraum von</label>
                     <input type="date" value={form.token_usage_from || ''} onChange={(e) => setForm({ ...form, token_usage_from: e.target.value || null })} className="w-full" />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Zeitraum bis</label>
+                    <label className="block text-xs text-text-muted mb-2">Zeitraum bis</label>
                     <input type="date" value={form.token_usage_to || ''} onChange={(e) => setForm({ ...form, token_usage_to: e.target.value || null })} className="w-full" />
                   </div>
                 </div>
@@ -873,7 +873,7 @@ export default function InvoiceForm() {
 
         {/* GitHub Commits */}
         {selectedCustomerHasGithub && (
-          <div className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+          <div className="bg-surface border border-border rounded-card p-5 space-y-4">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -882,7 +882,7 @@ export default function InvoiceForm() {
                 onChange={(e) => {
                   setAttachGithubCommits(e.target.checked)
                 }}
-                className="w-4 h-4 accent-[#58a6ff]"
+                className="w-4 h-4 accent-[#7cb0ff]"
               />
               <label htmlFor="attach-github-commits" className="text-sm font-semibold text-text cursor-pointer">
                 GitHub Commits an Rechnung anhängen
@@ -895,7 +895,7 @@ export default function InvoiceForm() {
                 </p>
                 {customerGithubRepos.length > 1 && (
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Repos auswählen</label>
+                    <label className="block text-xs text-text-muted mb-2">Repos auswählen</label>
                     <div className="space-y-1">
                       {customerGithubRepos.map((repo) => (
                         <label key={repo} className="flex items-center gap-2 text-sm text-text cursor-pointer hover:text-accent transition-colors">
@@ -906,7 +906,7 @@ export default function InvoiceForm() {
                               if (e.target.checked) setSelectedGithubRepos([...selectedGithubRepos, repo])
                               else setSelectedGithubRepos(selectedGithubRepos.filter(r => r !== repo))
                             }}
-                            className="w-3.5 h-3.5 accent-[#58a6ff]"
+                            className="w-3.5 h-3.5 accent-[#7cb0ff]"
                           />
                           {repo}
                         </label>
@@ -926,14 +926,14 @@ export default function InvoiceForm() {
 
         {/* Activity Chart */}
         {selectedCustomerHasTracker && attachTokenUsage && (
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 id="include-activity-chart"
                 checked={form.include_activity_chart || false}
                 onChange={(e) => setForm({ ...form, include_activity_chart: e.target.checked })}
-                className="w-4 h-4 accent-[#58a6ff]"
+                className="w-4 h-4 accent-[#7cb0ff]"
               />
               <label htmlFor="include-activity-chart" className="text-sm font-semibold text-text cursor-pointer">
                 Aktivitätsdiagramm anhängen

@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import FilterChips from '../../components/FilterChips'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment } from '../../api/invoices'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice } from '../../types'
@@ -149,7 +153,7 @@ export default function InvoiceList() {
             {inv.status === 'entwurf' && (
               <button
                 onClick={(e) => handleQuickStatusChange(e, inv, 'gestellt')}
-                className="text-[10px] text-text-muted hover:text-accent border border-border rounded px-1.5 py-0.5"
+                className="md-state text-[10px] text-text-muted hover:text-accent border border-border rounded-full px-2.5 py-0.5 transition-colors duration-short"
                 title="Als gestellt markieren"
               >
                 → Gestellt
@@ -158,7 +162,7 @@ export default function InvoiceList() {
             {(inv.status === 'gestellt' || inv.status === 'ueberfaellig') && (
               <button
                 onClick={(e) => handleQuickStatusChange(e, inv, 'bezahlt')}
-                className="text-[10px] text-text-muted hover:text-success border border-border rounded px-1.5 py-0.5"
+                className="md-state text-[10px] text-text-muted hover:text-success border border-border rounded-full px-2.5 py-0.5 transition-colors duration-short"
                 title="Als bezahlt markieren"
               >
                 ✓ Bezahlt
@@ -178,43 +182,31 @@ export default function InvoiceList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Rechnungen</h2>
-        <button onClick={() => navigate('/rechnungen/neu')} className="btn-primary">
-          Neue Rechnung
-        </button>
-      </div>
+      <PageHeader title="Rechnungen" />
 
-      <div className="flex gap-3 items-center mb-4 flex-wrap">
-        <select
+      <div className="flex gap-3 items-center mb-5 flex-wrap">
+        <FilterChips
+          options={statusOptions}
           value={statusFilter}
-          onChange={(e) => {
-            const v = e.target.value
+          onChange={(v) => {
             setStatusFilter(v)
             setPage(1)
             if (v) setSearchParams({ status: v })
             else setSearchParams({})
           }}
-          className="input-field w-48"
-        >
-          {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        />
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-xs text-text-muted">{selectedIds.size} ausgewählt</span>
-            <button onClick={handleBulkMarkPaid} className="btn-secondary text-xs py-1.5">Als bezahlt</button>
-            <button onClick={handleBulkDownloadPdfs} className="btn-secondary text-xs py-1.5">PDFs laden</button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-text-muted text-xs hover:text-text">×</button>
+            <button onClick={handleBulkMarkPaid} className="btn-secondary text-xs !py-1.5 !px-4">Als bezahlt</button>
+            <button onClick={handleBulkDownloadPdfs} className="btn-secondary text-xs !py-1.5 !px-4">PDFs laden</button>
+            <button onClick={() => setSelectedIds(new Set())} className="md-state text-text-muted text-xs hover:text-text w-7 h-7 rounded-full">×</button>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -225,6 +217,8 @@ export default function InvoiceList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/rechnungen/neu')} label="Neue Rechnung" />
     </div>
   )
 }

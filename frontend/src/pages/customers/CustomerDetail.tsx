@@ -12,6 +12,7 @@ import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import TokenUsage from '../../components/TokenUsage'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { formatDate, formatCurrency, formatRelativeTime } from '../../utils/formatters'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
@@ -141,7 +142,7 @@ export default function CustomerDetail() {
   const manualTypes = new Set(['note', 'call', 'email', 'meeting'])
 
   if (!customer) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   const tabs = [
@@ -157,13 +158,13 @@ export default function CustomerDetail() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/kunden')} className="text-text-muted hover:text-text">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/kunden')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-text">{customer.name}</h2>
+          <h2 className="text-2xl font-semibold text-text tracking-tight">{customer.name}</h2>
           <div className="flex items-center gap-2 ml-2">
             <span title={customer.token_tracker_url ? 'KI-Tracker verknüpft' : 'Kein KI-Tracker'} className="flex items-center gap-1">
               <span className={`w-2 h-2 rounded-full ${customer.token_tracker_url ? 'bg-success' : 'bg-danger'}`}></span>
@@ -202,78 +203,81 @@ export default function CustomerDetail() {
       </div>
 
       {/* Info Card */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customer.company && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Firma</p>
+              <p className="text-xs text-text-muted mb-2">Firma</p>
               <p className="text-text">{customer.company}</p>
             </div>
           )}
           {customer.email && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">E-Mail</p>
+              <p className="text-xs text-text-muted mb-2">E-Mail</p>
               <p className="text-text">{customer.email}</p>
             </div>
           )}
           {customer.phone && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Telefon</p>
+              <p className="text-xs text-text-muted mb-2">Telefon</p>
               <p className="text-text">{customer.phone}</p>
             </div>
           )}
           {customer.website && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Website</p>
+              <p className="text-xs text-text-muted mb-2">Website</p>
               <a href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors">{customer.website}</a>
             </div>
           )}
           {customer.address && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Adresse</p>
+              <p className="text-xs text-text-muted mb-2">Adresse</p>
               <p className="text-text">{customer.address}</p>
             </div>
           )}
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Erstellt am</p>
+            <p className="text-xs text-text-muted mb-2">Erstellt am</p>
             <p className="text-text">{formatDate(customer.created_at)}</p>
           </div>
         </div>
         {customer.notes && (
           <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Notizen</p>
+            <p className="text-xs text-text-muted mb-1">Notizen</p>
             <p className="text-text text-sm whitespace-pre-wrap">{customer.notes}</p>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-border">
+      {/* Tabs — MD3 primary tabs with rounded indicator + state layer */}
+      <div className="flex gap-1 mb-5 border-b border-border overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => switchTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`md-state relative px-4 py-3 text-sm font-medium rounded-t-md whitespace-nowrap transition-colors duration-short ease-standard ${
               activeTab === tab.key
-                ? 'border-accent text-accent'
-                : 'border-transparent text-text-muted hover:text-text'
+                ? 'text-accent'
+                : 'text-text-muted hover:text-text'
             }`}
           >
             {tab.label}
+            {activeTab === tab.key && (
+              <span className="absolute left-2 right-2 -bottom-px h-[3px] rounded-full bg-accent animate-md-fade" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       {activeTab === 'auftraege' && (
-        <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+        <div className="overflow-x-auto bg-surface border border-border rounded-card">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-2 border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Titel</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Betrag</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Datum</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Titel</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Betrag</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Datum</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -299,14 +303,14 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'vertraege' && (
-        <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+        <div className="overflow-x-auto bg-surface border border-border rounded-card">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-2 border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Titel</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Typ</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Monatl.</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Titel</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Typ</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Monatl.</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -332,14 +336,14 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'rechnungen' && (
-        <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+        <div className="overflow-x-auto bg-surface border border-border rounded-card">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-2 border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Nr.</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Titel</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Brutto</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Nr.</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Titel</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Brutto</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -382,11 +386,11 @@ export default function CustomerDetail() {
 
           {/* Inline form */}
           {showActivityForm && (
-            <div className="bg-surface border border-border rounded-[12px] p-5 mb-4">
+            <div className="bg-surface border border-border rounded-card p-5 mb-4">
               <form onSubmit={handleCreateActivity} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Typ</label>
+                    <label className="block text-xs text-text-muted mb-2">Typ</label>
                     <select
                       value={activityForm.type}
                       onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value })}
@@ -399,7 +403,7 @@ export default function CustomerDetail() {
                     </select>
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Titel *</label>
+                    <label className="block text-xs text-text-muted mb-2">Titel *</label>
                     <input
                       type="text"
                       value={activityForm.title}
@@ -411,7 +415,7 @@ export default function CustomerDetail() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Beschreibung (optional)</label>
+                  <label className="block text-xs text-text-muted mb-2">Beschreibung (optional)</label>
                   <textarea
                     value={activityForm.description}
                     onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
@@ -432,14 +436,14 @@ export default function CustomerDetail() {
           {/* Timeline */}
           <div className="space-y-3">
             {activities.length === 0 ? (
-              <div className="bg-surface border border-border rounded-[12px] px-4 py-8 text-center text-text-muted">
+              <div className="bg-surface border border-border rounded-card px-4 py-8 text-center text-text-muted">
                 Keine Aktivitäten vorhanden.
               </div>
             ) : (
               activities.map((a) => {
                 const config = activityTypeConfig[a.type] || { label: a.type, color: 'bg-gray-400' }
                 return (
-                  <div key={a.id} className="bg-surface border border-border rounded-[12px] p-4 flex items-start gap-3">
+                  <div key={a.id} className="bg-surface border border-border rounded-card p-4 flex items-start gap-3">
                     <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${config.color}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-text">{a.title}</p>
@@ -519,18 +523,18 @@ export default function CustomerDetail() {
             </button>
           </div>
 
-          <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+          <div className="overflow-x-auto bg-surface border border-border rounded-card">
             <table className="w-full">
               <thead>
                 <tr className="bg-surface-2 border-b border-border">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Datum</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">URL</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Strategie</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Performance</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Barrierefrei</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">Best Practices</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider">SEO</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Aktionen</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Datum</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">URL</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Strategie</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted">Performance</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted">Barrierefrei</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted">Best Practices</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-muted">SEO</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted">Aktionen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -674,7 +678,7 @@ export default function CustomerDetail() {
               />
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Menge</label>
+                  <label className="block text-xs text-text-muted mb-2">Menge</label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -685,7 +689,7 @@ export default function CustomerDetail() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Einheit</label>
+                  <label className="block text-xs text-text-muted mb-2">Einheit</label>
                   <select
                     value={quickForm.einheit}
                     onChange={(e) => setQuickForm({ ...quickForm, einheit: e.target.value })}
@@ -698,7 +702,7 @@ export default function CustomerDetail() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Einzelpreis (€) *</label>
+                  <label className="block text-xs text-text-muted mb-2">Einzelpreis (€) *</label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -716,7 +720,7 @@ export default function CustomerDetail() {
                 </div>
               )}
               <div>
-                <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">Notiz (optional)</label>
+                <label className="block text-xs text-text-muted mb-2">Notiz (optional)</label>
                 <input
                   type="text"
                   value={quickForm.notes}

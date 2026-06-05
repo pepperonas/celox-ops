@@ -52,17 +52,17 @@ export default function DataTable<T extends { id: string }>({
     : data
 
   return (
-    <div className="bg-surface border border-border rounded-card overflow-hidden">
+    <div className="bg-surface-container border border-border rounded-md overflow-hidden shadow-elev-1">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-b border-border bg-surface-low/40">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={col.sortable !== false ? () => handleSort(col.key) : undefined}
-                  className={`px-3 py-2.5 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider ${
-                    col.sortable !== false ? 'cursor-pointer hover:text-text select-none' : ''
+                  className={`px-4 py-3 text-left text-[11px] font-semibold text-text-muted ${
+                    col.sortable !== false ? 'cursor-pointer hover:text-text select-none transition-colors duration-short' : ''
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
@@ -82,7 +82,7 @@ export default function DataTable<T extends { id: string }>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-3 py-12 text-center text-text-muted text-[13px]"
+                  className="px-4 py-14 text-center text-text-muted text-[13px]"
                 >
                   Keine Einträge vorhanden.
                 </td>
@@ -92,14 +92,14 @@ export default function DataTable<T extends { id: string }>({
                 <tr
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
-                  className={`border-b border-border transition-all duration-150 ${
+                  className={`border-b border-border/60 last:border-0 transition-colors duration-short ease-standard ${
                     onRowClick
-                      ? 'cursor-pointer hover:bg-surface-2'
+                      ? 'cursor-pointer hover:bg-surface-high'
                       : ''
                   }`}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-3 py-2.5 text-[13px] text-text">
+                    <td key={col.key} className="px-4 py-3 text-[13px] text-text">
                       {col.render
                         ? col.render(item)
                         : String((item as Record<string, unknown>)[col.key] ?? '')}
@@ -113,15 +113,15 @@ export default function DataTable<T extends { id: string }>({
       </div>
 
       {totalPages > 1 && onPageChange && (
-        <div className="flex items-center justify-between px-3 py-2.5 border-t border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
           <span className="text-xs text-text-muted">
             {total} Einträge gesamt
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
-              className="px-2.5 py-1 text-xs rounded-[6px] border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+              className="md-state px-3 py-1.5 text-xs rounded-full text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-short"
             >
               Zurück
             </button>
@@ -140,10 +140,10 @@ export default function DataTable<T extends { id: string }>({
                 <button
                   key={pageNum}
                   onClick={() => onPageChange(pageNum)}
-                  className={`px-2.5 py-1 text-xs rounded-[6px] transition-all duration-150 ${
+                  className={`md-state min-w-[32px] px-2.5 py-1.5 text-xs rounded-full transition-all duration-short ease-spring ${
                     pageNum === page
-                      ? 'bg-accent text-white'
-                      : 'border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text'
+                      ? 'bg-md-primary text-on-primary font-semibold'
+                      : 'text-text-muted hover:text-text'
                   }`}
                 >
                   {pageNum}
@@ -153,7 +153,7 @@ export default function DataTable<T extends { id: string }>({
             <button
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
-              className="px-2.5 py-1 text-xs rounded-[6px] border border-border bg-surface text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+              className="md-state px-3 py-1.5 text-xs rounded-full text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-short"
             >
               Weiter
             </button>

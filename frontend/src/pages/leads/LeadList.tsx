@@ -2,9 +2,13 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import FilterChips from '../../components/FilterChips'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getLeads } from '../../api/leads'
 import { formatDate } from '../../utils/formatters'
-import type { Lead, LeadStatus } from '../../types'
+import type { Lead } from '../../types'
 
 const statusOptions: { value: string; label: string }[] = [
   { value: '', label: 'Alle' },
@@ -87,17 +91,12 @@ export default function LeadList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Vorgemerkt</h2>
-        <button onClick={() => navigate('/vorgemerkt/neu')} className="btn-primary">
-          Neue Website
-        </button>
-      </div>
+      <PageHeader title="Vorgemerkt" />
 
-      <div className="flex gap-3 items-center mb-4">
+      <div className="flex flex-col gap-3 mb-5">
         <input
           type="text"
-          placeholder="Leads suchen..."
+          placeholder="Leads suchen…"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
@@ -105,24 +104,18 @@ export default function LeadList() {
           }}
           className="input-field max-w-md"
         />
-        <select
+        <FilterChips
+          options={statusOptions}
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as LeadStatus | '')
+          onChange={(v) => {
+            setStatusFilter(v)
             setPage(1)
           }}
-          className="input-field w-auto"
-        >
-          {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -133,6 +126,8 @@ export default function LeadList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/vorgemerkt/neu')} label="Neue Website" />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import LoadingIndicator from '../components/LoadingIndicator'
 import { Bar } from 'react-chartjs-2'
 import {
   getProfitability,
@@ -10,12 +11,12 @@ import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
 const COLORS = {
-  green: '#3fb950',
-  orange: '#d29922',
-  red: '#f85149',
-  accent: '#58a6ff',
-  border: '#30363d',
-  textMuted: '#8b949e',
+  green: '#74d98a',
+  orange: '#e9c46a',
+  red: '#ff6b62',
+  accent: '#7cb0ff',
+  border: '#2c333d',
+  textMuted: '#9aa6b5',
 }
 
 type SortKey = 'customer_name' | 'revenue' | 'hours_logged' | 'effective_hourly_rate' | 'invoices_count' | 'profit'
@@ -77,7 +78,7 @@ export default function Analytics() {
   }
 
   if (loading || !forecast) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   const forecastChartData = {
@@ -118,11 +119,11 @@ export default function Analytics() {
         labels: { color: COLORS.textMuted, usePointStyle: true, pointStyle: 'circle' as const },
       },
       tooltip: {
-        backgroundColor: '#1c2128',
+        backgroundColor: '#232a33',
         borderColor: COLORS.border,
         borderWidth: 1,
-        titleColor: '#e6edf3',
-        bodyColor: '#e6edf3',
+        titleColor: '#e3e7ee',
+        bodyColor: '#e3e7ee',
         callbacks: {
           label: (ctx: { dataset: { label?: string }; parsed: { y: number } }) =>
             `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`,
@@ -150,13 +151,13 @@ export default function Analytics() {
     <div>
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-        <h2 className="text-lg font-semibold text-text">Analyse</h2>
+        <h2 className="text-2xl font-semibold text-text tracking-tight">Analyse</h2>
       </div>
 
       {/* Forecast KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Monatlich wiederkehrend
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: COLORS.green }}>
@@ -166,8 +167,8 @@ export default function Analytics() {
             {formatCurrency(forecast.annual_recurring)} / Jahr
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Pipeline (Angebote)
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: COLORS.orange }}>
@@ -177,8 +178,8 @@ export default function Analytics() {
             {forecast.pipeline_count} offene Angebote
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Prognose 6 Monate
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: COLORS.accent }}>
@@ -188,8 +189,8 @@ export default function Analytics() {
             Wiederkehrend + Pipeline
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-4">
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">
+        <div className="bg-surface border border-border rounded-card p-4">
+          <div className="text-xs text-text-muted mb-1">
             Leads in Bearbeitung
           </div>
           <div className="text-xl font-semibold tabular-nums" style={{ color: COLORS.accent }}>
@@ -202,7 +203,7 @@ export default function Analytics() {
       </div>
 
       {/* Customer Profitability Table */}
-      <div className="bg-surface border border-border rounded-[12px] overflow-hidden mb-6">
+      <div className="bg-surface border border-border rounded-card overflow-hidden mb-6">
         <div className="px-5 py-3 border-b border-border">
           <h3 className="text-sm font-medium text-text">Kunden-Profitabilit\u00e4t</h3>
         </div>
@@ -307,7 +308,7 @@ export default function Analytics() {
       </div>
 
       {/* Forecast Chart */}
-      <div className="bg-surface border border-border rounded-[12px] p-5">
+      <div className="bg-surface border border-border rounded-card p-5">
         <h3 className="text-sm font-medium text-text mb-4">Umsatzprognose</h3>
         <div style={{ height: '300px' }}>
           <Bar data={forecastChartData} options={forecastChartOptions as any} />

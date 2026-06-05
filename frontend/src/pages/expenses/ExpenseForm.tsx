@@ -109,7 +109,7 @@ export default function ExpenseForm() {
   return (
     <div className="max-w-2xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">
           {isEdit ? 'Ausgabe bearbeiten' : 'Neue Ausgabe'}
         </h2>
         {isEdit && (
@@ -121,7 +121,7 @@ export default function ExpenseForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-surface border border-border rounded-[12px] p-6 space-y-5"
+        className="bg-surface border border-border rounded-card p-6 space-y-5"
       >
         <FormField
           label="Beschreibung"
@@ -206,7 +206,7 @@ export default function ExpenseForm() {
 
       {isEdit && id && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-3">Belege</h3>
+          <h3 className="text-sm font-semibold text-text mb-3">Belege</h3>
           <FileAttachments expense_id={id} showCamera />
         </div>
       )}

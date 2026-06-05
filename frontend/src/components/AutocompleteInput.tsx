@@ -441,7 +441,7 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
   return (
     <div ref={wrapperRef} className={`relative ${className || ''}`}>
       {label && (
-        <label className="block text-xs uppercase tracking-wider text-text-muted mb-2">
+        <label className="block text-xs text-text-muted mb-2">
           {label}
           {required && <span className="text-danger ml-1">*</span>}
         </label>

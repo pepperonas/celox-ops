@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import LoadingIndicator from '../components/LoadingIndicator'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import toast from 'react-hot-toast'
@@ -19,9 +20,9 @@ const priorityColors: Record<string, string> = {
 }
 
 const priorityBadgeColors: Record<string, string> = {
-  critical: 'bg-[#f8514933] text-danger',
-  warning: 'bg-[#d2992233] text-warning',
-  info: 'bg-[#58a6ff1a] text-accent',
+  critical: 'bg-danger/20 text-danger',
+  warning: 'bg-warning/20 text-warning',
+  info: 'bg-accent/10 text-accent',
 }
 
 export default function Tasks() {
@@ -65,16 +66,16 @@ export default function Tasks() {
   }
 
   if (loading) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-text">Aufgaben</h2>
+          <h2 className="text-2xl font-semibold text-text tracking-tight">Aufgaben</h2>
           {count > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-accent text-white text-xs font-semibold">
+            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-accent text-on-primary text-xs font-semibold">
               {count}
             </span>
           )}
@@ -82,14 +83,14 @@ export default function Tasks() {
         <button
           onClick={handleGenerateRecurring}
           disabled={generating}
-          className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-accent text-on-primary text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
         >
           {generating ? 'Generiere...' : 'Vertragsrechnungen generieren'}
         </button>
       </div>
 
       {tasks.length === 0 ? (
-        <div className="bg-surface border border-border rounded-[12px] p-12 text-center">
+        <div className="bg-surface border border-border rounded-card p-12 text-center">
           <p className="text-text-muted">Keine anstehenden Aufgaben</p>
         </div>
       ) : (
@@ -98,7 +99,7 @@ export default function Tasks() {
             <div
               key={idx}
               onClick={() => navigate(task.link)}
-              className={`bg-surface border border-border rounded-[12px] p-4 pl-5 border-l-4 ${priorityColors[task.priority] || 'border-l-border'} cursor-pointer hover:bg-surface-2 transition-colors`}
+              className={`bg-surface border border-border rounded-card p-4 pl-5 border-l-4 ${priorityColors[task.priority] || 'border-l-border'} cursor-pointer hover:bg-surface-2 transition-colors`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">

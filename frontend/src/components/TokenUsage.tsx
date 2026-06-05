@@ -5,18 +5,18 @@ import { formatDate, formatCurrency } from '../utils/formatters'
 import type { TokenTrackerData } from '../types'
 
 const CHART_COLORS = {
-  accent: '#58a6ff',
+  accent: '#7cb0ff',
   accentAlpha: 'rgba(88, 166, 255, 0.15)',
-  green: '#3fb950',
+  green: '#74d98a',
   greenAlpha: 'rgba(63, 185, 80, 0.15)',
-  orange: '#d29922',
+  orange: '#e9c46a',
   orangeAlpha: 'rgba(210, 153, 34, 0.15)',
-  purple: '#bc8cff',
-  red: '#f85149',
-  border: '#30363d',
-  surface: '#161b22',
-  text: '#e6edf3',
-  muted: '#8b949e',
+  purple: '#c4abff',
+  red: '#ff6b62',
+  border: '#2c333d',
+  surface: '#1a2028',
+  text: '#e3e7ee',
+  muted: '#9aa6b5',
 }
 
 const CHART_OPTIONS = {
@@ -25,11 +25,11 @@ const CHART_OPTIONS = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#161b22',
-      borderColor: '#30363d',
+      backgroundColor: '#1a2028',
+      borderColor: '#2c333d',
       borderWidth: 1,
-      titleColor: '#e6edf3',
-      bodyColor: '#8b949e',
+      titleColor: '#e3e7ee',
+      bodyColor: '#9aa6b5',
       padding: 12,
       cornerRadius: 8,
     },
@@ -37,11 +37,11 @@ const CHART_OPTIONS = {
   scales: {
     x: {
       grid: { color: 'rgba(48, 54, 61, 0.5)' },
-      ticks: { color: '#8b949e', font: { size: 11 } },
+      ticks: { color: '#9aa6b5', font: { size: 11 } },
     },
     y: {
       grid: { color: 'rgba(48, 54, 61, 0.5)' },
-      ticks: { color: '#8b949e', font: { size: 11 } },
+      ticks: { color: '#9aa6b5', font: { size: 11 } },
       beginAtZero: true,
     },
   },
@@ -198,8 +198,8 @@ export default function TokenUsage({ trackerUrl }: Props) {
   h1 { font-size: 22px; margin-bottom: 4px; }
   h2 { font-size: 16px; margin: 32px 0 12px; color: #1a1a2e; border-bottom: 2px solid #e8e8e8; padding-bottom: 6px; }
   .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 3px solid #58a6ff; padding-bottom: 16px; }
-  .brand { font-size: 18px; font-weight: 700; color: #58a6ff; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 3px solid #7cb0ff; padding-bottom: 16px; }
+  .brand { font-size: 18px; font-weight: 700; color: #7cb0ff; }
   .brand-sub { font-size: 11px; color: #999; }
   .date { font-size: 12px; color: #999; text-align: right; }
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
@@ -207,14 +207,14 @@ export default function TokenUsage({ trackerUrl }: Props) {
   .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 4px; }
   .kpi-value { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .kpi-sub { font-size: 11px; color: #999; margin-top: 2px; }
-  .blue { color: #58a6ff; } .green { color: #22863a; } .purple { color: #8957e5; } .orange { color: #d29922; }
+  .blue { color: #7cb0ff; } .green { color: #22863a; } .purple { color: #8957e5; } .orange { color: #e9c46a; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
   th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; border-bottom: 2px solid #e8e8e8; padding: 8px 10px; }
   td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
   tr:hover td { background: #f8f9fa; }
   .right { text-align: right; }
   .mono { font-variant-numeric: tabular-nums; }
-  .badge { display: inline-block; background: #f0f4ff; color: #58a6ff; border: 1px solid #d0e0ff; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin: 2px; }
+  .badge { display: inline-block; background: #f0f4ff; color: #7cb0ff; border: 1px solid #d0e0ff; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin: 2px; }
   .models { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   .summary-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
@@ -370,7 +370,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
             onClick={() => setPeriod(p)}
             className={`px-3 py-1.5 text-xs rounded-[6px] transition-all ${
               period === p
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-on-primary'
                 : 'bg-surface-2 text-text-muted border border-border hover:text-text hover:border-accent'
             }`}
           >
@@ -381,7 +381,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
           onClick={() => setPeriod('custom')}
           className={`px-3 py-1.5 text-xs rounded-[6px] transition-all ${
             period === 'custom'
-              ? 'bg-accent text-white'
+              ? 'bg-accent text-on-primary'
               : 'bg-surface-2 text-text-muted border border-border hover:text-text hover:border-accent'
           }`}
         >
@@ -405,7 +405,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
       </div>
 
       {/* Explanatory Intro */}
-      <div className="bg-surface border border-border rounded-[12px] p-4">
+      <div className="bg-surface border border-border rounded-card p-4">
         <p className="text-sm text-text-muted">
           Diese Übersicht zeigt transparent, wann und wie intensiv KI-gestützte Entwicklungsarbeit an Ihrem Projekt stattgefunden hat.
           Jede Arbeitssitzung wird automatisch protokolliert — inkl. geschriebener Codezeilen, Dauer und eingesetzter KI-Modelle.
@@ -414,23 +414,23 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border rounded-[12px] p-5">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">KI-Kosten (ca.)</p>
+        <div className="bg-surface border border-border rounded-card p-5">
+          <p className="text-xs text-text-muted mb-2">KI-Kosten (ca.)</p>
           <p className="text-[28px] font-bold tabular-nums text-accent">{formatCurrency(costEur)}</p>
           <p className="text-xs text-text-muted mt-1">${s.total_cost.toFixed(2)} USD</p>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-5">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Aktive Arbeitszeit</p>
+        <div className="bg-surface border border-border rounded-card p-5">
+          <p className="text-xs text-text-muted mb-2">Aktive Arbeitszeit</p>
           <p className="text-[28px] font-bold tabular-nums text-success">{formatDuration(s.total_active_min)}</p>
           <p className="text-xs text-text-muted mt-1">{s.total_sessions} Sitzungen</p>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-5">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Codezeilen geschrieben</p>
+        <div className="bg-surface border border-border rounded-card p-5">
+          <p className="text-xs text-text-muted mb-2">Codezeilen geschrieben</p>
           <p className="text-[28px] font-bold tabular-nums text-purple">{s.lines_written.toLocaleString('de-DE')}</p>
           <p className="text-xs text-text-muted mt-1">+{s.lines_added.toLocaleString('de-DE')} / −{s.lines_removed.toLocaleString('de-DE')}</p>
         </div>
-        <div className="bg-surface border border-border rounded-[12px] p-5">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-2">KI-Anfragen</p>
+        <div className="bg-surface border border-border rounded-card p-5">
+          <p className="text-xs text-text-muted mb-2">KI-Anfragen</p>
           <p className="text-[28px] font-bold tabular-nums text-warning">{s.total_messages.toLocaleString('de-DE')}</p>
           <p className="text-xs text-text-muted mt-1">Einzelne Interaktionen mit der KI</p>
         </div>
@@ -438,7 +438,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 
       {/* Daily Activity Chart */}
       {data.daily.length > 0 && (
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h4 className="text-sm font-semibold text-text mb-1">Arbeitsintensität pro Tag</h4>
           <p className="text-xs text-text-muted mb-4">Zeigt die Anzahl der KI-Anfragen und geschriebenen Codezeilen pro Arbeitstag.</p>
           <div style={{ height: 280 }}>
@@ -486,7 +486,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 
       {/* Cost Trend Chart */}
       {data.daily.length > 1 && (
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h4 className="text-sm font-semibold text-text mb-1">Kostenverlauf</h4>
           <p className="text-xs text-text-muted mb-4">Kumulierte KI-Kosten über den gewählten Zeitraum.</p>
           <div style={{ height: 220 }}>
@@ -533,7 +533,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 
       {/* Code Output Chart */}
       {data.daily.length > 0 && data.daily.some(d => d.lines_written > 0) && (
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h4 className="text-sm font-semibold text-text mb-1">Code-Entwicklung pro Tag</h4>
           <p className="text-xs text-text-muted mb-4">Geschriebene, hinzugefügte und entfernte Codezeilen — zeigt den Entwicklungsfortschritt.</p>
           <div style={{ height: 220 }}>
@@ -572,19 +572,19 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 
       {/* Sessions Timeline */}
       {data.sessions.length > 0 && (
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h4 className="text-sm font-semibold text-text mb-1">Arbeitssitzungen</h4>
           <p className="text-xs text-text-muted mb-4">Jede Sitzung entspricht einer zusammenhängenden Arbeitsphase am Projekt.</p>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">Datum</th>
-                  <th className="text-left text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">Dauer</th>
-                  <th className="text-left text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">KI-Modell</th>
-                  <th className="text-right text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">Anfragen</th>
-                  <th className="text-right text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">Codezeilen</th>
-                  <th className="text-right text-[11px] uppercase tracking-wider text-text-muted py-2.5 px-3">Kosten</th>
+                  <th className="text-left text-[11px] text-text-muted py-2.5 px-3">Datum</th>
+                  <th className="text-left text-[11px] text-text-muted py-2.5 px-3">Dauer</th>
+                  <th className="text-left text-[11px] text-text-muted py-2.5 px-3">KI-Modell</th>
+                  <th className="text-right text-[11px] text-text-muted py-2.5 px-3">Anfragen</th>
+                  <th className="text-right text-[11px] text-text-muted py-2.5 px-3">Codezeilen</th>
+                  <th className="text-right text-[11px] text-text-muted py-2.5 px-3">Kosten</th>
                 </tr>
               </thead>
               <tbody>
@@ -610,7 +610,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
       {/* Models Used + Activity Range */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {s.models_used.length > 0 && (
-          <div className="bg-surface border border-border rounded-[12px] p-5">
+          <div className="bg-surface border border-border rounded-card p-5">
             <h4 className="text-sm font-semibold text-text mb-1">Eingesetzte KI-Modelle</h4>
             <p className="text-xs text-text-muted mb-3">Verschiedene Modelle werden je nach Aufgabe eingesetzt.</p>
             <div className="space-y-2">
@@ -626,7 +626,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
             </div>
           </div>
         )}
-        <div className="bg-surface border border-border rounded-[12px] p-5">
+        <div className="bg-surface border border-border rounded-card p-5">
           <h4 className="text-sm font-semibold text-text mb-1">Zusammenfassung</h4>
           <p className="text-xs text-text-muted mb-3">Eckdaten des Projekts im gewählten Zeitraum.</p>
           <div className="space-y-2 text-sm">

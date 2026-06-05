@@ -28,12 +28,12 @@ export default function DeleteDialog({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative bg-surface border border-border rounded-[16px] p-12 max-w-[400px] w-full mx-4">
-        <h3 className="text-lg font-semibold text-text mb-2">{title}</h3>
-        <p className="text-text-muted text-sm mb-6">{message}</p>
-        <div className="flex justify-end gap-3">
+      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-8 max-w-[400px] w-full mx-4 animate-md-scale">
+        <h3 className="text-xl font-semibold text-text mb-3">{title}</h3>
+        <p className="text-text-muted text-sm mb-7 leading-relaxed">{message}</p>
+        <div className="flex justify-end gap-2">
           <button onClick={onClose} className="btn-secondary">
             Abbrechen
           </button>

@@ -153,7 +153,7 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-[12px] p-8 mb-4 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-card p-8 mb-4 text-center transition-colors ${
           dragOver
             ? 'border-accent bg-accent/10'
             : 'border-border hover:border-text-muted'
@@ -198,15 +198,15 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
       </div>
 
       {/* File list */}
-      <div className="overflow-x-auto bg-surface border border-border rounded-[12px]">
+      <div className="overflow-x-auto bg-surface border border-border rounded-card">
         <table className="w-full">
           <thead>
             <tr className="bg-surface-2 border-b border-border">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Datei</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Beschreibung</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Größe</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Datum</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Aktionen</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Datei</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Beschreibung</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Größe</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-text-muted">Datum</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-text-muted">Aktionen</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

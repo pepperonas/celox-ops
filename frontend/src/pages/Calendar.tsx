@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import LoadingIndicator from '../components/LoadingIndicator'
 import { getInvoices } from '../api/invoices'
 import { getContracts } from '../api/contracts'
 import { getTimeEntries } from '../api/timeEntries'
@@ -231,7 +232,7 @@ export default function Calendar() {
         <button onClick={goToToday} className="btn-secondary text-sm">Heute</button>
 
         {loading ? (
-          <div className="text-center py-12 text-text-muted">Laden...</div>
+          <LoadingIndicator />
         ) : daysWithEvents.length === 0 ? (
           <div className="text-center py-12 text-text-muted">Keine Ereignisse in diesem Monat</div>
         ) : (
@@ -302,7 +303,7 @@ export default function Calendar() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-text-muted">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <>
           {/* Calendar grid */}
@@ -313,7 +314,7 @@ export default function Calendar() {
                 <div
                   key={day}
                   className={`text-center text-xs font-semibold py-2.5 text-text-muted ${
-                    i >= 5 ? 'bg-[#ffffff06]' : ''
+                    i >= 5 ? 'bg-white/5' : ''
                   }`}
                 >
                   {day}
@@ -336,7 +337,7 @@ export default function Calendar() {
                     className={`
                       relative min-h-[5rem] p-1.5 text-left border-b border-r border-border
                       transition-colors hover:bg-surface-2 focus:outline-none
-                      ${isWeekend ? 'bg-[#ffffff04]' : 'bg-surface'}
+                      ${isWeekend ? 'bg-white/[0.04]' : 'bg-surface'}
                       ${isSelected ? 'ring-1 ring-accent ring-inset' : ''}
                       ${!cell.current ? 'opacity-40' : ''}
                     `}
@@ -344,7 +345,7 @@ export default function Calendar() {
                     <span
                       className={`
                         inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full
-                        ${isToday ? 'bg-accent text-white' : 'text-text'}
+                        ${isToday ? 'bg-accent text-on-primary' : 'text-text'}
                       `}
                     >
                       {cell.day}

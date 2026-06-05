@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
+import PageHeader from '../../components/PageHeader'
+import Fab from '../../components/Fab'
+import FilterChips from '../../components/FilterChips'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { getOrders } from '../../api/orders'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Order } from '../../types'
@@ -70,17 +74,12 @@ export default function OrderList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">Aufträge</h2>
-        <button onClick={() => navigate('/auftraege/neu')} className="btn-primary">
-          Neuer Auftrag
-        </button>
-      </div>
+      <PageHeader title="Aufträge" />
 
-      <div className="flex gap-3 items-center mb-4">
+      <div className="flex flex-col gap-3 mb-5">
         <input
           type="text"
-          placeholder="Aufträge suchen..."
+          placeholder="Aufträge suchen…"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
@@ -88,24 +87,18 @@ export default function OrderList() {
           }}
           className="input-field max-w-md"
         />
-        <select
+        <FilterChips
+          options={statusOptions}
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value)
+          onChange={(v) => {
+            setStatusFilter(v)
             setPage(1)
           }}
-          className="input-field w-48"
-        >
-          {statusOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Laden...</div>
+        <LoadingIndicator />
       ) : (
         <DataTable
           columns={columns}
@@ -116,6 +109,8 @@ export default function OrderList() {
           onPageChange={setPage}
         />
       )}
+
+      <Fab onClick={() => navigate('/auftraege/neu')} label="Neuer Auftrag" />
     </div>
   )
 }

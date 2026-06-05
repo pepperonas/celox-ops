@@ -1,43 +1,54 @@
+// MD3 tonal chip styles — container tint + on-container text, pill shaped.
+const tones = {
+  accent: 'bg-accent/15 text-accent',
+  success: 'bg-success/15 text-success',
+  warning: 'bg-warning/20 text-warning',
+  danger: 'bg-danger/15 text-danger',
+  purple: 'bg-purple/15 text-purple',
+  cyan: 'bg-cyan/15 text-cyan',
+  neutral: 'bg-surface-high text-text-muted',
+} as const
+
 const statusColors: Record<string, string> = {
   // Order statuses
-  angebot: 'bg-[#d2992233] text-warning border border-[#d2992240]',
-  beauftragt: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  in_arbeit: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
-  abgeschlossen: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
-  storniert: 'bg-[#f8514933] text-danger border border-[#f8514940]',
+  angebot: tones.warning,
+  beauftragt: tones.accent,
+  in_arbeit: tones.purple,
+  abgeschlossen: tones.success,
+  storniert: tones.danger,
   // Contract statuses
-  aktiv: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
-  gekuendigt: 'bg-[#d2992233] text-warning border border-[#d2992240]',
-  ausgelaufen: 'bg-[#f8514933] text-danger border border-[#f8514940]',
+  aktiv: tones.success,
+  gekuendigt: tones.warning,
+  ausgelaufen: tones.danger,
   // Invoice statuses
-  entwurf: 'bg-surface-2 text-text-muted border border-border',
-  gestellt: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  bezahlt: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
-  ueberfaellig: 'bg-[#f8514933] text-danger border border-[#f8514940]',
+  entwurf: tones.neutral,
+  gestellt: tones.accent,
+  bezahlt: tones.success,
+  ueberfaellig: tones.danger,
   // Lead statuses
-  neu: 'bg-[#d2992233] text-warning border border-[#d2992240]',
-  kontaktiert: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  interessiert: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
-  abgelehnt: 'bg-[#f8514933] text-danger border border-[#f8514940]',
+  neu: tones.warning,
+  kontaktiert: tones.accent,
+  interessiert: tones.purple,
+  abgelehnt: tones.danger,
   // Contract types
-  hosting: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  wartung: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
-  support: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
-  sonstige: 'bg-surface-2 text-text-muted border border-border',
+  hosting: tones.accent,
+  wartung: tones.purple,
+  support: tones.success,
+  sonstige: tones.neutral,
   // Billing cycles
-  monatlich: 'bg-surface-2 text-text-muted border border-border',
-  quartalsweise: 'bg-surface-2 text-text-muted border border-border',
-  halbjaehrlich: 'bg-surface-2 text-text-muted border border-border',
-  jaehrlich: 'bg-surface-2 text-text-muted border border-border',
+  monatlich: tones.neutral,
+  quartalsweise: tones.neutral,
+  halbjaehrlich: tones.neutral,
+  jaehrlich: tones.neutral,
   // Expense categories
-  domain: 'bg-[#58a6ff1a] text-accent border border-[#58a6ff30]',
-  software: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
-  lizenz: 'bg-[#bc8cff1a] text-purple border border-[#bc8cff30]',
-  hardware: 'bg-[#d2992233] text-warning border border-[#d2992240]',
-  ki_api: 'bg-[#39d3531a] text-[#39d353] border border-[#39d35330]',
-  werbung: 'bg-[#3fb95033] text-success border border-[#3fb95040]',
-  buero: 'bg-surface-2 text-text-muted border border-border',
-  reise: 'bg-[#d2992233] text-warning border border-[#d2992240]',
+  domain: tones.accent,
+  software: tones.purple,
+  lizenz: tones.purple,
+  hardware: tones.warning,
+  ki_api: tones.cyan,
+  werbung: tones.success,
+  buero: tones.neutral,
+  reise: tones.warning,
 }
 
 const statusLabels: Record<string, string> = {
@@ -82,12 +93,12 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const colorClass = statusColors[status] || 'bg-surface-2 text-text-muted border border-border'
+  const colorClass = statusColors[status] || tones.neutral
   const label = statusLabels[status] || status
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${colorClass}`}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors duration-short ${colorClass}`}
     >
       {label}
     </span>

@@ -38,16 +38,16 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
-      <div className="bg-surface border border-border rounded-[16px] p-12 w-full max-w-[400px] text-center">
-        <div className="w-12 h-12 bg-accent rounded-[12px] inline-flex items-center justify-center text-2xl font-bold text-white mb-6">
+      <div className="bg-surface-high rounded-xl shadow-elev-3 p-12 w-full max-w-[400px] text-center animate-md-scale">
+        <div className="w-16 h-16 bg-md-primary rounded-lg inline-flex items-center justify-center text-3xl font-bold text-on-primary mb-6 shadow-elev-1 animate-md-pop">
           C
         </div>
-        <h1 className="text-xl font-semibold text-text mb-2">celox ops</h1>
+        <h1 className="text-2xl font-semibold text-text mb-2">celox ops</h1>
         <p className="text-text-muted text-sm mb-8">Verwaltungssystem</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="text-left">
-            <label htmlFor="username" className="block text-xs uppercase tracking-wider text-text-muted mb-1.5">
+            <label htmlFor="username" className="block text-xs text-text-muted mb-1.5">
               Benutzername
             </label>
             <input
@@ -64,7 +64,7 @@ export default function Login() {
           </div>
 
           <div className="text-left">
-            <label htmlFor="password" className="block text-xs uppercase tracking-wider text-text-muted mb-1.5">
+            <label htmlFor="password" className="block text-xs text-text-muted mb-1.5">
               Passwort
             </label>
             <input
@@ -81,7 +81,7 @@ export default function Login() {
 
           {showTotp && (
             <div className="text-left">
-              <label htmlFor="totp" className="block text-xs uppercase tracking-wider text-text-muted mb-1.5">
+              <label htmlFor="totp" className="block text-xs text-text-muted mb-1.5">
                 2FA-Code
               </label>
               <input

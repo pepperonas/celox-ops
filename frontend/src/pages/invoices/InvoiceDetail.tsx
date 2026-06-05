@@ -20,6 +20,7 @@ import { getCustomer } from '../../api/customers'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import EmailDialog from '../../components/EmailDialog'
+import LoadingIndicator from '../../components/LoadingIndicator'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice } from '../../types'
 
@@ -208,25 +209,25 @@ export default function InvoiceDetail() {
   }
 
   if (!invoice) {
-    return <div className="text-text-muted py-12 text-center">Laden...</div>
+    return <LoadingIndicator />
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/rechnungen')} className="text-text-muted hover:text-text">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/rechnungen')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h2 className="text-lg font-semibold text-text">{invoice.invoice_number}</h2>
+            <h2 className="text-2xl font-semibold text-text tracking-tight">{invoice.invoice_number}</h2>
             <p className="text-sm text-text-muted">{invoice.title}</p>
           </div>
           <StatusBadge status={invoice.status} />
           {invoice.is_credit_note && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple/15 text-purple">
               Gutschrift
             </span>
           )}
@@ -359,20 +360,20 @@ export default function InvoiceDetail() {
       </div>
 
       {/* Invoice Info */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {invoice.customer_name && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Kunde</p>
+              <p className="text-xs text-text-muted mb-2">Kunde</p>
               <p className="text-text">{invoice.customer_name}</p>
             </div>
           )}
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Rechnungsdatum</p>
+            <p className="text-xs text-text-muted mb-2">Rechnungsdatum</p>
             <p className="text-text">{formatDate(invoice.invoice_date)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Fälligkeitsdatum</p>
+            <p className="text-xs text-text-muted mb-2">Fälligkeitsdatum</p>
             <p className="text-text">{formatDate(invoice.due_date)}</p>
           </div>
         </div>
@@ -380,19 +381,19 @@ export default function InvoiceDetail() {
 
       {/* Payment Info */}
       {!invoice.is_credit_note && invoice.amount_paid > 0 && (
-        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Zahlungen</h3>
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <h3 className="text-sm font-semibold text-text mb-4">Zahlungen</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Rechnungsbetrag</p>
+              <p className="text-xs text-text-muted mb-2">Rechnungsbetrag</p>
               <p className="text-text font-semibold tabular-nums">{formatCurrency(invoice.total)}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Bereits bezahlt</p>
+              <p className="text-xs text-text-muted mb-2">Bereits bezahlt</p>
               <p className="text-success font-semibold tabular-nums">{formatCurrency(invoice.amount_paid)}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-text-muted mb-2">Offener Betrag</p>
+              <p className="text-xs text-text-muted mb-2">Offener Betrag</p>
               <p className={`font-semibold tabular-nums ${invoice.total - invoice.amount_paid <= 0 ? 'text-success' : 'text-warning'}`}>
                 {formatCurrency(Math.max(0, invoice.total - invoice.amount_paid))}
               </p>
@@ -403,8 +404,8 @@ export default function InvoiceDetail() {
 
       {/* Payment Form */}
       {showPaymentForm && (
-        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-          <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Zahlung erfassen</h3>
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <h3 className="text-sm font-semibold text-text mb-4">Zahlung erfassen</h3>
           <div className="flex items-end gap-3">
             <div className="flex-1 max-w-xs">
               <label className="block text-sm font-medium text-text-muted mb-1">Betrag (EUR)</label>
@@ -437,7 +438,7 @@ export default function InvoiceDetail() {
 
       {/* Credit Note Reference */}
       {invoice.credit_note_for && (
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-[12px] p-5 mb-6">
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-card p-5 mb-6">
           <p className="text-sm text-purple-800 dark:text-purple-300">
             Diese Gutschrift bezieht sich auf Rechnung{' '}
             <button
@@ -451,17 +452,17 @@ export default function InvoiceDetail() {
       )}
 
       {/* Positions Table */}
-      <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-        <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Positionen</h3>
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-4">Positionen</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-2 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Beschreibung</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Menge</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Einheit</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Einzelpreis</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Gesamt</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-text-muted">Beschreibung</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted">Menge</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-text-muted">Einheit</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted">Einzelpreis</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-text-muted">Gesamt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -534,8 +535,8 @@ export default function InvoiceDetail() {
         let terms: string[] = []
         try { terms = JSON.parse(invoice.special_terms) } catch { terms = invoice.special_terms ? [invoice.special_terms] : [] }
         return terms.length > 0 ? (
-          <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-            <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-3">Sondervereinbarungen</h3>
+          <div className="bg-surface border border-border rounded-card p-5 mb-6">
+            <h3 className="text-sm font-semibold text-text mb-3">Sondervereinbarungen</h3>
             <ul className="space-y-1.5">
               {terms.map((term, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-text">
@@ -550,16 +551,16 @@ export default function InvoiceDetail() {
 
       {/* Service Description */}
       {invoice.service_description && (
-        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Leistungsbeschreibung</p>
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <p className="text-xs text-text-muted mb-1">Leistungsbeschreibung</p>
           <p className="text-text text-sm whitespace-pre-wrap">{invoice.service_description}</p>
         </div>
       )}
 
       {/* Notes */}
       {invoice.notes && (
-        <div className="bg-surface border border-border rounded-[12px] p-5 mb-6">
-          <p className="text-xs uppercase tracking-wider text-text-muted mb-1">Notizen</p>
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <p className="text-xs text-text-muted mb-1">Notizen</p>
           <p className="text-text text-sm whitespace-pre-wrap">{invoice.notes}</p>
         </div>
       )}

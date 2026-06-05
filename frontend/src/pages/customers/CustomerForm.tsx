@@ -162,12 +162,12 @@ export default function CustomerForm() {
   return (
     <div className="max-w-2xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-text">
+        <h2 className="text-2xl font-semibold text-text tracking-tight">
           {isEdit ? 'Kunde bearbeiten' : 'Neuer Kunde'}
         </h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[12px] p-5 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-card p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Name" name="name" value={form.name || ''} onChange={handleChange} required />
           <FormField label="Firma" name="company" value={form.company || ''} onChange={handleChange} />
@@ -181,7 +181,7 @@ export default function CustomerForm() {
         {/* Token Tracker */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs uppercase tracking-wider text-text-muted">KI-Nutzung (Token Tracker)</label>
+            <label className="text-xs text-text-muted">KI-Nutzung (Token Tracker)</label>
             <button
               type="button"
               onClick={handleOpenProjectPicker}
@@ -219,7 +219,7 @@ export default function CustomerForm() {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs uppercase tracking-wider text-text-muted">GitHub Repositories</label>
+            <label className="text-xs text-text-muted">GitHub Repositories</label>
             <button
               type="button"
               onClick={async () => {
