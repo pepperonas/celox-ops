@@ -2,7 +2,7 @@
 // Reine "Add-to-Home"-Funktionalität, kein aggressives Caching.
 // Vermeidet Versionsverwirrung bei Auto-Deploys.
 
-const CACHE_NAME = 'celox-ops-v3'
+const CACHE_NAME = 'celox-ops-v4'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
