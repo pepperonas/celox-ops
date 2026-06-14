@@ -460,3 +460,184 @@ export interface EmailTemplateUpdate {
   body?: string
   category?: string
 }
+
+// --------------------------------------------------------------------------- //
+//  Rainmaker — Akquise-Aktivierung
+// --------------------------------------------------------------------------- //
+export type RainmakerLeadStatus =
+  | 'new'
+  | 'contacted'
+  | 'in_conversation'
+  | 'proposal'
+  | 'won'
+  | 'lost'
+  | 'dormant'
+
+export type RainmakerPriority = 'low' | 'medium' | 'high'
+
+export type RainmakerActivityType =
+  | 'call'
+  | 'email'
+  | 'visit'
+  | 'message'
+  | 'follow_up'
+  | 'note'
+
+export interface RainmakerLead {
+  id: string
+  company: string
+  contact_name: string | null
+  role: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  source: string | null
+  status: RainmakerLeadStatus
+  priority: RainmakerPriority
+  value_estimate: number | null
+  tags: string[] | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  // Activation-engine computed fields
+  next_action_type: RainmakerActivityType | null
+  next_action_due: string | null
+  next_action_id: string | null
+  needs_next_action: boolean
+}
+
+export interface RainmakerLeadCreate {
+  company: string
+  contact_name?: string | null
+  role?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  website?: string | null
+  source?: string | null
+  status?: RainmakerLeadStatus
+  priority?: RainmakerPriority
+  value_estimate?: number | null
+  tags?: string[] | null
+  notes?: string | null
+}
+
+export type RainmakerLeadUpdate = Partial<RainmakerLeadCreate>
+
+export type RainmakerActivityStatus = 'planned' | 'done' | 'skipped'
+
+export type RainmakerOutcome =
+  | 'reached'
+  | 'no_answer'
+  | 'positive'
+  | 'negative'
+  | 'meeting_set'
+  | 'proposal_sent'
+  | 'not_interested'
+
+export interface RainmakerActivity {
+  id: string
+  lead_id: string
+  type: RainmakerActivityType
+  status: RainmakerActivityStatus
+  due_date: string | null
+  completed_at: string | null
+  outcome: RainmakerOutcome | null
+  notes: string | null
+  created_at: string
+}
+
+export interface RainmakerActivityCreate {
+  type: RainmakerActivityType
+  due_date?: string | null
+  notes?: string | null
+}
+
+export interface RainmakerActivityComplete {
+  outcome?: RainmakerOutcome | null
+  notes?: string | null
+  next_type?: RainmakerActivityType | null
+  next_due?: string | null
+  close_status?: RainmakerLeadStatus | null
+}
+
+export interface RainmakerLeadSummary {
+  id: string
+  company: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  status: RainmakerLeadStatus
+  priority: RainmakerPriority
+  value_estimate: number | null
+}
+
+export interface RainmakerTodayItem {
+  activity: RainmakerActivity
+  lead: RainmakerLeadSummary
+  days_overdue: number
+}
+
+export interface RainmakerProgress {
+  daily_quota: number
+  done_today: number
+  current_streak: number
+  longest_streak: number
+  total_points: number
+}
+
+export interface RainmakerTodayResponse {
+  date: string
+  queue: RainmakerTodayItem[]
+  rotting: RainmakerLeadSummary[]
+  progress: RainmakerProgress
+}
+
+export type RainmakerReminderChannel = 'email' | 'telegram' | 'push'
+export type RainmakerTemplateChannel = 'email' | 'message'
+
+export interface RainmakerSettings {
+  id: string
+  daily_quota: number
+  reminder_enabled: boolean
+  reminder_time: string
+  reminder_channel: RainmakerReminderChannel
+  telegram_chat_id: string | null
+}
+
+export type RainmakerSettingsUpdate = Partial<Omit<RainmakerSettings, 'id'>>
+
+export interface RainmakerTemplate {
+  id: string
+  channel: RainmakerTemplateChannel
+  name: string
+  subject: string | null
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RainmakerTemplateCreate {
+  channel: RainmakerTemplateChannel
+  name: string
+  subject?: string | null
+  body: string
+}
+
+export type RainmakerTemplateUpdate = Partial<RainmakerTemplateCreate>
+
+export interface RainmakerStats {
+  activity_by_type: { type: RainmakerActivityType; count: number }[]
+  activity_by_day: { date: string; count: number }[]
+  funnel: { status: RainmakerLeadStatus; count: number }[]
+  total_leads: number
+  won_count: number
+  lost_count: number
+  open_value: number | null
+  won_value: number | null
+  current_streak: number
+  longest_streak: number
+  total_points: number
+}

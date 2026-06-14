@@ -30,6 +30,12 @@ import Kanban from './pages/Kanban'
 import Analytics from './pages/Analytics'
 import Documents from './pages/Documents'
 import Settings from './pages/Settings'
+import RainmakerToday from './pages/rainmaker/Today'
+import RainmakerPipeline from './pages/rainmaker/Pipeline'
+import RainmakerLeadForm from './pages/rainmaker/LeadForm'
+import RainmakerLeadDetail from './pages/rainmaker/LeadDetail'
+import RainmakerStatistics from './pages/rainmaker/Statistics'
+import RainmakerSettingsPage from './pages/rainmaker/Settings'
 
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
@@ -51,6 +57,13 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/rainmaker" element={<RainmakerToday />} />
+          <Route path="/rainmaker/pipeline" element={<RainmakerPipeline />} />
+          <Route path="/rainmaker/statistik" element={<RainmakerStatistics />} />
+          <Route path="/rainmaker/einstellungen" element={<RainmakerSettingsPage />} />
+          <Route path="/rainmaker/leads/neu" element={<RainmakerLeadForm />} />
+          <Route path="/rainmaker/leads/:id" element={<RainmakerLeadDetail />} />
+          <Route path="/rainmaker/leads/:id/bearbeiten" element={<RainmakerLeadForm />} />
           <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kalender" element={<Calendar />} />
           <Route path="/zeiterfassung" element={<TimeTracking />} />

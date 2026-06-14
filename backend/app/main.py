@@ -14,6 +14,11 @@ from app.database import async_session_factory, engine
 from app.models.customer import Base
 import app.models.pagespeed_result  # noqa: F401 — register for create_all
 import app.models.audit_log  # noqa: F401 — register for create_all
+import app.models.rainmaker_lead  # noqa: F401 — register for create_all
+import app.models.rainmaker_activity  # noqa: F401 — register for create_all
+import app.models.rainmaker_settings  # noqa: F401 — register for create_all
+import app.models.rainmaker_streak  # noqa: F401 — register for create_all
+import app.models.rainmaker_template  # noqa: F401 — register for create_all
 from app.middleware.audit import AuditMiddleware
 from app.services.cron_service import check_overdue_invoices
 
@@ -44,6 +49,15 @@ async def run_cron() -> None:
                 except Exception:
                     await db.rollback()
                     logger.exception("Cron: Fehler bei Überprüfung überfälliger Rechnungen")
+
+                # Rainmaker: daily acquisition reminder (best-effort, never blocks)
+                try:
+                    from app.services.rainmaker_service import check_rainmaker_reminder
+                    await check_rainmaker_reminder(db)
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    logger.exception("Cron: Rainmaker-Reminder fehlgeschlagen")
         except Exception:
             logger.exception("Cron: Unerwarteter Fehler")
 
@@ -134,6 +148,7 @@ from app.routers.documents import router as documents_router  # noqa: E402
 from app.routers.pagespeed import router as pagespeed_router  # noqa: E402
 from app.routers.search import router as search_router  # noqa: E402
 from app.routers.ical import router as ical_router  # noqa: E402
+from app.routers.rainmaker import router as rainmaker_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -156,6 +171,7 @@ app.include_router(documents_router)
 app.include_router(pagespeed_router)
 app.include_router(search_router)
 app.include_router(ical_router)
+app.include_router(rainmaker_router)
 
 
 @app.get("/api/health")
