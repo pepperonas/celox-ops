@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-celox ops is a full-stack business management webapp for freelancers/IT consultants. German-language UI. Single-user JWT auth. Manages customers, orders, contracts, invoices (with PDF generation), leads, time tracking, expenses, and integrates with the Claude Token Tracker for AI usage transparency.
+celox ops is a full-stack business management webapp for freelancers/IT consultants. German-language UI. Single-user JWT auth. Manages customers, orders, contracts, invoices (with PDF generation), leads, time tracking, expenses, the **Rainmaker** acquisition-activation module, and integrates with the Claude Token Tracker for AI usage transparency. The frontend uses a **Material Design 3 Expressive** dark theme.
 
 ## Commands
 
@@ -67,9 +67,19 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **API client**: `api/client.ts` — Axios with JWT interceptor, 401 redirect
 - **Types**: All in `frontend/src/types/index.ts` — must match backend Pydantic schemas exactly
 - **Routing**: German paths (`/kunden`, `/auftraege`, `/rechnungen`, `/vorgemerkt`, `/ausgaben`, etc.)
-- **Theme**: GitHub-inspired dark theme. Colors defined as CSS variables in `index.css` AND as Tailwind custom colors in `tailwind.config.ts`. Key colors: `bg` (#0d1117), `surface` (#161b22), `accent` (#58a6ff).
+- **Theme**: **Material Design 3 Expressive** (dark). The token layer lives in `index.css`: MD3 tonal surfaces as RGB-channel CSS vars (`--c-bg`, `--c-surface`, `--c-accent`, …) so Tailwind opacity modifiers (`bg-danger/10`) keep working; expressive shape scale, elevation (`shadow-elev-1..3`), motion tokens (easing `ease-emphasized/decelerate/spring`, durations `duration-short/medium/long`), state-layer helper `.md-state`, pill `.btn-*` with shape-morph on press, `.fab`, `.md-spinner`, keyframe utilities (`animate-md-enter/scale/pop`, `.md-stagger`, `.md-skeleton`). `tailwind.config.ts` maps the legacy semantic names (`bg`, `surface`, `accent`, …) onto these vars. Reusable MD3 components: `PageHeader`, `Fab`, `FilterChips`, `SegmentedButtons`, `LoadingIndicator` (plus restyled `StatusBadge`, `DataTable`, dialogs). Labels are sentence-case (no uppercase micro-labels). `prefers-reduced-motion` disables animations.
 - **Charts**: Chart.js + react-chartjs-2. Cast options as `any` to avoid TS issues with Chart.js types.
 - **Tab persistence**: CustomerDetail uses URL hash (`#auftraege`, `#dokumente`, `#tokens`) for tab state.
+
+### Rainmaker (Acquisition Activation)
+- **Action-first acquisition tool** — surfaces *what to do today*, not a contact list. Backend under `/api/rainmaker` (`routers/rainmaker.py`), engine helpers in `services/rainmaker_service.py`. Frontend under `/rainmaker/*` (pages in `pages/rainmaker/`), own pill sub-nav (`RainmakerNav`) + footer.
+- **5 models** (`rainmaker_lead`, `rainmaker_activity`, `rainmaker_settings`, `rainmaker_streak`, `rainmaker_template`) — registered for `create_all` in `main.py`, `native_enum=False` enums, **no `owner_id`** (single-user); `settings`/`streak` are single-row tables (`get_or_create_*`).
+- **Activation engine**: a lead's "next action" = earliest planned activity by `due_date`. An active lead (status not `won`/`lost`/`dormant`) without a planned activity is **"rotting"** and surfaced in red. `GET /today` returns the queue (planned, due ≤ today, sorted by priority + overdueness) + rotting list + progress.
+- **Next-Action-Zwang**: `POST /activities/{id}/complete` logs done (+outcome/notes) and **atomically requires** a next planned action — unless the lead is closed (`won`/`lost`/`dormant`). Returns 400 otherwise. After mutating it reloads `lead.activities` (`refresh(..., attribute_names=["activities"])`) so the recomputed next-action isn't stale.
+- **Gamification**: daily quota (settings) vs `count_done_today`; streak increments the first time the quota is met per day (gap → reset), with `display_streak` reading 0 if a full day was missed; points per type (call 10 · visit 20 · email/message/follow_up 5; ×1.5 at streak ≥ 7) via `register_completion`.
+- **Reminder**: `check_rainmaker_reminder()` runs inside the existing hourly `run_cron` loop (NOT APScheduler). Sends one mail/day at `reminder_time` via the existing `send_email` SMTP when the quota is unmet; in-memory dedupe (`_reminder_sent_on`, like `_stats_cache`). Email channel only; no-ops without SMTP.
+- **Templates** (`/templates`): email/message with `{company}`/`{contact_name}`/`{role}` placeholders; LeadDetail can launch a `mailto:` from a template with placeholders substituted.
+- **Tests**: `backend/tests/test_rainmaker.py` — DB-free unit tests for rotting, next-action selection, streak display, points (run with the smoke tests in-container).
 
 ### Token Tracker Integration
 - Backend proxies to Token Tracker via `TOKEN_TRACKER_BASE_URL` (internal Docker URL: `http://host.docker.internal:3007`)
@@ -131,7 +141,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (13)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log
+## Database Tables (18)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates
 
 Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.

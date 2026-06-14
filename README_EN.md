@@ -277,12 +277,22 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 
 ### Design
-- **GitHub-inspired dark theme**
-- Color palette: `#0d1117` (background), `#161b22` (surfaces), `#58a6ff` (accent)
-- Responsive layout with collapsible sidebar
-- Sidebar navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
-- Consistent status badges, tables, and form components
+- **Material Design 3 Expressive** (dark) — tonal surface containers, pill buttons with shape-morph, spring motion, progress/entrance animations, navigation drawer with pill indicator
+- Token layer in `index.css` (RGB-channel colors for opacity modifiers, elevation, easing/duration tokens, state layers); reusable components: `PageHeader`, `Fab`, `FilterChips`, `SegmentedButtons`, `LoadingIndicator`
+- Responsive layout with collapsible sidebar; respects `prefers-reduced-motion`
+- Sidebar navigation: Dashboard, **Rainmaker**, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
+- Consistent pill status chips, tables, and form components; sentence-case labels
 - Tab state persisted in URL hash across page refreshes
+
+### Rainmaker (acquisition activation)
+- **Action-first**: shows *what to do today*, not a contact list — with direct buttons (call `tel:`, mail `mailto:`, route via Maps)
+- **"Today" queue**: due actions sorted by priority + overdueness; a red block on top for **rotting leads** (active but without a next step)
+- **Next-action enforcement**: completing an action requires a next action + date — unless the lead is set to won/lost/dormant
+- **Pipeline**: Kanban board across all statuses with drag & drop
+- **Gamification**: daily quota (progress ring), streak (🔥, with gap reset) and points (call 10 · visit 20 · mail/message/follow-up 5; ×1.5 at streak ≥ 7)
+- **Daily mail reminder** when the quota is unmet (via existing SMTP)
+- **Statistics**: activities by day/type, conversion funnel (new → won), open value
+- **Templates** with placeholders (`{company}`, `{contact_name}`, `{role}`) for mail/message
 
 ---
 
@@ -628,12 +638,14 @@ OPS/
 │       │   ├── token_tracker.py # Token Tracker share API proxy
 │       │   ├── github.py        # GitHub integration endpoints
 │       │   ├── attachments.py  # File attachment endpoints
-│       │   └── email_templates.py # Email template CRUD
+│       │   ├── email_templates.py # Email template CRUD
+│       │   └── rainmaker.py     # Rainmaker: leads, activities, today, stats, settings, templates
 │       ├── services/
 │       │   ├── invoice_service.py  # Invoice number + calculation
 │       │   ├── pdf_service.py      # WeasyPrint + Jinja2 + AI report
 │       │   ├── email_service.py    # SMTP email sending
-│       │   └── cron_service.py    # Background automation (overdue detection)
+│       │   ├── cron_service.py    # Background automation (overdue detection)
+│       │   └── rainmaker_service.py # Activation engine: next-action, streak, points, reminder
 │       └── templates/
 │           ├── invoice.html    # A4 invoice PDF template
 │           ├── reminder.html   # Reminder/dunning PDF template
@@ -643,7 +655,7 @@ OPS/
 ├── frontend/
 │   ├── Dockerfile              # Multi-stage: build → Nginx
 │   ├── package.json
-│   ├── tailwind.config.ts      # Custom dark theme
+│   ├── tailwind.config.ts      # Material Design 3 Expressive theme (tokens)
 │   └── src/
 │       ├── App.tsx             # Routing
 │       ├── api/                # Axios API client + CRUD functions

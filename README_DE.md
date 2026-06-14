@@ -278,12 +278,22 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Kategorien: Website-Konzeption, Entwicklung (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastruktur, Performance & Sicherheit, Wartung & Support, App & Software, Beratung, KI, Vor-Ort/Remote-Support, E-Mail-Konfiguration (Outlook/Apple Mail/Thunderbird/Mobile), Browser & Software (Chrome/Firefox/Edge/Office/Antivirus), Sicherheit am Kundenrechner (Firewall/Defender/2FA/Backup), Datenrettung & Fehlerdiagnose, Recherche & Dokumentation (techn./rechtl., Reports, Gutachten), Kommunikation & Schulung
 
 ### Design
-- **GitHub-inspiriertes Dark Theme**
-- Farbpalette: `#0d1117` (Hintergrund), `#161b22` (Oberflächen), `#58a6ff` (Akzent)
-- Responsives Layout mit einklappbarer Seitenleiste
-- Seitenleisten-Navigation: Dashboard, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
-- Einheitliche Status-Badges, Tabellen und Formular-Komponenten
+- **Material Design 3 Expressive** (Dark) — tonale Surface-Container, Pill-Buttons mit Shape-Morph, Spring-Motion, Fortschritts-/Eingangs-Animationen, Navigation-Drawer mit Pill-Indikator
+- Token-Layer in `index.css` (RGB-Channel-Farben für Opacity-Modifier, Elevation, Easing/Duration-Tokens, State-Layer); wiederverwendbare Komponenten: `PageHeader`, `Fab`, `FilterChips`, `SegmentedButtons`, `LoadingIndicator`
+- Responsives Layout mit einklappbarer Seitenleiste; `prefers-reduced-motion` respektiert
+- Seitenleisten-Navigation: Dashboard, **Rainmaker**, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
+- Einheitliche Status-Chips (Pill), Tabellen und Formular-Komponenten; Sentence-Case-Labels
 - Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert
+
+### Rainmaker (Akquise-Aktivierung)
+- **Action-first**: zeigt nicht „alle Kontakte", sondern *was heute konkret zu tun ist* — mit Direkt-Buttons (Anruf `tel:`, Mail `mailto:`, Route via Maps)
+- **„Heute"-Queue**: fällige Aktionen nach Priorität + Überfälligkeit; oben ein roter Block für **verrottende Leads** (aktiv, aber ohne nächsten Schritt)
+- **Next-Action-Zwang**: beim Abhaken zwingend nächste Aktion + Datum erfassen — außer der Lead wird auf gewonnen/verloren/ruhend gesetzt
+- **Pipeline**: Kanban-Board über alle Status mit Drag & Drop
+- **Gamification**: Tagespensum (Fortschrittsring), Streak (🔥, mit Lücken-Reset) und Punkte (Anruf 10 · Besuch 20 · Mail/Nachricht/Nachfassen 5; ×1,5 ab Streak 7)
+- **Tägliche Mail-Erinnerung** bei offenem Pensum (über bestehenden SMTP)
+- **Statistik**: Aktivitäten nach Tag/Typ, Conversion-Funnel (neu → gewonnen), offenes Volumen
+- **Vorlagen** mit Platzhaltern (`{company}`, `{contact_name}`, `{role}`) für Mail/Nachricht
 
 ---
 
