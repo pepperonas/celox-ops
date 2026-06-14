@@ -289,7 +289,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **"Today" queue**: due actions sorted by priority + overdueness; a red block on top for **rotting leads** (active but without a next step)
 - **Next-action enforcement**: completing an action requires a next action + date — unless the lead is set to won/lost/dormant
 - **Pipeline**: Kanban board across all statuses with drag & drop
-- **Gamification**: daily quota (progress ring), streak (🔥, with gap reset) and points (call 10 · visit 20 · mail/message/follow-up 5; ×1.5 at streak ≥ 7)
+- **Gamification**: daily quota (progress ring), **working-day streak** (🔥, Mon–Fri only — weekends don't break it) with configurable **freeze days** as a buffer for vacation/sick days, and points (call 10 · visit 20 · mail/message/follow-up 5; ×1.5 at streak ≥ 7)
 - **Daily mail reminder** when the quota is unmet (via existing SMTP)
 - **Statistics**: activities by day/type, conversion funnel (new → won), open value
 - **Templates** with placeholders (`{company}`, `{contact_name}`, `{role}`) for mail/message

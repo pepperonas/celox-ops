@@ -290,7 +290,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **„Heute"-Queue**: fällige Aktionen nach Priorität + Überfälligkeit; oben ein roter Block für **verrottende Leads** (aktiv, aber ohne nächsten Schritt)
 - **Next-Action-Zwang**: beim Abhaken zwingend nächste Aktion + Datum erfassen — außer der Lead wird auf gewonnen/verloren/ruhend gesetzt
 - **Pipeline**: Kanban-Board über alle Status mit Drag & Drop
-- **Gamification**: Tagespensum (Fortschrittsring), Streak (🔥, mit Lücken-Reset) und Punkte (Anruf 10 · Besuch 20 · Mail/Nachricht/Nachfassen 5; ×1,5 ab Streak 7)
+- **Gamification**: Tagespensum (Fortschrittsring), **Werktage-Streak** (🔥, nur Mo–Fr — Wochenenden brechen ihn nicht) mit konfigurierbaren **Freeze-Tagen** als Puffer für Urlaub/krank, und Punkte (Anruf 10 · Besuch 20 · Mail/Nachricht/Nachfassen 5; ×1,5 ab Streak 7)
 - **Tägliche Mail-Erinnerung** bei offenem Pensum (über bestehenden SMTP)
 - **Statistik**: Aktivitäten nach Tag/Typ, Conversion-Funnel (neu → gewonnen), offenes Volumen
 - **Vorlagen** mit Platzhaltern (`{company}`, `{contact_name}`, `{role}`) für Mail/Nachricht
