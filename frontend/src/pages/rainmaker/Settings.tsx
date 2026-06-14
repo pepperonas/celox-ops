@@ -54,6 +54,7 @@ export default function RainmakerSettingsPage() {
         reminder_enabled: settings.reminder_enabled,
         reminder_time: settings.reminder_time.length === 5 ? settings.reminder_time + ':00' : settings.reminder_time,
         reminder_channel: settings.reminder_channel,
+        freezes_per_month: settings.freezes_per_month,
       })
       setSettings(saved)
       toast.success('Einstellungen gespeichert.')
@@ -114,7 +115,13 @@ export default function RainmakerSettingsPage() {
             <input type="time" value={settings.reminder_time.slice(0, 5)}
               onChange={(e) => setSettings({ ...settings, reminder_time: e.target.value })} className="w-full" />
           </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-2">Freeze-Tage / Monat</label>
+            <input type="number" min="0" max="15" value={settings.freezes_per_month}
+              onChange={(e) => setSettings({ ...settings, freezes_per_month: Number(e.target.value) })} className="w-full" />
+          </div>
         </div>
+        <p className="text-xs text-text-muted">Der Streak zählt nur Werktage (Mo–Fr) — Wochenenden brechen ihn nicht. Freeze-Tage puffern verpasste Werktage (Urlaub/krank), bevor er zurückgesetzt wird.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
           <FormField label="Erinnerungs-Kanal" name="reminder_channel" type="select"
             value={settings.reminder_channel}

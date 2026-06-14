@@ -586,6 +586,7 @@ export interface RainmakerProgress {
   current_streak: number
   longest_streak: number
   total_points: number
+  freeze_remaining: number
 }
 
 export interface RainmakerTodayResponse {
@@ -605,6 +606,7 @@ export interface RainmakerSettings {
   reminder_time: string
   reminder_channel: RainmakerReminderChannel
   telegram_chat_id: string | null
+  freezes_per_month: number
 }
 
 export type RainmakerSettingsUpdate = Partial<Omit<RainmakerSettings, 'id'>>

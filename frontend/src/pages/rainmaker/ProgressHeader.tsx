@@ -6,7 +6,7 @@ interface Props {
 
 /** MD3 progress ring (Pensum) + streak + points header for the "Heute" view. */
 export default function ProgressHeader({ progress }: Props) {
-  const { daily_quota, done_today, current_streak, longest_streak, total_points } = progress
+  const { daily_quota, done_today, current_streak, longest_streak, total_points, freeze_remaining } = progress
   const pct = daily_quota > 0 ? Math.min(done_today / daily_quota, 1) : 0
   const met = done_today >= daily_quota
 
@@ -45,7 +45,10 @@ export default function ProgressHeader({ progress }: Props) {
         <div className="text-2xl font-bold tabular-nums" style={{ color: current_streak > 0 ? '#e9c46a' : 'var(--text-muted)' }}>
           {current_streak > 0 ? `🔥${current_streak}` : '–'}
         </div>
-        <div className="text-[10px] text-text-muted mt-0.5">Streak · längste {longest_streak}</div>
+        <div className="text-[10px] text-text-muted mt-0.5" title="Streak zählt Werktage (Mo–Fr); Wochenenden brechen ihn nicht">
+          Werktage-Streak · längste {longest_streak}
+        </div>
+        <div className="text-[10px] text-text-muted mt-0.5" title="Freeze-Tage puffern verpasste Werktage">🧊 {freeze_remaining} Freeze{freeze_remaining !== 1 ? 's' : ''}</div>
       </div>
 
       {/* Points */}

@@ -37,3 +37,7 @@ class RainmakerSettings(Base):
         nullable=False,
     )
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Streak-freeze days granted per month (buffer for vacation/sick days).
+    freezes_per_month: Mapped[int] = mapped_column(
+        Integer, default=2, server_default="2", nullable=False
+    )

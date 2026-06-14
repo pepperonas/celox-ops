@@ -133,6 +133,7 @@ class RainmakerProgress(BaseModel):
     current_streak: int
     longest_streak: int
     total_points: int
+    freeze_remaining: int = 0
 
 
 class RainmakerTodayResponse(BaseModel):
@@ -186,6 +187,7 @@ class RainmakerSettingsResponse(BaseModel):
     reminder_time: TimeType
     reminder_channel: RainmakerReminderChannel
     telegram_chat_id: str | None = None
+    freezes_per_month: int
 
 
 class RainmakerSettingsUpdate(BaseModel):
@@ -194,6 +196,7 @@ class RainmakerSettingsUpdate(BaseModel):
     reminder_time: TimeType | None = None
     reminder_channel: RainmakerReminderChannel | None = None
     telegram_chat_id: str | None = None
+    freezes_per_month: int | None = None
 
 
 # --------------------------------------------------------------------------- #

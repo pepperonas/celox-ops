@@ -105,22 +105,67 @@ async def count_done_today(db: AsyncSession) -> int:
     return int(result.scalar_one())
 
 
+def is_working_day(d: date) -> bool:
+    """Mon–Fri count toward the streak; weekends are neutral."""
+    return d.weekday() < 5
+
+
+def missed_working_days(last_met: date | None, today: date) -> int:
+    """Working days strictly between last_met and today (today still in progress,
+    so excluded). Weekends don't count as missed."""
+    if last_met is None:
+        return 0
+    n = 0
+    d = last_met + timedelta(days=1)
+    while d < today:
+        if is_working_day(d):
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
 def display_streak(streak: RainmakerStreak, today: date) -> int:
-    """The streak is 'alive' only if the quota was met today or yesterday;
-    otherwise a full day was missed and it reads as 0."""
-    if streak.last_quota_met_date and streak.last_quota_met_date >= today - timedelta(days=1):
+    """Working-day streak with freeze buffer: alive if the working days missed
+    since the last quota-met day don't exceed the remaining freeze budget."""
+    if not streak.last_quota_met_date or streak.current_streak <= 0:
+        return 0
+    if missed_working_days(streak.last_quota_met_date, today) <= streak.freeze_remaining:
         return streak.current_streak
     return 0
 
 
+def _period_key(d: date) -> str:
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+async def _ensure_monthly_freezes(
+    db: AsyncSession, streak: RainmakerStreak, settings: RainmakerSettings
+) -> None:
+    """Replenish the freeze budget at the start of each month."""
+    key = _period_key(date.today())
+    if streak.freeze_period != key:
+        streak.freeze_remaining = settings.freezes_per_month
+        streak.freeze_period = key
+
+
+async def get_streak_display(db: AsyncSession) -> tuple[RainmakerStreak, int]:
+    """Streak row (freezes replenished) + its current display value."""
+    settings = await get_or_create_settings(db)
+    streak = await get_or_create_streak(db)
+    await _ensure_monthly_freezes(db, streak, settings)
+    return streak, display_streak(streak, date.today())
+
+
 async def register_completion(db: AsyncSession, activity_type: RainmakerActivityType) -> None:
-    """Award points for a completed activity and advance the daily-quota streak.
+    """Award points for a completed activity and advance the working-day streak.
 
     Points per type (call=10, visit=20, email/message/follow_up=5); ×1.5 while on
-    a streak of ≥7. The streak increments the first time today's quota is met."""
+    a streak of ≥7. The streak increments the first time today's quota is met on a
+    working day; missed working days consume freezes before the streak resets."""
     settings = await get_or_create_settings(db)
     streak = await get_or_create_streak(db)
     today = date.today()
+    await _ensure_monthly_freezes(db, streak, settings)
 
     base = ACTIVITY_POINTS.get(activity_type, 0)
     multiplier = 1.5 if display_streak(streak, today) >= 7 else 1.0
@@ -129,15 +174,16 @@ async def register_completion(db: AsyncSession, activity_type: RainmakerActivity
     # Recompute after this completion is persisted so it is counted.
     await db.flush()
     if await count_done_today(db) >= settings.daily_quota:
-        if streak.last_quota_met_date == today:
-            pass  # already counted today
-        elif streak.last_quota_met_date == today - timedelta(days=1):
-            streak.current_streak += 1
+        # Weekends are bonus (points only) — the streak tracks working days.
+        if is_working_day(today) and streak.last_quota_met_date != today:
+            missed = missed_working_days(streak.last_quota_met_date, today)
+            if missed <= streak.freeze_remaining:
+                streak.freeze_remaining -= missed  # spend freezes to bridge the gap
+                streak.current_streak += 1
+            else:
+                streak.current_streak = 1  # too many missed working days → reset
             streak.last_quota_met_date = today
-        else:
-            streak.current_streak = 1  # fresh start (first ever or after a gap)
-            streak.last_quota_met_date = today
-        streak.longest_streak = max(streak.longest_streak, streak.current_streak)
+            streak.longest_streak = max(streak.longest_streak, streak.current_streak)
 
 
 async def check_rainmaker_reminder(db: AsyncSession) -> bool:
@@ -168,9 +214,8 @@ async def check_rainmaker_reminder(db: AsyncSession) -> bool:
     if not to_email or not app_settings.SMTP_HOST:
         return False
 
-    streak = await get_or_create_streak(db)
+    _streak, s = await get_streak_display(db)
     remaining = settings.daily_quota - done
-    s = display_streak(streak, today)
     streak_line = f"Streak: {s} Tag{'e' if s != 1 else ''} 🔥<br>" if s else ""
     body_html = (
         f"Du hast heute noch <strong>{remaining} von {settings.daily_quota}</strong> "

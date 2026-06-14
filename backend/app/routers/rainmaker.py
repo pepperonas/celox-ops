@@ -53,9 +53,8 @@ from app.schemas.rainmaker import (
 )
 from app.services.rainmaker_service import (
     count_done_today,
-    display_streak,
     get_or_create_settings,
-    get_or_create_streak,
+    get_streak_display,
     is_rotting,
     lead_response,
     planned_activities,
@@ -319,13 +318,14 @@ async def today(db: AsyncSession = Depends(get_db)) -> RainmakerTodayResponse:
     rotting.sort(key=lambda s: priority_weight(lead_by_id[s.id]))
 
     settings = await get_or_create_settings(db)
-    streak = await get_or_create_streak(db)
+    streak, current = await get_streak_display(db)
     progress = RainmakerProgress(
         daily_quota=settings.daily_quota,
         done_today=await count_done_today(db),
-        current_streak=display_streak(streak, today_date),
+        current_streak=current,
         longest_streak=streak.longest_streak,
         total_points=streak.total_points,
+        freeze_remaining=streak.freeze_remaining,
     )
 
     return RainmakerTodayResponse(
@@ -403,7 +403,7 @@ async def stats(db: AsyncSession = Depends(get_db)) -> RainmakerStatsResponse:
         )
     )).scalar_one_or_none()
 
-    streak = await get_or_create_streak(db)
+    streak, current = await get_streak_display(db)
 
     return RainmakerStatsResponse(
         activity_by_type=activity_by_type,
@@ -414,7 +414,7 @@ async def stats(db: AsyncSession = Depends(get_db)) -> RainmakerStatsResponse:
         lost_count=lost_count,
         open_value=open_value,
         won_value=won_value,
-        current_streak=display_streak(streak, today_date),
+        current_streak=current,
         longest_streak=streak.longest_streak,
         total_points=streak.total_points,
     )
