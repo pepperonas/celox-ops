@@ -495,25 +495,16 @@ input:-webkit-autofill:focus {
 }
 
 /* ============================================================
-   View Transitions — directional content hand-off (chrome persists)
-   Only the element with view-transition-name:page animates; the root
-   snapshot (sidebar/header) crossfades invisibly since it's unchanged.
+   Directional content reveal — animates the incoming DOM (GPU-only:
+   opacity + transform). Chrome persists; no snapshot, so no async flicker.
    ============================================================ */
-@keyframes vt-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
-@keyframes vt-out-left { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-18px); } }
-@keyframes vt-in-left  { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes vt-out-right{ from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(18px); } }
+@keyframes page-in-fwd { from { opacity: 0; transform: translate3d(18px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes page-in-back { from { opacity: 0; transform: translate3d(-18px, 0, 0); } to { opacity: 1; transform: none; } }
 
-::view-transition-group(page) { animation-duration: var(--md-dur-medium); }
-html[data-nav="forward"]::view-transition-new(page) { animation: vt-in-right var(--md-dur-medium) var(--md-ease-decelerate) both; }
-html[data-nav="forward"]::view-transition-old(page) { animation: vt-out-left var(--md-dur-short) var(--md-ease-accelerate) both; }
-html[data-nav="back"]::view-transition-new(page) { animation: vt-in-left var(--md-dur-medium) var(--md-ease-decelerate) both; }
-html[data-nav="back"]::view-transition-old(page) { animation: vt-out-right var(--md-dur-short) var(--md-ease-accelerate) both; }
-/* Shared-element hero (list card → detail) morphs with an emphasized spring. */
-::view-transition-group(rm-hero) {
-  animation-duration: var(--md-dur-long);
-  animation-timing-function: var(--md-ease-spring);
-}
+.page-enter { animation: page-in-fwd var(--md-dur-medium) var(--md-ease-decelerate) both; }
+html[data-nav="back"] .page-enter { animation-name: page-in-back; }
+/* When the page already reveals itself, don't double up with its inner stagger. */
+.page-enter .md-stagger > * { animation: none; }
 
 @layer utilities {
   /* Cursor-reactive tilt — gated to fine pointers via JS; damped via transition.

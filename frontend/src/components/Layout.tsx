@@ -264,10 +264,13 @@ export default function Layout() {
           </button>
         </header>
 
-        {/* Page content — directional View Transition hand-off (chrome persists);
-            scroll position restored on back/forward by useScrollRestoration. */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-6" style={{ viewTransitionName: 'page' }}>
-          <Outlet />
+        {/* Page content — directional GPU-only reveal, re-keyed per route.
+            Chrome persists; scroll restored on back/forward; no entrance replay
+            on POP (data-pop). */}
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-6">
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
       <QuickSearch />

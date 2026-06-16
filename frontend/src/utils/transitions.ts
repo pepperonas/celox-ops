@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { flushSync } from 'react-dom'
 import { useLocation, useNavigate, useNavigationType, type NavigateOptions } from 'react-router-dom'
 
 export function prefersReducedMotion(): boolean {
@@ -7,41 +6,30 @@ export function prefersReducedMotion(): boolean {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-/**
- * Run a DOM update inside a View Transition with a directional tag, falling back
- * to an immediate update when unsupported or when the user prefers reduced motion.
- */
-export function runViewTransition(update: () => void, direction: 'forward' | 'back' = 'forward') {
-  if (prefersReducedMotion() || !('startViewTransition' in document)) {
-    update()
-    return
-  }
-  document.documentElement.dataset.nav = direction
-  const clear = () => {
-    if (document.documentElement.dataset.nav === direction) {
-      delete document.documentElement.dataset.nav
-    }
-  }
-  const vt = document.startViewTransition(() => flushSync(update))
-  vt.finished.finally(clear)
-  // Safety net: never leave the directional flag stuck if `finished` hangs.
-  window.setTimeout(clear, 1000)
-}
-
 type AppNavOptions = NavigateOptions & { back?: boolean }
 
 /**
- * Drop-in replacement for useNavigate that animates the route change with a
- * directional View Transition. Pass `{ back: true }` for "up a level" moves.
+ * Drop-in replacement for useNavigate that tags the navigation direction
+ * (`html[data-nav]`) so the content reveal animates from the right (deeper) or
+ * left (up a level). The reveal is a lightweight GPU-only CSS animation on the
+ * incoming content — NOT the View Transitions API, which snapshots the page and
+ * flickers/janks with our async-loading, canvas-heavy views. Pass `{ back: true }`
+ * for up-a-level moves. Reduced motion → plain instant navigation.
  */
 export function useAppNavigate() {
   const navigate = useNavigate()
   return useCallback((to: string | number, opts: AppNavOptions = {}) => {
     const { back, ...rest } = opts
-    runViewTransition(
-      () => navigate(to as string, rest),
-      back || (typeof to === 'number' && to < 0) ? 'back' : 'forward',
-    )
+    const direction = back || (typeof to === 'number' && to < 0) ? 'back' : 'forward'
+    if (!prefersReducedMotion()) {
+      document.documentElement.dataset.nav = direction
+      window.setTimeout(() => {
+        if (document.documentElement.dataset.nav === direction) {
+          delete document.documentElement.dataset.nav
+        }
+      }, 360)
+    }
+    navigate(to as string, rest)
   }, [navigate])
 }
 

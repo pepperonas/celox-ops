@@ -114,7 +114,7 @@ export default function RainmakerLeadDetail() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-2xl font-semibold text-text tracking-tight truncate" style={{ viewTransitionName: 'rm-hero' }}>{lead.company}</h2>
+          <h2 className="text-2xl font-semibold text-text tracking-tight truncate">{lead.company}</h2>
           <span className="shrink-0 text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: color + '26', color }}>{STATUS_LABELS[lead.status]}</span>
           <span className={`shrink-0 text-xs font-medium px-3 py-1 rounded-full ${PRIORITY_TONE[lead.priority]}`}>{PRIORITY_LABELS[lead.priority]}</span>
         </div>
