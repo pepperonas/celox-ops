@@ -90,9 +90,9 @@ export default {
         },
       },
       animation: {
-        'md-enter': 'md-fade-up 0.32s cubic-bezier(0.05,0.7,0.1,1) both',
-        'md-scale': 'md-scale-in 0.32s cubic-bezier(0.34,1.45,0.5,1) both',
-        'md-pop': 'md-pop 0.32s cubic-bezier(0.34,1.45,0.5,1) both',
+        'md-enter': 'md-fade-up 0.46s cubic-bezier(0.22,1,0.36,1) both',
+        'md-scale': 'md-scale-in 0.4s cubic-bezier(0.22,1,0.36,1) both',
+        'md-pop': 'md-pop 0.4s cubic-bezier(0.34,1.28,0.5,1) both',
       },
     },
   },
