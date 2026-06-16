@@ -13,6 +13,9 @@ import type {
   RainmakerTemplate,
   RainmakerTemplateCreate,
   RainmakerTemplateUpdate,
+  RainmakerGoal,
+  RainmakerGoalCreate,
+  RainmakerGoalUpdate,
   PaginatedResponse,
 } from '../types'
 
@@ -116,4 +119,29 @@ export async function updateRainmakerTemplate(id: string, data: RainmakerTemplat
 
 export async function deleteRainmakerTemplate(id: string): Promise<void> {
   await api.delete(`/rainmaker/templates/${id}`)
+}
+
+// --- Goals (Akquise-Ziele) ---
+export async function getRainmakerGoals(): Promise<RainmakerGoal[]> {
+  const response = await api.get('/rainmaker/goals')
+  return response.data
+}
+
+export async function seedRainmakerGoals(): Promise<RainmakerGoal[]> {
+  const response = await api.post('/rainmaker/goals/seed')
+  return response.data
+}
+
+export async function createRainmakerGoal(data: RainmakerGoalCreate): Promise<RainmakerGoal> {
+  const response = await api.post('/rainmaker/goals', data)
+  return response.data
+}
+
+export async function updateRainmakerGoal(id: string, data: RainmakerGoalUpdate): Promise<RainmakerGoal> {
+  const response = await api.put(`/rainmaker/goals/${id}`, data)
+  return response.data
+}
+
+export async function deleteRainmakerGoal(id: string): Promise<void> {
+  await api.delete(`/rainmaker/goals/${id}`)
 }

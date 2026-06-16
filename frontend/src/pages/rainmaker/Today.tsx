@@ -40,6 +40,30 @@ export default function RainmakerToday() {
         <>
           <ProgressHeader progress={data.progress} />
 
+          {/* Daily goals */}
+          {data.goals.length > 0 && (
+            <div className="card mb-6">
+              <h3 className="text-sm font-semibold text-text mb-4">Tagesziele</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                {data.goals.map((g) => {
+                  const pct = g.daily_target > 0 ? Math.min(g.done_today / g.daily_target, 1) * 100 : 0
+                  const met = g.done_today >= g.daily_target
+                  return (
+                    <div key={g.id}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-text truncate">{g.name}</span>
+                        <span className={`tabular-nums shrink-0 ml-2 ${met ? 'text-success' : 'text-text-muted'}`}>{g.done_today}/{g.daily_target}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-surface-high overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-long ease-emphasized" style={{ width: `${pct}%`, background: met ? 'var(--md-success)' : 'var(--md-primary)' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Rotting leads — anti-stalling warning */}
           {data.rotting.length > 0 && (
             <div className="mb-6 rounded-card border-2 border-danger/50 bg-danger/10 overflow-hidden">
@@ -67,11 +91,27 @@ export default function RainmakerToday() {
           </div>
 
           {data.queue.length === 0 ? (
-            <div className="card text-center py-16">
-              <div className="text-4xl mb-3">🎉</div>
-              <p className="text-text font-medium">Alles abgearbeitet</p>
-              <p className="text-text-muted text-sm mt-1">Keine fälligen Akquise-Aktionen für heute.</p>
-            </div>
+            data.total_leads === 0 ? (
+              <div className="card text-center py-16">
+                <div className="text-4xl mb-3">🌱</div>
+                <p className="text-text font-medium">Noch keine Leads</p>
+                <p className="text-text-muted text-sm mt-1 mb-4">Leg deinen ersten Lead an und plane den ersten Schritt.</p>
+                <button onClick={() => navigate('/rainmaker/leads/neu')} className="btn-primary">Ersten Lead anlegen</button>
+              </div>
+            ) : data.progress.done_today > 0 ? (
+              <div className="card text-center py-16">
+                <div className="text-4xl mb-3">🎉</div>
+                <p className="text-text font-medium">Alles erledigt für heute</p>
+                <p className="text-text-muted text-sm mt-1">Keine offenen fälligen Akquise-Aktionen mehr.</p>
+              </div>
+            ) : (
+              <div className="card text-center py-16">
+                <div className="text-4xl mb-3">📭</div>
+                <p className="text-text font-medium">Heute nichts fällig</p>
+                <p className="text-text-muted text-sm mt-1 mb-4">Kein geplanter Schritt für heute — Zeit, proaktiv zu akquirieren?</p>
+                <button onClick={() => navigate('/rainmaker/pipeline')} className="btn-secondary">Zur Pipeline</button>
+              </div>
+            )
           ) : (
             <div className="md-stagger space-y-3">
               {data.queue.map((item) => {

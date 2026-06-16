@@ -9,11 +9,16 @@ import RainmakerFooter from './RainmakerFooter'
 import {
   getRainmakerSettings, updateRainmakerSettings,
   getRainmakerTemplates, createRainmakerTemplate, updateRainmakerTemplate, deleteRainmakerTemplate,
+  getRainmakerGoals, seedRainmakerGoals, createRainmakerGoal, updateRainmakerGoal, deleteRainmakerGoal,
 } from '../../api/rainmaker'
 import type {
   RainmakerSettings, RainmakerReminderChannel,
   RainmakerTemplate, RainmakerTemplateChannel,
+  RainmakerGoal, RainmakerActivityType,
 } from '../../types'
+import { ACTIVITY_TYPE_LABELS } from './constants'
+
+const TYPE_OPTIONS = (Object.keys(ACTIVITY_TYPE_LABELS) as RainmakerActivityType[]).map((v) => ({ value: v, label: ACTIVITY_TYPE_LABELS[v] }))
 
 const CHANNEL_OPTIONS = [
   { value: 'email', label: 'E-Mail' },
@@ -26,6 +31,7 @@ const TPL_CHANNEL_OPTIONS = [
 ]
 
 const emptyTpl = { channel: 'email' as RainmakerTemplateChannel, name: '', subject: '', body: '' }
+const emptyGoal = { name: '', suggested_type: 'call' as RainmakerActivityType, daily_target: 3 }
 
 export default function RainmakerSettingsPage() {
   const [settings, setSettings] = useState<RainmakerSettings | null>(null)
@@ -35,15 +41,54 @@ export default function RainmakerSettingsPage() {
   const [tplForm, setTplForm] = useState<{ id?: string; channel: RainmakerTemplateChannel; name: string; subject: string; body: string }>(emptyTpl)
   const [savingTpl, setSavingTpl] = useState(false)
   const [deleteTplId, setDeleteTplId] = useState<string | null>(null)
+  const [goals, setGoals] = useState<RainmakerGoal[]>([])
+  const [goalForm, setGoalForm] = useState<{ id?: string; name: string; suggested_type: RainmakerActivityType; daily_target: number }>(emptyGoal)
+  const [savingGoal, setSavingGoal] = useState(false)
+  const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null)
 
   const loadTemplates = () => getRainmakerTemplates().then(setTemplates).catch(() => {})
+  const loadGoals = () => getRainmakerGoals().then(setGoals).catch(() => {})
 
   useEffect(() => {
-    Promise.all([getRainmakerSettings(), getRainmakerTemplates()])
-      .then(([s, t]) => { setSettings(s); setTemplates(t) })
+    Promise.all([getRainmakerSettings(), getRainmakerTemplates(), getRainmakerGoals()])
+      .then(([s, t, g]) => { setSettings(s); setTemplates(t); setGoals(g) })
       .catch(() => toast.error('Einstellungen konnten nicht geladen werden.'))
       .finally(() => setLoading(false))
   }, [])
+
+  const handleSeedGoals = async () => {
+    try { setGoals(await seedRainmakerGoals()); toast.success('Default-Ziele angelegt.') }
+    catch { toast.error('Konnte nicht anlegen.') }
+  }
+
+  const saveGoal = async () => {
+    if (!goalForm.name) { toast.error('Name ist erforderlich.'); return }
+    setSavingGoal(true)
+    try {
+      const payload = { name: goalForm.name, suggested_type: goalForm.suggested_type, daily_target: goalForm.daily_target }
+      if (goalForm.id) await updateRainmakerGoal(goalForm.id, payload)
+      else await createRainmakerGoal(payload)
+      toast.success(goalForm.id ? 'Ziel aktualisiert.' : 'Ziel erstellt.')
+      setGoalForm(emptyGoal)
+      loadGoals()
+    } catch { toast.error('Speichern fehlgeschlagen.') }
+    setSavingGoal(false)
+  }
+
+  const toggleGoalActive = async (g: RainmakerGoal) => {
+    try { await updateRainmakerGoal(g.id, { active: !g.active }); loadGoals() }
+    catch { toast.error('Konnte nicht ändern.') }
+  }
+
+  const handleDeleteGoal = async () => {
+    if (!deleteGoalId) return
+    try {
+      await deleteRainmakerGoal(deleteGoalId)
+      setDeleteGoalId(null)
+      if (goalForm.id === deleteGoalId) setGoalForm(emptyGoal)
+      loadGoals()
+    } catch { toast.error('Löschen fehlgeschlagen.') }
+  }
 
   const saveSettings = async () => {
     if (!settings) return
@@ -139,6 +184,55 @@ export default function RainmakerSettingsPage() {
         </div>
       </div>
 
+      {/* Goals */}
+      <div className="bg-surface-container border border-border rounded-card p-6 mb-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-text">Akquise-Ziele</h3>
+          {goals.length === 0 && (
+            <button onClick={handleSeedGoals} className="btn-secondary text-xs !py-1.5 !px-4">Default-Ziele anlegen</button>
+          )}
+        </div>
+
+        {goals.length > 0 && (
+          <div className="space-y-2">
+            {goals.map((g) => (
+              <div key={g.id} className={`flex items-center gap-3 p-3 rounded-lg bg-surface-high ${!g.active ? 'opacity-50' : ''}`}>
+                <span className="text-sm text-text flex-1 truncate">{g.name}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent shrink-0">{ACTIVITY_TYPE_LABELS[g.suggested_type]}</span>
+                <span className="text-xs text-text-muted tabular-nums shrink-0">{g.daily_target}/Tag</span>
+                <button onClick={() => toggleGoalActive(g)} className="md-state text-xs text-text-muted hover:text-text px-2 py-1 rounded-full" title={g.active ? 'Deaktivieren' : 'Aktivieren'}>{g.active ? 'Aktiv' : 'Inaktiv'}</button>
+                <button onClick={() => setGoalForm({ id: g.id, name: g.name, suggested_type: g.suggested_type, daily_target: g.daily_target })} className="md-state text-xs text-text-muted hover:text-accent px-2 py-1 rounded-full">Bearbeiten</button>
+                <button onClick={() => setDeleteGoalId(g.id)} className="md-state text-xs text-text-muted hover:text-danger px-2 py-1 rounded-full">Löschen</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="border-t border-border pt-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-text">{goalForm.id ? 'Ziel bearbeiten' : 'Neues Ziel'}</p>
+            {goalForm.id && <button onClick={() => setGoalForm(emptyGoal)} className="text-xs text-text-muted hover:text-text">+ Neues stattdessen</button>}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1">
+              <label className="block text-xs text-text-muted mb-2">Name</label>
+              <input type="text" value={goalForm.name} onChange={(e) => setGoalForm({ ...goalForm, name: e.target.value })} className="w-full" placeholder="z. B. Neukunden Telefon-Akquise" />
+            </div>
+            <FormField label="Vorgeschlagener Typ" name="goal_type" type="select" value={goalForm.suggested_type}
+              onChange={(e) => setGoalForm({ ...goalForm, suggested_type: e.target.value as RainmakerActivityType })} options={TYPE_OPTIONS} />
+            <div>
+              <label className="block text-xs text-text-muted mb-2">Tagesziel</label>
+              <input type="number" min="1" max="50" value={goalForm.daily_target} onChange={(e) => setGoalForm({ ...goalForm, daily_target: Number(e.target.value) })} className="w-full" />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={saveGoal} disabled={savingGoal} className="btn-primary">
+              {savingGoal ? 'Speichern…' : goalForm.id ? 'Aktualisieren' : 'Ziel anlegen'}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Templates */}
       <div className="bg-surface-container border border-border rounded-card p-6 space-y-5">
         <h3 className="text-sm font-semibold text-text">Vorlagen</h3>
@@ -197,6 +291,13 @@ export default function RainmakerSettingsPage() {
         onConfirm={handleDeleteTpl}
         title="Vorlage löschen"
         message="Diese Vorlage wirklich löschen?"
+      />
+      <DeleteDialog
+        isOpen={!!deleteGoalId}
+        onClose={() => setDeleteGoalId(null)}
+        onConfirm={handleDeleteGoal}
+        title="Ziel löschen"
+        message="Dieses Akquise-Ziel wirklich löschen? Verknüpfte Aktivitäten bleiben erhalten (ohne Ziel)."
       />
     </div>
   )

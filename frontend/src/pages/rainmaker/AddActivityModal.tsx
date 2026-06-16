@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { createLeadActivity } from '../../api/rainmaker'
-import type { RainmakerActivityType } from '../../types'
+import { createLeadActivity, getRainmakerGoals } from '../../api/rainmaker'
+import type { RainmakerActivityType, RainmakerGoal } from '../../types'
 import { ACTIVITY_TYPE_LABELS } from './constants'
 
 interface Props {
@@ -21,6 +21,8 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
   const [type, setType] = useState<RainmakerActivityType>('call')
   const [dueDate, setDueDate] = useState(today())
   const [notes, setNotes] = useState('')
+  const [goals, setGoals] = useState<RainmakerGoal[]>([])
+  const [goalId, setGoalId] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -29,11 +31,21 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  useEffect(() => {
+    getRainmakerGoals().then((g) => setGoals(g.filter((x) => x.active))).catch(() => {})
+  }, [])
+
+  const pickGoal = (id: string) => {
+    setGoalId(id)
+    const g = goals.find((x) => x.id === id)
+    if (g) setType(g.suggested_type) // prefill suggested type, still overridable
+  }
+
   const handleSave = async () => {
     if (saving) return
     setSaving(true)
     try {
-      await createLeadActivity(leadId, { type, due_date: dueDate || null, notes: notes || null })
+      await createLeadActivity(leadId, { type, due_date: dueDate || null, notes: notes || null, goal_id: goalId || null })
       toast.success('Aktion geplant.')
       onAdded()
     } catch {
@@ -47,6 +59,15 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
       <div className="fixed inset-0" onClick={onClose} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[420px] w-full mx-4 animate-md-scale">
         <h3 className="text-xl font-semibold text-text mb-5">Nächste Aktion planen</h3>
+        {goals.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-xs text-text-muted mb-2">Akquise-Ziel (optional)</label>
+            <select value={goalId} onChange={(e) => pickGoal(e.target.value)} className="w-full">
+              <option value="">— kein Ziel —</option>
+              {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-text-muted mb-2">Aktion</label>

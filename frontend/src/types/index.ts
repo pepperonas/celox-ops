@@ -539,6 +539,7 @@ export type RainmakerOutcome =
 export interface RainmakerActivity {
   id: string
   lead_id: string
+  goal_id: string | null
   type: RainmakerActivityType
   status: RainmakerActivityStatus
   due_date: string | null
@@ -552,6 +553,7 @@ export interface RainmakerActivityCreate {
   type: RainmakerActivityType
   due_date?: string | null
   notes?: string | null
+  goal_id?: string | null
 }
 
 export interface RainmakerActivityComplete {
@@ -559,7 +561,37 @@ export interface RainmakerActivityComplete {
   notes?: string | null
   next_type?: RainmakerActivityType | null
   next_due?: string | null
+  next_goal_id?: string | null
   close_status?: RainmakerLeadStatus | null
+}
+
+export interface RainmakerGoal {
+  id: string
+  name: string
+  suggested_type: RainmakerActivityType
+  daily_target: number
+  active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface RainmakerGoalCreate {
+  name: string
+  suggested_type: RainmakerActivityType
+  daily_target?: number
+  active?: boolean
+  sort_order?: number
+}
+
+export type RainmakerGoalUpdate = Partial<RainmakerGoalCreate>
+
+export interface RainmakerGoalProgress {
+  id: string
+  name: string
+  suggested_type: RainmakerActivityType
+  daily_target: number
+  done_today: number
 }
 
 export interface RainmakerLeadSummary {
@@ -594,6 +626,8 @@ export interface RainmakerTodayResponse {
   queue: RainmakerTodayItem[]
   rotting: RainmakerLeadSummary[]
   progress: RainmakerProgress
+  goals: RainmakerGoalProgress[]
+  total_leads: number
 }
 
 export type RainmakerReminderChannel = 'email' | 'telegram' | 'push'

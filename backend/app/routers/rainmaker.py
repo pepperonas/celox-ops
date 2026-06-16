@@ -22,6 +22,7 @@ from app.models.rainmaker_activity import (
     RainmakerActivity,
     RainmakerActivityStatus,
 )
+from app.models.rainmaker_goal import DEFAULT_GOALS, RainmakerGoal
 from app.models.rainmaker_lead import (
     CLOSED_STATUSES,
     RainmakerLead,
@@ -37,6 +38,10 @@ from app.schemas.rainmaker import (
     RainmakerLeadCreate,
     RainmakerLeadResponse,
     RainmakerLeadSummary,
+    RainmakerGoalCreate,
+    RainmakerGoalProgress,
+    RainmakerGoalResponse,
+    RainmakerGoalUpdate,
     RainmakerLeadUpdate,
     RainmakerProgress,
     RainmakerSettingsResponse,
@@ -272,6 +277,7 @@ async def complete_activity(
                 lead_id=lead.id,
                 type=data.next_type,
                 due_date=data.next_due,
+                goal_id=data.next_goal_id,
                 status=RainmakerActivityStatus.planned,
             )
         )
@@ -328,8 +334,34 @@ async def today(db: AsyncSession = Depends(get_db)) -> RainmakerTodayResponse:
         freeze_remaining=streak.freeze_remaining,
     )
 
+    # Per-goal progress today (active goals only).
+    start = datetime.combine(today_date, datetime.min.time(), tzinfo=timezone.utc)
+    done_by_goal_rows = (await db.execute(
+        select(RainmakerActivity.goal_id, func.count())
+        .where(
+            RainmakerActivity.status == RainmakerActivityStatus.done,
+            RainmakerActivity.completed_at >= start,
+            RainmakerActivity.goal_id.isnot(None),
+        )
+        .group_by(RainmakerActivity.goal_id)
+    )).all()
+    done_by_goal = {gid: c for gid, c in done_by_goal_rows}
+    active_goals = (await db.execute(
+        select(RainmakerGoal)
+        .where(RainmakerGoal.active.is_(True))
+        .order_by(RainmakerGoal.sort_order, RainmakerGoal.created_at)
+    )).scalars().all()
+    goals = [
+        RainmakerGoalProgress(
+            id=g.id, name=g.name, suggested_type=g.suggested_type,
+            daily_target=g.daily_target, done_today=int(done_by_goal.get(g.id, 0)),
+        )
+        for g in active_goals
+    ]
+
     return RainmakerTodayResponse(
-        date=today_date, queue=queue, rotting=rotting, progress=progress
+        date=today_date, queue=queue, rotting=rotting, progress=progress,
+        goals=goals, total_leads=len(leads),
     )
 
 
@@ -493,3 +525,71 @@ async def delete_template(
     if not tpl:
         raise HTTPException(status_code=404, detail="Vorlage nicht gefunden")
     await db.delete(tpl)
+
+
+# --------------------------------------------------------------------------- #
+#  Goals (Akquise-Ziele)
+# --------------------------------------------------------------------------- #
+@router.get("/goals", response_model=list[RainmakerGoalResponse])
+async def list_goals(db: AsyncSession = Depends(get_db)) -> list[RainmakerGoal]:
+    result = await db.execute(
+        select(RainmakerGoal).order_by(RainmakerGoal.sort_order, RainmakerGoal.created_at)
+    )
+    return list(result.scalars().all())
+
+
+@router.post("/goals", response_model=RainmakerGoalResponse, status_code=status.HTTP_201_CREATED)
+async def create_goal(
+    data: RainmakerGoalCreate,
+    db: AsyncSession = Depends(get_db),
+) -> RainmakerGoal:
+    goal = RainmakerGoal(**data.model_dump())
+    db.add(goal)
+    await db.flush()
+    await db.refresh(goal)
+    return goal
+
+
+@router.post("/goals/seed", response_model=list[RainmakerGoalResponse])
+async def seed_goals(db: AsyncSession = Depends(get_db)) -> list[RainmakerGoal]:
+    """Seed the default goal set — idempotent (only seeds when none exist)."""
+    existing = (await db.execute(select(func.count()).select_from(RainmakerGoal))).scalar_one()
+    if existing == 0:
+        for i, (name, suggested_type, daily_target) in enumerate(DEFAULT_GOALS):
+            db.add(RainmakerGoal(name=name, suggested_type=suggested_type, daily_target=daily_target, sort_order=i))
+        await db.flush()
+    result = await db.execute(
+        select(RainmakerGoal).order_by(RainmakerGoal.sort_order, RainmakerGoal.created_at)
+    )
+    return list(result.scalars().all())
+
+
+@router.put("/goals/{goal_id}", response_model=RainmakerGoalResponse)
+async def update_goal(
+    goal_id: uuid.UUID,
+    data: RainmakerGoalUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> RainmakerGoal:
+    goal = (
+        await db.execute(select(RainmakerGoal).where(RainmakerGoal.id == goal_id))
+    ).scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Ziel nicht gefunden")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(goal, key, value)
+    await db.flush()
+    await db.refresh(goal)
+    return goal
+
+
+@router.delete("/goals/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_goal(
+    goal_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    goal = (
+        await db.execute(select(RainmakerGoal).where(RainmakerGoal.id == goal_id))
+    ).scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Ziel nicht gefunden")
+    await db.delete(goal)

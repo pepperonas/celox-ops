@@ -75,6 +75,7 @@ class RainmakerActivityCreate(BaseModel):
     type: RainmakerActivityType
     due_date: DateType | None = None
     notes: str | None = None
+    goal_id: uuid.UUID | None = None
 
 
 class RainmakerActivityResponse(BaseModel):
@@ -82,6 +83,7 @@ class RainmakerActivityResponse(BaseModel):
 
     id: uuid.UUID
     lead_id: uuid.UUID
+    goal_id: uuid.UUID | None = None
     type: RainmakerActivityType
     status: RainmakerActivityStatus
     due_date: DateType | None = None
@@ -100,6 +102,7 @@ class RainmakerActivityComplete(BaseModel):
     # Next planned action (required unless close_status is set):
     next_type: RainmakerActivityType | None = None
     next_due: DateType | None = None
+    next_goal_id: uuid.UUID | None = None
     # Closing the lead instead of planning a next action:
     close_status: RainmakerLeadStatus | None = None
 
@@ -136,11 +139,21 @@ class RainmakerProgress(BaseModel):
     freeze_remaining: int = 0
 
 
+class RainmakerGoalProgress(BaseModel):
+    id: uuid.UUID
+    name: str
+    suggested_type: RainmakerActivityType
+    daily_target: int
+    done_today: int
+
+
 class RainmakerTodayResponse(BaseModel):
     date: DateType
     queue: list[RainmakerTodayItem]
     rotting: list[RainmakerLeadSummary]
     progress: RainmakerProgress
+    goals: list[RainmakerGoalProgress]
+    total_leads: int
 
 
 # --------------------------------------------------------------------------- #
@@ -221,6 +234,37 @@ class RainmakerTemplateUpdate(BaseModel):
 
 
 class RainmakerTemplateResponse(RainmakerTemplateBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+# --------------------------------------------------------------------------- #
+#  Goals (Akquise-Ziele)
+# --------------------------------------------------------------------------- #
+class RainmakerGoalBase(BaseModel):
+    name: str
+    suggested_type: RainmakerActivityType
+    daily_target: int = 3
+    active: bool = True
+    sort_order: int = 0
+
+
+class RainmakerGoalCreate(RainmakerGoalBase):
+    pass
+
+
+class RainmakerGoalUpdate(BaseModel):
+    name: str | None = None
+    suggested_type: RainmakerActivityType | None = None
+    daily_target: int | None = None
+    active: bool | None = None
+    sort_order: int | None = None
+
+
+class RainmakerGoalResponse(RainmakerGoalBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID

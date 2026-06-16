@@ -15,6 +15,7 @@ from app.models.customer import Base
 import app.models.pagespeed_result  # noqa: F401 — register for create_all
 import app.models.audit_log  # noqa: F401 — register for create_all
 import app.models.rainmaker_lead  # noqa: F401 — register for create_all
+import app.models.rainmaker_goal  # noqa: F401 — register for create_all
 import app.models.rainmaker_activity  # noqa: F401 — register for create_all
 import app.models.rainmaker_settings  # noqa: F401 — register for create_all
 import app.models.rainmaker_streak  # noqa: F401 — register for create_all

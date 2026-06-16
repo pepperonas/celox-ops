@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { completeActivity } from '../../api/rainmaker'
+import { completeActivity, getRainmakerGoals } from '../../api/rainmaker'
 import type {
   RainmakerActivity,
   RainmakerActivityType,
+  RainmakerGoal,
   RainmakerLead,
   RainmakerLeadStatus,
   RainmakerOutcome,
@@ -41,6 +42,8 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
   const [mode, setMode] = useState<'next' | 'close'>('next')
   const [nextType, setNextType] = useState<RainmakerActivityType>('follow_up')
   const [nextDue, setNextDue] = useState<string>(plusDays(7))
+  const [nextGoalId, setNextGoalId] = useState('')
+  const [goals, setGoals] = useState<RainmakerGoal[]>([])
   const [closeStatus, setCloseStatus] = useState<RainmakerLeadStatus>('won')
   const [saving, setSaving] = useState(false)
 
@@ -49,6 +52,16 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  useEffect(() => {
+    getRainmakerGoals().then((g) => setGoals(g.filter((x) => x.active))).catch(() => {})
+  }, [])
+
+  const pickGoal = (id: string) => {
+    setNextGoalId(id)
+    const g = goals.find((x) => x.id === id)
+    if (g) setNextType(g.suggested_type)
+  }
 
   const canConfirm = mode === 'close' ? Boolean(closeStatus) : Boolean(nextType && nextDue)
 
@@ -61,7 +74,7 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
         notes: notes || null,
         ...(mode === 'close'
           ? { close_status: closeStatus }
-          : { next_type: nextType, next_due: nextDue }),
+          : { next_type: nextType, next_due: nextDue, next_goal_id: nextGoalId || null }),
       })
       toast.success('Erledigt ✓')
       onCompleted(lead)
@@ -112,16 +125,27 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
         </div>
 
         {mode === 'next' ? (
-          <div className="grid grid-cols-2 gap-3 mb-2">
-            <div>
-              <label className="block text-xs text-text-muted mb-2">Aktion</label>
-              <select value={nextType} onChange={(e) => setNextType(e.target.value as RainmakerActivityType)} className="w-full">
-                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{ACTIVITY_TYPE_LABELS[t]}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-text-muted mb-2">Wiedervorlage</label>
-              <input type="date" value={nextDue} onChange={(e) => setNextDue(e.target.value)} className="w-full" />
+          <div className="mb-2">
+            {goals.length > 0 && (
+              <div className="mb-3">
+                <label className="block text-xs text-text-muted mb-2">Akquise-Ziel (optional)</label>
+                <select value={nextGoalId} onChange={(e) => pickGoal(e.target.value)} className="w-full">
+                  <option value="">— kein Ziel —</option>
+                  {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-muted mb-2">Aktion</label>
+                <select value={nextType} onChange={(e) => setNextType(e.target.value as RainmakerActivityType)} className="w-full">
+                  {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{ACTIVITY_TYPE_LABELS[t]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-2">Wiedervorlage</label>
+                <input type="date" value={nextDue} onChange={(e) => setNextDue(e.target.value)} className="w-full" />
+              </div>
             </div>
           </div>
         ) : (

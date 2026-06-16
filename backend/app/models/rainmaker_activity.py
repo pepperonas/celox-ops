@@ -57,6 +57,13 @@ class RainmakerActivity(Base):
         nullable=False,
         index=True,
     )
+    # Optional acquisition goal this activity counts toward.
+    goal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("rainmaker_goal.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     type: Mapped[RainmakerActivityType] = mapped_column(
         Enum(RainmakerActivityType, native_enum=False, length=20), nullable=False
     )
