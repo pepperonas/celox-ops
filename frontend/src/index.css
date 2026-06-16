@@ -87,10 +87,12 @@
   --md-ease-emphasized:    cubic-bezier(0.2, 0, 0, 1);
   --md-ease-decelerate:    cubic-bezier(0.05, 0.7, 0.1, 1);
   --md-ease-accelerate:    cubic-bezier(0.3, 0, 0.8, 0.15);
-  --md-ease-spring:        cubic-bezier(0.34, 1.45, 0.5, 1); /* expressive overshoot */
+  --md-ease-spring:        cubic-bezier(0.34, 1.28, 0.5, 1); /* gentle overshoot */
+  --md-ease-soft:          cubic-bezier(0.22, 1, 0.36, 1);   /* smooth glide (ease-out quint) */
   --md-dur-short:  0.18s;
-  --md-dur-medium: 0.32s;
+  --md-dur-medium: 0.34s;
   --md-dur-long:   0.5s;
+  --md-dur-reveal: 0.46s; /* page/content reveal — soft & graceful */
 
   /* ---- Elevation (dark) ---- */
   --md-elev-1: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px 1px rgba(0,0,0,.22);
@@ -394,7 +396,7 @@ input:-webkit-autofill:focus {
 @layer utilities {
   /* ---------- MD3 Expressive motion ---------- */
   @keyframes md-fade-up {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   @keyframes md-fade-in {
@@ -427,7 +429,7 @@ input:-webkit-autofill:focus {
   }
 
   .animate-md-enter {
-    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
+    animation: md-fade-up var(--md-dur-reveal) var(--md-ease-soft) both;
   }
   .animate-md-scale {
     animation: md-scale-in var(--md-dur-medium) var(--md-ease-spring) both;
@@ -439,14 +441,9 @@ input:-webkit-autofill:focus {
     animation: md-pop var(--md-dur-medium) var(--md-ease-spring) both;
   }
 
-  /* Page transition wrapper (re-keyed per route) */
-  .page-enter {
-    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
-  }
-
   /* Staggered list/grid entrance: parent gets .md-stagger, children animate */
   .md-stagger > * {
-    animation: md-fade-up var(--md-dur-medium) var(--md-ease-decelerate) both;
+    animation: md-fade-up var(--md-dur-reveal) var(--md-ease-soft) both;
   }
   .md-stagger > *:nth-child(1)  { animation-delay: 0ms; }
   .md-stagger > *:nth-child(2)  { animation-delay: 40ms; }
@@ -498,10 +495,10 @@ input:-webkit-autofill:focus {
    Directional content reveal — animates the incoming DOM (GPU-only:
    opacity + transform). Chrome persists; no snapshot, so no async flicker.
    ============================================================ */
-@keyframes page-in-fwd { from { opacity: 0; transform: translate3d(18px, 0, 0); } to { opacity: 1; transform: none; } }
-@keyframes page-in-back { from { opacity: 0; transform: translate3d(-18px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes page-in-fwd { from { opacity: 0; transform: translate3d(12px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes page-in-back { from { opacity: 0; transform: translate3d(-12px, 0, 0); } to { opacity: 1; transform: none; } }
 
-.page-enter { animation: page-in-fwd var(--md-dur-medium) var(--md-ease-decelerate) both; }
+.page-enter { animation: page-in-fwd var(--md-dur-reveal) var(--md-ease-soft) both; }
 html[data-nav="back"] .page-enter { animation-name: page-in-back; }
 /* When the page already reveals itself, don't double up with its inner stagger. */
 .page-enter .md-stagger > * { animation: none; }
