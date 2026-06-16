@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import {
   getInvoice,
@@ -26,7 +27,7 @@ import type { Invoice } from '../../types'
 
 export default function InvoiceDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [showDelete, setShowDelete] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -54,7 +55,7 @@ export default function InvoiceDetail() {
     try {
       await deleteInvoice(id!)
       toast.success('Rechnung gelöscht.')
-      navigate('/rechnungen')
+      navigate('/rechnungen', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -216,7 +217,7 @@ export default function InvoiceDetail() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/rechnungen')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/rechnungen', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>

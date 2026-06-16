@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useRef, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useAppNavigate, useScrollRestoration } from '../utils/transitions'
 import QuickSearch from './QuickSearch'
 
 const navItems = [
@@ -151,15 +152,30 @@ const navItems = [
   },
 ]
 
+function isItemActive(pathname: string, to: string): boolean {
+  if (to === '/') return pathname === '/'
+  return pathname === to || pathname.startsWith(to + '/')
+}
+
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const logout = useAuthStore((s) => s.logout)
-  const navigate = useNavigate()
+  const appNavigate = useAppNavigate()
   const location = useLocation()
+  const mainRef = useRef<HTMLElement>(null)
+  useScrollRestoration(mainRef)
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    appNavigate('/login')
+  }
+
+  // Real anchor + intercepted left-click → animated client navigation
+  // (modifier/middle clicks fall through to the browser for new-tab etc.).
+  const handleNavClick = (e: React.MouseEvent, to: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    if (to !== location.pathname) appNavigate(to)
   }
 
   return (
@@ -194,26 +210,28 @@ export default function Layout() {
 
         {/* Nav — MD3 pill indicators + state layers */}
         <nav className="flex-1 py-3 space-y-1 px-3 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) =>
-                `md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
-                  isActive
+          {navItems.map((item) => {
+            const active = isItemActive(location.pathname, item.to)
+            return (
+              <a
+                key={item.to}
+                href={item.to}
+                onClick={(e) => handleNavClick(e, item.to)}
+                title={collapsed ? item.label : undefined}
+                aria-current={active ? 'page' : undefined}
+                className={`md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
+                  active
                     ? 'bg-md-primary-container text-on-primary-container'
                     : 'text-text-muted hover:text-text'
-                } ${collapsed ? 'justify-center px-0' : ''}`
-              }
-            >
-              <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
-                {item.icon}
-              </span>
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </NavLink>
-          ))}
+                } ${collapsed ? 'justify-center px-0' : ''}`}
+              >
+                <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
+                  {item.icon}
+                </span>
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </a>
+            )
+          })}
         </nav>
       </aside>
 
@@ -246,11 +264,10 @@ export default function Layout() {
           </button>
         </header>
 
-        {/* Page content — re-keyed per route for MD3 enter transition */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div key={location.pathname} className="page-enter">
-            <Outlet />
-          </div>
+        {/* Page content — directional View Transition hand-off (chrome persists);
+            scroll position restored on back/forward by useScrollRestoration. */}
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-6" style={{ viewTransitionName: 'page' }}>
+          <Outlet />
         </main>
       </div>
       <QuickSearch />

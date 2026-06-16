@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import { getContract, deleteContract } from '../../api/contracts'
 import { getInvoices } from '../../api/invoices'
@@ -12,7 +13,7 @@ import type { Contract, Invoice } from '../../types'
 
 export default function ContractDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [contract, setContract] = useState<Contract | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [showDelete, setShowDelete] = useState(false)
@@ -27,7 +28,7 @@ export default function ContractDetail() {
     try {
       await deleteContract(id!)
       toast.success('Vertrag gelöscht.')
-      navigate('/vertraege')
+      navigate('/vertraege', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -41,7 +42,7 @@ export default function ContractDetail() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/vertraege')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/vertraege', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>

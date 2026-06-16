@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import { api } from '../../api/client'
 import { getCustomer, deleteCustomer, downloadDsgvoExport } from '../../api/customers'
@@ -19,7 +20,7 @@ import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, Page
 
 export default function CustomerDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const location = useLocation()
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
@@ -66,7 +67,7 @@ export default function CustomerDetail() {
     try {
       await deleteCustomer(id!)
       toast.success('Kunde gelöscht.')
-      navigate('/kunden')
+      navigate('/kunden', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -159,7 +160,7 @@ export default function CustomerDetail() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/kunden')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/kunden', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
@@ -12,7 +13,7 @@ import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
 
 export default function RainmakerPipeline() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [leads, setLeads] = useState<RainmakerLead[]>([])
   const [loading, setLoading] = useState(true)
   const [dragOver, setDragOver] = useState<RainmakerLeadStatus | null>(null)
@@ -94,7 +95,7 @@ export default function RainmakerPipeline() {
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', lead.id); e.dataTransfer.effectAllowed = 'move'; setDraggingId(lead.id) }}
                     onDragEnd={() => { setDraggingId(null); setDragOver(null) }}
-                    onClick={() => navigate(`/rainmaker/leads/${lead.id}`)}
+                    onClick={(e) => { e.currentTarget.style.viewTransitionName = 'rm-hero'; navigate(`/rainmaker/leads/${lead.id}`) }}
                     className={`bg-surface-high border border-border rounded-md p-3 cursor-grab active:cursor-grabbing transition-all duration-short hover:border-text-muted hover:shadow-elev-1 ${
                       draggingId === lead.id ? 'opacity-40' : ''
                     }`}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
@@ -26,7 +27,7 @@ const categoryOptions: { value: string; label: string }[] = [
 ]
 
 export default function ExpenseList() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')

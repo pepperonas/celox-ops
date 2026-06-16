@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import LoadingIndicator from '../../components/LoadingIndicator'
@@ -13,10 +14,18 @@ import type { RainmakerActivity, RainmakerTodayResponse } from '../../types'
 import { ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_ICONS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
 
 export default function RainmakerToday() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [data, setData] = useState<RainmakerTodayResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState<{ activity: RainmakerActivity; company: string } | null>(null)
+  const [exitingId, setExitingId] = useState<string | null>(null)
+
+  // After logging: let the item play its exit, then refetch (ring + queue update).
+  const handleCompleted = (activityId: string) => {
+    setCompleting(null)
+    setExitingId(activityId)
+    setTimeout(() => { setExitingId(null); load() }, 460)
+  }
 
   const load = useCallback(async () => {
     try {
@@ -117,7 +126,7 @@ export default function RainmakerToday() {
               {data.queue.map((item) => {
                 const { lead, activity, days_overdue } = item
                 return (
-                  <div key={activity.id} className="card flex items-center gap-4 !py-4 hover:shadow-elev-2 transition-shadow duration-medium">
+                  <div key={activity.id} className={`card flex items-center gap-4 !py-4 hover:shadow-elev-2 transition-shadow duration-medium ${exitingId === activity.id ? 'rm-complete-exit' : ''}`}>
                     <div className="shrink-0 w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={ACTIVITY_TYPE_ICONS[activity.type]} /></svg>
                     </div>
@@ -163,7 +172,7 @@ export default function RainmakerToday() {
           activity={completing.activity}
           leadCompany={completing.company}
           onClose={() => setCompleting(null)}
-          onCompleted={() => { setCompleting(null); load() }}
+          onCompleted={() => handleCompleted(completing.activity.id)}
         />
       )}
 

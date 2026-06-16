@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../utils/transitions'
 import toast from 'react-hot-toast'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { api } from '../api/client'
+import TiltCard from '../components/TiltCard'
 import type { DashboardStats, Invoice } from '../types'
 import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters'
 
@@ -64,7 +66,7 @@ const activityDotColors: Record<string, string> = {
 
 
 export default function Dashboard() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -229,10 +231,10 @@ export default function Dashboard() {
       ) : (
         <div className={`md-stagger grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
           {cards.map((card) => (
-            <div
+            <TiltCard
               key={card.label}
               onClick={card.highlight ? () => navigate('/rechnungen?status=ueberfaellig') : undefined}
-              className={`rounded-md p-5 transition-all duration-medium ease-spring hover:-translate-y-0.5 ${
+              className={`rounded-md p-5 transition-shadow duration-medium ${
                 card.highlight
                   ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 hover:shadow-elev-2 cursor-pointer'
                   : 'bg-surface-container border border-border hover:shadow-elev-2'
@@ -255,7 +257,7 @@ export default function Dashboard() {
               </div>
               <p className={`text-[28px] font-bold tabular-nums ${card.valueColor}`}>{card.value}</p>
               <p className="text-xs text-text-muted mt-1">{card.sub}</p>
-            </div>
+            </TiltCard>
           ))}
         </div>
       )}

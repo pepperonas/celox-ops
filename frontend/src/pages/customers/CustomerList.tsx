@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import DataTable, { type Column } from '../../components/DataTable'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
@@ -9,7 +10,7 @@ import { formatDate } from '../../utils/formatters'
 import type { Customer } from '../../types'
 
 export default function CustomerList() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')

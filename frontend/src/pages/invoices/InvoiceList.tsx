@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
@@ -21,7 +22,7 @@ const statusOptions = [
 ]
 
 export default function InvoiceList() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)

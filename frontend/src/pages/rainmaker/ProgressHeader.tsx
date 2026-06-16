@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { RainmakerProgress } from '../../types'
 
 interface Props {
@@ -14,10 +15,23 @@ export default function ProgressHeader({ progress }: Props) {
   const circ = 2 * Math.PI * r
   const dash = circ * pct
 
+  // Pop the ring whenever the day's count climbs (the "Erledigt" payoff).
+  const [pop, setPop] = useState(false)
+  const prevDone = useRef(done_today)
+  useEffect(() => {
+    if (done_today > prevDone.current) {
+      setPop(true)
+      const t = setTimeout(() => setPop(false), 340)
+      prevDone.current = done_today
+      return () => clearTimeout(t)
+    }
+    prevDone.current = done_today
+  }, [done_today])
+
   return (
     <div className="card flex items-center gap-6 mb-6 animate-md-enter">
       {/* Pensum ring */}
-      <div className="relative shrink-0" style={{ width: 76, height: 76 }}>
+      <div className={`relative shrink-0 ${pop ? 'rm-ring-pop' : ''}`} style={{ width: 76, height: 76 }}>
         <svg width="76" height="76" viewBox="0 0 76 76" className="-rotate-90">
           <circle cx="38" cy="38" r={r} fill="none" stroke="var(--md-surface-container-highest)" strokeWidth="7" />
           <circle

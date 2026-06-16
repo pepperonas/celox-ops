@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import DeleteDialog from '../../components/DeleteDialog'
@@ -26,7 +27,7 @@ function mapsHref(address: string) {
 
 export default function RainmakerLeadDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [lead, setLead] = useState<RainmakerLead | null>(null)
   const [activities, setActivities] = useState<RainmakerActivity[]>([])
   const [templates, setTemplates] = useState<RainmakerTemplate[]>([])
@@ -67,7 +68,7 @@ export default function RainmakerLeadDetail() {
     try {
       await deleteRainmakerLead(id)
       toast.success('Lead gelöscht.')
-      navigate('/rainmaker/pipeline')
+      navigate('/rainmaker/pipeline', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -108,12 +109,12 @@ export default function RainmakerLeadDetail() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/rainmaker/pipeline')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/rainmaker/pipeline', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-2xl font-semibold text-text tracking-tight truncate">{lead.company}</h2>
+          <h2 className="text-2xl font-semibold text-text tracking-tight truncate" style={{ viewTransitionName: 'rm-hero' }}>{lead.company}</h2>
           <span className="shrink-0 text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: color + '26', color }}>{STATUS_LABELS[lead.status]}</span>
           <span className={`shrink-0 text-xs font-medium px-3 py-1 rounded-full ${PRIORITY_TONE[lead.priority]}`}>{PRIORITY_LABELS[lead.priority]}</span>
         </div>

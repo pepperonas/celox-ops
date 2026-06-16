@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
 import PageHeader from '../../components/PageHeader'
@@ -20,7 +21,7 @@ const statusOptions = [
 ]
 
 export default function OrderList() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')

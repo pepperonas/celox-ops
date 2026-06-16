@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import { getOrder, deleteOrder, generateQuotePdf, downloadQuotePdf, viewQuotePdf, sendQuoteEmail } from '../../api/orders'
 import { getInvoices } from '../../api/invoices'
@@ -14,7 +15,7 @@ import type { Order, Invoice } from '../../types'
 
 export default function OrderDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const [order, setOrder] = useState<Order | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [showDelete, setShowDelete] = useState(false)
@@ -66,7 +67,7 @@ export default function OrderDetail() {
     try {
       await deleteOrder(id!)
       toast.success('Auftrag gelöscht.')
-      navigate('/auftraege')
+      navigate('/auftraege', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -80,7 +81,7 @@ export default function OrderDetail() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/auftraege')} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/auftraege', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
