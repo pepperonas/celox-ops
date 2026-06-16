@@ -292,6 +292,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Gamification**: daily quota (progress ring), **working-day streak** (🔥, Mon–Fri only — weekends don't break it) with configurable **freeze days** as a buffer for vacation/sick days, and points (call 10 · visit 20 · mail/message/follow-up 5; ×1.5 at streak ≥ 7)
 - **Daily mail reminder** when the quota is unmet (via existing SMTP)
 - **Statistics**: activities by day/type, conversion funnel (new → won), open value
+- **Configurable acquisition goals**: define your own goals (e.g. "Neukunden Telefon-Akquise", "LinkedIn anschreiben", "Bestandskunde kontaktieren") with a suggested action type + **daily target**; default set seedable in one click. Activities count toward goals → daily progress on "Heute"
 - **Templates** with placeholders (`{company}`, `{contact_name}`, `{role}`) for mail/message
 
 ---

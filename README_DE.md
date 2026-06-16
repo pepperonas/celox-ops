@@ -293,6 +293,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Gamification**: Tagespensum (Fortschrittsring), **Werktage-Streak** (🔥, nur Mo–Fr — Wochenenden brechen ihn nicht) mit konfigurierbaren **Freeze-Tagen** als Puffer für Urlaub/krank, und Punkte (Anruf 10 · Besuch 20 · Mail/Nachricht/Nachfassen 5; ×1,5 ab Streak 7)
 - **Tägliche Mail-Erinnerung** bei offenem Pensum (über bestehenden SMTP)
 - **Statistik**: Aktivitäten nach Tag/Typ, Conversion-Funnel (neu → gewonnen), offenes Volumen
+- **Konfigurierbare Akquise-Ziele**: eigene Ziele (z. B. „Neukunden Telefon-Akquise", „LinkedIn anschreiben", „Bestandskunde kontaktieren") mit vorgeschlagenem Aktionstyp + **Tagesziel**; Default-Set per Klick anlegbar. Aktivitäten zählen aufs Ziel → Tagesfortschritt auf „Heute"
 - **Vorlagen** mit Platzhaltern (`{company}`, `{contact_name}`, `{role}`) für Mail/Nachricht
 
 ---

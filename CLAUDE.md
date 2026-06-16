@@ -79,6 +79,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Gamification**: daily quota (settings) vs `count_done_today`; points per type (call 10 · visit 20 · email/message/follow_up 5; ×1.5 at streak ≥ 7) via `register_completion`. **Working-day streak**: only Mon–Fri count (weekends are bonus = points only, never break it); missed working days consume a monthly **freeze** budget (`rainmaker_streak.freeze_remaining`, replenished to `settings.freezes_per_month` via `_ensure_monthly_freezes`) before the streak resets. `display_streak`/`get_streak_display` compute the live value (0 if missed working days exceed remaining freezes). The `freeze_remaining`/`freeze_period`/`freezes_per_month` columns were added via `ALTER TABLE` (create_all doesn't backfill columns on existing tables).
 - **Reminder**: `check_rainmaker_reminder()` runs inside the existing hourly `run_cron` loop (NOT APScheduler). Sends one mail/day at `reminder_time` via the existing `send_email` SMTP when the quota is unmet; in-memory dedupe (`_reminder_sent_on`, like `_stats_cache`). Email channel only; no-ops without SMTP.
 - **Templates** (`/templates`): email/message with `{company}`/`{contact_name}`/`{role}` placeholders; LeadDetail can launch a `mailto:` from a template with placeholders substituted.
+- **Acquisition goals** (`rainmaker_goal`, `/goals` CRUD + `/goals/seed` idempotent): user-defined channels (e.g. "Neukunden Telefon-Akquise", "LinkedIn anschreiben") with a `suggested_type` (pre-fills the action type when planning, overridable) and a **daily_target**. Activities optionally carry `goal_id` (column added via `ALTER`; the `rainmaker_goal` table itself is auto-created by create_all). `/today` returns per-goal `done_today/daily_target` (shown as "Tagesziele" bars) plus `total_leads`. The Heute empty-state is context-aware via `total_leads`/`done_today` (no leads → "leg den ersten an"; nothing due → "heute nichts fällig"; only truly cleared → "🎉").
 - **Tests**: `backend/tests/test_rainmaker.py` — DB-free unit tests for rotting, next-action selection, streak display, points (run with the smoke tests in-container).
 
 ### Token Tracker Integration
@@ -141,7 +142,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (18)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates
+## Database Tables (19)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal
 
 Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.
