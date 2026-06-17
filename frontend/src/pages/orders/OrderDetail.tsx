@@ -79,7 +79,7 @@ export default function OrderDetail() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/auftraege', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,7 +89,7 @@ export default function OrderDetail() {
           <h2 className="text-2xl font-semibold text-text tracking-tight">{order.title}</h2>
           <StatusBadge status={order.status} />
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           {order.status === 'angebot' && (
             <button onClick={handleGenerateQuotePdf} disabled={pdfLoading} className="btn-secondary">
               {pdfLoading ? 'Erstelle...' : 'Angebot PDF erstellen'}

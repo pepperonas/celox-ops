@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useAppNavigate, useScrollRestoration } from '../utils/transitions'
@@ -159,11 +159,15 @@ function isItemActive(pathname: string, to: string): boolean {
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const logout = useAuthStore((s) => s.logout)
   const appNavigate = useAppNavigate()
   const location = useLocation()
   const mainRef = useRef<HTMLElement>(null)
   useScrollRestoration(mainRef)
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   const handleLogout = () => {
     logout()
@@ -175,16 +179,29 @@ export default function Layout() {
   const handleNavClick = (e: React.MouseEvent, to: string) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
     e.preventDefault()
+    setMobileOpen(false)
     if (to !== location.pathname) appNavigate(to)
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
-      {/* Navigation drawer (MD3) */}
+      {/* Scrim behind the mobile drawer */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+        className={`fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-short ${
+          mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      {/* Navigation: off-canvas drawer on mobile, persistent rail on md+ */}
       <aside
-        className={`${
-          collapsed ? 'w-[76px]' : 'w-60'
-        } flex-shrink-0 bg-surface-low flex flex-col transition-[width] duration-medium ease-emphasized`}
+        className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto w-[280px] ${
+          collapsed ? 'md:w-[76px]' : 'md:w-60'
+        } flex-shrink-0 bg-surface-low flex flex-col shadow-elev-3 md:shadow-none transition-transform duration-medium ease-emphasized md:transition-[width] ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Logo / Brand */}
         <div className="h-16 flex items-center justify-between px-4">
@@ -193,9 +210,10 @@ export default function Layout() {
               celox ops
             </span>
           )}
+          {/* Desktop: collapse rail */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="md-state grid place-items-center w-11 h-11 rounded-full text-text-muted hover:text-text transition-colors duration-short"
+            className="md-state hidden md:grid place-items-center w-11 h-11 rounded-full text-text-muted hover:text-text transition-colors duration-short"
             title={collapsed ? 'Menü ausklappen' : 'Menü einklappen'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,6 +222,16 @@ export default function Layout() {
               ) : (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
               )}
+            </svg>
+          </button>
+          {/* Mobile: close drawer */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md-state md:hidden grid place-items-center w-11 h-11 rounded-full text-text-muted hover:text-text transition-colors duration-short"
+            aria-label="Menü schließen"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -223,12 +251,12 @@ export default function Layout() {
                   active
                     ? 'bg-md-primary-container text-on-primary-container'
                     : 'text-text-muted hover:text-text'
-                } ${collapsed ? 'justify-center px-0' : ''}`}
+                } ${collapsed ? 'md:justify-center md:px-0' : ''}`}
               >
                 <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
                   {item.icon}
                 </span>
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
               </a>
             )
           })}
@@ -238,8 +266,21 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top app bar (MD3) */}
-        <header className="h-16 flex-shrink-0 bg-surface flex items-center justify-between px-6 gap-4">
-          <h1 className="text-base font-semibold text-text hidden sm:block">
+        <header
+          className="min-h-[64px] flex-shrink-0 bg-surface flex items-center px-4 sm:px-6 gap-2 sm:gap-4"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
+          {/* Mobile: open drawer */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="md-state md:hidden grid place-items-center w-11 h-11 -ml-2 shrink-0 rounded-full text-text-muted hover:text-text transition-colors duration-short"
+            aria-label="Menü öffnen"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h1 className="text-base font-semibold text-text hidden lg:block shrink-0">
             Verwaltung
           </h1>
           <button
@@ -247,27 +288,31 @@ export default function Layout() {
             className="md-state flex-1 max-w-md flex items-center gap-2 text-xs h-10 px-4 bg-surface-high rounded-full text-text-muted transition-colors duration-short"
             title="Globale Suche (Ctrl+K / ⌘K)"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <span className="flex-1 text-left">Suchen…</span>
-            <kbd className="text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
+            <kbd className="hidden sm:inline text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
           </button>
           <button
             onClick={handleLogout}
-            className="btn-secondary text-xs !py-2 !px-4"
+            className="btn-secondary text-xs !py-2 !px-3 shrink-0"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Abmelden
+            <span className="hidden sm:inline">Abmelden</span>
           </button>
         </header>
 
         {/* Page content — directional GPU-only reveal, re-keyed per route.
             Chrome persists; scroll restored on back/forward; no entrance replay
             on POP (data-pop). */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-6">
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto p-4 sm:p-6"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>

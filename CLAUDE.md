@@ -63,6 +63,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 
 ### Frontend (React 18, TypeScript, TailwindCSS, Vite)
 - **Entry**: `frontend/src/main.tsx` → `App.tsx` (routing) → `Layout.tsx` (sidebar + content)
+- **Responsive shell**: the nav is a persistent rail at `md+` (collapsible) and an off-canvas **drawer below `md`** (hamburger in the top bar opens it, scrim closes it, route change auto-closes it). Content is full-width on phones. Safe-area insets applied to the header (top), `<main>` (bottom) and the FAB. Detail-page header button rows use `flex-wrap`; the Rainmaker `ProgressHeader` stacks (ring+label / streak+points) below `sm`. Verified at 390px: no horizontal overflow on any page.
 - **State**: Zustand for auth (`store/authStore.ts`), localStorage for JWT
 - **API client**: `api/client.ts` — Axios with JWT interceptor, 401 redirect
 - **Types**: All in `frontend/src/types/index.ts` — must match backend Pydantic schemas exactly
