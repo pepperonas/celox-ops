@@ -30,6 +30,13 @@ jobs:
         run: |
           cd backend
           python -c "from app.routers.search import router; from app.routers.invoices import router; from app.routers.dashboard import router; from app.routers.attachments import router; from app.routers.ical import router; print('OK')"
+      - name: Unit tests (pytest)
+        env:
+          DATABASE_URL: postgresql+asyncpg://x:x@localhost/x
+          JWT_SECRET: ci-test-jwt-secret-with-at-least-32-characters
+          ADMIN_USERNAME: admin
+          CORS_ORIGINS: http://localhost
+        run: cd backend && python -m pytest -q
 
   frontend:
     runs-on: ubuntu-latest
@@ -44,5 +51,7 @@ jobs:
         run: cd frontend && npm ci
       - name: TypeScript check
         run: cd frontend && npx tsc --noEmit
+      - name: Unit tests (vitest)
+        run: cd frontend && npm test
       - name: Build
         run: cd frontend && npm run build

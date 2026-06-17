@@ -280,7 +280,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 ### Design
 - **Material Design 3 Expressive** (Dark) — tonale Surface-Container, Pill-Buttons mit Shape-Morph, Spring-Motion, Fortschritts-/Eingangs-Animationen, Navigation-Drawer mit Pill-Indikator
 - Token-Layer in `index.css` (RGB-Channel-Farben für Opacity-Modifier, Elevation, Easing/Duration-Tokens, State-Layer); wiederverwendbare Komponenten: `PageHeader`, `Fab`, `FilterChips`, `SegmentedButtons`, `LoadingIndicator`
-- Responsives Layout mit einklappbarer Seitenleiste; `prefers-reduced-motion` respektiert
+- **Mobil optimiert**: ab `md` persistente, einklappbare Seitenleiste; auf dem Handy Off-Canvas-Drawer (Hamburger), Inhalt full-width, Safe-Area-Insets, umbrechende Aktionsleisten; `prefers-reduced-motion` respektiert
 - Seitenleisten-Navigation: Dashboard, **Rainmaker**, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
 - Einheitliche Status-Chips (Pill), Tabellen und Formular-Komponenten; Sentence-Case-Labels
 - Tab-Zustand in URL-Hash über Seitenaktualisierungen hinweg gespeichert

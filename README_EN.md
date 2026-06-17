@@ -279,7 +279,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 ### Design
 - **Material Design 3 Expressive** (dark) — tonal surface containers, pill buttons with shape-morph, spring motion, progress/entrance animations, navigation drawer with pill indicator
 - Token layer in `index.css` (RGB-channel colors for opacity modifiers, elevation, easing/duration tokens, state layers); reusable components: `PageHeader`, `Fab`, `FilterChips`, `SegmentedButtons`, `LoadingIndicator`
-- Responsive layout with collapsible sidebar; respects `prefers-reduced-motion`
+- **Mobile-optimised**: persistent collapsible sidebar at `md+`; off-canvas drawer (hamburger) on phones, full-width content, safe-area insets, wrapping action bars; respects `prefers-reduced-motion`
 - Sidebar navigation: Dashboard, **Rainmaker**, Aufgaben, Kalender, Zeiterfassung, Kunden, Aufträge, Kanban, Verträge, Rechnungen, Vorgemerkt, Ausgaben, EÜR, Analyse, Dokumente, Einstellungen
 - Consistent pill status chips, tables, and form components; sentence-case labels
 - Tab state persisted in URL hash across page refreshes

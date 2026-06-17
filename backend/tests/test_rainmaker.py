@@ -139,6 +139,34 @@ def test_streak_zero_when_never_met():
     assert display_streak(s, MONDAY) == 0
 
 
+def test_streak_alive_when_missed_exactly_equals_freeze():
+    # Boundary: missed working days == freeze budget → still alive (<=).
+    s = RainmakerStreak(current_streak=6, last_quota_met_date=MONDAY, freeze_remaining=2)
+    assert display_streak(s, THURSDAY) == 6  # Tue+Wed missed (2), 2 freezes
+
+
+def test_missed_working_days_over_full_week_gap():
+    # Mon this week → Mon next week: Tue,Wed,Thu,Fri missed (4 working days).
+    next_monday = MONDAY + timedelta(days=7)
+    assert missed_working_days(MONDAY, next_monday) == 4
+
+
+def test_next_action_tiebreak_by_created_at():
+    base = datetime.now(timezone.utc)
+    same_due = TODAY + timedelta(days=2)
+    older = _activity(RainmakerActivityStatus.planned, same_due, base)
+    newer = _activity(RainmakerActivityStatus.planned, same_due, base + timedelta(minutes=5))
+    lead = _lead(RainmakerLeadStatus.contacted, [newer, older])
+    assert next_planned_activity(lead) is older
+
+
+def test_lead_with_planned_and_done_is_not_rotting():
+    base = datetime.now(timezone.utc)
+    done = _activity(RainmakerActivityStatus.done, TODAY - timedelta(days=1), base)
+    planned = _activity(RainmakerActivityStatus.planned, TODAY + timedelta(days=1), base)
+    assert is_rotting(_lead(RainmakerLeadStatus.proposal, [done, planned])) is False
+
+
 # --------------------------------------------------------------------------- #
 #  Points table
 # --------------------------------------------------------------------------- #
