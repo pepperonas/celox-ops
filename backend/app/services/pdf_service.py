@@ -53,7 +53,7 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
                 "until": f"{date_to.isoformat()}T23:59:59Z",
                 "per_page": 100,
             }
-            resp = httpx.get(url, headers=headers, params=params, timeout=15)
+            resp = httpx.get(url, headers=headers, params=params, timeout=8)
             if resp.status_code == 200:
                 for c in resp.json():
                     sha = c["sha"]
@@ -64,7 +64,7 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
                     try:
                         detail = httpx.get(
                             f"https://api.github.com/repos/{repo}/commits/{sha}",
-                            headers=headers, timeout=10,
+                            headers=headers, timeout=8,
                         )
                         if detail.status_code == 200:
                             stats = detail.json().get("stats", {})
@@ -157,7 +157,7 @@ def _fetch_token_usage(customer: Customer, invoice: Invoice) -> dict | None:
             }
             sep = "&" if "?" in tracker_url else "?"
             url = f"{tracker_url}{sep}" + "&".join(f"{k}={v}" for k, v in params.items())
-            resp = httpx.get(url, timeout=30)
+            resp = httpx.get(url, timeout=8)
             if resp.status_code == 200:
                 data = resp.json()
                 if merged is None:

@@ -3,7 +3,7 @@ import math
 import uuid
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -176,10 +176,39 @@ async def create_invoice(
     return resp
 
 
+async def _regenerate_pdf_bg(invoice_id: uuid.UUID) -> None:
+    """Regeneriert das Rechnungs-PDF im Hintergrund (eigene Session), damit das
+    Speichern den User nicht blockiert (WeasyPrint + Tracker-/GitHub-Fetches dauern)."""
+    import logging
+
+    from app.database import async_session_factory
+    from app.services.pdf_service import generate_invoice_pdf
+
+    try:
+        async with async_session_factory() as session:
+            result = await session.execute(
+                select(Invoice)
+                .options(joinedload(Invoice.customer))
+                .where(Invoice.id == invoice_id)
+            )
+            invoice = result.scalar_one_or_none()
+            if invoice is None or not invoice.pdf_path:
+                return
+            pdf_path = await asyncio.to_thread(generate_invoice_pdf, invoice, invoice.customer)
+            invoice.pdf_path = pdf_path
+            await session.commit()
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            f"PDF-Hintergrund-Regenerierung fehlgeschlagen für {invoice_id}: {e}",
+            exc_info=True,
+        )
+
+
 @router.put("/{invoice_id}", response_model=InvoiceResponse)
 async def update_invoice(
     invoice_id: uuid.UUID,
     data: InvoiceUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> InvoiceResponse:
     result = await db.execute(
@@ -228,18 +257,10 @@ async def update_invoice(
     )
     invoice = result.scalar_one()
 
-    # Regenerate PDF if one already exists, so edits are reflected immediately
+    # Regenerate PDF in the background if one already exists, so the save returns
+    # immediately (WeasyPrint + Tracker/GitHub fetches would block 4-8s otherwise).
     if invoice.pdf_path:
-        try:
-            new_pdf_path = await asyncio.to_thread(generate_invoice_pdf, invoice, invoice.customer)
-            invoice.pdf_path = new_pdf_path
-            await db.flush()
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(
-                f"PDF-Regenerierung nach Update fehlgeschlagen für {invoice.invoice_number}: {e}",
-                exc_info=True,
-            )
+        background_tasks.add_task(_regenerate_pdf_bg, invoice.id)
 
     resp = InvoiceResponse.model_validate(invoice)
     resp.customer_name = invoice.customer.name if invoice.customer else ""
