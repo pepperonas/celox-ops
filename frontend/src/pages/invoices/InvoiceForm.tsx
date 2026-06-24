@@ -214,17 +214,14 @@ export default function InvoiceForm() {
       const strVal = value || null
       setForm({ ...form, [name]: strVal || (name === 'customer_id' ? '' : null) })
     } else if (name === 'invoice_date') {
-      // Fälligkeitsdatum mitziehen: bisherigen Abstand beibehalten (Default 14 Tage)
+      // Fälligkeitsdatum automatisch auf Rechnungsdatum + 14 Tage setzen (frei überschreibbar)
       const next: Partial<typeof form> = { invoice_date: value }
       if (value) {
-        const oldInvoice = form.invoice_date ? new Date(form.invoice_date) : null
-        const oldDue = form.due_date ? new Date(form.due_date) : null
-        let offsetDays = 14
-        if (oldInvoice && oldDue && !isNaN(oldInvoice.getTime()) && !isNaN(oldDue.getTime())) {
-          offsetDays = Math.round((oldDue.getTime() - oldInvoice.getTime()) / 86400000)
+        const d = new Date(value + 'T00:00:00')
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() + 14)
+          next.due_date = d.toISOString().split('T')[0]
         }
-        const newDue = new Date(new Date(value).getTime() + offsetDays * 86400000)
-        if (!isNaN(newDue.getTime())) next.due_date = newDue.toISOString().split('T')[0]
       }
       setForm({ ...form, ...next })
     } else if (type === 'number') {
