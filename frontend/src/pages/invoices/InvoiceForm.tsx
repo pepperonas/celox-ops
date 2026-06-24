@@ -213,6 +213,20 @@ export default function InvoiceForm() {
     if (name === 'customer_id' || name === 'order_id' || name === 'contract_id') {
       const strVal = value || null
       setForm({ ...form, [name]: strVal || (name === 'customer_id' ? '' : null) })
+    } else if (name === 'invoice_date') {
+      // Fälligkeitsdatum mitziehen: bisherigen Abstand beibehalten (Default 14 Tage)
+      const next: Partial<typeof form> = { invoice_date: value }
+      if (value) {
+        const oldInvoice = form.invoice_date ? new Date(form.invoice_date) : null
+        const oldDue = form.due_date ? new Date(form.due_date) : null
+        let offsetDays = 14
+        if (oldInvoice && oldDue && !isNaN(oldInvoice.getTime()) && !isNaN(oldDue.getTime())) {
+          offsetDays = Math.round((oldDue.getTime() - oldInvoice.getTime()) / 86400000)
+        }
+        const newDue = new Date(new Date(value).getTime() + offsetDays * 86400000)
+        if (!isNaN(newDue.getTime())) next.due_date = newDue.toISOString().split('T')[0]
+      }
+      setForm({ ...form, ...next })
     } else if (type === 'number') {
       setForm({ ...form, [name]: parseFloat(value) || 0 })
     } else {
