@@ -157,9 +157,15 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (20)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings
+## Database Tables (21)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings, compliance_records
 
 **app_settings** (single-row, like `rainmaker_settings`): app-wide config. Currently `default_unit_price` (default 95) — pre-filled into new invoice positions + used as the KI-import hourly rate. Router `routers/settings.py` (`GET`/`PUT /api/settings`, `get_or_create_settings`); editable in the frontend **Einstellungen → Rechnungen**. `refresh-drafts` uses it as the hourly-rate fallback. Auto-created by `create_all` (new table — no manual ALTER needed).
+
+### Legal-Compliance-Tracking (Rechtsdokumente)
+Stellt sicher, dass jeder Kunde die Pflicht-Rechtsdokumente (Default **AGB + AVV**) unterschrieben vorliegen hat. Router `routers/compliance.py` (`/api/compliance/*`): `GET /overview` (alle Kunden × Pflichtdocs, Lücken zuerst), `GET /customer/{id}`, `POST /mark` (manuell ab-/anhaken), `POST /upload` (unterschriebenes PDF → legt einen `attachments`-Eintrag an **und** den Compliance-Record an), `PUT /templates/{id}/required` (Pflicht-Flag toggeln).
+- **Pflicht-Set ist konfigurierbar** über die neue Spalte `document_templates.compliance_required` (nullable: `NULL`=nie konfiguriert → Seed setzt Default für AGB+AVV; `true/false`=Nutzerwahl bleibt bei Re-Seed erhalten). **Spalte via manuellem `ALTER` auf bestehende Tabelle** (`ALTER TABLE document_templates ADD COLUMN compliance_required boolean;`), danach Seed nachziehen.
+- **`compliance_records`** (auto-erstellt via `create_all`): eine Zeile pro (Kunde, Vorlage), unique. `signed_at` gesetzt = erfüllt; `method` = `upload`|`manual`; `attachment_id` verweist auf die hochgeladene Datei. „Erfüllt" wird daraus berechnet — Anhänge bleiben die Single Source of Truth für die Datei.
+- **Frontend**: Nav-Seite **Rechtsdokumente** (`/rechtsdokumente`, `pages/Compliance.tsx`) mit Summary + Pro-Kunde-Karten (PDF erstellen / Hochladen / Abhaken) + Pflicht-Konfiguration. Im Kundendetail: Header-Badge „Legal" + `CustomerComplianceCard` im Dokumente-Tab. PDF-Erstellung nutzt die bestehenden `routers/documents.py`-Endpoints.
 
 Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.

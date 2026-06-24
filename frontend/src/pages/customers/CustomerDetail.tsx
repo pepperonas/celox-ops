@@ -12,6 +12,8 @@ import { listAttachments } from '../../api/attachments'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
+import CustomerComplianceCard from '../../components/CustomerComplianceCard'
+import { getCustomerCompliance, type ComplianceCustomer } from '../../api/compliance'
 import TokenUsage from '../../components/TokenUsage'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
@@ -35,6 +37,10 @@ export default function CustomerDetail() {
   const [pagespeedLoading, setPagespeedLoading] = useState(false)
 
   const [attachmentsCount, setAttachmentsCount] = useState(0)
+  const [compliance, setCompliance] = useState<ComplianceCustomer | null>(null)
+  const loadCompliance = useCallback(() => {
+    if (id) getCustomerCompliance(id).then(setCompliance).catch(() => {})
+  }, [id])
 
   const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'dokumente', 'aktivitaeten', 'pagespeed', 'tokens'] as const
   type TabKey = typeof validTabs[number]
@@ -60,7 +66,8 @@ export default function CustomerDetail() {
     getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
     listAttachments({ customer_id: id }).then((a) => setAttachmentsCount(a.length)).catch((err) => console.warn('Anhang-Anzahl konnte nicht geladen werden:', err))
     api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
-  }, [id])
+    loadCompliance()
+  }, [id, loadCompliance])
 
 
   const handleDelete = async () => {
@@ -175,6 +182,16 @@ export default function CustomerDetail() {
               <span className={`w-2 h-2 rounded-full ${customer.github_repos ? 'bg-success' : 'bg-danger'}`}></span>
               <span className="text-[10px] text-text-muted">GitHub</span>
             </span>
+            {compliance && compliance.total_required > 0 && (
+              <button
+                onClick={() => switchTab('dokumente')}
+                title={compliance.complete ? 'Alle Pflichtdokumente unterschrieben' : `${compliance.missing_count} Pflichtdokument(e) offen`}
+                className="flex items-center gap-1"
+              >
+                <span className={`w-2 h-2 rounded-full ${compliance.complete ? 'bg-success' : 'bg-danger'}`}></span>
+                <span className="text-[10px] text-text-muted">Legal</span>
+              </button>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -370,7 +387,10 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'dokumente' && (
-        <FileAttachments customer_id={id} onCountChange={setAttachmentsCount} />
+        <>
+          <CustomerComplianceCard data={compliance} onChanged={loadCompliance} />
+          <FileAttachments customer_id={id} onCountChange={setAttachmentsCount} />
+        </>
       )}
 
       {activeTab === 'aktivitaeten' && (

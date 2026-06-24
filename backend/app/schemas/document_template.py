@@ -13,6 +13,7 @@ class DocumentTemplateResponse(BaseModel):
     description: str | None = None
     content: str
     is_system: bool
+    compliance_required: bool | None = None
     created_at: datetime
 
 

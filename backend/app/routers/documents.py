@@ -99,18 +99,29 @@ async def list_templates(db: AsyncSession = Depends(get_db)) -> list:
     return [DocumentTemplateResponse.model_validate(t) for t in result.scalars().all()]
 
 
+# Standardmäßig als Pflichtdokumente für die Compliance-Übersicht vorbelegt.
+COMPLIANCE_REQUIRED_DEFAULTS = {
+    "Allgemeine Geschäftsbedingungen (AGB)",
+    "Auftragsverarbeitungsvertrag (AV-Vertrag)",
+}
+
+
 @router.post("/templates/seed")
 async def seed_templates(db: AsyncSession = Depends(get_db)) -> dict:
     count = 0
     for tmpl in SYSTEM_TEMPLATES:
+        default_required = tmpl["name"] in COMPLIANCE_REQUIRED_DEFAULTS
         result = await db.execute(select(DocumentTemplate).where(DocumentTemplate.name == tmpl["name"]))
         existing = result.scalar_one_or_none()
         if existing:
             existing.content = tmpl["content"]
             existing.description = tmpl["description"]
             existing.category = tmpl["category"]
+            # Default nur setzen, wenn noch nie konfiguriert (None) — Nutzer-Toggles bleiben.
+            if existing.compliance_required is None:
+                existing.compliance_required = default_required
         else:
-            db.add(DocumentTemplate(**tmpl, is_system=True))
+            db.add(DocumentTemplate(**tmpl, is_system=True, compliance_required=default_required))
             count += 1
     await db.flush()
     return {"created": count, "total": len(SYSTEM_TEMPLATES)}

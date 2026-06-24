@@ -21,6 +21,7 @@ import app.models.rainmaker_settings  # noqa: F401 — register for create_all
 import app.models.rainmaker_streak  # noqa: F401 — register for create_all
 import app.models.rainmaker_template  # noqa: F401 — register for create_all
 import app.models.app_settings  # noqa: F401 — register for create_all
+import app.models.compliance_record  # noqa: F401 — register for create_all
 from app.middleware.audit import AuditMiddleware
 from app.services.cron_service import check_overdue_invoices
 
@@ -152,6 +153,7 @@ from app.routers.search import router as search_router  # noqa: E402
 from app.routers.ical import router as ical_router  # noqa: E402
 from app.routers.rainmaker import router as rainmaker_router  # noqa: E402
 from app.routers.settings import router as settings_router  # noqa: E402
+from app.routers.compliance import router as compliance_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -176,6 +178,7 @@ app.include_router(search_router)
 app.include_router(ical_router)
 app.include_router(rainmaker_router)
 app.include_router(settings_router)
+app.include_router(compliance_router)
 
 
 @app.get("/api/health")

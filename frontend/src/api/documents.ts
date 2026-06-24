@@ -6,6 +6,7 @@ export interface DocumentTemplate {
   category: string
   description: string | null
   is_system: boolean
+  compliance_required: boolean | null
   created_at: string
 }
 
