@@ -9,6 +9,7 @@ import { getCustomers, getCustomer } from '../../api/customers'
 import axiosRaw from 'axios'
 import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
+import { getSettings } from '../../api/settings'
 import { formatCurrency } from '../../utils/formatters'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
@@ -121,9 +122,30 @@ export default function InvoiceForm() {
   const [aiImportTo, setAiImportTo] = useState(new Date().toISOString().split('T')[0])
   const [aiHourlyRate, setAiHourlyRate] = useState(95)
   const [aiImportLoading, setAiImportLoading] = useState(false)
+  const [defaultPrice, setDefaultPrice] = useState(95)
 
   useEffect(() => {
     getCustomers({ page_size: 1000 }).then((r) => setCustomers(r.items))
+
+    // Default-Einzelpreis aus den Einstellungen laden (auch KI-Stundensatz vorbelegen)
+    getSettings()
+      .then((s) => {
+        const price = s.default_unit_price ?? 95
+        setDefaultPrice(price)
+        setAiHourlyRate(price)
+        // Bei neuer Rechnung leere Positionen (Preis 0, keine Beschreibung) vorbelegen
+        if (!id) {
+          setForm((prev) => ({
+            ...prev,
+            positions: prev.positions.map((p) =>
+              p.einzelpreis === 0 && !p.beschreibung?.trim()
+                ? { ...p, einzelpreis: price, gesamt: p.menge * price }
+                : p,
+            ),
+          }))
+        }
+      })
+      .catch(() => {})
 
     if (id) {
       getInvoice(id).then((inv) => {
@@ -292,12 +314,12 @@ export default function InvoiceForm() {
 
   const addPosition = () => {
     const nextPos = form.positions.length + 1
-    setForm({ ...form, positions: [...form.positions, { ...emptyPosition, position: nextPos }] })
+    setForm({ ...form, positions: [...form.positions, { ...emptyPosition, einzelpreis: defaultPrice, position: nextPos }] })
   }
 
   const removePosition = (index: number) => {
     const updated = form.positions.filter((_, i) => i !== index).map((p, i) => ({ ...p, position: i + 1 }))
-    if (updated.length === 0) { setForm({ ...form, positions: [{ ...emptyPosition }] }); return }
+    if (updated.length === 0) { setForm({ ...form, positions: [{ ...emptyPosition, einzelpreis: defaultPrice }] }); return }
     setForm({ ...form, positions: updated })
   }
 

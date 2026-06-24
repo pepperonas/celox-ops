@@ -579,6 +579,11 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
     pdf_count = 0
     async_client = httpx.AsyncClient(timeout=30)
 
+    # Konfigurierter Default-Stundensatz als Fallback (wenn keine Position einen Satz hat)
+    from app.routers.settings import get_or_create_settings
+    app_settings = await get_or_create_settings(db)
+    default_rate = Decimal(str(app_settings.default_unit_price))
+
     for inv in drafts:
         changed = False
 
@@ -631,8 +636,8 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
 
                 if total_active_min > 0:
                     hours = round(total_active_min / 60, 2)
-                    # Find hourly rate from existing position or default to 95
-                    hourly_rate = Decimal("95")
+                    # Find hourly rate from existing position or fall back to configured default
+                    hourly_rate = default_rate
                     for p in (inv.positions or []):
                         if "Stunden" in str(p.get("einheit", "")) and float(p.get("einzelpreis", 0)) > 0:
                             hourly_rate = Decimal(str(p["einzelpreis"]))

@@ -8,6 +8,7 @@ import {
   deleteEmailTemplate,
   seedEmailTemplates,
 } from '../api/emailTemplates'
+import { getSettings, updateSettings } from '../api/settings'
 import type { EmailTemplate, EmailTemplateCreate } from '../types'
 
 interface TrackerConfig {
@@ -39,10 +40,33 @@ export default function Settings() {
     category: 'allgemein',
   })
 
+  const [defaultPrice, setDefaultPrice] = useState('')
+  const [savingPrice, setSavingPrice] = useState(false)
+
   useEffect(() => {
     loadConfig()
     loadTemplates()
+    getSettings()
+      .then((s) => setDefaultPrice(String(s.default_unit_price ?? 95)))
+      .catch(() => {})
   }, [])
+
+  const handleSavePrice = async () => {
+    const value = parseFloat(defaultPrice.replace(',', '.'))
+    if (!Number.isFinite(value) || value < 0) {
+      toast.error('Bitte einen gültigen Preis eingeben.')
+      return
+    }
+    setSavingPrice(true)
+    try {
+      const s = await updateSettings({ default_unit_price: value })
+      setDefaultPrice(String(s.default_unit_price))
+      toast.success('Standard-Einzelpreis gespeichert.')
+    } catch {
+      toast.error('Fehler beim Speichern.')
+    }
+    setSavingPrice(false)
+  }
 
   const loadConfig = async () => {
     setLoading(true)
@@ -148,6 +172,34 @@ export default function Settings() {
   return (
     <div className="max-w-3xl">
       <h2 className="text-2xl font-semibold text-text tracking-tight mb-6">Einstellungen</h2>
+
+      {/* Rechnungen */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-4">Rechnungen</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Standard-Einzelpreis für neue Rechnungspositionen. Wird beim Anlegen einer Rechnung
+          automatisch vorbelegt (auch als Stundensatz beim KI-Import) und bleibt überschreibbar.
+        </p>
+        <div className="flex items-end gap-3">
+          <div>
+            <label htmlFor="default-price" className="block text-xs text-text-muted mb-2">
+              Standard-Einzelpreis (€)
+            </label>
+            <input
+              id="default-price"
+              type="text"
+              inputMode="decimal"
+              value={defaultPrice}
+              onChange={(e) => setDefaultPrice(e.target.value)}
+              placeholder="z.B. 95"
+              className="w-40"
+            />
+          </div>
+          <button onClick={handleSavePrice} disabled={savingPrice} className="btn-primary">
+            {savingPrice ? 'Speichere...' : 'Speichern'}
+          </button>
+        </div>
+      </div>
 
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
         <h3 className="text-sm font-semibold text-text mb-4">Token Tracker Verbindung</h3>
