@@ -22,6 +22,57 @@ const emptyPosition: InvoicePosition = {
   gesamt: 0,
 }
 
+// Akzeptiert Dezimalzahlen mit Komma ODER Punkt (z.B. "0,45" oder "0.45").
+const parseDecimalInput = (raw: string): number => {
+  const cleaned = raw.replace(/\s/g, '').replace(/,/g, '.')
+  const n = parseFloat(cleaned)
+  return Number.isFinite(n) ? n : 0
+}
+
+// Texteingabe für Dezimalzahlen: hält den getippten Text als eigenen State, damit
+// Zwischenzustände wie "0," / "0." nicht sofort zu 0 kollabieren. Komma & Punkt gelten beide.
+function DecimalInput({
+  value,
+  onChange,
+  className,
+  'aria-label': ariaLabel,
+}: {
+  value: number
+  onChange: (n: number) => void
+  className?: string
+  'aria-label'?: string
+}) {
+  const [text, setText] = useState<string>(() => String(value))
+  const [focused, setFocused] = useState(false)
+
+  // Externe Wertänderungen (z.B. KI-Import) übernehmen, solange nicht aktiv getippt wird.
+  useEffect(() => {
+    if (!focused && parseDecimalInput(text) !== value) setText(String(value))
+  }, [value, focused]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      value={text}
+      onChange={(e) => {
+        const raw = e.target.value
+        // Nur Ziffern, Komma, Punkt, optional führendes Minus zulassen.
+        if (raw !== '' && !/^-?[\d.,]*$/.test(raw)) return
+        setText(raw)
+        onChange(parseDecimalInput(raw))
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false)
+        setText(String(value))
+      }}
+      className={className}
+    />
+  )
+}
+
 const emptyForm: InvoiceCreate = {
   customer_id: '',
   order_id: null,
@@ -559,11 +610,10 @@ export default function InvoiceForm() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="md:hidden text-xs text-text-muted mb-1 block">Menge</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <DecimalInput
+                    aria-label="Menge"
                     value={pos.menge}
-                    onChange={(e) => updatePosition(idx, 'menge', parseFloat(e.target.value.replace(',', '.')) || 0)}
+                    onChange={(n) => updatePosition(idx, 'menge', n)}
                     className="input-field text-sm"
                   />
                 </div>
@@ -579,11 +629,10 @@ export default function InvoiceForm() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="md:hidden text-xs text-text-muted mb-1 block">Einzelpreis</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <DecimalInput
+                    aria-label="Einzelpreis"
                     value={pos.einzelpreis}
-                    onChange={(e) => updatePosition(idx, 'einzelpreis', parseFloat(e.target.value.replace(',', '.')) || 0)}
+                    onChange={(n) => updatePosition(idx, 'einzelpreis', n)}
                     className="input-field text-sm"
                   />
                 </div>
