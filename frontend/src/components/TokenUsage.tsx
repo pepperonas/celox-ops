@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import '../utils/charts'
 import { Bar, Line } from 'react-chartjs-2'
 import axios from 'axios'
 import { formatDate, formatCurrency } from '../utils/formatters'

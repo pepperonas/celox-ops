@@ -1,42 +1,47 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Toast from './components/Toast'
+import NetworkStatus from './components/NetworkStatus'
+import LoadingIndicator from './components/LoadingIndicator'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import CustomerList from './pages/customers/CustomerList'
-import CustomerForm from './pages/customers/CustomerForm'
-import CustomerDetail from './pages/customers/CustomerDetail'
-import OrderList from './pages/orders/OrderList'
-import OrderForm from './pages/orders/OrderForm'
-import OrderDetail from './pages/orders/OrderDetail'
-import ContractList from './pages/contracts/ContractList'
-import ContractForm from './pages/contracts/ContractForm'
-import ContractDetail from './pages/contracts/ContractDetail'
-import InvoiceList from './pages/invoices/InvoiceList'
-import InvoiceForm from './pages/invoices/InvoiceForm'
-import InvoiceDetail from './pages/invoices/InvoiceDetail'
-import LeadList from './pages/leads/LeadList'
-import LeadForm from './pages/leads/LeadForm'
-import Tasks from './pages/Tasks'
-import Calendar from './pages/Calendar'
-import TimeTracking from './pages/TimeTracking'
-import ExpenseList from './pages/expenses/ExpenseList'
-import ExpenseForm from './pages/expenses/ExpenseForm'
-import Euer from './pages/Euer'
-import Kanban from './pages/Kanban'
-import Analytics from './pages/Analytics'
-import Documents from './pages/Documents'
-import Compliance from './pages/Compliance'
-import Settings from './pages/Settings'
-import RainmakerToday from './pages/rainmaker/Today'
-import RainmakerPipeline from './pages/rainmaker/Pipeline'
-import RainmakerLeadForm from './pages/rainmaker/LeadForm'
-import RainmakerLeadDetail from './pages/rainmaker/LeadDetail'
-import RainmakerStatistics from './pages/rainmaker/Statistics'
-import RainmakerSettingsPage from './pages/rainmaker/Settings'
+
+// Route-level code splitting: each page loads on demand, so Chart.js and
+// secondary views stay out of the initial bundle.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const CustomerList = lazy(() => import('./pages/customers/CustomerList'))
+const CustomerForm = lazy(() => import('./pages/customers/CustomerForm'))
+const CustomerDetail = lazy(() => import('./pages/customers/CustomerDetail'))
+const OrderList = lazy(() => import('./pages/orders/OrderList'))
+const OrderForm = lazy(() => import('./pages/orders/OrderForm'))
+const OrderDetail = lazy(() => import('./pages/orders/OrderDetail'))
+const ContractList = lazy(() => import('./pages/contracts/ContractList'))
+const ContractForm = lazy(() => import('./pages/contracts/ContractForm'))
+const ContractDetail = lazy(() => import('./pages/contracts/ContractDetail'))
+const InvoiceList = lazy(() => import('./pages/invoices/InvoiceList'))
+const InvoiceForm = lazy(() => import('./pages/invoices/InvoiceForm'))
+const InvoiceDetail = lazy(() => import('./pages/invoices/InvoiceDetail'))
+const LeadList = lazy(() => import('./pages/leads/LeadList'))
+const LeadForm = lazy(() => import('./pages/leads/LeadForm'))
+const Tasks = lazy(() => import('./pages/Tasks'))
+const Calendar = lazy(() => import('./pages/Calendar'))
+const TimeTracking = lazy(() => import('./pages/TimeTracking'))
+const ExpenseList = lazy(() => import('./pages/expenses/ExpenseList'))
+const ExpenseForm = lazy(() => import('./pages/expenses/ExpenseForm'))
+const Euer = lazy(() => import('./pages/Euer'))
+const Kanban = lazy(() => import('./pages/Kanban'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const Documents = lazy(() => import('./pages/Documents'))
+const Compliance = lazy(() => import('./pages/Compliance'))
+const Settings = lazy(() => import('./pages/Settings'))
+const RainmakerToday = lazy(() => import('./pages/rainmaker/Today'))
+const RainmakerPipeline = lazy(() => import('./pages/rainmaker/Pipeline'))
+const RainmakerLeadForm = lazy(() => import('./pages/rainmaker/LeadForm'))
+const RainmakerLeadDetail = lazy(() => import('./pages/rainmaker/LeadDetail'))
+const RainmakerStatistics = lazy(() => import('./pages/rainmaker/Statistics'))
+const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
 
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
@@ -48,6 +53,8 @@ export default function App() {
   return (
     <>
       <Toast />
+      <NetworkStatus />
+      <Suspense fallback={<LoadingIndicator />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
@@ -98,6 +105,7 @@ export default function App() {
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>
+      </Suspense>
     </>
   )
 }

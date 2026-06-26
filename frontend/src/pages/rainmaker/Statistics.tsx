@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import '../../utils/charts'
 import { Bar } from 'react-chartjs-2'
 import PageHeader from '../../components/PageHeader'
 import LoadingIndicator from '../../components/LoadingIndicator'

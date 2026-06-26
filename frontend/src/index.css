@@ -537,6 +537,50 @@ html[data-pop="1"] .page-enter {
   animation: none !important;
 }
 
+/* ============================================================
+   Mobile & touch ergonomics
+   ============================================================ */
+
+/* Remove the grey/blue tap flash; we provide our own :active feedback.
+   touch-action: manipulation kills the 300ms tap delay + double-tap zoom. */
+a, button, [role="button"], label,
+.btn-primary, .btn-secondary, .btn-danger, .fab,
+input, select, textarea, summary {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Prevent scroll-chaining / accidental browser back-forward navigation. */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Generic active feedback for tappable elements that lack their own. */
+@media (hover: none) and (pointer: coarse) {
+  a:active, button:active, [role="button"]:active {
+    opacity: 0.7;
+  }
+  /* …but the pill buttons already animate on :active — don't double-dim them. */
+  .btn-primary:active, .btn-secondary:active, .btn-danger:active, .fab:active {
+    opacity: 1;
+  }
+}
+
+/* iOS zooms into any focused field whose font-size < 16px. Bump fields to 16px
+   on phones to stop the zoom-jump; keep the compact 13px on desktop. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select, textarea, .input, .input-field {
+    font-size: 16px;
+  }
+  /* Comfortable 44px+ touch targets for the primary controls. */
+  .btn-primary, .btn-secondary, .btn-danger,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select, textarea, .input, .input-field {
+    min-height: 44px;
+  }
+}
+
 /* ---------- Respect reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

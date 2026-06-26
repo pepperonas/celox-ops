@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import LoadingIndicator from '../components/LoadingIndicator'
+import '../utils/charts'
 import { Bar } from 'react-chartjs-2'
 import {
   getProfitability,

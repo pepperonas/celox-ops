@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1117" />
+    <title>Offline · celox ops</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background: radial-gradient(120% 80% at 50% 0%, #161b22 0%, #0d1117 60%);
+        color: #e3e7ee;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+        display: flex; align-items: center; justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px;
+        text-align: center;
+      }
+      .card {
+        max-width: 360px;
+        background: #1a2028;
+        border: 1px solid #2c333d;
+        border-radius: 28px;
+        padding: 32px 28px;
+      }
+      .badge {
+        width: 64px; height: 64px; margin: 0 auto 20px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 999px; background: #232a33; font-size: 30px;
+      }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+      p { font-size: 15px; line-height: 1.55; color: #9aa6b5; margin: 0 0 24px; }
+      button {
+        appearance: none; border: none; cursor: pointer;
+        background: #7cb0ff; color: #00315f; font-weight: 600; font-size: 15px;
+        padding: 13px 28px; border-radius: 999px; min-height: 48px;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      }
+      button:active { transform: scale(0.97); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge" aria-hidden="true">📡</div>
+      <h1>Keine Verbindung</h1>
+      <p>celox ops ist gerade offline. Sobald du wieder online bist, kannst du weiterarbeiten.</p>
+      <button onclick="location.reload()">Erneut versuchen</button>
+    </div>
+    <script>
+      // Auto-reload as soon as the connection is back.
+      window.addEventListener('online', () => location.reload())
+    </script>
+  </body>
+</html>

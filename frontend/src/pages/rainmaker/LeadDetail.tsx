@@ -230,7 +230,7 @@ export default function RainmakerLeadDetail() {
                         <span className="text-xs text-text-muted">geplant{a.due_date ? ` · ${formatDate(a.due_date)}` : ''}</span>
                       )}
                       {a.outcome && <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-high text-text-muted">{OUTCOME_LABELS[a.outcome]}</span>}
-                      <button onClick={() => handleDeleteActivity(a.id)} className="ml-auto opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger text-xs transition-opacity" title="Löschen">✕</button>
+                      <button onClick={() => handleDeleteActivity(a.id)} className="ml-auto min-w-[32px] min-h-[32px] opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger text-sm transition-opacity" title="Löschen" aria-label="Aktivität löschen">✕</button>
                     </div>
                     {a.notes && <p className="text-sm text-text-muted mt-0.5 whitespace-pre-wrap">{a.notes}</p>}
                   </div>
