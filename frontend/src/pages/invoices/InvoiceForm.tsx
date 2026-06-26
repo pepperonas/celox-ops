@@ -11,6 +11,7 @@ import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { getSettings } from '../../api/settings'
 import { formatCurrency } from '../../utils/formatters'
+import { parseDecimalInput } from '../../utils/decimal'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
@@ -21,13 +22,6 @@ const emptyPosition: InvoicePosition = {
   einheit: 'Stunden',
   einzelpreis: 0,
   gesamt: 0,
-}
-
-// Akzeptiert Dezimalzahlen mit Komma ODER Punkt (z.B. "0,45" oder "0.45").
-const parseDecimalInput = (raw: string): number => {
-  const cleaned = raw.replace(/\s/g, '').replace(/,/g, '.')
-  const n = parseFloat(cleaned)
-  return Number.isFinite(n) ? n : 0
 }
 
 // Texteingabe für Dezimalzahlen: hält den getippten Text als eigenen State, damit
