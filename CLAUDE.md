@@ -33,7 +33,7 @@ cd frontend && npx tsc --noEmit       # TypeScript check
 
 ### Tests
 ```bash
-# Backend (pure unit tests — no DB needed): smoke, invoice calc, JWT auth, Rainmaker engine
+# Backend (pure unit tests — no DB needed): smoke, invoice calc, JWT auth, Rainmaker engine, compliance engine
 cd backend && python -m pytest -q          # locally needs the deps; otherwise run in the container:
 docker compose -f docker-compose.dev.yml run --rm --no-deps \
   -v "$PWD/backend/tests:/app/tests" backend python -m pytest -q
@@ -149,7 +149,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Auto-deploy**: VPS runs `scripts/auto-deploy.sh` every 5 minutes (cron). Polls `origin/main`, rebuilds only what changed. Repo at `/opt/celox-ops` was initialized with `git init && git remote add && git checkout -f main` (preserved `.env` via `/tmp/.env.backup`).
 - **Backup**: `scripts/backup.sh` runs via cron at 03:00 daily. Outputs to `/var/backups/celox-ops/`. Optional rclone push to remote `celox-backup:`.
 - **iCal feed**: `/api/ical?token=…` is PUBLIC (no JWT auth) — secured only by `ICAL_TOKEN` env var. Don't share the URL.
-- **Tests**: `backend/tests/` (pytest, all DB-free pure unit tests): `test_smoke` (config/router-import/invoice calc), `test_invoice_service` (totals + discounts + rounding), `test_auth` (JWT roundtrip/expiry/tamper), `test_rainmaker` (activation engine: next-action, rotting, working-day streak + freeze, points). `frontend/src/**/*.test.ts` (Vitest): formatters, validators, Rainmaker constants. **CI runs both on every push** (backend `pytest`, frontend `vitest`). The dev backend container mounts only `app/`, so to run new test files in it, mount `tests/` (see Tests section) or rebuild.
+- **Tests (89 total, all DB-free)**: `backend/tests/` (pytest, **51**): `test_smoke` (config/router-import/invoice calc), `test_invoice_service` (totals + discounts + rounding), `test_auth` (JWT roundtrip/expiry/tamper), `test_rainmaker` (activation engine: next-action, rotting, working-day streak + freeze, points), `test_compliance` (`_build_items` signed/unsigned + `COMPLIANCE_REQUIRED_DEFAULTS`). `frontend/src/**/*.test.ts` (Vitest, **38**): formatters, validators, `decimal` (comma/dot `parseDecimalInput`), `AutocompleteInput` (POSITION_SUGGESTIONS count/dedup/themes), Rainmaker constants. **CI runs both on every push** (backend `pytest`, frontend `vitest`). The dev backend container mounts only `app/`, so to run new test files in it, mount `tests/` (see Tests section) or rebuild. **Roughly ~27,400 LoC app code** (~9,840 backend Python · ~1,620 Jinja templates · ~15,900 frontend TS/TSX).
 - **Pre-commit vs CI scope**: `.pre-commit-config.yaml` runs `ruff --fix` only on **staged** files; GitHub Actions runs `ruff check backend/` over the **whole** backend tree. Always run `ruff check backend/` locally before pushing larger changes to catch pre-existing lint debt that the hook misses.
 - **Axios FormData uploads**: The default `Content-Type: application/json` on the axios client (`api/client.ts`) prevents Axios from auto-detecting FormData and setting the multipart boundary. For file uploads, pass `headers: { 'Content-Type': undefined }` to override the default — otherwise backend gets 422.
 - **Refresh-drafts position detection**: Auto-generated positions are marked with `"auto": true`. Legacy data detected via regex `\(\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}\)$`. Title-based matching was removed because renaming the invoice caused duplication.

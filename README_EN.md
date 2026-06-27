@@ -74,7 +74,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - One-click creation from customer detail page
 - Single line item with description and amount
 - Auto invoice number, 14-day payment term
-- Autocomplete for description (>220 task suggestions)
+- Autocomplete for description (over 380 task suggestions)
 - Comma input for quantity and unit price (mobile shows decimal keyboard)
 
 ### Keyboard Shortcuts
@@ -272,7 +272,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest over 190 IT consulting services while typing (including website changes, security adjustments, IT support, research/reports, DevOps, Cloud, e-commerce, monitoring)
-- Position descriptions suggest over 220 detailed task descriptions
+- Position descriptions suggest over 380 detailed task descriptions (webmaster, marketing, GDPR, cybersecurity, and more)
 - Keyboard navigation (arrow keys + Enter), filtered as you type
 - Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 
@@ -753,8 +753,8 @@ CO-2026-0001
 ## DevOps & Auto-Deploy
 
 - **GitHub Actions CI** (`.github/workflows/ci.yml`):
-  - Backend: ruff lint + smoke-import of all routers
-  - Frontend: tsc --noEmit + npm run build
+  - Backend: ruff lint + smoke-import of all routers + `pytest`
+  - Frontend: tsc --noEmit + `vitest` + npm run build
 - **Pre-commit hooks** (`.pre-commit-config.yaml`):
   - ruff for backend (staged files only, with `--fix`), tsc for frontend, secret scan
   - Install: `pip install pre-commit && pre-commit install`
@@ -762,7 +762,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Smoke tests** (`backend/tests/test_smoke.py`): 8 tests covering router imports, JWT, invoice calculation (incl. discount edge cases), path traversal, auto-position pattern
+- **Unit tests — 89 total** (all DB-free, run in CI on every push):
+  - **Backend (pytest, 51):** `test_smoke` (8 — router imports/JWT/invoice calc/path traversal/auto-position), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT roundtrip/expiry/tamper), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine + defaults)
+  - **Frontend (Vitest, 38):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5)
+
+## Project size
+
+- **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
+- **~730 LoC tests** · 21 DB tables · 89 unit tests
 
 ---
 

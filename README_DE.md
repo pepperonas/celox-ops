@@ -74,7 +74,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Ein-Klick-Erstellung von der Kundendetailseite
 - Einzelposition mit Beschreibung und Betrag
 - Automatische Rechnungsnummer, 14 Tage Zahlungsziel
-- Autovervollständigung bei Beschreibung (>220 Tätigkeitsvorschläge)
+- Autovervollständigung bei Beschreibung (über 380 Tätigkeitsvorschläge)
 - Komma-Eingabe bei Menge und Einzelpreis (mobil mit Dezimal-Keyboard)
 
 ### Tastatur-Shortcuts
@@ -273,7 +273,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen über 190 IT-Consulting-Leistungen während der Eingabe vor (inkl. Website-Änderungen, Sicherheits-Anpassungen, IT-Betreuung, Recherche/Reports, DevOps, Cloud, E-Commerce, Monitoring)
-- Positionsbeschreibungen schlagen über 220 detaillierte Tätigkeitsbeschreibungen vor
+- Positionsbeschreibungen schlagen über 380 detaillierte Tätigkeitsbeschreibungen vor (Webmaster, Marketing, DSGVO, Cybersecurity u. v. m.)
 - Tastaturnavigation (Pfeiltasten + Enter), gefiltert während der Eingabe
 - Kategorien: Website-Konzeption, Entwicklung (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastruktur, Performance & Sicherheit, Wartung & Support, App & Software, Beratung, KI, Vor-Ort/Remote-Support, E-Mail-Konfiguration (Outlook/Apple Mail/Thunderbird/Mobile), Browser & Software (Chrome/Firefox/Edge/Office/Antivirus), Sicherheit am Kundenrechner (Firewall/Defender/2FA/Backup), Datenrettung & Fehlerdiagnose, Recherche & Dokumentation (techn./rechtl., Reports, Gutachten), Kommunikation & Schulung
 
@@ -758,8 +758,8 @@ CO-2026-0001
 ## DevOps & Auto-Deploy
 
 - **GitHub Actions CI** (`.github/workflows/ci.yml`):
-  - Backend: ruff lint + Smoke-Import aller Router
-  - Frontend: tsc --noEmit + npm run build
+  - Backend: ruff lint + Smoke-Import aller Router + `pytest`
+  - Frontend: tsc --noEmit + `vitest` + npm run build
 - **Pre-commit Hooks** (`.pre-commit-config.yaml`):
   - ruff für Backend (nur staged files mit `--fix`), tsc für Frontend, Secret-Scan
   - Installation: `pip install pre-commit && pre-commit install`
@@ -768,8 +768,14 @@ CO-2026-0001
   - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
   - Logs in `/var/log/celox-auto-deploy.log`
   - Smoke-Test (Health-Check) nach Backend-Rebuild
-- **Smoke-Tests** (`backend/tests/test_smoke.py`):
-  - 8 Tests: Router-Imports, JWT, Invoice-Berechnung (mit Discount-Edge-Cases), Path-Traversal, Auto-Position-Pattern
+- **Unit-Tests — 89 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
+  - **Backend (pytest, 51):** `test_smoke` (8 — Router-Imports/JWT/Invoice-Berechnung/Path-Traversal/Auto-Position), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT-Roundtrip/Ablauf/Manipulation), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine + Defaults)
+  - **Frontend (Vitest, 38):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `AutocompleteInput` (4 — Positionsvorschläge), Rainmaker-`constants` (5)
+
+## Projektumfang
+
+- **~27.400 LoC Anwendungscode** — ~9.840 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~15.900 Frontend (TypeScript/React)
+- **~730 LoC Tests** · 21 DB-Tabellen · 89 Unit-Tests
 
 ---
 
