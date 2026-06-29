@@ -17,6 +17,7 @@ from weasyprint import HTML
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
+from app.tenancy import current_owner_id
 from app.models.activity import Activity
 from app.models.contract import Contract, ContractStatus
 from app.models.customer import Customer
@@ -69,8 +70,8 @@ class DashboardStats(BaseModel):
     active_contracts_monthly_sum: Decimal
 
 
-# In-memory cache for /stats: 60-second TTL. Single-user app — no need for shared cache.
-_stats_cache: dict = {"data": None, "expires": 0.0}
+# In-memory cache for /stats: 60-second TTL, keyed per user (multi-tenant).
+_stats_cache: dict = {}
 _STATS_CACHE_TTL = 60.0
 
 
@@ -78,8 +79,10 @@ _STATS_CACHE_TTL = 60.0
 async def get_stats(
     db: AsyncSession = Depends(get_db),
 ) -> DashboardStats:
-    if _stats_cache["data"] is not None and time.monotonic() < _stats_cache["expires"]:
-        return _stats_cache["data"]
+    oid = current_owner_id.get()
+    entry = _stats_cache.get(oid)
+    if entry is not None and time.monotonic() < entry["expires"]:
+        return entry["data"]
 
     now = datetime.now(timezone.utc)
     current_year = now.year
@@ -159,15 +162,14 @@ async def get_stats(
         active_contracts_count=active_contracts_count,
         active_contracts_monthly_sum=active_contracts_monthly_sum,
     )
-    _stats_cache["data"] = stats
-    _stats_cache["expires"] = time.monotonic() + _STATS_CACHE_TTL
+    _stats_cache[oid] = {"data": stats, "expires": time.monotonic() + _STATS_CACHE_TTL}
     return stats
 
 
 def invalidate_stats_cache() -> None:
-    """Invalidate the dashboard stats cache (call after invoice/contract mutations)."""
-    _stats_cache["data"] = None
-    _stats_cache["expires"] = 0.0
+    """Invalidate the dashboard stats cache (call after invoice/contract mutations).
+    Clears all per-user entries — each recomputes (owner-scoped) on next request."""
+    _stats_cache.clear()
 
 
 @router.get("/charts")
