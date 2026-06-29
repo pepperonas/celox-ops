@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class RainmakerLeadStatus(str, enum.Enum):
@@ -36,7 +37,7 @@ CLOSED_STATUSES = {
 }
 
 
-class RainmakerLead(Base):
+class RainmakerLead(OwnedMixin, Base):
     __tablename__ = "rainmaker_leads"
 
     id: Mapped[uuid.UUID] = mapped_column(

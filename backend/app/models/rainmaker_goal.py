@@ -6,10 +6,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 from app.models.rainmaker_activity import RainmakerActivityType
 
 
-class RainmakerGoal(Base):
+class RainmakerGoal(OwnedMixin, Base):
     """A configurable acquisition goal/channel with a daily target.
 
     Examples: "Neukunden Telefon-Akquise" (call, 5/day), "LinkedIn anschreiben"

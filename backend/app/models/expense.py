@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class ExpenseCategory(str, enum.Enum):
@@ -23,7 +24,7 @@ class ExpenseCategory(str, enum.Enum):
     sonstige = "sonstige"
 
 
-class Expense(Base):
+class Expense(OwnedMixin, Base):
     __tablename__ = "expenses"
 
     id: Mapped[uuid.UUID] = mapped_column(

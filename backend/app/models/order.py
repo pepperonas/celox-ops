@@ -18,6 +18,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class OrderStatus(str, enum.Enum):
@@ -28,7 +29,7 @@ class OrderStatus(str, enum.Enum):
     storniert = "storniert"
 
 
-class Order(Base):
+class Order(OwnedMixin, Base):
     __tablename__ = "orders"
 
     id: Mapped[uuid.UUID] = mapped_column(

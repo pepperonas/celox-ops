@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class PagespeedResult(Base):
+class PagespeedResult(OwnedMixin, Base):
     __tablename__ = "pagespeed_results"
 
     id: Mapped[uuid.UUID] = mapped_column(

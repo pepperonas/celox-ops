@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class LeadStatus(str, enum.Enum):
@@ -16,7 +17,7 @@ class LeadStatus(str, enum.Enum):
     abgelehnt = "abgelehnt"
 
 
-class Lead(Base):
+class Lead(OwnedMixin, Base):
     __tablename__ = "leads"
 
     id: Mapped[uuid.UUID] = mapped_column(

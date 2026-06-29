@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class RainmakerTemplateChannel(str, enum.Enum):
@@ -14,7 +15,7 @@ class RainmakerTemplateChannel(str, enum.Enum):
     message = "message"
 
 
-class RainmakerTemplate(Base):
+class RainmakerTemplate(OwnedMixin, Base):
     __tablename__ = "rainmaker_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(

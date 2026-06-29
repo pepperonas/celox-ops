@@ -4,13 +4,14 @@ from datetime import datetime
 from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from app.tenancy import OwnedMixin
 
 
 class Base(DeclarativeBase):
     pass
 
 
-class Customer(Base):
+class Customer(OwnedMixin, Base):
     __tablename__ = "customers"
 
     id: Mapped[uuid.UUID] = mapped_column(

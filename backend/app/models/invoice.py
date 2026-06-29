@@ -21,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class InvoiceStatus(str, enum.Enum):
@@ -31,7 +32,7 @@ class InvoiceStatus(str, enum.Enum):
     storniert = "storniert"
 
 
-class Invoice(Base):
+class Invoice(OwnedMixin, Base):
     __tablename__ = "invoices"
     __table_args__ = (
         Index("idx_invoice_customer_id", "customer_id"),

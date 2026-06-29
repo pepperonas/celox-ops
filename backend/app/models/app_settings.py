@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class AppSettings(Base):
+class AppSettings(OwnedMixin, Base):
     """Single-row app-wide settings table (celox ops is single-user — no owner FK)."""
 
     __tablename__ = "app_settings"

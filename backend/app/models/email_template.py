@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class EmailTemplate(Base):
+class EmailTemplate(OwnedMixin, Base):
     __tablename__ = "email_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(

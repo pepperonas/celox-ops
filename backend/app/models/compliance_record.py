@@ -7,9 +7,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class ComplianceRecord(Base):
+class ComplianceRecord(OwnedMixin, Base):
     """Erfüllungsnachweis eines Pflicht-Rechtsdokuments für einen Kunden.
 
     Eine Zeile pro (Kunde, Vorlage). `signed_at` gesetzt = erfüllt. Erfüllt werden

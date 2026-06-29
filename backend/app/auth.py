@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.models.user import User, UserRole
+from app.tenancy import current_owner_id
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -87,6 +88,8 @@ async def get_current_user(
             detail="Konto nicht gefunden oder deaktiviert",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # Activate multi-tenant scoping for the rest of this request.
+    current_owner_id.set(user.id)
     return user
 
 

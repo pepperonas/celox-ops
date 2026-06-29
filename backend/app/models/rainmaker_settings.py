@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class RainmakerReminderChannel(str, enum.Enum):
@@ -15,7 +16,7 @@ class RainmakerReminderChannel(str, enum.Enum):
     push = "push"
 
 
-class RainmakerSettings(Base):
+class RainmakerSettings(OwnedMixin, Base):
     """Single-row settings table (celox ops is single-user — no owner FK)."""
 
     __tablename__ = "rainmaker_settings"

@@ -11,20 +11,39 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import async_session_factory, engine
-from app.models.customer import Base
-import app.models.pagespeed_result  # noqa: F401 — register for create_all
-import app.models.audit_log  # noqa: F401 — register for create_all
-import app.models.rainmaker_lead  # noqa: F401 — register for create_all
-import app.models.rainmaker_goal  # noqa: F401 — register for create_all
-import app.models.rainmaker_activity  # noqa: F401 — register for create_all
-import app.models.rainmaker_settings  # noqa: F401 — register for create_all
-import app.models.rainmaker_streak  # noqa: F401 — register for create_all
-import app.models.rainmaker_template  # noqa: F401 — register for create_all
-import app.models.app_settings  # noqa: F401 — register for create_all
-import app.models.compliance_record  # noqa: F401 — register for create_all
-import app.models.user  # noqa: F401 — register for create_all
+from app.models.customer import Base, Customer
+from app.models.order import Order
+from app.models.contract import Contract
+from app.models.invoice import Invoice
+from app.models.lead import Lead
+from app.models.time_entry import TimeEntry
+from app.models.expense import Expense
+from app.models.activity import Activity
+from app.models.attachment import Attachment
+from app.models.email_template import EmailTemplate
+from app.models.pagespeed_result import PagespeedResult
+from app.models.compliance_record import ComplianceRecord
+from app.models.rainmaker_lead import RainmakerLead
+from app.models.rainmaker_activity import RainmakerActivity
+from app.models.rainmaker_goal import RainmakerGoal
+from app.models.rainmaker_template import RainmakerTemplate
+from app.models.rainmaker_settings import RainmakerSettings
+from app.models.rainmaker_streak import RainmakerStreak
+from app.models.app_settings import AppSettings
+import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
+import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
+import app.models.user  # noqa: F401 — register for create_all (global, not owned)
+from app.tenancy import install_tenancy_events, set_owned_models
 from app.middleware.audit import AuditMiddleware
 from app.services.cron_service import check_overdue_invoices
+
+# Multi-tenant isolation: every owned entity is auto-scoped to the current user.
+set_owned_models([
+    Customer, Order, Contract, Invoice, Lead, TimeEntry, Expense, Activity, Attachment,
+    EmailTemplate, PagespeedResult, ComplianceRecord, RainmakerLead, RainmakerActivity,
+    RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
+])
+install_tenancy_events()
 
 logger = logging.getLogger(__name__)
 

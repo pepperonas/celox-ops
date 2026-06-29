@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class RainmakerStreak(Base):
+class RainmakerStreak(OwnedMixin, Base):
     """Single-row streak/points table (single-user — no owner FK).
 
     The streak counts working days (Mon–Fri) only; weekends never break it.

@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class ContractType(str, enum.Enum):
@@ -41,7 +42,7 @@ class ContractStatus(str, enum.Enum):
     ausgelaufen = "ausgelaufen"
 
 
-class Contract(Base):
+class Contract(OwnedMixin, Base):
     __tablename__ = "contracts"
 
     id: Mapped[uuid.UUID] = mapped_column(

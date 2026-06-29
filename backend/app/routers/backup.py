@@ -11,14 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 
-from app.auth import get_current_user
+from app.auth import require_admin
 from app.database import get_db
 from app.models.customer import Base
 
 router = APIRouter(
     prefix="/api/backup",
     tags=["backup"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_admin)],
 )
 
 

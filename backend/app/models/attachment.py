@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
-class Attachment(Base):
+class Attachment(OwnedMixin, Base):
     __tablename__ = "attachments"
 
     id: Mapped[uuid.UUID] = mapped_column(

@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
+from app.tenancy import OwnedMixin
 
 
 class RainmakerActivityType(str, enum.Enum):
@@ -45,7 +46,7 @@ ACTIVITY_POINTS = {
 }
 
 
-class RainmakerActivity(Base):
+class RainmakerActivity(OwnedMixin, Base):
     __tablename__ = "rainmaker_activities"
 
     id: Mapped[uuid.UUID] = mapped_column(
