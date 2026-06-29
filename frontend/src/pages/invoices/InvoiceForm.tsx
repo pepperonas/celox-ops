@@ -12,6 +12,7 @@ import { getContracts } from '../../api/contracts'
 import { getSettings } from '../../api/settings'
 import { formatCurrency } from '../../utils/formatters'
 import { parseDecimalInput } from '../../utils/decimal'
+import { isAutoPosition } from '../../utils/positions'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
@@ -22,17 +23,6 @@ const emptyPosition: InvoicePosition = {
   einheit: 'Stunden',
   einzelpreis: 0,
   gesamt: 0,
-}
-
-// Erkennt automatisch erzeugte KI-Import-Positionen (Flag oder Legacy-Muster),
-// damit ein erneuter Import sie ersetzt statt zu duplizieren. Manuelle bleiben.
-const PERIOD_SUFFIX = /\(\d{4}-\d{2}-\d{2}\s*[–-]\s*\d{4}-\d{2}-\d{2}\)\s*$/
-function isAutoPosition(p: InvoicePosition): boolean {
-  if (p.auto === true) return true
-  const desc = (p.beschreibung || '').trim()
-  if (desc === 'Technische Infrastruktur & externe Systemkosten') return true
-  if (desc.startsWith('KI-')) return true
-  return PERIOD_SUFFIX.test(desc)
 }
 
 // Texteingabe für Dezimalzahlen: hält den getippten Text als eigenen State, damit

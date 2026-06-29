@@ -762,14 +762,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 89 total** (all DB-free, run in CI on every push):
+- **Unit tests — 94 total** (all DB-free, run in CI on every push):
   - **Backend (pytest, 51):** `test_smoke` (8 — router imports/JWT/invoice calc/path traversal/auto-position), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT roundtrip/expiry/tamper), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine + defaults)
-  - **Frontend (Vitest, 38):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5)
+  - **Frontend (Vitest, 43):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5)
 
 ## Project size
 
 - **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
-- **~730 LoC tests** · 21 DB tables · 89 unit tests
+- **~760 LoC tests** · 21 DB tables · 94 unit tests
 
 ---
 
