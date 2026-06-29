@@ -182,6 +182,8 @@ export interface InvoicePosition {
   einheit: string
   einzelpreis: number
   gesamt: number
+  /** true = automatisch aus dem KI-Import erzeugt (wird bei Re-Import ersetzt). */
+  auto?: boolean
 }
 
 export interface Invoice {

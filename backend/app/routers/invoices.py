@@ -92,6 +92,33 @@ async def list_invoices(
     }
 
 
+@router.get("/usage-period-start")
+async def usage_period_start(
+    customer_id: uuid.UUID,
+    exclude_invoice_id: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Nächster KI-Abrechnungsstart für einen Kunden = Ende der letzten Abrechnung + 1 Tag.
+
+    Verhindert, dass bereits abgerechnete (historische) KI-Zeiträume erneut in
+    Rechnung gestellt werden. Berücksichtigt ALLE Rechnungen des Kunden mit
+    KI-Zeitraum (auch Entwürfe), außer der gerade bearbeiteten."""
+    from datetime import timedelta
+
+    query = select(func.max(Invoice.token_usage_to)).where(
+        Invoice.customer_id == customer_id,
+        Invoice.token_usage_to.is_not(None),
+    )
+    if exclude_invoice_id is not None:
+        query = query.where(Invoice.id != exclude_invoice_id)
+    last_to = (await db.execute(query)).scalar_one_or_none()
+    start = (last_to + timedelta(days=1)) if last_to else None
+    return {
+        "start": start.isoformat() if start else None,
+        "last_billed_to": last_to.isoformat() if last_to else None,
+    }
+
+
 @router.get("/{invoice_id}", response_model=InvoiceDetail)
 async def get_invoice(
     invoice_id: uuid.UUID,

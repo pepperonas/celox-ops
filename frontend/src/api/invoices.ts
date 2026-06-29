@@ -17,6 +17,17 @@ export async function getInvoice(id: string): Promise<Invoice> {
   return response.data
 }
 
+/** Nächster KI-Abrechnungsstart (Ende der letzten Abrechnung + 1 Tag) für einen Kunden. */
+export async function getUsagePeriodStart(
+  customerId: string,
+  excludeInvoiceId?: string,
+): Promise<{ start: string | null; last_billed_to: string | null }> {
+  const params: Record<string, string> = { customer_id: customerId }
+  if (excludeInvoiceId) params.exclude_invoice_id = excludeInvoiceId
+  const response = await api.get('/invoices/usage-period-start', { params })
+  return response.data
+}
+
 export async function createInvoice(data: InvoiceCreate): Promise<Invoice> {
   const response = await api.post('/invoices', data)
   return response.data

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import axios from 'axios'
 import FormField from '../../components/FormField'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
-import { getInvoice, createInvoice, updateInvoice } from '../../api/invoices'
+import { getInvoice, createInvoice, updateInvoice, getUsagePeriodStart } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
 import axiosRaw from 'axios'
 import { getOrders } from '../../api/orders'
@@ -22,6 +22,17 @@ const emptyPosition: InvoicePosition = {
   einheit: 'Stunden',
   einzelpreis: 0,
   gesamt: 0,
+}
+
+// Erkennt automatisch erzeugte KI-Import-Positionen (Flag oder Legacy-Muster),
+// damit ein erneuter Import sie ersetzt statt zu duplizieren. Manuelle bleiben.
+const PERIOD_SUFFIX = /\(\d{4}-\d{2}-\d{2}\s*[–-]\s*\d{4}-\d{2}-\d{2}\)\s*$/
+function isAutoPosition(p: InvoicePosition): boolean {
+  if (p.auto === true) return true
+  const desc = (p.beschreibung || '').trim()
+  if (desc === 'Technische Infrastruktur & externe Systemkosten') return true
+  if (desc.startsWith('KI-')) return true
+  return PERIOD_SUFFIX.test(desc)
 }
 
 // Texteingabe für Dezimalzahlen: hält den getippten Text als eigenen State, damit
@@ -253,12 +264,19 @@ export default function InvoiceForm() {
           const today = now.toISOString().split('T')[0]
           if (c.token_tracker_url) {
             setAttachTokenUsage(true)
-            setForm(prev => ({
-              ...prev,
-              token_usage_from: prev.token_usage_from || firstOfMonth,
-              token_usage_to: prev.token_usage_to || today,
-              include_activity_chart: true,
-            }))
+            setForm(prev => ({ ...prev, token_usage_to: today, include_activity_chart: true }))
+            setAiImportTo(today)
+            // Start = Ende der letzten Abrechnung dieses Kunden + 1 Tag (sonst Monatserster),
+            // damit bereits abgerechnete KI-Zeiträume nicht erneut berechnet werden.
+            getUsagePeriodStart(form.customer_id!)
+              .then(({ start }) => {
+                const from = start || firstOfMonth
+                setForm(prev => ({ ...prev, token_usage_from: from }))
+                setAiImportFrom(from)
+              })
+              .catch(() => {
+                setForm(prev => ({ ...prev, token_usage_from: prev.token_usage_from || firstOfMonth }))
+              })
           }
           if (c.github_repos) {
             setAttachGithubCommits(true)
@@ -361,35 +379,39 @@ export default function InvoiceForm() {
       const periodTo = aiImportTo || 'heute'
 
       const newPositions: InvoicePosition[] = []
-      const nextPos = form.positions.filter(p => p.beschreibung).length + 1
 
       // Position 1: Use invoice title as base for value-oriented description
       const titleBase = form.title?.trim() || 'Entwicklung und Umsetzung'
       newPositions.push({
-        position: nextPos,
+        position: 0,
         beschreibung: `${titleBase} (${periodFrom} – ${periodTo})`,
         menge: hours,
         einheit: 'Stunden',
         einzelpreis: aiHourlyRate,
         gesamt: Math.round(hours * aiHourlyRate * 100) / 100,
+        auto: true,
       })
 
       // Position 2: Infrastructure costs (if > 0)
       if (totalCost > 0) {
         const costEur = Math.round(totalCost * 0.92 * 100) / 100
         newPositions.push({
-          position: nextPos + 1,
+          position: 0,
           beschreibung: 'Technische Infrastruktur & externe Systemkosten',
           menge: 1,
           einheit: 'pauschal',
           einzelpreis: costEur,
           gesamt: costEur,
+          auto: true,
         })
       }
 
-      // Add to existing positions (replace empty first position if exists)
-      let existingPositions = form.positions.filter(p => p.beschreibung.trim() !== '')
-      const allPositions = [...existingPositions, ...newPositions].map((p, i) => ({
+      // Keep only MANUAL positions — drop previously imported auto-positions so a
+      // re-import replaces them instead of creating duplicates.
+      const manualPositions = form.positions.filter(
+        p => p.beschreibung.trim() !== '' && !isAutoPosition(p),
+      )
+      const allPositions = [...manualPositions, ...newPositions].map((p, i) => ({
         ...p,
         position: i + 1,
         gesamt: p.menge * p.einzelpreis,
