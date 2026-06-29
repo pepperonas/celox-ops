@@ -10,7 +10,7 @@
 
 # celox ops
 
-Business-management web app for freelancers and IT consultants. Manages customers, orders, contracts, and invoices with professional PDF generation, AI usage tracking, and a German-language UI. Single-user application with JWT authentication.
+Business-management web app for freelancers and IT consultants. Manages customers, orders, contracts, and invoices with professional PDF generation, AI usage tracking, and a German-language UI. **Multi-user with isolated workspaces** (per-user data isolation; admin-managed accounts) and JWT authentication.
 
 ---
 
@@ -769,7 +769,7 @@ CO-2026-0001
 ## Project size
 
 - **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
-- **~760 LoC tests** · 21 DB tables · 94 unit tests
+- **~760 LoC tests** · 22 DB tables · 94 unit tests · multi-user with isolated workspaces
 
 ---
 

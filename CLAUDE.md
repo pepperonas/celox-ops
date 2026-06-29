@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-celox ops is a full-stack business management webapp for freelancers/IT consultants. German-language UI. Single-user JWT auth. Manages customers, orders, contracts, invoices (with PDF generation), leads, time tracking, expenses, the **Rainmaker** acquisition-activation module, and integrates with the Claude Token Tracker for AI usage transparency. The frontend uses a **Material Design 3 Expressive** dark theme.
+celox ops is a full-stack business management webapp for freelancers/IT consultants. German-language UI. **Multi-user with isolated workspaces** (per-user `owner_id` data isolation; admin-managed accounts, no public registration; JWT auth). Manages customers, orders, contracts, invoices (with PDF generation), leads, time tracking, expenses, the **Rainmaker** acquisition-activation module, and integrates with the Claude Token Tracker for AI usage transparency. The frontend uses a **Material Design 3 Expressive** dark theme.
 
 ## Commands
 
@@ -63,7 +63,8 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **Entry point**: `backend/app/main.py` — FastAPI app with lifespan (creates tables + starts hourly cron)
 - **Config**: `backend/app/config.py` — Pydantic Settings, all from `.env`
 - **Database**: `backend/app/database.py` — async SQLAlchemy 2.0 with asyncpg, connection pooling
-- **Auth**: `backend/app/auth.py` — JWT (python-jose), single-user, OAuth2PasswordBearer
+- **Auth**: `backend/app/auth.py` — JWT (python-jose), DB-backed `users` table, OAuth2PasswordBearer. `get_current_user` returns the `User` and sets the `current_owner_id` ContextVar (see Multi-tenancy). `require_admin` gates admin endpoints. `.env` admin is bootstrapped into a real DB user on first start.
+- **Multi-tenancy / data isolation**: `backend/app/tenancy.py` — every owned model uses `OwnedMixin` (`owner_id` FK→users). A request-scoped `current_owner_id` ContextVar (set in `get_current_user`) drives two SQLAlchemy session events: `do_orm_execute` auto-filters every ORM SELECT (incl. column aggregates) to the owner via `with_loader_criteria`, and `before_flush` auto-stamps `owner_id` on new owned objects. Unset ContextVar (login, lifespan bootstrap, cron) ⇒ unscoped/global. **So routers generally need NO manual owner filtering** — but caches must be per-owner (e.g. dashboard `_stats_cache` is keyed by `owner_id`). `users`/`audit_log`/`document_templates` are global (not owned). Owned-model list is registered in `main.py` (`set_owned_models([...])` + `install_tenancy_events()`).
 - **Pattern**: Each module has model → schema → router. All routers registered in main.py after app creation (to avoid circular imports).
 - **Models inherit from `Base`** defined in `models/customer.py`. New models MUST import Base from there.
 - **All list endpoints return paginated**: `{items: [], total, page, page_size, pages}` — NOT plain arrays. Exception: `GET /api/attachments` returns a plain list.
@@ -87,7 +88,7 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 
 ### Rainmaker (Acquisition Activation)
 - **Action-first acquisition tool** — surfaces *what to do today*, not a contact list. Backend under `/api/rainmaker` (`routers/rainmaker.py`), engine helpers in `services/rainmaker_service.py`. Frontend under `/rainmaker/*` (pages in `pages/rainmaker/`), own pill sub-nav (`RainmakerNav`) + footer.
-- **5 models** (`rainmaker_lead`, `rainmaker_activity`, `rainmaker_settings`, `rainmaker_streak`, `rainmaker_template`) — registered for `create_all` in `main.py`, `native_enum=False` enums, **no `owner_id`** (single-user); `settings`/`streak` are single-row tables (`get_or_create_*`).
+- **5 models** (`rainmaker_lead`, `rainmaker_activity`, `rainmaker_settings`, `rainmaker_streak`, `rainmaker_template`) — registered for `create_all` in `main.py`, `native_enum=False` enums, **owner-scoped** (`OwnedMixin`); `settings`/`streak` are now per-user single-row tables (`get_or_create_*` returns the current owner's row via auto-scoping).
 - **Activation engine**: a lead's "next action" = earliest planned activity by `due_date`. An active lead (status not `won`/`lost`/`dormant`) without a planned activity is **"rotting"** and surfaced in red. `GET /today` returns the queue (planned, due ≤ today, sorted by priority + overdueness) + rotting list + progress.
 - **Next-Action-Zwang**: `POST /activities/{id}/complete` logs done (+outcome/notes) and **atomically requires** a next planned action — unless the lead is closed (`won`/`lost`/`dormant`). Returns 400 otherwise. After mutating it reloads `lead.activities` (`refresh(..., attribute_names=["activities"])`) so the recomputed next-action isn't stale.
 - **Gamification**: daily quota (settings) vs `count_done_today`; points per type (call 10 · visit 20 · email/message/follow_up 5; ×1.5 at streak ≥ 7) via `register_completion`. **Working-day streak**: only Mon–Fri count (weekends are bonus = points only, never break it); missed working days consume a monthly **freeze** budget (`rainmaker_streak.freeze_remaining`, replenished to `settings.freezes_per_month` via `_ensure_monthly_freezes`) before the streak resets. `display_streak`/`get_streak_display` compute the live value (0 if missed working days exceed remaining freezes). The `freeze_remaining`/`freeze_period`/`freezes_per_month` columns were added via `ALTER TABLE` (create_all doesn't backfill columns on existing tables).
@@ -157,8 +158,10 @@ ssh root@YOUR_VPS 'cd /opt/celox-ops && tar xzf /tmp/celox-ops.tar.gz && rm /tmp
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (21)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings, compliance_records
+## Database Tables (22)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings, compliance_records, users
+
+**users** (multi-tenant auth): `username` (unique), `password_hash` (bcrypt), `role` (admin/user), `is_active`, per-user `totp_secret`. Admin-managed via `routers/users.py` (`/api/users` CRUD + `/me/password`, all `require_admin` except self password change). All other tables except `audit_log`/`document_templates` carry `owner_id` (FK→users, `ON DELETE CASCADE`) — added to existing tables via manual `ALTER` + backfill to the bootstrap admin; new DBs get them via `create_all`.
 
 **app_settings** (single-row, like `rainmaker_settings`): app-wide config. Currently `default_unit_price` (default 95) — pre-filled into new invoice positions + used as the KI-import hourly rate. Router `routers/settings.py` (`GET`/`PUT /api/settings`, `get_or_create_settings`); editable in the frontend **Einstellungen → Rechnungen**. `refresh-drafts` uses it as the hourly-rate fallback. Auto-created by `create_all` (new table — no manual ALTER needed).
 

@@ -10,7 +10,7 @@
 
 # celox ops
 
-Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet Kunden, Auftr&auml;ge, Vertr&auml;ge und Rechnungen mit professioneller PDF-Generierung, KI-Nutzungstracking und deutschsprachiger Oberfl&auml;che. Einzelbenutzer-Anwendung mit JWT-Authentifizierung.
+Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet Kunden, Auftr&auml;ge, Vertr&auml;ge und Rechnungen mit professioneller PDF-Generierung, KI-Nutzungstracking und deutschsprachiger Oberfl&auml;che. **Mehrbenutzer-f&auml;hig mit isolierten Arbeitsbereichen** (Daten pro Benutzer getrennt; Konten werden von Admins angelegt) und JWT-Authentifizierung.
 
 ---
 
@@ -775,7 +775,7 @@ CO-2026-0001
 ## Projektumfang
 
 - **~27.400 LoC Anwendungscode** — ~9.840 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~15.900 Frontend (TypeScript/React)
-- **~760 LoC Tests** · 21 DB-Tabellen · 94 Unit-Tests
+- **~760 LoC Tests** · 22 DB-Tabellen · 94 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 

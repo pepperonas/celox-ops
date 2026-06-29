@@ -5,16 +5,21 @@ import type { AuthResponse } from '../types'
 interface AuthState {
   token: string | null
   isAuthenticated: boolean
+  username: string | null
+  role: string | null
   loading: boolean
   error: string | null
   login: (username: string, password: string, totp?: string) => Promise<void>
   logout: () => void
   initialize: () => void
+  fetchMe: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isAuthenticated: false,
+  username: null,
+  role: null,
   loading: false,
   error: null,
 
@@ -33,6 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { access_token } = response.data
       localStorage.setItem('token', access_token)
       set({ token: access_token, isAuthenticated: true, loading: false })
+      await get().fetchMe()
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.'
@@ -43,13 +49,23 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('token')
-    set({ token: null, isAuthenticated: false })
+    set({ token: null, isAuthenticated: false, username: null, role: null })
   },
 
   initialize: () => {
     const token = localStorage.getItem('token')
     if (token) {
       set({ token, isAuthenticated: true })
+      get().fetchMe()
+    }
+  },
+
+  fetchMe: async () => {
+    try {
+      const res = await api.get<{ username: string; role: string }>('/auth/me')
+      set({ username: res.data.username, role: res.data.role })
+    } catch {
+      // 401 is handled by the axios interceptor (redirect to /login)
     }
   },
 }))

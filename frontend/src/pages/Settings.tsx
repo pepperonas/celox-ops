@@ -9,6 +9,7 @@ import {
   seedEmailTemplates,
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
+import { changeOwnPassword } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate } from '../types'
 
 interface TrackerConfig {
@@ -41,6 +42,9 @@ export default function Settings() {
   })
 
   const [defaultPrice, setDefaultPrice] = useState('')
+  const [curPw, setCurPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
   const [savingPrice, setSavingPrice] = useState(false)
 
   useEffect(() => {
@@ -172,6 +176,33 @@ export default function Settings() {
   return (
     <div className="max-w-3xl">
       <h2 className="text-2xl font-semibold text-text tracking-tight mb-6">Einstellungen</h2>
+
+      {/* Konto / Passwort */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-4">Passwort ändern</h3>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            if (newPw.length < 8) { toast.error('Neues Passwort min. 8 Zeichen.'); return }
+            setPwSaving(true)
+            try {
+              await changeOwnPassword(curPw, newPw)
+              toast.success('Passwort geändert.')
+              setCurPw(''); setNewPw('')
+            } catch (err: any) {
+              toast.error(err?.response?.data?.detail || 'Passwortänderung fehlgeschlagen.')
+            }
+            setPwSaving(false)
+          }}
+          className="grid gap-3 sm:grid-cols-2 sm:max-w-md"
+        >
+          <input type="password" autoComplete="current-password" placeholder="Aktuelles Passwort" value={curPw} onChange={(e) => setCurPw(e.target.value)} required className="w-full" />
+          <input type="password" autoComplete="new-password" placeholder="Neues Passwort (min. 8)" value={newPw} onChange={(e) => setNewPw(e.target.value)} required minLength={8} className="w-full" />
+          <div className="sm:col-span-2">
+            <button type="submit" disabled={pwSaving} className="btn-primary">{pwSaving ? 'Speichere…' : 'Passwort ändern'}</button>
+          </div>
+        </form>
+      </div>
 
       {/* Rechnungen */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">

@@ -35,6 +35,7 @@ const Kanban = lazy(() => import('./pages/Kanban'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const Documents = lazy(() => import('./pages/Documents'))
 const Compliance = lazy(() => import('./pages/Compliance'))
+const Users = lazy(() => import('./pages/Users'))
 const Settings = lazy(() => import('./pages/Settings'))
 const RainmakerToday = lazy(() => import('./pages/rainmaker/Today'))
 const RainmakerPipeline = lazy(() => import('./pages/rainmaker/Pipeline'))
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/analyse" element={<Analytics />} />
           <Route path="/dokumente" element={<Documents />} />
           <Route path="/rechtsdokumente" element={<Compliance />} />
+          <Route path="/benutzer" element={<Users />} />
           <Route path="/einstellungen" element={<Settings />} />
         </Route>
       </Routes>

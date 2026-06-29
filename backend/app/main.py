@@ -195,6 +195,7 @@ from app.routers.ical import router as ical_router  # noqa: E402
 from app.routers.rainmaker import router as rainmaker_router  # noqa: E402
 from app.routers.settings import router as settings_router  # noqa: E402
 from app.routers.compliance import router as compliance_router  # noqa: E402
+from app.routers.users import router as users_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -220,6 +221,7 @@ app.include_router(ical_router)
 app.include_router(rainmaker_router)
 app.include_router(settings_router)
 app.include_router(compliance_router)
+app.include_router(users_router)
 
 
 @app.get("/api/health")

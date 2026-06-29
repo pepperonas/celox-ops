@@ -150,6 +150,16 @@ const navItems = [
     ),
   },
   {
+    to: '/benutzer',
+    label: 'Benutzer',
+    adminOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.7" />
+      </svg>
+    ),
+  },
+  {
     to: '/einstellungen',
     label: 'Einstellungen',
     icon: (
@@ -170,6 +180,8 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const logout = useAuthStore((s) => s.logout)
+  const role = useAuthStore((s) => s.role)
+  const visibleNavItems = navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || role === 'admin')
   const appNavigate = useAppNavigate()
   const location = useLocation()
   const mainRef = useRef<HTMLElement>(null)
@@ -247,7 +259,7 @@ export default function Layout() {
 
         {/* Nav — MD3 pill indicators + state layers */}
         <nav className="flex-1 py-3 space-y-1 px-3 overflow-y-auto">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isItemActive(location.pathname, item.to)
             return (
               <a
