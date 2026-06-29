@@ -22,6 +22,7 @@ import app.models.rainmaker_streak  # noqa: F401 — register for create_all
 import app.models.rainmaker_template  # noqa: F401 — register for create_all
 import app.models.app_settings  # noqa: F401 — register for create_all
 import app.models.compliance_record  # noqa: F401 — register for create_all
+import app.models.user  # noqa: F401 — register for create_all
 from app.middleware.audit import AuditMiddleware
 from app.services.cron_service import check_overdue_invoices
 
@@ -82,6 +83,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create all tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Bootstrap: turn the .env admin into a real DB user on first start, so the
+    # existing single-user login keeps working unchanged once auth is DB-backed.
+    from sqlalchemy import select as _select
+
+    from app.models.user import User, UserRole
+
+    async with async_session_factory() as session:
+        has_user = (await session.execute(_select(User).limit(1))).scalar_one_or_none()
+        if has_user is None and settings.ADMIN_PASSWORD_HASH:
+            session.add(
+                User(
+                    username=settings.ADMIN_USERNAME,
+                    password_hash=settings.ADMIN_PASSWORD_HASH,
+                    role=UserRole.admin,
+                    is_active=True,
+                    totp_secret=(settings.TOTP_SECRET or None),
+                )
+            )
+            await session.commit()
+            logger.info("Bootstrap: Admin-User '%s' angelegt", settings.ADMIN_USERNAME)
 
     # Start background cron task
     cron_task = asyncio.create_task(run_cron())
