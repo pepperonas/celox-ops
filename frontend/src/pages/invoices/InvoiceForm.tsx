@@ -13,6 +13,7 @@ import { getSettings } from '../../api/settings'
 import { formatCurrency } from '../../utils/formatters'
 import { parseDecimalInput } from '../../utils/decimal'
 import { isAutoPosition } from '../../utils/positions'
+import { getCommitSummary, SUMMARY_MARKER } from '../../api/github'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
@@ -419,6 +420,25 @@ export default function InvoiceForm() {
       setShowAiImport(false)
       setAttachTokenUsage(true)
       toast.success(`${hours} Stunden KI-Arbeitszeit importiert.`)
+
+      // Smart: derive a grouped "Leistungsbeschreibung" from GitHub commits of the
+      // same period. Only fill if empty or previously auto-generated (never clobber
+      // manual text). Best-effort — never fails the import.
+      if (form.customer_id) {
+        try {
+          const { summary } = await getCommitSummary(form.customer_id, aiImportFrom, importTo)
+          if (summary) {
+            setForm(prev => {
+              const cur = (prev.service_description || '').trim()
+              if (cur === '' || cur.startsWith(SUMMARY_MARKER)) {
+                return { ...prev, service_description: summary }
+              }
+              return prev
+            })
+            toast.success('Leistungsbeschreibung aus GitHub-Commits ergänzt.')
+          }
+        } catch { /* github not configured / unreachable — skip silently */ }
+      }
     } catch {
       toast.error('Fehler beim Laden der KI-Daten.')
     }
