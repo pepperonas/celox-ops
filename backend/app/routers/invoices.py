@@ -786,119 +786,14 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
 @router.post("/generate-recurring", response_model=list[InvoiceResponse])
 async def generate_recurring_invoices(db: AsyncSession = Depends(get_db)) -> list:
     """Erstellt Entwurfsrechnungen für fällige Vertragsabrechnungen."""
-    from datetime import date as date_type, timedelta
-    from decimal import Decimal
+    from datetime import date as date_type
 
-    from dateutil.relativedelta import relativedelta
-
-    from app.models.contract import BillingCycle, Contract, ContractStatus
+    from app.services.invoice_service import generate_due_recurring
 
     today = date_type.today()
-
-    # Get all active contracts
-    result = await db.execute(
-        select(Contract)
-        .options(joinedload(Contract.customer))
-        .where(Contract.status == ContractStatus.aktiv)
-    )
-    contracts = result.scalars().unique().all()
-
-    if not contracts:
-        return []
-
-    cycle_months = {
-        BillingCycle.monatlich: 1,
-        BillingCycle.quartalsweise: 3,
-        BillingCycle.halbjaehrlich: 6,
-        BillingCycle.jaehrlich: 12,
-    }
-
-    german_months = [
-        "", "Januar", "Februar", "März", "April", "Mai", "Juni",
-        "Juli", "August", "September", "Oktober", "November", "Dezember",
-    ]
-
-    processed_contract_ids: set[uuid.UUID] = set()
-
-    for contract in contracts:
-        months = cycle_months[contract.billing_cycle]
-
-        if contract.last_invoiced_date is None:
-            # Never invoiced — due immediately
-            is_due = True
-        else:
-            next_date = contract.last_invoiced_date + relativedelta(months=months)
-            is_due = next_date <= today
-
-        if not is_due:
-            continue
-
-        # Build period label
-        if contract.billing_cycle == BillingCycle.monatlich:
-            period_label = f"{german_months[today.month]} {today.year}"
-        elif contract.billing_cycle == BillingCycle.quartalsweise:
-            quarter = (today.month - 1) // 3 + 1
-            period_label = f"Q{quarter} {today.year}"
-        elif contract.billing_cycle == BillingCycle.halbjaehrlich:
-            half = 1 if today.month <= 6 else 2
-            period_label = f"{half}. Halbjahr {today.year}"
-        else:  # jaehrlich
-            period_label = str(today.year)
-
-        # Calculate amount
-        amount = contract.monthly_amount * Decimal(str(months))
-
-        # Build invoice
-        invoice_number = await generate_invoice_number(db)
-
-        positions_json = [{
-            "position": 1,
-            "beschreibung": contract.title,
-            "menge": "1",
-            "einheit": period_label,
-            "einzelpreis": str(amount),
-            "gesamt": str(amount),
-        }]
-
-        positions_dicts = [{
-            "position": 1,
-            "beschreibung": contract.title,
-            "menge": Decimal("1"),
-            "einheit": period_label,
-            "einzelpreis": amount,
-            "gesamt": amount,
-        }]
-
-        is_exempt = settings.KLEINUNTERNEHMER
-        subtotal, tax_amount, total = calculate_invoice_totals(
-            positions_dicts, Decimal("19.00"), is_exempt
-        )
-
-        invoice = Invoice(
-            customer_id=contract.customer_id,
-            contract_id=contract.id,
-            invoice_number=invoice_number,
-            title=f"{contract.title} — {period_label}",
-            positions=positions_json,
-            subtotal=subtotal,
-            tax_rate=Decimal("0") if is_exempt else Decimal("19.00"),
-            tax_exempt=is_exempt,
-            tax_amount=tax_amount,
-            total=total,
-            invoice_date=today,
-            due_date=today + timedelta(days=14),
-            status=InvoiceStatus.entwurf,
-        )
-        db.add(invoice)
-
-        # Update contract
-        contract.last_invoiced_date = today
-        processed_contract_ids.add(contract.id)
-
+    processed_contract_ids = await generate_due_recurring(db)
     if not processed_contract_ids:
         return []
-
-    await db.flush()
 
     # Re-query the invoices we just created to get customer data
     new_result = await db.execute(

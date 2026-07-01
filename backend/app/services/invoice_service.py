@@ -63,3 +63,87 @@ def calculate_invoice_totals(
 
     total = subtotal + tax_amount
     return subtotal, tax_amount, total
+
+
+async def generate_due_recurring(db: AsyncSession) -> set:
+    """Creates draft invoices for all DUE recurring contract billings of the
+    current owner (ContextVar-scoped). Idempotent: advances `last_invoiced_date`
+    so a due contract is billed at most once per cycle. Returns the set of
+    processed contract ids. Callable from the endpoint and the cron."""
+    from datetime import date as date_type
+    from datetime import timedelta
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.models.contract import BillingCycle, Contract, ContractStatus
+    from app.models.invoice import InvoiceStatus
+
+    today = date_type.today()
+    contracts = (
+        await db.execute(select(Contract).where(Contract.status == ContractStatus.aktiv))
+    ).scalars().unique().all()
+    if not contracts:
+        return set()
+
+    cycle_months = {
+        BillingCycle.monatlich: 1, BillingCycle.quartalsweise: 3,
+        BillingCycle.halbjaehrlich: 6, BillingCycle.jaehrlich: 12,
+    }
+    german_months = [
+        "", "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember",
+    ]
+    processed: set = set()
+
+    for contract in contracts:
+        months = cycle_months[contract.billing_cycle]
+        if contract.last_invoiced_date is None:
+            is_due = True
+        else:
+            is_due = (contract.last_invoiced_date + relativedelta(months=months)) <= today
+        if not is_due:
+            continue
+
+        if contract.billing_cycle == BillingCycle.monatlich:
+            period_label = f"{german_months[today.month]} {today.year}"
+        elif contract.billing_cycle == BillingCycle.quartalsweise:
+            period_label = f"Q{(today.month - 1) // 3 + 1} {today.year}"
+        elif contract.billing_cycle == BillingCycle.halbjaehrlich:
+            period_label = f"{1 if today.month <= 6 else 2}. Halbjahr {today.year}"
+        else:
+            period_label = str(today.year)
+
+        amount = contract.monthly_amount * Decimal(str(months))
+        positions_json = [{
+            "position": 1, "beschreibung": contract.title, "menge": "1",
+            "einheit": period_label, "einzelpreis": str(amount), "gesamt": str(amount),
+        }]
+        positions_dicts = [{
+            "position": 1, "beschreibung": contract.title, "menge": Decimal("1"),
+            "einheit": period_label, "einzelpreis": amount, "gesamt": amount,
+        }]
+        is_exempt = settings.KLEINUNTERNEHMER
+        subtotal, tax_amount, total = calculate_invoice_totals(
+            positions_dicts, Decimal("19.00"), is_exempt
+        )
+        db.add(Invoice(
+            customer_id=contract.customer_id,
+            contract_id=contract.id,
+            invoice_number=await generate_invoice_number(db),
+            title=f"{contract.title} — {period_label}",
+            positions=positions_json,
+            subtotal=subtotal,
+            tax_rate=Decimal("0") if is_exempt else Decimal("19.00"),
+            tax_exempt=is_exempt,
+            tax_amount=tax_amount,
+            total=total,
+            invoice_date=today,
+            due_date=today + timedelta(days=14),
+            status=InvoiceStatus.entwurf,
+        ))
+        contract.last_invoiced_date = today
+        processed.add(contract.id)
+
+    if processed:
+        await db.flush()
+    return processed

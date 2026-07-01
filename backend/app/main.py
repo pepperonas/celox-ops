@@ -73,11 +73,13 @@ async def run_cron() -> None:
                     await db.rollback()
                     logger.exception("Cron: Fehler bei Überprüfung überfälliger Rechnungen")
 
-                # Rainmaker: daily acquisition reminder — per user (multi-tenant).
+                # Per-user cron tasks (multi-tenant): rainmaker reminder + auto-recurring invoices.
                 try:
                     from sqlalchemy import select as _sel
 
                     from app.models.user import User as _User
+                    from app.routers.dashboard import invalidate_stats_cache
+                    from app.services.invoice_service import generate_due_recurring
                     from app.services.rainmaker_service import check_rainmaker_reminder
                     from app.tenancy import current_owner_id as _owner
 
@@ -85,17 +87,26 @@ async def run_cron() -> None:
                         await db.execute(_sel(_User).where(_User.is_active.is_(True)))
                     ).scalars().all()
                     for u in active_users:
-                        _owner.set(u.id)  # scope this user's rainmaker data
+                        _owner.set(u.id)  # scope this user's owned data
                         try:
                             await check_rainmaker_reminder(db, u)
                             await db.commit()
                         except Exception:
                             await db.rollback()
                             logger.exception("Cron: Rainmaker-Reminder für %s fehlgeschlagen", u.username)
+                        try:
+                            created = await generate_due_recurring(db)
+                            if created:
+                                await db.commit()
+                                invalidate_stats_cache()
+                                logger.info("Cron: %d wiederkehrende Rechnung(en) für %s erstellt", len(created), u.username)
+                        except Exception:
+                            await db.rollback()
+                            logger.exception("Cron: Recurring-Rechnungen für %s fehlgeschlagen", u.username)
                     _owner.set(None)
                 except Exception:
                     await db.rollback()
-                    logger.exception("Cron: Rainmaker-Reminder fehlgeschlagen")
+                    logger.exception("Cron: Per-Nutzer-Tasks fehlgeschlagen")
         except Exception:
             logger.exception("Cron: Unerwarteter Fehler")
 
