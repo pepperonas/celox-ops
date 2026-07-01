@@ -77,6 +77,13 @@ _charts_cache: dict = {}  # keyed by (owner_id, period, include_drafts)
 _STATS_CACHE_TTL = 60.0
 
 
+def _month_bounds(year: int, month: int) -> tuple[date, date]:
+    """Half-open [start, end) for a given month — sargable (uses the date index)."""
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    return start, end
+
+
 @router.get("/stats", response_model=DashboardStats)
 async def get_stats(
     db: AsyncSession = Depends(get_db),
@@ -91,12 +98,15 @@ async def get_stats(
     current_month = now.month
     today = date.today()
 
+    _m_start, _m_end = _month_bounds(current_year, current_month)
+    _y_start, _y_end = date(current_year, 1, 1), date(current_year + 1, 1, 1)
+
     # Revenue this month (paid invoices)
     result = await db.execute(
         select(func.coalesce(func.sum(Invoice.total), 0)).where(
             Invoice.status == InvoiceStatus.bezahlt,
-            func.extract("year", Invoice.invoice_date) == current_year,
-            func.extract("month", Invoice.invoice_date) == current_month,
+            Invoice.invoice_date >= _m_start,
+            Invoice.invoice_date < _m_end,
         )
     )
     revenue_month = result.scalar_one()
@@ -105,7 +115,8 @@ async def get_stats(
     result = await db.execute(
         select(func.coalesce(func.sum(Invoice.total), 0)).where(
             Invoice.status == InvoiceStatus.bezahlt,
-            func.extract("year", Invoice.invoice_date) == current_year,
+            Invoice.invoice_date >= _y_start,
+            Invoice.invoice_date < _y_end,
         )
     )
     revenue_year = result.scalar_one()
@@ -495,12 +506,14 @@ async def generate_monthly_report(
 
     # --- KPIs ---
 
+    _rs, _re = _month_bounds(year, month)
+
     # Revenue: paid invoices in this month
     result = await db.execute(
         select(func.coalesce(func.sum(Invoice.total), 0)).where(
             Invoice.status == InvoiceStatus.bezahlt,
-            func.extract("year", Invoice.invoice_date) == year,
-            func.extract("month", Invoice.invoice_date) == month,
+            Invoice.invoice_date >= _rs,
+            Invoice.invoice_date < _re,
         )
     )
     revenue = float(result.scalar_one())
@@ -519,8 +532,8 @@ async def generate_monthly_report(
     # New customers this month
     result = await db.execute(
         select(func.count(Customer.id)).where(
-            func.extract("year", Customer.created_at) == year,
-            func.extract("month", Customer.created_at) == month,
+            Customer.created_at >= _rs,
+            Customer.created_at < _re,
         )
     )
     new_customers = result.scalar_one()
@@ -531,8 +544,8 @@ async def generate_monthly_report(
         .options(joinedload(Order.customer))
         .where(
             Order.status == OrderStatus.abgeschlossen,
-            func.extract("year", Order.updated_at) == year,
-            func.extract("month", Order.updated_at) == month,
+            Order.updated_at >= _rs,
+            Order.updated_at < _re,
         )
     )
     completed_orders_raw = result.scalars().unique().all()

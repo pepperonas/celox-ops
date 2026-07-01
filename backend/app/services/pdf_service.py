@@ -1,4 +1,5 @@
 import base64
+import concurrent.futures
 import os
 from pathlib import Path
 
@@ -10,6 +11,37 @@ from app.config import settings
 from app.models.customer import Customer
 from app.models.invoice import Invoice
 from app.models.order import Order
+
+# Commit line stats are immutable → cache across PDF regenerations / refresh-drafts.
+_commit_stats_cache: dict[tuple[str, str], tuple[int, int]] = {}
+
+
+def _fetch_commit_stats_bulk(
+    pairs: list[tuple[str, str]], headers: dict
+) -> dict[tuple[str, str], tuple[int, int]]:
+    """Fetch (additions, deletions) for each (repo, sha) concurrently, cached.
+    Replaces the old sequential one-request-per-commit N+1."""
+    todo = [p for p in set(pairs) if p not in _commit_stats_cache]
+
+    def _one(pair: tuple[str, str]) -> None:
+        repo, sha = pair
+        add = dele = 0
+        try:
+            r = httpx.get(
+                f"https://api.github.com/repos/{repo}/commits/{sha}",
+                headers=headers, timeout=8,
+            )
+            if r.status_code == 200:
+                st = r.json().get("stats", {})
+                add, dele = st.get("additions", 0), st.get("deletions", 0)
+        except Exception:
+            pass
+        _commit_stats_cache[pair] = (add, dele)
+
+    if todo:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            list(ex.map(_one, todo))
+    return {p: _commit_stats_cache.get(p, (0, 0)) for p in pairs}
 
 
 def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | None:
@@ -36,66 +68,64 @@ def _fetch_github_commits(customer: Customer, invoice: Invoice) -> list[dict] | 
     if not repos:
         return None
 
-    all_commits = []
-    daily_stats: dict[str, dict] = {}  # date -> {additions, deletions}
-    total_additions = 0
-    total_deletions = 0
     headers = {
         "Authorization": f"token {settings.GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
     }
+
+    # Pass 1: list commits (one call per repo — no per-commit detail yet).
+    listed: list[dict] = []
     for repo in repos:
         repo = repo.strip().strip("/")
         try:
-            url = f"https://api.github.com/repos/{repo}/commits"
-            params = {
-                "since": f"{date_from.isoformat()}T00:00:00Z",
-                "until": f"{date_to.isoformat()}T23:59:59Z",
-                "per_page": 100,
-            }
-            resp = httpx.get(url, headers=headers, params=params, timeout=8)
+            resp = httpx.get(
+                f"https://api.github.com/repos/{repo}/commits",
+                headers=headers,
+                params={
+                    "since": f"{date_from.isoformat()}T00:00:00Z",
+                    "until": f"{date_to.isoformat()}T23:59:59Z",
+                    "per_page": 100,
+                },
+                timeout=8,
+            )
             if resp.status_code == 200:
                 for c in resp.json():
-                    sha = c["sha"]
-                    date_str = c["commit"]["author"]["date"][:10]
-                    additions = 0
-                    deletions = 0
-                    # Fetch individual commit for stats
-                    try:
-                        detail = httpx.get(
-                            f"https://api.github.com/repos/{repo}/commits/{sha}",
-                            headers=headers, timeout=8,
-                        )
-                        if detail.status_code == 200:
-                            stats = detail.json().get("stats", {})
-                            additions = stats.get("additions", 0)
-                            deletions = stats.get("deletions", 0)
-                    except Exception:
-                        pass
-
-                    total_additions += additions
-                    total_deletions += deletions
-
-                    if date_str not in daily_stats:
-                        daily_stats[date_str] = {"additions": 0, "deletions": 0, "commits": 0}
-                    daily_stats[date_str]["additions"] += additions
-                    daily_stats[date_str]["deletions"] += deletions
-                    daily_stats[date_str]["commits"] += 1
-
-                    all_commits.append({
+                    listed.append({
+                        "repo_full": repo,
                         "repo": repo.split("/")[-1] if "/" in repo else repo,
-                        "sha": sha[:7],
+                        "sha_full": c["sha"],
+                        "sha": c["sha"][:7],
                         "message": c["commit"]["message"].split("\n")[0][:120],
                         "author": c["commit"]["author"]["name"],
-                        "date": date_str,
-                        "additions": additions,
-                        "deletions": deletions,
+                        "date": c["commit"]["author"]["date"][:10],
                     })
         except Exception:
             continue
 
-    if not all_commits:
+    if not listed:
         return None
+
+    # Pass 2: fetch per-commit line stats CONCURRENTLY (bounded), cached by (repo, sha)
+    # since commit stats are immutable. Avoids the old N+1 (one 8s call per commit).
+    stats_map = _fetch_commit_stats_bulk([(c["repo_full"], c["sha_full"]) for c in listed], headers)
+
+    all_commits = []
+    daily_stats: dict[str, dict] = {}
+    total_additions = 0
+    total_deletions = 0
+    for c in listed:
+        additions, deletions = stats_map.get((c["repo_full"], c["sha_full"]), (0, 0))
+        total_additions += additions
+        total_deletions += deletions
+        d = daily_stats.setdefault(c["date"], {"additions": 0, "deletions": 0, "commits": 0})
+        d["additions"] += additions
+        d["deletions"] += deletions
+        d["commits"] += 1
+        all_commits.append({
+            "repo": c["repo"], "sha": c["sha"], "message": c["message"],
+            "author": c["author"], "date": c["date"],
+            "additions": additions, "deletions": deletions,
+        })
 
     # Build daily chart data
     max_changes = max((d["additions"] + d["deletions"] for d in daily_stats.values()), default=1) or 1
