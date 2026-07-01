@@ -36,5 +36,11 @@ async def update_settings(
     row = await get_or_create_settings(db)
     if data.default_unit_price is not None:
         row.default_unit_price = data.default_unit_price
+    if data.invoice_prefix is not None:
+        # Sanitize: uppercase alphanumerics only (used verbatim in invoice numbers).
+        import re
+        clean = re.sub(r"[^A-Za-z0-9]", "", data.invoice_prefix).upper()[:10]
+        if clean:
+            row.invoice_prefix = clean
     await db.flush()
     return AppSettingsResponse.model_validate(row)

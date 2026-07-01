@@ -42,6 +42,7 @@ export default function Settings() {
   })
 
   const [defaultPrice, setDefaultPrice] = useState('')
+  const [invoicePrefix, setInvoicePrefix] = useState('')
   const [curPw, setCurPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
@@ -58,7 +59,7 @@ export default function Settings() {
     loadConfig()
     loadTemplates()
     getSettings()
-      .then((s) => setDefaultPrice(String(s.default_unit_price ?? 95)))
+      .then((s) => { setDefaultPrice(String(s.default_unit_price ?? 95)); setInvoicePrefix(s.invoice_prefix ?? 'CO') })
       .catch(() => {})
   }, [])
 
@@ -68,11 +69,17 @@ export default function Settings() {
       toast.error('Bitte einen gültigen Preis eingeben.')
       return
     }
+    const prefix = invoicePrefix.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10)
+    if (!prefix) {
+      toast.error('Bitte ein gültiges Rechnungspräfix eingeben (A–Z, 0–9).')
+      return
+    }
     setSavingPrice(true)
     try {
-      const s = await updateSettings({ default_unit_price: value })
+      const s = await updateSettings({ default_unit_price: value, invoice_prefix: prefix })
       setDefaultPrice(String(s.default_unit_price))
-      toast.success('Standard-Einzelpreis gespeichert.')
+      setInvoicePrefix(s.invoice_prefix)
+      toast.success('Rechnungseinstellungen gespeichert.')
     } catch {
       toast.error('Fehler beim Speichern.')
     }
@@ -238,7 +245,7 @@ export default function Settings() {
           Standard-Einzelpreis für neue Rechnungspositionen. Wird beim Anlegen einer Rechnung
           automatisch vorbelegt (auch als Stundensatz beim KI-Import) und bleibt überschreibbar.
         </p>
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-3 flex-wrap">
           <div>
             <label htmlFor="default-price" className="block text-xs text-text-muted mb-2">
               Standard-Einzelpreis (€)
@@ -252,6 +259,20 @@ export default function Settings() {
               placeholder="z.B. 95"
               className="w-40"
             />
+          </div>
+          <div>
+            <label htmlFor="invoice-prefix" className="block text-xs text-text-muted mb-2">
+              Rechnungspräfix
+            </label>
+            <input
+              id="invoice-prefix"
+              type="text"
+              value={invoicePrefix}
+              onChange={(e) => setInvoicePrefix(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10))}
+              placeholder="CO"
+              className="w-28 font-mono uppercase"
+            />
+            <p className="text-[11px] text-text-muted mt-1">→ {invoicePrefix || 'CO'}-{new Date().getFullYear()}-0001</p>
           </div>
           <button onClick={handleSavePrice} disabled={savingPrice} className="btn-primary">
             {savingPrice ? 'Speichere...' : 'Speichern'}

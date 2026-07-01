@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Numeric
+from sqlalchemy import Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,4 +20,8 @@ class AppSettings(OwnedMixin, Base):
     # Default-Einzelpreis für neue Rechnungspositionen (auch KI-Import-Stundensatz).
     default_unit_price: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), default=Decimal("95"), server_default="95", nullable=False
+    )
+    # Pro-Nutzer-Präfix für Rechnungsnummern (z.B. "CO" → CO-2026-0001).
+    invoice_prefix: Mapped[str] = mapped_column(
+        String(10), default="CO", server_default="CO", nullable=False
     )

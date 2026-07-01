@@ -14,10 +14,15 @@ INVOICE_NUMBER_OFFSET = int(getattr(settings, "INVOICE_NUMBER_OFFSET", 0) or 0)
 
 
 async def generate_invoice_number(db: AsyncSession) -> str:
-    year = datetime.now().year
-    prefix = f"CO-{year}-"
+    from app.models.app_settings import AppSettings
 
-    # Get all existing numbers for this year
+    year = datetime.now().year
+    # Per-owner prefix (query is owner-scoped via tenancy events; default "CO").
+    row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    prefix_code = (row.invoice_prefix if row and row.invoice_prefix else "CO")
+    prefix = f"{prefix_code}-{year}-"
+
+    # Get all existing numbers for this year (owner-scoped)
     result = await db.execute(
         select(Invoice.invoice_number)
         .where(Invoice.invoice_number.like(f"{prefix}%"))

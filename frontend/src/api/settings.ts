@@ -2,6 +2,7 @@ import { api } from './client'
 
 export interface AppSettings {
   default_unit_price: number
+  invoice_prefix: string
 }
 
 export async function getSettings(): Promise<AppSettings> {
