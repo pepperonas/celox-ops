@@ -34,8 +34,13 @@ Marker „Erbrachte Leistungen ("). Hinweis: Qualität hängt von der Commit-Mes
 Hygiene ab (Repos mit „Prefix:"-Konvention → echte Themen; prosaische Commits →
 gekappte Liste). LLM-Variante bewusst nicht gebaut (kein Anthropic-Key nötig).
 
+### [DONE] C2 — Auto-Recurring-Rechnungen (2026-07)
+`services/invoice_service.generate_due_recurring` (owner-gescopt, idempotent via
+`last_invoiced_date`) läuft stündlich im Cron pro aktivem Nutzer; Endpoint
+`/generate-recurring` nutzt dieselbe Funktion. Verifiziert: 1 Rechnung bei
+Fälligkeit, 0 bei Wiederholung, korrekt owner-isoliert.
+
 **Offen — Features (nicht kritisch):**
-- **C2** Auto-Recurring-Rechnungen im Cron (pro Nutzer gescopt).
 - **C3** Per-User-2FA-Aktivierung über die UI (`users.totp_secret` + `/auth/2fa/setup` existieren).
 - **C4** Pro-Nutzer-Rechnungspräfix (koppelt an A1).
 - `document_templates` global geteilt (Legal-Boilerplate); `compliance_required` globale Policy — falls je gewünscht: pro-User-Pflichtset.
