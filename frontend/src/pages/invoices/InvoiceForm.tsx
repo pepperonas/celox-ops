@@ -339,9 +339,11 @@ export default function InvoiceForm() {
         urls = [selectedCustomerTrackerUrl]
       }
 
+      // Das "Bis"-Datum folgt immer dem aktuell gewählten Rechnungsdatum.
+      const importTo = form.invoice_date || new Date().toISOString().split('T')[0]
       const params = new URLSearchParams()
       if (aiImportFrom) params.set('from', aiImportFrom)
-      if (aiImportTo) params.set('to', aiImportTo)
+      params.set('to', importTo)
       const paramStr = params.toString()
 
       // Fetch all URLs and merge
@@ -366,7 +368,7 @@ export default function InvoiceForm() {
 
       const hours = Math.round(totalActiveMin / 60 * 100) / 100 // round to 2 decimals
       const periodFrom = aiImportFrom || 'Beginn'
-      const periodTo = aiImportTo || 'heute'
+      const periodTo = importTo
 
       const newPositions: InvoicePosition[] = []
 
@@ -411,7 +413,7 @@ export default function InvoiceForm() {
         ...form,
         positions: allPositions.length > 0 ? allPositions : [{ ...emptyPosition }],
         token_usage_from: aiImportFrom || null,
-        token_usage_to: aiImportTo || null,
+        token_usage_to: importTo,
       })
 
       setShowAiImport(false)
@@ -595,8 +597,8 @@ export default function InvoiceForm() {
                   <input type="date" value={aiImportFrom} onChange={e => setAiImportFrom(e.target.value)} className="w-full !py-1.5 !text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs text-text-muted mb-1">Bis</label>
-                  <input type="date" value={aiImportTo} onChange={e => setAiImportTo(e.target.value)} className="w-full !py-1.5 !text-sm" />
+                  <label className="block text-xs text-text-muted mb-1">Bis (Rechnungsdatum)</label>
+                  <input type="date" value={form.invoice_date || ''} readOnly disabled title="Folgt automatisch dem Rechnungsdatum" className="w-full !py-1.5 !text-sm opacity-70 cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-xs text-text-muted mb-1">Stundensatz (€)</label>
