@@ -72,8 +72,12 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [chartPeriod, setChartPeriod] = useState<'30d' | '12m'>('30d')
-  const [includeDrafts, setIncludeDrafts] = useState(false)
+  const [chartPeriod, setChartPeriod] = useState<'30d' | '12m'>(
+    () => (localStorage.getItem('dash-chart-period') as '30d' | '12m') || '30d',
+  )
+  const [includeDrafts, setIncludeDrafts] = useState<boolean>(
+    () => localStorage.getItem('dash-chart-drafts') === '1',
+  )
   const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([])
 
   const loadData = useCallback(() => {
@@ -93,6 +97,10 @@ export default function Dashboard() {
       })
       .finally(() => setLoading(false))
   }, [chartPeriod, includeDrafts])
+
+  // Persist the chart toggles so they survive reloads / status refreshes.
+  useEffect(() => { localStorage.setItem('dash-chart-period', chartPeriod) }, [chartPeriod])
+  useEffect(() => { localStorage.setItem('dash-chart-drafts', includeDrafts ? '1' : '0') }, [includeDrafts])
 
   const handleRefreshDrafts = async () => {
     setRefreshing(true)
@@ -268,19 +276,43 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Revenue & Expenses Bar Chart */}
           <div className="bg-surface border border-border rounded-card p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <h3 className="text-sm font-semibold text-text">Umsatz & Ausgaben</h3>
-              <div className="flex gap-2">
-                <div className="flex rounded-[6px] overflow-hidden border border-border">
+              <div className="flex gap-2 flex-wrap">
+                {/* Zeitraum */}
+                <div className="flex rounded-[6px] overflow-hidden border border-border" role="group" aria-label="Zeitraum">
                   {(['30d', '12m'] as const).map((p) => (
-                    <button key={p} onClick={() => setChartPeriod(p)} className={`px-2.5 py-1 text-[11px] transition-all ${chartPeriod === p ? 'bg-accent text-on-primary' : 'bg-surface-2 text-text-muted hover:text-text'}`}>
+                    <button
+                      key={p}
+                      onClick={() => setChartPeriod(p)}
+                      aria-pressed={chartPeriod === p}
+                      title={p === '30d' ? 'Letzte 30 Tage' : 'Letzte 12 Monate'}
+                      className={`px-2.5 py-1 text-[11px] transition-all ${chartPeriod === p ? 'bg-accent text-on-primary font-medium' : 'bg-surface-2 text-text-muted hover:text-text'}`}
+                    >
                       {p === '30d' ? '30 Tage' : '12 Monate'}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setIncludeDrafts(!includeDrafts)} className={`px-2.5 py-1 text-[11px] rounded-[6px] border transition-all ${includeDrafts ? 'bg-accent/20 text-accent border-accent/40' : 'bg-surface-2 text-text-muted border-border hover:text-text'}`}>
-                  {includeDrafts ? 'inkl. Entwürfe' : 'nur Bezahlt'}
-                </button>
+                {/* Datenbasis: nur bezahlte Rechnungen vs. inkl. Entwürfe */}
+                <div className="flex rounded-[6px] overflow-hidden border border-border" role="group" aria-label="Datenbasis">
+                  {([
+                    ['paid', 'Nur bezahlt', 'Nur bezahlte Rechnungen'],
+                    ['drafts', 'Inkl. Entwürfe', 'Bezahlte Rechnungen + Entwürfe (erwarteter Umsatz)'],
+                  ] as const).map(([key, label, tip]) => {
+                    const active = (key === 'drafts') === includeDrafts
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setIncludeDrafts(key === 'drafts')}
+                        aria-pressed={active}
+                        title={tip}
+                        className={`px-2.5 py-1 text-[11px] transition-all ${active ? 'bg-accent text-on-primary font-medium' : 'bg-surface-2 text-text-muted hover:text-text'}`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
             <div style={{ height: 280 }}>
