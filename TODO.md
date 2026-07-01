@@ -23,9 +23,11 @@ Rollen admin/user.
 - A4 Cross-Tenant-FK-Prüfung (invoices/activities/attachments/time-entries). A6 Backup global.
 - Perf: WeasyPrint via `to_thread` (monthly-report/pagespeed), `/charts`-Cache pro Nutzer, +14 Indizes.
 
-**Offen — Paket 2 / Features (nicht kritisch):**
-- **B1** GitHub-Commit-N+1 (`pdf_service._fetch_github_commits`): 1 Detail-Call pro Commit → droppen/batchen + Cache pro (repo,sha).
-- **B5** nicht-sargbare `func.extract()`-Datumsfilter (Dashboard/Kunden) → halb-offene Ranges.
+### [DONE] Paket 2 — Performance (2026-07)
+- **B1** GitHub-Commit-Stats parallel (ThreadPool 8) + Cache pro (repo,sha) statt N+1 (1.0s kalt / 0.27s warm bei 11 Commits verifiziert).
+- **B5** WHERE-Datumsfilter (Dashboard/Monatsbericht) auf halb-offene Ranges (sargbar); Zahlen unverändert verifiziert.
+
+**Offen — Features (nicht kritisch):**
 - **C1** Smarter KI-Import (GitHub-Commits → gruppierte Leistungsbeschreibung).
 - **C2** Auto-Recurring-Rechnungen im Cron (pro Nutzer gescopt).
 - **C3** Per-User-2FA-Aktivierung über die UI (`users.totp_secret` + `/auth/2fa/setup` existieren).
