@@ -40,6 +40,11 @@ gekappte Liste). LLM-Variante bewusst nicht gebaut (kein Anthropic-Key nötig).
 `/generate-recurring` nutzt dieselbe Funktion. Verifiziert: 1 Rechnung bei
 Fälligkeit, 0 bei Wiederholung, korrekt owner-isoliert.
 
+### [DONE] C4 — Pro-Nutzer-Rechnungspräfix (2026-07)
+`app_settings.invoice_prefix` (Default "CO"); `generate_invoice_number` nutzt das
+owner-gescopte Präfix. In Einstellungen → Rechnungen konfigurierbar. Verifiziert:
+martin behält CO, Test-Nutzer bekommt eigenen Nummernkreis (ACME-2026-…).
+
 **Offen — Features (nicht kritisch):**
 - **C3** Per-User-2FA-Aktivierung über die UI (`users.totp_secret` + `/auth/2fa/setup` existieren).
 - **C4** Pro-Nutzer-Rechnungspräfix (koppelt an A1).
