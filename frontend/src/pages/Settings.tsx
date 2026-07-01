@@ -9,7 +9,7 @@ import {
   seedEmailTemplates,
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
-import { changeOwnPassword, getMyIcalToken } from '../api/users'
+import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate } from '../types'
 
 interface TrackerConfig {
@@ -47,12 +47,56 @@ export default function Settings() {
   const [newPw, setNewPw] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
   const [icalUrl, setIcalUrl] = useState('')
+  const [twofaEnabled, setTwofaEnabled] = useState<boolean | null>(null)
+  const [twofaSetup, setTwofaSetup] = useState<{ secret: string; qr: string } | null>(null)
+  const [twofaCode, setTwofaCode] = useState('')
+  const [twofaBusy, setTwofaBusy] = useState(false)
 
   useEffect(() => {
     getMyIcalToken()
       .then((t) => setIcalUrl(`${window.location.origin}/api/ical?token=${t}`))
       .catch(() => {})
+    getMe().then((m) => setTwofaEnabled(m.totp_enabled)).catch(() => {})
   }, [])
+
+  const handleStart2fa = async () => {
+    setTwofaBusy(true)
+    try {
+      const { secret, qr } = await init2fa()
+      setTwofaSetup({ secret, qr })
+      setTwofaCode('')
+    } catch {
+      toast.error('2FA-Setup konnte nicht gestartet werden.')
+    }
+    setTwofaBusy(false)
+  }
+
+  const handleEnable2fa = async () => {
+    if (!twofaSetup) return
+    setTwofaBusy(true)
+    try {
+      await enable2fa(twofaSetup.secret, twofaCode.trim())
+      toast.success('Zwei-Faktor-Authentifizierung aktiviert.')
+      setTwofaSetup(null); setTwofaCode(''); setTwofaEnabled(true)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Code ungültig.')
+    }
+    setTwofaBusy(false)
+  }
+
+  const handleDisable2fa = async () => {
+    const code = window.prompt('Aktuellen 6-stelligen 2FA-Code zum Deaktivieren eingeben:')
+    if (!code) return
+    setTwofaBusy(true)
+    try {
+      await disable2fa(code.trim())
+      toast.success('Zwei-Faktor-Authentifizierung deaktiviert.')
+      setTwofaEnabled(false)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Code ungültig.')
+    }
+    setTwofaBusy(false)
+  }
   const [savingPrice, setSavingPrice] = useState(false)
 
   useEffect(() => {
@@ -216,6 +260,38 @@ export default function Settings() {
             <button type="submit" disabled={pwSaving} className="btn-primary">{pwSaving ? 'Speichere…' : 'Passwort ändern'}</button>
           </div>
         </form>
+      </div>
+
+      {/* Zwei-Faktor-Authentifizierung */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <h3 className="text-sm font-semibold text-text">Zwei-Faktor-Authentifizierung (2FA)</h3>
+          {twofaEnabled !== null && (
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${twofaEnabled ? 'bg-success/10 text-success' : 'bg-surface-2 text-text-muted'}`}>
+              {twofaEnabled ? '✓ aktiv' : 'inaktiv'}
+            </span>
+          )}
+        </div>
+        <p className="text-text-muted text-sm mb-4">
+          Zusätzlicher Schutz per Authenticator-App (TOTP) beim Login.
+        </p>
+        {twofaEnabled ? (
+          <button onClick={handleDisable2fa} disabled={twofaBusy} className="btn-danger">2FA deaktivieren</button>
+        ) : twofaSetup ? (
+          <div className="space-y-3">
+            <p className="text-sm text-text">1. QR-Code in deiner Authenticator-App scannen:</p>
+            <img src={twofaSetup.qr} alt="2FA QR-Code" width={160} height={160} className="rounded-lg bg-white p-2" />
+            <p className="text-xs text-text-muted">Oder Schlüssel manuell eingeben: <code className="text-text font-mono break-all">{twofaSetup.secret}</code></p>
+            <p className="text-sm text-text">2. Aktuellen 6-stelligen Code bestätigen:</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input value={twofaCode} onChange={(e) => setTwofaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="123456" className="w-32 font-mono !text-base tracking-widest" />
+              <button onClick={handleEnable2fa} disabled={twofaBusy || twofaCode.length < 6} className="btn-primary">Aktivieren</button>
+              <button onClick={() => { setTwofaSetup(null); setTwofaCode('') }} className="btn-secondary text-sm">Abbrechen</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={handleStart2fa} disabled={twofaBusy} className="btn-primary">2FA aktivieren</button>
+        )}
       </div>
 
       {/* Kalender-Abo (iCal) */}

@@ -48,3 +48,19 @@ export async function getMyIcalToken(): Promise<string> {
   const res = await api.get('/users/me/ical-token')
   return res.data.token
 }
+
+export async function getMe(): Promise<{ username: string; role: string; totp_enabled: boolean }> {
+  return (await api.get('/auth/me')).data
+}
+
+export async function init2fa(): Promise<{ secret: string; otpauth_uri: string; qr: string }> {
+  return (await api.get('/auth/2fa/init')).data
+}
+
+export async function enable2fa(secret: string, code: string): Promise<void> {
+  await api.post('/auth/2fa/enable', { secret, code })
+}
+
+export async function disable2fa(code: string): Promise<void> {
+  await api.post('/auth/2fa/disable', { code })
+}

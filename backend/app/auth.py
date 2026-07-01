@@ -1,3 +1,4 @@
+import base64
 import io
 from datetime import datetime, timedelta, timezone
 
@@ -174,3 +175,55 @@ async def setup_2fa(current_user: User = Depends(get_current_user)) -> Response:
             "X-TOTP-Hint": "Persist via account settings to activate 2FA",
         },
     )
+
+
+class TwoFAEnable(BaseModel):
+    secret: str
+    code: str
+
+
+class TwoFADisable(BaseModel):
+    code: str
+
+
+@router.get("/2fa/init")
+async def init_2fa(current_user: User = Depends(get_current_user)) -> dict:
+    """Generate a fresh candidate TOTP secret + QR (data URL). NOT persisted yet —
+    the client must confirm a valid code via /2fa/enable to activate."""
+    secret = pyotp.random_base32()
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=current_user.username,
+        issuer_name=f"celox ops ({settings.BUSINESS_NAME or 'celox.io'})",
+    )
+    buf = io.BytesIO()
+    qrcode.make(uri).save(buf, format="PNG")
+    qr_data_url = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    return {"secret": secret, "otpauth_uri": uri, "qr": qr_data_url}
+
+
+@router.post("/2fa/enable", status_code=status.HTTP_204_NO_CONTENT)
+async def enable_2fa(
+    data: TwoFAEnable,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Activate 2FA after verifying a code against the candidate secret."""
+    if not pyotp.TOTP(data.secret).verify(data.code.strip(), valid_window=1):
+        raise HTTPException(status_code=400, detail="Code ungültig")
+    current_user.totp_secret = data.secret
+    await db.flush()
+
+
+@router.post("/2fa/disable", status_code=status.HTTP_204_NO_CONTENT)
+async def disable_2fa(
+    data: TwoFADisable,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Deactivate 2FA after verifying a current code."""
+    if not current_user.totp_secret:
+        return
+    if not pyotp.TOTP(current_user.totp_secret).verify(data.code.strip(), valid_window=1):
+        raise HTTPException(status_code=400, detail="Code ungültig")
+    current_user.totp_secret = None
+    await db.flush()
