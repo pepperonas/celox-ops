@@ -27,8 +27,14 @@ Rollen admin/user.
 - **B1** GitHub-Commit-Stats parallel (ThreadPool 8) + Cache pro (repo,sha) statt N+1 (1.0s kalt / 0.27s warm bei 11 Commits verifiziert).
 - **B5** WHERE-Datumsfilter (Dashboard/Monatsbericht) auf halb-offene Ranges (sargbar); Zahlen unverändert verifiziert.
 
+### [DONE] C1 — Smarter KI-Import (2026-07)
+GET `/api/github/summary` (owner-gescopt) gruppiert Commit-Betreffs zu einer
+Leistungsbeschreibung; KI-Import füllt `service_description` (nur wenn leer/auto,
+Marker „Erbrachte Leistungen ("). Hinweis: Qualität hängt von der Commit-Message-
+Hygiene ab (Repos mit „Prefix:"-Konvention → echte Themen; prosaische Commits →
+gekappte Liste). LLM-Variante bewusst nicht gebaut (kein Anthropic-Key nötig).
+
 **Offen — Features (nicht kritisch):**
-- **C1** Smarter KI-Import (GitHub-Commits → gruppierte Leistungsbeschreibung).
 - **C2** Auto-Recurring-Rechnungen im Cron (pro Nutzer gescopt).
 - **C3** Per-User-2FA-Aktivierung über die UI (`users.totp_secret` + `/auth/2fa/setup` existieren).
 - **C4** Pro-Nutzer-Rechnungspräfix (koppelt an A1).
