@@ -45,7 +45,9 @@ Fälligkeit, 0 bei Wiederholung, korrekt owner-isoliert.
 owner-gescopte Präfix. In Einstellungen → Rechnungen konfigurierbar. Verifiziert:
 martin behält CO, Test-Nutzer bekommt eigenen Nummernkreis (ACME-2026-…).
 
-**Offen — Features (nicht kritisch):**
-- **C3** Per-User-2FA-Aktivierung über die UI (`users.totp_secret` + `/auth/2fa/setup` existieren).
-- **C4** Pro-Nutzer-Rechnungspräfix (koppelt an A1).
+### [DONE] C3 — Per-User-2FA-Aktivierung in der UI (2026-07)
+`/auth/2fa/{init,enable,disable}` + 2FA-Karte in den Einstellungen (QR scannen +
+Code bestätigen / deaktivieren). Verifiziert: Login erzwingt danach den TOTP-Code.
+
+**Optionale Restpunkte (nicht kritisch):**
 - `document_templates` global geteilt (Legal-Boilerplate); `compliance_required` globale Policy — falls je gewünscht: pro-User-Pflichtset.
