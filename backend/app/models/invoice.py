@@ -14,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -35,6 +36,8 @@ class InvoiceStatus(str, enum.Enum):
 class Invoice(OwnedMixin, Base):
     __tablename__ = "invoices"
     __table_args__ = (
+        # Rechnungsnummern sind PRO NUTZER eindeutig (jeder Tenant hat eigene Sequenz).
+        UniqueConstraint("owner_id", "invoice_number", name="uq_invoice_owner_number"),
         Index("idx_invoice_customer_id", "customer_id"),
         Index("idx_invoice_status_due", "status", "due_date"),
         Index("idx_invoice_invoice_date", "invoice_date"),
@@ -53,7 +56,7 @@ class Invoice(OwnedMixin, Base):
         UUID(as_uuid=True), ForeignKey("contracts.id"), nullable=True
     )
     invoice_number: Mapped[str] = mapped_column(
-        String(20), unique=True, nullable=False
+        String(20), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     positions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)

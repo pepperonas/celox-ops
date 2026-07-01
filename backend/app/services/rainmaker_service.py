@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 # In-memory dedupe so the hourly cron sends at most one reminder per day
 # (mirrors the dashboard _stats_cache pattern; reset on process restart).
-_reminder_sent_on: date | None = None
+# Per-user dedupe: {user_id: date} — one reminder per user per day.
+_reminder_sent_on: dict = {}
 
 # Sort weight for lead priority (high first).
 _PRIORITY_WEIGHT = {"high": 0, "medium": 1, "low": 2}
@@ -186,10 +187,10 @@ async def register_completion(db: AsyncSession, activity_type: RainmakerActivity
             streak.longest_streak = max(streak.longest_streak, streak.current_streak)
 
 
-async def check_rainmaker_reminder(db: AsyncSession) -> bool:
-    """Called hourly by run_cron. Sends one mail reminder per day at the
-    configured hour if the daily quota is not yet met. Returns True if sent."""
-    global _reminder_sent_on
+async def check_rainmaker_reminder(db: AsyncSession, user=None) -> bool:
+    """Called hourly by run_cron, once per active user (owner ContextVar set by the
+    caller). Sends one mail reminder per user per day at the configured hour if the
+    daily quota is not yet met. Returns True if sent."""
     settings = await get_or_create_settings(db)
     if not settings.reminder_enabled:
         return False
@@ -203,14 +204,16 @@ async def check_rainmaker_reminder(db: AsyncSession) -> bool:
         return False
 
     today = date.today()
-    if _reminder_sent_on == today:
+    dedupe_key = getattr(user, "id", None)
+    if _reminder_sent_on.get(dedupe_key) == today:
         return False
 
     done = await count_done_today(db)
     if done >= settings.daily_quota:
         return False
 
-    to_email = app_settings.BUSINESS_EMAIL
+    # Send to the user's own email; fall back to the global business address.
+    to_email = getattr(user, "email", None) or app_settings.BUSINESS_EMAIL
     if not to_email or not app_settings.SMTP_HOST:
         return False
 
@@ -227,6 +230,6 @@ async def check_rainmaker_reminder(db: AsyncSession) -> bool:
         subject=f"Rainmaker: noch {remaining} offen heute",
         body_html=body_html,
     )
-    _reminder_sent_on = today
+    _reminder_sent_on[dedupe_key] = today
     logger.info("Rainmaker-Reminder gesendet (%d von %d offen)", remaining, settings.daily_quota)
     return True

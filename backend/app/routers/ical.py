@@ -12,6 +12,8 @@ from app.config import settings
 from app.database import get_db
 from app.models.contract import Contract, ContractStatus
 from app.models.invoice import Invoice, InvoiceStatus
+from app.models.user import User
+from app.tenancy import current_owner_id
 
 router = APIRouter(prefix="/api/ical", tags=["ical"])
 
@@ -33,11 +35,17 @@ async def ical_feed(
     token: str = Query(...),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    """Public iCal feed (no auth — protected by `token` URL param).
-    Subscribe to: https://ops.celox.io/api/ical?token=<settings.ICAL_TOKEN>
+    """Public per-user iCal feed (no JWT — protected by the user's personal `token`).
+    Subscribe to: https://ops.celox.io/api/ical?token=<user.ical_token>
+    The token identifies the user; the feed is then scoped to that user's data only.
     """
-    if not settings.ICAL_TOKEN or token != settings.ICAL_TOKEN:
+    if not token:
         return Response(status_code=403, content="Forbidden")
+    user = (await db.execute(select(User).where(User.ical_token == token))).scalar_one_or_none()
+    if user is None or not user.is_active:
+        return Response(status_code=403, content="Forbidden")
+    # Scope all following ORM queries to this user (multi-tenant isolation).
+    current_owner_id.set(user.id)
 
     lines = [
         "BEGIN:VCALENDAR",

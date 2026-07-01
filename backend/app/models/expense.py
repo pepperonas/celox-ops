@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Numeric, String, Text, func
+from sqlalchemy import Index, Boolean, Date, DateTime, Enum, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,9 @@ class ExpenseCategory(str, enum.Enum):
 
 class Expense(OwnedMixin, Base):
     __tablename__ = "expenses"
+    __table_args__ = (
+        Index("idx_expenses_date", "date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

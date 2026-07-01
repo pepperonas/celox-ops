@@ -45,7 +45,12 @@ def _row_to_dict(row) -> dict:
 
 @router.get("/export")
 async def export_database(db: AsyncSession = Depends(get_db)) -> Response:
-    """Exportiert die gesamte Datenbank als JSON."""
+    """Exportiert die gesamte Datenbank als JSON (global, alle Mandanten)."""
+    from app.tenancy import current_owner_id
+
+    # Disable per-owner scoping so this is a genuine full-DB backup, not just the
+    # admin's own tenant.
+    current_owner_id.set(None)
     data = {}
 
     # Auto-discover all tables from SQLAlchemy Base

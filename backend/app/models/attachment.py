@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Index, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,12 @@ from app.tenancy import OwnedMixin
 
 class Attachment(OwnedMixin, Base):
     __tablename__ = "attachments"
+    __table_args__ = (
+        Index("idx_attachments_customer_id", "customer_id"),
+        Index("idx_attachments_order_id", "order_id"),
+        Index("idx_attachments_contract_id", "contract_id"),
+        Index("idx_attachments_expense_id", "expense_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

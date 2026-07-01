@@ -95,6 +95,18 @@ async def upload_attachment(
             detail="Datei zu groß (max. 20 MB).",
         )
 
+    # Validate the referenced entity belongs to the current owner (scoped lookups).
+    from app.models.contract import Contract as _Contract
+    from app.models.customer import Customer as _Customer
+    from app.models.expense import Expense as _Expense
+    from app.models.order import Order as _Order
+    for _val, _model, _label in (
+        (customer_id, _Customer, "Kunde"), (order_id, _Order, "Auftrag"),
+        (contract_id, _Contract, "Vertrag"), (expense_id, _Expense, "Ausgabe"),
+    ):
+        if _val and not (await db.execute(select(_model.id).where(_model.id == uuid.UUID(_val)))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail=f"{_label} nicht gefunden")
+
     with open(file_path, "wb") as f:
         f.write(content)
 

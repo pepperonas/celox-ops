@@ -73,11 +73,26 @@ async def run_cron() -> None:
                     await db.rollback()
                     logger.exception("Cron: Fehler bei Überprüfung überfälliger Rechnungen")
 
-                # Rainmaker: daily acquisition reminder (best-effort, never blocks)
+                # Rainmaker: daily acquisition reminder — per user (multi-tenant).
                 try:
+                    from sqlalchemy import select as _sel
+
+                    from app.models.user import User as _User
                     from app.services.rainmaker_service import check_rainmaker_reminder
-                    await check_rainmaker_reminder(db)
-                    await db.commit()
+                    from app.tenancy import current_owner_id as _owner
+
+                    active_users = (
+                        await db.execute(_sel(_User).where(_User.is_active.is_(True)))
+                    ).scalars().all()
+                    for u in active_users:
+                        _owner.set(u.id)  # scope this user's rainmaker data
+                        try:
+                            await check_rainmaker_reminder(db, u)
+                            await db.commit()
+                        except Exception:
+                            await db.rollback()
+                            logger.exception("Cron: Rainmaker-Reminder für %s fehlgeschlagen", u.username)
+                    _owner.set(None)
                 except Exception:
                     await db.rollback()
                     logger.exception("Cron: Rainmaker-Reminder fehlgeschlagen")
@@ -109,6 +124,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     from app.models.user import User, UserRole
 
+    import secrets as _secrets
+
     async with async_session_factory() as session:
         has_user = (await session.execute(_select(User).limit(1))).scalar_one_or_none()
         if has_user is None and settings.ADMIN_PASSWORD_HASH:
@@ -119,10 +136,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     role=UserRole.admin,
                     is_active=True,
                     totp_secret=(settings.TOTP_SECRET or None),
+                    # Reuse the legacy global iCal token for the admin so an existing
+                    # calendar subscription keeps working (now scoped to the admin).
+                    ical_token=(settings.ICAL_TOKEN or _secrets.token_urlsafe(24)),
                 )
             )
             await session.commit()
             logger.info("Bootstrap: Admin-User '%s' angelegt", settings.ADMIN_USERNAME)
+
+        # Backfill iCal tokens for any user missing one (admin keeps the legacy token).
+        missing = (await session.execute(_select(User).where(User.ical_token.is_(None)))).scalars().all()
+        for u in missing:
+            if u.role == UserRole.admin and settings.ICAL_TOKEN:
+                u.ical_token = settings.ICAL_TOKEN
+            else:
+                u.ical_token = _secrets.token_urlsafe(24)
+        if missing:
+            await session.commit()
+            logger.info("Bootstrap: iCal-Token für %d Nutzer nachgezogen", len(missing))
 
     # Start background cron task
     cron_task = asyncio.create_task(run_cron())

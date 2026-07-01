@@ -151,6 +151,16 @@ async def create_invoice(
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
 
+    # Validate optional FKs belong to the same owner (scoped → None if foreign tenant).
+    from app.models.contract import Contract as _Contract
+    from app.models.order import Order as _Order
+    if data.order_id is not None:
+        if not (await db.execute(select(_Order.id).where(_Order.id == data.order_id))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if data.contract_id is not None:
+        if not (await db.execute(select(_Contract.id).where(_Contract.id == data.contract_id))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
+
     invoice_number = await generate_invoice_number(db)
 
     positions_dicts = [p.model_dump() for p in data.positions]

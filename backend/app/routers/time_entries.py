@@ -159,6 +159,10 @@ async def update_time_entry(
         raise HTTPException(status_code=404, detail="Zeiteintrag nicht gefunden")
 
     update_data = data.model_dump(exclude_unset=True)
+    # Prevent reassigning to another owner's customer (scoped existence check).
+    if update_data.get("customer_id") is not None:
+        if not (await db.execute(select(Customer.id).where(Customer.id == update_data["customer_id"]))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
     for key, value in update_data.items():
         setattr(entry, key, value)
 

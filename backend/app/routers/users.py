@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,6 +30,18 @@ async def _active_admin_count(db: AsyncSession, exclude_id: uuid.UUID | None = N
 
 
 # ---- Self-service (any authenticated user) ----
+
+@router.get("/me/ical-token")
+async def my_ical_token(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Returns (and lazily creates) the current user's personal iCal feed token."""
+    if not current_user.ical_token:
+        current_user.ical_token = secrets.token_urlsafe(24)
+        await db.flush()
+    return {"token": current_user.ical_token}
+
 
 @router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_own_password(
@@ -66,6 +79,7 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)) -> U
         password_hash=hash_password(data.password),
         role=role,
         is_active=True,
+        ical_token=secrets.token_urlsafe(24),
     )
     db.add(user)
     await db.flush()

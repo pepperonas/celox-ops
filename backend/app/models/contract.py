@@ -4,6 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Index,
     Boolean,
     Date,
     DateTime,
@@ -44,6 +45,11 @@ class ContractStatus(str, enum.Enum):
 
 class Contract(OwnedMixin, Base):
     __tablename__ = "contracts"
+    __table_args__ = (
+        Index("idx_contracts_customer_id", "customer_id"),
+        Index("idx_contracts_status", "status"),
+        Index("idx_contracts_end_date", "end_date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

@@ -9,7 +9,7 @@ import {
   seedEmailTemplates,
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
-import { changeOwnPassword } from '../api/users'
+import { changeOwnPassword, getMyIcalToken } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate } from '../types'
 
 interface TrackerConfig {
@@ -45,6 +45,13 @@ export default function Settings() {
   const [curPw, setCurPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
+  const [icalUrl, setIcalUrl] = useState('')
+
+  useEffect(() => {
+    getMyIcalToken()
+      .then((t) => setIcalUrl(`${window.location.origin}/api/ical?token=${t}`))
+      .catch(() => {})
+  }, [])
   const [savingPrice, setSavingPrice] = useState(false)
 
   useEffect(() => {
@@ -203,6 +210,26 @@ export default function Settings() {
           </div>
         </form>
       </div>
+
+      {/* Kalender-Abo (iCal) */}
+      {icalUrl && (
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <h3 className="text-sm font-semibold text-text mb-2">Kalender-Abo (iCal)</h3>
+          <p className="text-text-muted text-sm mb-3">
+            Persönlicher Feed mit deinen Rechnungsfristen und Vertragsterminen — in Apple/Google Kalender abonnieren.
+            Der Link ist geheim und zeigt nur <strong>deine</strong> Daten.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input readOnly value={icalUrl} onClick={(e) => (e.target as HTMLInputElement).select()} className="flex-1 min-w-0 !text-xs font-mono" />
+            <button
+              onClick={() => { navigator.clipboard.writeText(icalUrl); toast.success('Link kopiert.') }}
+              className="btn-secondary text-sm shrink-0"
+            >
+              Kopieren
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Rechnungen */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">

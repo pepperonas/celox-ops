@@ -34,6 +34,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     # Per-user TOTP secret (nullable = 2FA off for this user).
     totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Per-user secret token for the personal iCal feed (scoped to this user's data).
+    ical_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

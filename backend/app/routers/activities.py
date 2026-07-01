@@ -58,6 +58,12 @@ async def create_activity(
             detail=f"Manuell erstellbare Typen: {', '.join(sorted(MANUAL_TYPES))}",
         )
 
+    # Ensure the referenced customer belongs to the current owner (scoped lookup).
+    if data.customer_id is not None:
+        from app.models.customer import Customer as _Customer
+        if not (await db.execute(select(_Customer.id).where(_Customer.id == data.customer_id))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
     activity = Activity(
         customer_id=data.customer_id,
         type=data.type,

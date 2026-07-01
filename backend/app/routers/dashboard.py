@@ -1,3 +1,4 @@
+import asyncio
 import calendar
 import time
 from datetime import date, datetime, timezone
@@ -70,8 +71,9 @@ class DashboardStats(BaseModel):
     active_contracts_monthly_sum: Decimal
 
 
-# In-memory cache for /stats: 60-second TTL, keyed per user (multi-tenant).
+# In-memory caches: 60-second TTL, keyed per user (multi-tenant).
 _stats_cache: dict = {}
+_charts_cache: dict = {}  # keyed by (owner_id, period, include_drafts)
 _STATS_CACHE_TTL = 60.0
 
 
@@ -170,6 +172,7 @@ def invalidate_stats_cache() -> None:
     """Invalidate the dashboard stats cache (call after invoice/contract mutations).
     Clears all per-user entries — each recomputes (owner-scoped) on next request."""
     _stats_cache.clear()
+    _charts_cache.clear()
 
 
 @router.get("/charts")
@@ -178,6 +181,10 @@ async def get_chart_data(
     include_drafts: bool = Query(False),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    cache_key = (current_owner_id.get(), period, include_drafts)
+    entry = _charts_cache.get(cache_key)
+    if entry is not None and time.monotonic() < entry["expires"]:
+        return entry["data"]
     today = date.today()
 
     # --- Revenue data ---
@@ -340,13 +347,15 @@ async def get_chart_data(
         for act in act_result.scalars().unique().all()
     ]
 
-    return {
+    result = {
         "revenue_by_period": revenue_by_period,
         "invoice_status_distribution": invoice_status_distribution,
         "top_customers": top_customers,
         "recent_invoices": recent_invoices,
         "recent_activities": recent_activities,
     }
+    _charts_cache[cache_key] = {"data": result, "expires": time.monotonic() + _STATS_CACHE_TTL}
+    return result
 
 
 @router.get("/profitability", response_model=list[CustomerProfitability])
@@ -631,7 +640,7 @@ async def generate_monthly_report(
         completed_orders=completed_orders,
     )
 
-    pdf_bytes = HTML(string=html_content).write_pdf()
+    pdf_bytes = await asyncio.to_thread(lambda: HTML(string=html_content).write_pdf())
 
     filename = f"Monatsbericht_{year}_{month:02d}.pdf"
     return Response(

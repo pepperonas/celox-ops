@@ -4,6 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Index,
     Date,
     DateTime,
     Enum,
@@ -31,6 +32,10 @@ class OrderStatus(str, enum.Enum):
 
 class Order(OwnedMixin, Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("idx_orders_customer_id", "customer_id"),
+        Index("idx_orders_status", "status"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

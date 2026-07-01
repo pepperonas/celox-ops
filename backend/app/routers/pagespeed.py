@@ -1,10 +1,11 @@
+import asyncio
 import json
 import os
 import uuid
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from jinja2 import Template
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -240,7 +241,7 @@ async def analyze_pagespeed(
         passed=passed,
     )
 
-    pdf = HTML(string=html).write_pdf()
+    pdf = await asyncio.to_thread(lambda: HTML(string=html).write_pdf())
     domain = url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
     filename = f"PageSpeed_{domain}.pdf"
 
@@ -328,15 +329,13 @@ async def download_pagespeed_pdf(
     if not os.path.exists(entry.pdf_path):
         raise HTTPException(status_code=404, detail="PDF-Datei nicht gefunden")
 
-    with open(entry.pdf_path, "rb") as f:
-        pdf_data = f.read()
-
     domain = entry.url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
     strategy_label = "Mobile" if entry.strategy == "mobile" else "Desktop"
     filename = f"PageSpeed_{domain}_{strategy_label}_{entry.created_at.strftime('%Y-%m-%d')}.pdf"
 
-    return Response(
-        content=pdf_data,
+    return FileResponse(
+        entry.pdf_path,
         media_type="application/pdf",
+        filename=filename,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

@@ -43,3 +43,8 @@ export async function deleteUser(id: string): Promise<void> {
 export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.post('/users/me/password', { current_password: currentPassword, new_password: newPassword })
 }
+
+export async function getMyIcalToken(): Promise<string> {
+  const res = await api.get('/users/me/ical-token')
+  return res.data.token
+}
