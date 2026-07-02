@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 const items = [
   { to: '/rainmaker', label: 'Heute', end: true },
+  { to: '/rainmaker/traumziel', label: '🏁 Traumziel', end: false },
   { to: '/rainmaker/pipeline', label: 'Pipeline', end: false },
   { to: '/rainmaker/statistik', label: 'Statistik', end: false },
   { to: '/rainmaker/einstellungen', label: 'Einstellungen', end: false },

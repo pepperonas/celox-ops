@@ -39,6 +39,7 @@ const Users = lazy(() => import('./pages/Users'))
 const Settings = lazy(() => import('./pages/Settings'))
 const RainmakerToday = lazy(() => import('./pages/rainmaker/Today'))
 const RainmakerPipeline = lazy(() => import('./pages/rainmaker/Pipeline'))
+const RainmakerDreamGoal = lazy(() => import('./pages/rainmaker/DreamGoal'))
 const RainmakerLeadForm = lazy(() => import('./pages/rainmaker/LeadForm'))
 const RainmakerLeadDetail = lazy(() => import('./pages/rainmaker/LeadDetail'))
 const RainmakerStatistics = lazy(() => import('./pages/rainmaker/Statistics'))
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/rainmaker" element={<RainmakerToday />} />
           <Route path="/rainmaker/pipeline" element={<RainmakerPipeline />} />
+          <Route path="/rainmaker/traumziel" element={<RainmakerDreamGoal />} />
           <Route path="/rainmaker/statistik" element={<RainmakerStatistics />} />
           <Route path="/rainmaker/einstellungen" element={<RainmakerSettingsPage />} />
           <Route path="/rainmaker/leads/neu" element={<RainmakerLeadForm />} />

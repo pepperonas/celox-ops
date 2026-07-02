@@ -635,6 +635,8 @@ export interface RainmakerTodayResponse {
 export type RainmakerReminderChannel = 'email' | 'telegram' | 'push'
 export type RainmakerTemplateChannel = 'email' | 'message'
 
+export type RainmakerDreamMode = 'ev' | 'invoices'
+
 export interface RainmakerSettings {
   id: string
   daily_quota: number
@@ -643,9 +645,46 @@ export interface RainmakerSettings {
   reminder_channel: RainmakerReminderChannel
   telegram_chat_id: string | null
   freezes_per_month: number
+  // Traumziel (dream goal)
+  dream_goal_key: string | null
+  dream_goal_name: string | null
+  dream_goal_price: number
+  dream_savings_rate_pct: number
+  dream_avg_deal_value: number
+  dream_contacts_per_win: number
+  dream_start_date: string | null
+  dream_mode: RainmakerDreamMode
 }
 
 export type RainmakerSettingsUpdate = Partial<Omit<RainmakerSettings, 'id'>>
+
+// Traumziel — expected-value motivation engine (numbers may arrive as strings
+// from the API; the page wraps them in Number()).
+export interface RainmakerDreamResponse {
+  goal_key: string | null
+  goal_name: string
+  goal_price: number
+  savings_rate_pct: number
+  avg_deal_value: number
+  contacts_per_win: number
+  start_date: string
+  mode: RainmakerDreamMode
+  ev_per_contact: number
+  ev_weights: Record<string, number>
+  counts_by_type: { type: RainmakerActivityType; count: number }[]
+  activities_ev: number
+  won_count: number
+  won_value: number
+  won_ev: number
+  invoices_paid: number
+  invoices_ev: number
+  saved_total: number
+  pct: number
+  today_ev: number
+  pace_per_day: number
+  projected_date: string | null
+  days_active: number
+}
 
 export interface RainmakerTemplate {
   id: string

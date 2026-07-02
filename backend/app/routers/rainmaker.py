@@ -11,6 +11,7 @@ konkret zu tun ist. Router wird phasenweise gefüllt:
 import math
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.models.invoice import Invoice, InvoiceStatus
 from app.models.rainmaker_activity import (
     RainmakerActivity,
     RainmakerActivityStatus,
@@ -29,12 +31,13 @@ from app.models.rainmaker_lead import (
     RainmakerLeadStatus,
     RainmakerPriority,
 )
-from app.models.rainmaker_settings import RainmakerSettings
+from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
     RainmakerActivityComplete,
     RainmakerActivityCreate,
     RainmakerActivityResponse,
+    RainmakerDreamResponse,
     RainmakerLeadCreate,
     RainmakerLeadResponse,
     RainmakerLeadSummary,
@@ -57,7 +60,11 @@ from app.schemas.rainmaker import (
     RmTypeCount,
 )
 from app.services.rainmaker_service import (
+    DREAM_EV_WEIGHTS,
     count_done_today,
+    dream_activities_ev,
+    dream_ev_per_contact,
+    dream_projected_date,
     get_or_create_settings,
     get_streak_display,
     is_rotting,
@@ -449,6 +456,120 @@ async def stats(db: AsyncSession = Depends(get_db)) -> RainmakerStatsResponse:
         current_streak=current,
         longest_streak=streak.longest_streak,
         total_points=streak.total_points,
+    )
+
+
+# --------------------------------------------------------------------------- #
+#  Traumziel — expected-value motivation engine
+# --------------------------------------------------------------------------- #
+_DREAM_DEFAULT_NAME = "Porsche Cayenne Turbo Electric"
+
+
+@router.get("/dream", response_model=RainmakerDreamResponse)
+async def dream(db: AsyncSession = Depends(get_db)) -> RainmakerDreamResponse:
+    """Progress toward the dream goal. In "ev" mode every completed action since
+    the start date carries its statistical value (plus won leads as "realized");
+    in "invoices" mode paid invoice totals drive the bar instead."""
+    s = await get_or_create_settings(db)
+    today_date = date.today()
+    if s.dream_start_date is None:
+        # First visit starts the challenge.
+        s.dream_start_date = today_date
+        await db.flush()
+    start = s.dream_start_date
+    start_dt = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
+
+    ev_unit = dream_ev_per_contact(
+        s.dream_avg_deal_value, s.dream_savings_rate_pct, s.dream_contacts_per_win
+    )
+    rate = Decimal(s.dream_savings_rate_pct) / Decimal(100)
+
+    async def _activity_ev_since(since: datetime) -> tuple[dict, Decimal]:
+        rows = (await db.execute(
+            select(RainmakerActivity.type, func.count())
+            .where(
+                RainmakerActivity.status == RainmakerActivityStatus.done,
+                RainmakerActivity.completed_at >= since,
+            )
+            .group_by(RainmakerActivity.type)
+        )).all()
+        counts = {t: int(c) for t, c in rows}
+        return counts, dream_activities_ev(counts, ev_unit)
+
+    async def _won_since(since: datetime) -> tuple[int, Decimal]:
+        # Won leads since `since` — updated_at is the proxy for the win date.
+        row = (await db.execute(
+            select(func.count(), func.coalesce(func.sum(RainmakerLead.value_estimate), 0))
+            .where(
+                RainmakerLead.status == RainmakerLeadStatus.won,
+                RainmakerLead.updated_at >= since,
+            )
+        )).one()
+        return int(row[0]), Decimal(row[1] or 0)
+
+    async def _paid_invoices_since(since: date) -> Decimal:
+        total = (await db.execute(
+            select(func.coalesce(func.sum(Invoice.total), 0)).where(
+                Invoice.status == InvoiceStatus.bezahlt,
+                Invoice.invoice_date >= since,
+            )
+        )).scalar_one()
+        return Decimal(total or 0)
+
+    counts, acts_ev = await _activity_ev_since(start_dt)
+    won_count, won_value = await _won_since(start_dt)
+    won_ev = (won_value * rate).quantize(Decimal("0.01"))
+    invoices_paid = await _paid_invoices_since(start)
+    invoices_ev = (invoices_paid * rate).quantize(Decimal("0.01"))
+
+    if s.dream_mode == RainmakerDreamMode.invoices:
+        saved_total = invoices_ev
+    else:
+        saved_total = (acts_ev + won_ev).quantize(Decimal("0.01"))
+
+    price = Decimal(s.dream_goal_price)
+    pct = float(min(saved_total / price, Decimal(1))) if price > 0 else 0.0
+
+    # Today's earned value (clipped to the challenge start).
+    today_dt = datetime.combine(today_date, datetime.min.time(), tzinfo=timezone.utc)
+    _tc, today_ev = await _activity_ev_since(max(today_dt, start_dt))
+
+    # Pace: Ø €/day over the last 28 days (window clipped to the start date).
+    window_start = max(start, today_date - timedelta(days=27))
+    window_days = (today_date - window_start).days + 1
+    window_dt = datetime.combine(window_start, datetime.min.time(), tzinfo=timezone.utc)
+    if s.dream_mode == RainmakerDreamMode.invoices:
+        window_total = (await _paid_invoices_since(window_start)) * rate
+    else:
+        _wc, window_acts_ev = await _activity_ev_since(window_dt)
+        _wn, window_won_value = await _won_since(window_dt)
+        window_total = window_acts_ev + window_won_value * rate
+    pace_per_day = (window_total / window_days).quantize(Decimal("0.01"))
+
+    return RainmakerDreamResponse(
+        goal_key=s.dream_goal_key,
+        goal_name=s.dream_goal_name or _DREAM_DEFAULT_NAME,
+        goal_price=price,
+        savings_rate_pct=s.dream_savings_rate_pct,
+        avg_deal_value=s.dream_avg_deal_value,
+        contacts_per_win=s.dream_contacts_per_win,
+        start_date=start,
+        mode=s.dream_mode,
+        ev_per_contact=ev_unit,
+        ev_weights={t.value: w for t, w in DREAM_EV_WEIGHTS.items()},
+        counts_by_type=[RmTypeCount(type=t, count=c) for t, c in counts.items()],
+        activities_ev=acts_ev,
+        won_count=won_count,
+        won_value=won_value,
+        won_ev=won_ev,
+        invoices_paid=invoices_paid,
+        invoices_ev=invoices_ev,
+        saved_total=saved_total,
+        pct=pct,
+        today_ev=today_ev,
+        pace_per_day=pace_per_day,
+        projected_date=dream_projected_date(price - saved_total, pace_per_day, today_date),
+        days_active=(today_date - start).days + 1,
     )
 
 

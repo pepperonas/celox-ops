@@ -7,6 +7,7 @@ import type {
   RainmakerActivityCreate,
   RainmakerActivityComplete,
   RainmakerTodayResponse,
+  RainmakerDreamResponse,
   RainmakerStats,
   RainmakerSettings,
   RainmakerSettingsUpdate,
@@ -87,6 +88,12 @@ export async function getRainmakerToday(): Promise<RainmakerTodayResponse> {
 
 export async function getRainmakerStats(): Promise<RainmakerStats> {
   const response = await api.get('/rainmaker/stats')
+  return response.data
+}
+
+// --- Traumziel (dream goal) ---
+export async function getRainmakerDream(): Promise<RainmakerDreamResponse> {
+  const response = await api.get('/rainmaker/dream')
   return response.data
 }
 

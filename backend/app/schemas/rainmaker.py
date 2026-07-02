@@ -10,7 +10,7 @@ from app.models.rainmaker_activity import (
     RainmakerOutcome,
 )
 from app.models.rainmaker_lead import RainmakerLeadStatus, RainmakerPriority
-from app.models.rainmaker_settings import RainmakerReminderChannel
+from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerReminderChannel
 from app.models.rainmaker_template import RainmakerTemplateChannel
 
 
@@ -201,6 +201,15 @@ class RainmakerSettingsResponse(BaseModel):
     reminder_channel: RainmakerReminderChannel
     telegram_chat_id: str | None = None
     freezes_per_month: int
+    # Traumziel (dream goal)
+    dream_goal_key: str | None = None
+    dream_goal_name: str | None = None
+    dream_goal_price: Decimal
+    dream_savings_rate_pct: int
+    dream_avg_deal_value: Decimal
+    dream_contacts_per_win: int
+    dream_start_date: DateType | None = None
+    dream_mode: RainmakerDreamMode
 
 
 class RainmakerSettingsUpdate(BaseModel):
@@ -210,6 +219,15 @@ class RainmakerSettingsUpdate(BaseModel):
     reminder_channel: RainmakerReminderChannel | None = None
     telegram_chat_id: str | None = None
     freezes_per_month: int | None = None
+    # Traumziel (dream goal)
+    dream_goal_key: str | None = None
+    dream_goal_name: str | None = None
+    dream_goal_price: Decimal | None = None
+    dream_savings_rate_pct: int | None = None
+    dream_avg_deal_value: Decimal | None = None
+    dream_contacts_per_win: int | None = None
+    dream_start_date: DateType | None = None
+    dream_mode: RainmakerDreamMode | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -270,3 +288,39 @@ class RainmakerGoalResponse(RainmakerGoalBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+# --------------------------------------------------------------------------- #
+#  Traumziel (dream goal) — expected-value motivation engine
+# --------------------------------------------------------------------------- #
+class RainmakerDreamResponse(BaseModel):
+    # Goal + assumptions (mirrors the settings so the view is self-contained).
+    goal_key: str | None = None
+    goal_name: str
+    goal_price: Decimal
+    savings_rate_pct: int
+    avg_deal_value: Decimal
+    contacts_per_win: int
+    start_date: DateType
+    mode: RainmakerDreamMode
+
+    # Engine constants for client-side scenario math.
+    ev_per_contact: Decimal
+    ev_weights: dict[str, float]
+
+    # Progress since start_date.
+    counts_by_type: list[RmTypeCount]
+    activities_ev: Decimal        # statistical value of all completed actions
+    won_count: int
+    won_value: Decimal            # sum of won leads' value_estimate
+    won_ev: Decimal               # won_value × savings rate ("realized")
+    invoices_paid: Decimal        # paid invoice totals since start
+    invoices_ev: Decimal          # invoices_paid × savings rate
+    saved_total: Decimal          # mode-dependent primary progress value
+    pct: float                    # saved_total / goal_price, capped at 1.0
+
+    # Momentum.
+    today_ev: Decimal             # value earned today
+    pace_per_day: Decimal         # Ø €/day over the last 28 days (mode-aware)
+    projected_date: DateType | None = None
+    days_active: int

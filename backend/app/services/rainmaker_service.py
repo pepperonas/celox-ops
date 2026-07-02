@@ -6,6 +6,7 @@ activity is "rotting" and must be surfaced prominently.
 """
 import logging
 from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -185,6 +186,65 @@ async def register_completion(db: AsyncSession, activity_type: RainmakerActivity
                 streak.current_streak = 1  # too many missed working days → reset
             streak.last_quota_met_date = today
             streak.longest_streak = max(streak.longest_streak, streak.current_streak)
+
+
+# --------------------------------------------------------------------------- #
+#  Traumziel (dream goal): expected-value engine
+#
+#  The motivational core: every completed acquisition action carries a
+#  statistical value toward the dream, even when the answer is "no". With the
+#  default assumptions (Ø deal 15k €, 20 contacts per win, 30 % savings rate)
+#  one call is worth 15000 × 0.30 / 20 = 225 € toward the goal.
+# --------------------------------------------------------------------------- #
+# Relative weight of each activity type against one "contact unit" (= a call).
+DREAM_EV_WEIGHTS: dict[RainmakerActivityType, float] = {
+    RainmakerActivityType.call: 1.0,
+    RainmakerActivityType.visit: 2.5,
+    RainmakerActivityType.email: 0.4,
+    RainmakerActivityType.message: 0.4,
+    RainmakerActivityType.follow_up: 0.8,
+    RainmakerActivityType.note: 0.0,
+}
+
+
+def dream_ev_per_contact(
+    avg_deal_value: Decimal | int | float,
+    savings_rate_pct: int,
+    contacts_per_win: int,
+) -> Decimal:
+    """Expected € toward the dream per weight-1.0 contact (one call)."""
+    if contacts_per_win <= 0 or savings_rate_pct <= 0:
+        return Decimal("0.00")
+    value = (
+        Decimal(str(avg_deal_value)) * Decimal(savings_rate_pct) / Decimal(100)
+    ) / Decimal(contacts_per_win)
+    return value.quantize(Decimal("0.01"))
+
+
+def dream_activities_ev(
+    counts_by_type: dict[RainmakerActivityType, int], ev_per_contact: Decimal
+) -> Decimal:
+    """Total expected value of a set of completed activities."""
+    total = Decimal("0")
+    for activity_type, count in counts_by_type.items():
+        weight = DREAM_EV_WEIGHTS.get(activity_type, 0.0)
+        total += ev_per_contact * Decimal(str(weight)) * count
+    return total.quantize(Decimal("0.01"))
+
+
+def dream_projected_date(
+    remaining: Decimal, pace_per_day: Decimal, today: date
+) -> date | None:
+    """Finish date at the current pace. None while there is no pace yet or the
+    projection is beyond any horizon a human plans with (> 50 years)."""
+    if remaining <= 0:
+        return today
+    if pace_per_day <= 0:
+        return None
+    days = int(remaining / pace_per_day) + 1
+    if days > 18250:
+        return None
+    return today + timedelta(days=days)
 
 
 async def check_rainmaker_reminder(db: AsyncSession, user=None) -> bool:
