@@ -768,14 +768,14 @@ CO-2026-0001
   - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
   - Logs in `/var/log/celox-auto-deploy.log`
   - Smoke-Test (Health-Check) nach Backend-Rebuild
-- **Unit-Tests — 94 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
-  - **Backend (pytest, 51):** `test_smoke` (8 — Router-Imports/JWT/Invoice-Berechnung/Path-Traversal/Auto-Position), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT-Roundtrip/Ablauf/Manipulation), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine + Defaults)
+- **Unit-Tests — 110 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
+  - **Backend (pytest, 67):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5)
   - **Frontend (Vitest, 43):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (4 — Positionsvorschläge), Rainmaker-`constants` (5)
 
 ## Projektumfang
 
 - **~27.400 LoC Anwendungscode** — ~9.840 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~15.900 Frontend (TypeScript/React)
-- **~760 LoC Tests** · 22 DB-Tabellen · 94 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
+- **~900 LoC Tests** · 22 DB-Tabellen · 110 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 

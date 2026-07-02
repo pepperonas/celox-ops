@@ -11,6 +11,14 @@
 
 <p align="center">
 
+[![CI](https://img.shields.io/github/actions/workflow/status/pepperonas/celox-ops/ci.yml?branch=main&logo=githubactions&logoColor=white&label=CI)](https://github.com/pepperonas/celox-ops/actions/workflows/ci.yml)
+[![Last commit](https://img.shields.io/github/last-commit/pepperonas/celox-ops?logo=git&logoColor=white)](https://github.com/pepperonas/celox-ops/commits/main)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/pepperonas/celox-ops)](https://github.com/pepperonas/celox-ops/pulse)
+[![Code size](https://img.shields.io/github/languages/code-size/pepperonas/celox-ops)](https://github.com/pepperonas/celox-ops)
+[![Repo size](https://img.shields.io/github/repo-size/pepperonas/celox-ops)](https://github.com/pepperonas/celox-ops)
+[![Top language](https://img.shields.io/github/languages/top/pepperonas/celox-ops)](https://github.com/pepperonas/celox-ops)
+[![Languages](https://img.shields.io/github/languages/count/pepperonas/celox-ops)](https://github.com/pepperonas/celox-ops)
+[![Issues](https://img.shields.io/github/issues/pepperonas/celox-ops?logo=github)](https://github.com/pepperonas/celox-ops/issues)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
@@ -30,6 +38,16 @@
 [![Platform](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.linux.org/)
 [![Zustand](https://img.shields.io/badge/Zustand-State-443E38)](https://zustand-demo.pmnd.rs/)
 [![Axios](https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white)](https://axios-http.com/)
+[![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen?logo=checkmarx&logoColor=white)](#tests)
+[![pytest](https://img.shields.io/badge/pytest-67-0A9EDC?logo=pytest&logoColor=white)](backend/tests)
+[![Vitest](https://img.shields.io/badge/Vitest-43-6E9F18?logo=vitest&logoColor=white)](frontend/src)
+[![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
+[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white)](#)
+[![Multi-tenant](https://img.shields.io/badge/multi--tenant-isolated%20workspaces-success)](#)
+[![2FA](https://img.shields.io/badge/2FA-TOTP-success?logo=authy&logoColor=white)](#)
+[![Material 3](https://img.shields.io/badge/Material%203-Expressive-757575?logo=materialdesign&logoColor=white)](https://m3.material.io/)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/pepperonas/celox-ops/pulls)
+[![Made by celox.io](https://img.shields.io/badge/made%20by-celox.io-0B57D0)](https://celox.io)
 
 </p>
 
