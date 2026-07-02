@@ -8,8 +8,9 @@ describe('isAutoPosition', () => {
     expect(isAutoPosition(pos('Irgendwas', true))).toBe(true)
   })
 
-  it('flags the infrastructure line', () => {
+  it('flags the infrastructure line (old and new "(KI)" label)', () => {
     expect(isAutoPosition(pos('Technische Infrastruktur & externe Systemkosten'))).toBe(true)
+    expect(isAutoPosition(pos('Technische Infrastruktur & externe Systemkosten (KI)'))).toBe(true)
   })
 
   it('flags a title carrying a period stamp (legacy auto)', () => {

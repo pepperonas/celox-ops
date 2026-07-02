@@ -717,7 +717,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                     if cost_eur > 0:
                         new_positions.append({
                             "position": 2,
-                            "beschreibung": "Technische Infrastruktur & externe Systemkosten",
+                            "beschreibung": "Technische Infrastruktur & externe Systemkosten (KI)",
                             "menge": "1",
                             "einheit": "pauschal",
                             "einzelpreis": str(cost_eur),
@@ -733,7 +733,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
                         desc = str(p.get("beschreibung", ""))
                         if desc.startswith("KI-"):
                             return True
-                        if desc == "Technische Infrastruktur & externe Systemkosten":
+                        if desc.startswith("Technische Infrastruktur & externe Systemkosten"):
                             return True
                         # Matches "<anything> (YYYY-MM-DD – YYYY-MM-DD)" regardless of title
                         if _period_pattern.search(desc):

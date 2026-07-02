@@ -390,7 +390,7 @@ export default function InvoiceForm() {
         const costEur = Math.round(totalCost * 0.92 * 100) / 100
         newPositions.push({
           position: 0,
-          beschreibung: 'Technische Infrastruktur & externe Systemkosten',
+          beschreibung: 'Technische Infrastruktur & externe Systemkosten (KI)',
           menge: 1,
           einheit: 'pauschal',
           einzelpreis: costEur,

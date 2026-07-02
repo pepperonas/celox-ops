@@ -12,7 +12,7 @@ export const PERIOD_SUFFIX = /\(\d{4}-\d{2}-\d{2}\s*[–-]\s*\d{4}-\d{2}-\d{2}\)
 export function isAutoPosition(p: Pick<InvoicePosition, 'beschreibung' | 'auto'>): boolean {
   if (p.auto === true) return true
   const desc = (p.beschreibung || '').trim()
-  if (desc === 'Technische Infrastruktur & externe Systemkosten') return true
+  if (desc.startsWith('Technische Infrastruktur & externe Systemkosten')) return true
   if (desc.startsWith('KI-')) return true
   return PERIOD_SUFFIX.test(desc)
 }
