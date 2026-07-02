@@ -87,23 +87,27 @@ async def run_cron() -> None:
                         await db.execute(_sel(_User).where(_User.is_active.is_(True)))
                     ).scalars().all()
                     for u in active_users:
-                        _owner.set(u.id)  # scope this user's owned data
+                        # Token-Reset im finally — ein geleakter Owner würde den
+                        # globalen Überfällig-Check des nächsten Ticks still scopen.
+                        _owner_token = _owner.set(u.id)  # scope this user's owned data
                         try:
-                            await check_rainmaker_reminder(db, u)
-                            await db.commit()
-                        except Exception:
-                            await db.rollback()
-                            logger.exception("Cron: Rainmaker-Reminder für %s fehlgeschlagen", u.username)
-                        try:
-                            created = await generate_due_recurring(db)
-                            if created:
+                            try:
+                                await check_rainmaker_reminder(db, u)
                                 await db.commit()
-                                invalidate_stats_cache()
-                                logger.info("Cron: %d wiederkehrende Rechnung(en) für %s erstellt", len(created), u.username)
-                        except Exception:
-                            await db.rollback()
-                            logger.exception("Cron: Recurring-Rechnungen für %s fehlgeschlagen", u.username)
-                    _owner.set(None)
+                            except Exception:
+                                await db.rollback()
+                                logger.exception("Cron: Rainmaker-Reminder für %s fehlgeschlagen", u.username)
+                            try:
+                                created = await generate_due_recurring(db)
+                                if created:
+                                    await db.commit()
+                                    invalidate_stats_cache()
+                                    logger.info("Cron: %d wiederkehrende Rechnung(en) für %s erstellt", len(created), u.username)
+                            except Exception:
+                                await db.rollback()
+                                logger.exception("Cron: Recurring-Rechnungen für %s fehlgeschlagen", u.username)
+                        finally:
+                            _owner.reset(_owner_token)
                 except Exception:
                     await db.rollback()
                     logger.exception("Cron: Per-Nutzer-Tasks fehlgeschlagen")

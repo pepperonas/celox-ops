@@ -1,5 +1,6 @@
 import base64
 import io
+import asyncio
 import os
 import uuid
 import zipfile
@@ -148,7 +149,8 @@ async def generate_all_documents(
         for tmpl in templates:
             content = _replace_placeholders(tmpl.content, customer)
             full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
-            pdf = HTML(string=full_html).write_pdf()
+            # WeasyPrint is sync (2-5s/render) — offload so the event loop stays free.
+            pdf = await asyncio.to_thread(lambda h=full_html: HTML(string=h).write_pdf())
             filename = f"{tmpl.name.replace(' ', '-')}.pdf"
             zf.writestr(filename, pdf)
 
@@ -172,7 +174,7 @@ async def generate_document(data: GenerateRequest, db: AsyncSession = Depends(ge
 
     content = _replace_placeholders(tmpl.content, customer)
     full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
-    pdf = HTML(string=full_html).write_pdf()
+    pdf = await asyncio.to_thread(lambda: HTML(string=full_html).write_pdf())
 
     filename = f"{tmpl.name.replace(' ', '-')}_{customer.company or customer.name}.pdf"
     return Response(

@@ -1,3 +1,4 @@
+import asyncio
 import smtplib
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -7,22 +8,16 @@ from pathlib import Path
 from app.config import settings
 
 
-async def send_email(
+def _send_email_sync(
     to_email: str,
     subject: str,
     body_html: str,
-    pdf_path: str | None = None,
-    cc: list[str] | None = None,
-    bcc: list[str] | None = None,
+    pdf_path: str | None,
+    cc: list[str] | None,
+    bcc: list[str] | None,
 ) -> bool:
-    """Send an email with optional PDF attachment via SMTP.
-
-    Returns True on success. Raises on failure.
-    Skips silently (returns False) if SMTP_HOST is not configured.
-    """
-    if not settings.SMTP_HOST:
-        raise RuntimeError("SMTP ist nicht konfiguriert. Bitte SMTP_HOST in .env setzen.")
-
+    """Blocking SMTP send — always call via asyncio.to_thread (an SMTP handshake
+    can take seconds and would stall the single-worker event loop)."""
     cc_list = [c.strip() for c in (cc or []) if c and c.strip()]
     bcc_list = [b.strip() for b in (bcc or []) if b and b.strip()]
 
@@ -70,3 +65,25 @@ async def send_email(
         )
 
     return True
+
+
+async def send_email(
+    to_email: str,
+    subject: str,
+    body_html: str,
+    pdf_path: str | None = None,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
+) -> bool:
+    """Send an email with optional PDF attachment via SMTP.
+
+    Returns True on success. Raises on failure.
+    Raises if SMTP_HOST is not configured.
+    The blocking SMTP I/O runs in a worker thread (same pattern as WeasyPrint).
+    """
+    if not settings.SMTP_HOST:
+        raise RuntimeError("SMTP ist nicht konfiguriert. Bitte SMTP_HOST in .env setzen.")
+
+    return await asyncio.to_thread(
+        _send_email_sync, to_email, subject, body_html, pdf_path, cc, bcc
+    )

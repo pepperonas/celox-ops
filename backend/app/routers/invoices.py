@@ -1,5 +1,6 @@
 import asyncio
 import math
+import os
 import uuid
 from decimal import Decimal
 
@@ -27,7 +28,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from app.models.activity import Activity
 from app.services.email_service import send_email
-from app.services.invoice_service import calculate_invoice_totals, generate_invoice_number
+from app.services.invoice_service import calculate_invoice_totals, flush_new_invoice, generate_invoice_number
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
 
 
@@ -196,8 +197,7 @@ async def create_invoice(
         discount_value=Decimal(str(data.discount_value)) if data.discount_value else None,
         discount_reason=data.discount_reason,
     )
-    db.add(invoice)
-    await db.flush()
+    await flush_new_invoice(db, invoice)
     await db.refresh(invoice)
 
     activity = Activity(
@@ -232,6 +232,17 @@ async def _regenerate_pdf_bg(invoice_id: uuid.UUID) -> None:
             if invoice is None or not invoice.pdf_path:
                 return
             pdf_path = await asyncio.to_thread(generate_invoice_pdf, invoice, invoice.customer)
+            # The invoice may have been deleted during the 2-5s render — don't
+            # leave an orphaned file behind.
+            still_there = (
+                await session.execute(select(Invoice.id).where(Invoice.id == invoice_id))
+            ).scalar_one_or_none()
+            if still_there is None:
+                try:
+                    os.remove(pdf_path)
+                except OSError:
+                    pass
+                return
             invoice.pdf_path = pdf_path
             await session.commit()
     except Exception as e:
@@ -259,6 +270,20 @@ async def update_invoice(
 
     update_data = data.model_dump(exclude_unset=True)
 
+    # Prevent reassigning to another tenant's records (scoped selects return
+    # None for foreign rows) — mirrors the guard in time_entries/create_invoice.
+    from app.models.contract import Contract as _Contract
+    from app.models.order import Order as _Order
+    if update_data.get("customer_id") is not None:
+        if not (await db.execute(select(Customer.id).where(Customer.id == update_data["customer_id"]))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+    if update_data.get("order_id") is not None:
+        if not (await db.execute(select(_Order.id).where(_Order.id == update_data["order_id"]))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if update_data.get("contract_id") is not None:
+        if not (await db.execute(select(_Contract.id).where(_Contract.id == update_data["contract_id"]))).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
+
     if "positions" in update_data and update_data["positions"] is not None:
         positions_dicts = [p.model_dump() for p in data.positions]  # type: ignore[union-attr]
         positions_json = []
@@ -271,8 +296,12 @@ async def update_invoice(
 
         tax_rate = data.tax_rate if data.tax_rate is not None else invoice.tax_rate
         tax_exempt = data.tax_exempt if data.tax_exempt is not None else invoice.tax_exempt
-        d_type = data.discount_type if data.discount_type is not None else invoice.discount_type
-        d_value = data.discount_value if data.discount_value is not None else (float(invoice.discount_value) if invoice.discount_value else None)
+        # Presence check, not None check: the form sends explicit nulls to CLEAR
+        # the discount — falling back to the old values here would persist totals
+        # that still include the removed discount.
+        d_type = update_data["discount_type"] if "discount_type" in update_data else invoice.discount_type
+        _raw_dv = update_data["discount_value"] if "discount_value" in update_data else invoice.discount_value
+        d_value = float(_raw_dv) if _raw_dv is not None else None
         subtotal, tax_amount, total = calculate_invoice_totals(
             positions_dicts, tax_rate, tax_exempt,
             discount_type=d_type, discount_value=d_value,
@@ -871,8 +900,7 @@ async def quick_invoice(
         notes=data.notes,
         status=InvoiceStatus.entwurf,
     )
-    db.add(invoice)
-    await db.flush()
+    await flush_new_invoice(db, invoice)
     await db.refresh(invoice)
 
     resp = InvoiceResponse.model_validate(invoice)
@@ -966,8 +994,7 @@ async def duplicate_invoice(
         discount_value=src.discount_value,
         discount_reason=src.discount_reason,
     )
-    db.add(new)
-    await db.flush()
+    await flush_new_invoice(db, new)
     await db.refresh(new)
 
     result = await db.execute(
@@ -1086,4 +1113,10 @@ async def delete_invoice(
             status_code=400,
             detail="Nur Rechnungen im Status 'Entwurf' können gelöscht werden",
         )
+    # Remove the PDF from disk too (best-effort) — otherwise it stays orphaned.
+    if invoice.pdf_path:
+        try:
+            os.remove(invoice.pdf_path)
+        except OSError:
+            pass
     await db.delete(invoice)

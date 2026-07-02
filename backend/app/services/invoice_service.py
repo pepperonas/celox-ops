@@ -1,20 +1,38 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.invoice import Invoice
+from app.tenancy import current_owner_id
 
 # Offset for externally issued invoices not tracked in this system.
 # Set INVOICE_NUMBER_OFFSET in .env to the number of invoices already
 # issued outside this app for the current year.
 INVOICE_NUMBER_OFFSET = int(getattr(settings, "INVOICE_NUMBER_OFFSET", 0) or 0)
 
+# Arbitrary namespace constant for the per-owner advisory lock (int4).
+_INVOICE_LOCK_NS = 0x1CE0
+
 
 async def generate_invoice_number(db: AsyncSession) -> str:
     from app.models.app_settings import AppSettings
+
+    # Serialize number generation per owner with a transaction-scoped advisory
+    # lock. It is held until commit/rollback, so a concurrent caller (double
+    # submit, or cron vs. the manual endpoint) blocks until the first invoice is
+    # committed and then reads the fresh max — no duplicate numbers, no retry
+    # guessing (which fails under true concurrency because the conflicting row
+    # isn't visible until it commits).
+    owner = current_owner_id.get()
+    if owner is not None:
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(:ns, hashtext(:owner))").bindparams(
+                ns=_INVOICE_LOCK_NS, owner=str(owner)
+            )
+        )
 
     year = datetime.now().year
     # Per-owner prefix (query is owner-scoped via tenancy events; default "CO").
@@ -35,6 +53,25 @@ async def generate_invoice_number(db: AsyncSession) -> str:
         next_seq += 1
 
     return f"{prefix}{next_seq:04d}"
+
+
+async def flush_new_invoice(db: AsyncSession, invoice, attempts: int = 3) -> None:
+    """Add + flush a new invoice, retrying with a fresh number when a concurrent
+    request grabbed the same one (uq_invoice_owner_number). The SAVEPOINT keeps
+    the surrounding transaction usable on conflict; without this the race
+    surfaces as an unhandled 500."""
+    from sqlalchemy.exc import IntegrityError
+
+    for attempt in range(attempts):
+        try:
+            async with db.begin_nested():
+                db.add(invoice)
+                await db.flush()
+            return
+        except IntegrityError:
+            if attempt == attempts - 1:
+                raise
+            invoice.invoice_number = await generate_invoice_number(db)
 
 
 def calculate_invoice_totals(
@@ -84,8 +121,13 @@ async def generate_due_recurring(db: AsyncSession) -> set:
     from app.models.invoice import InvoiceStatus
 
     today = date_type.today()
+    # FOR UPDATE: serialize against a concurrent run (hourly cron vs. the manual
+    # "generate" endpoint) — otherwise both read the same last_invoiced_date and
+    # create duplicate drafts for the period.
     contracts = (
-        await db.execute(select(Contract).where(Contract.status == ContractStatus.aktiv))
+        await db.execute(
+            select(Contract).where(Contract.status == ContractStatus.aktiv).with_for_update()
+        )
     ).scalars().unique().all()
     if not contracts:
         return set()
@@ -131,7 +173,7 @@ async def generate_due_recurring(db: AsyncSession) -> set:
         subtotal, tax_amount, total = calculate_invoice_totals(
             positions_dicts, Decimal("19.00"), is_exempt
         )
-        db.add(Invoice(
+        new_invoice = Invoice(
             customer_id=contract.customer_id,
             contract_id=contract.id,
             invoice_number=await generate_invoice_number(db),
@@ -145,7 +187,8 @@ async def generate_due_recurring(db: AsyncSession) -> set:
             invoice_date=today,
             due_date=today + timedelta(days=14),
             status=InvoiceStatus.entwurf,
-        ))
+        )
+        await flush_new_invoice(db, new_invoice)
         contract.last_invoiced_date = today
         processed.add(contract.id)
 

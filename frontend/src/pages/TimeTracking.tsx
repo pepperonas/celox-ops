@@ -225,12 +225,14 @@ export default function TimeTracking() {
     }
   }
 
+  // API-Decimals kommen als Strings — ohne Number() wird aus reduce eine
+  // String-Konkatenation und .toFixed() wirft (weiße Seite).
   const totalUninvoicedHours = summary.reduce(
-    (acc, s) => acc + s.uninvoiced_hours,
+    (acc, s) => acc + Number(s.uninvoiced_hours),
     0,
   )
   const totalUninvoicedAmount = summary.reduce((acc, s) => {
-    return acc + s.total_amount
+    return acc + Number(s.total_amount)
   }, 0)
 
   if (loading) {

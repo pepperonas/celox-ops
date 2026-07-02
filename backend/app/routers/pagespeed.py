@@ -247,6 +247,12 @@ async def analyze_pagespeed(
 
     # Save to DB if customer_id provided
     if customer_id:
+        # Scoped existence check — reject a foreign tenant's customer id.
+        from app.models.customer import Customer as _Customer
+        if not (
+            await db.execute(select(_Customer.id).where(_Customer.id == uuid.UUID(customer_id)))
+        ).scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
         os.makedirs(PDF_DIR, exist_ok=True)
         result_id = uuid.uuid4()
         pdf_filename = f"{result_id}.pdf"
