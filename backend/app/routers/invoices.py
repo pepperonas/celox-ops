@@ -28,6 +28,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from app.models.activity import Activity
 from app.services.email_service import send_email
+from app.services.exchange_service import get_usd_eur_rate
 from app.services.invoice_service import calculate_invoice_totals, flush_new_invoice, generate_invoice_number
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
 
@@ -732,7 +733,7 @@ async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
 
                     period_from = inv.token_usage_from.isoformat()
                     period_to = today.isoformat()
-                    cost_eur = round(total_cost * 0.92, 2)
+                    cost_eur = round(total_cost * await get_usd_eur_rate(), 2)
 
                     new_positions = [{
                         "position": 1,

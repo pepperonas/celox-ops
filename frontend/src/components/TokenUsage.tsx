@@ -3,6 +3,7 @@ import '../utils/charts'
 import { Bar, Line } from 'react-chartjs-2'
 import axios from 'axios'
 import { formatDate, formatCurrency } from '../utils/formatters'
+import { useUsdEurRate } from '../utils/exchangeRate'
 import type { TokenTrackerData } from '../types'
 
 const CHART_COLORS = {
@@ -78,6 +79,7 @@ export default function TokenUsage({ trackerUrl }: Props) {
   const [period, setPeriod] = useState<Period>('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  const usdEur = useUsdEurRate()
 
   const { from, to } = useMemo(() => {
     if (period === 'custom') return { from: customFrom, to: customTo }
@@ -179,7 +181,7 @@ export default function TokenUsage({ trackerUrl }: Props) {
   if (error || !data) return <div className="text-text-muted py-12 text-center">Daten konnten nicht geladen werden.</div>
 
   const s = data.summary
-  const costEur = s.total_cost * 0.92 // USD to EUR approximation
+  const costEur = s.total_cost * usdEur // USD→EUR (EZB-Kurs via Backend, Fallback 0.92)
   const projectSlug = (data.label || 'projekt').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/-+$/, '')
 
   const exportHTML = () => {

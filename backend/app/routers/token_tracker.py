@@ -4,12 +4,20 @@ from pydantic import BaseModel
 
 from app.auth import get_current_user
 from app.config import settings
+from app.services.exchange_service import get_rate_info
 
 router = APIRouter(
     prefix="/api/token-tracker",
     tags=["token-tracker"],
     dependencies=[Depends(get_current_user)],
 )
+
+
+@router.get("/exchange-rate")
+async def exchange_rate() -> dict:
+    """Aktueller USD→EUR-Kurs (EZB via Frankfurter, 12h-Cache, Fallback 0.92).
+    Vom Frontend für die KI-Kostenumrechnung genutzt."""
+    return await get_rate_info()
 
 
 class ShareCreate(BaseModel):

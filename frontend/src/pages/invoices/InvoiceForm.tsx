@@ -14,6 +14,7 @@ import { formatCurrency } from '../../utils/formatters'
 import { parseDecimalInput } from '../../utils/decimal'
 import { isAutoPosition } from '../../utils/positions'
 import { getCommitSummary, SUMMARY_MARKER } from '../../api/github'
+import { getUsdEurRate } from '../../utils/exchangeRate'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
 
@@ -387,7 +388,8 @@ export default function InvoiceForm() {
 
       // Position 2: Infrastructure costs (if > 0)
       if (totalCost > 0) {
-        const costEur = Math.round(totalCost * 0.92 * 100) / 100
+        const usdEur = await getUsdEurRate()
+        const costEur = Math.round(totalCost * usdEur * 100) / 100
         newPositions.push({
           position: 0,
           beschreibung: 'Technische Infrastruktur & externe Systemkosten (KI)',
