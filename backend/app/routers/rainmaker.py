@@ -13,7 +13,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,9 @@ from app.models.rainmaker_lead import (
 from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
+    LinkedInImportRequest,
+    LinkedInImportResult,
+    LinkedInPreviewRow,
     RainmakerActivityComplete,
     RainmakerActivityCreate,
     RainmakerActivityResponse,
@@ -59,6 +62,7 @@ from app.schemas.rainmaker import (
     RmStatusCount,
     RmTypeCount,
 )
+from app.services.linkedin_import import parse_linkedin_connections, row_to_lead_fields
 from app.services.rainmaker_service import (
     DREAM_EV_WEIGHTS,
     count_done_today,
@@ -187,6 +191,100 @@ async def delete_lead(
 ) -> None:
     lead = await _get_lead_or_404(lead_id, db)
     await db.delete(lead)
+
+
+# --------------------------------------------------------------------------- #
+#  LinkedIn-Import (offizieller Connections.csv-Datenexport — keine API)
+# --------------------------------------------------------------------------- #
+_LINKEDIN_IMPORT_MAX_BYTES = 10 * 1024 * 1024
+_LINKEDIN_IMPORT_MAX_ROWS = 20_000
+
+
+def _norm_url(url: str | None) -> str | None:
+    u = (url or "").strip().rstrip("/").lower()
+    return u.removeprefix("https://").removeprefix("http://").removeprefix("www.") or None
+
+
+async def _lead_dedup_keys(db: AsyncSession) -> tuple[set, set]:
+    """(URL-Keys, Namens-Keys) der bestehenden Leads des Owners — für die
+    Duplikat-Erkennung. Query ist via Tenancy-Events automatisch owner-scoped."""
+    res = await db.execute(select(RainmakerLead.website, RainmakerLead.contact_name))
+    urls, names = set(), set()
+    for website, contact_name in res.all():
+        if u := _norm_url(website):
+            urls.add(u)
+        if n := (contact_name or "").strip().lower():
+            names.add(n)
+    return urls, names
+
+
+def _row_keys(first_name: str, last_name: str, url: str) -> tuple[str | None, str]:
+    return _norm_url(url), f"{first_name} {last_name}".strip().lower()
+
+
+@router.post("/import/linkedin/preview", response_model=list[LinkedInPreviewRow])
+async def linkedin_import_preview(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> list[LinkedInPreviewRow]:
+    """Parst eine hochgeladene Connections.csv und markiert Duplikate
+    (bereits vorhandene Leads per Profil-URL oder Name, plus Mehrfachzeilen
+    innerhalb der Datei). Legt noch nichts an."""
+    raw = await file.read()
+    if len(raw) > _LINKEDIN_IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Datei zu groß (max. 10 MB)")
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1")
+    try:
+        rows = parse_linkedin_connections(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if len(rows) > _LINKEDIN_IMPORT_MAX_ROWS:
+        raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
+
+    urls, names = await _lead_dedup_keys(db)
+    seen_in_file: set[str] = set()
+    out: list[LinkedInPreviewRow] = []
+    for r in rows:
+        url_key, name_key = _row_keys(r["first_name"], r["last_name"], r["url"])
+        file_key = url_key or name_key
+        duplicate = (
+            (url_key is not None and url_key in urls)
+            or (bool(name_key) and name_key in names)
+            or file_key in seen_in_file
+        )
+        seen_in_file.add(file_key)
+        out.append(LinkedInPreviewRow(**r, duplicate=duplicate))
+    return out
+
+
+@router.post("/import/linkedin", response_model=LinkedInImportResult)
+async def linkedin_import(
+    data: LinkedInImportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LinkedInImportResult:
+    """Legt die (im Frontend ausgewählten) Zeilen als Leads an. Duplikate
+    werden serverseitig erneut geprüft und übersprungen (Doppel-Submit-sicher)."""
+    if len(data.rows) > _LINKEDIN_IMPORT_MAX_ROWS:
+        raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
+    urls, names = await _lead_dedup_keys(db)
+    created = skipped = 0
+    for row in data.rows:
+        fields = row_to_lead_fields(row.model_dump())
+        url_key, name_key = _row_keys(row.first_name, row.last_name, row.url)
+        if (url_key is not None and url_key in urls) or (bool(name_key) and name_key in names):
+            skipped += 1
+            continue
+        db.add(RainmakerLead(**fields))
+        if url_key:
+            urls.add(url_key)
+        if name_key:
+            names.add(name_key)
+        created += 1
+    await db.flush()
+    return LinkedInImportResult(created=created, skipped_duplicates=skipped)
 
 
 # --------------------------------------------------------------------------- #

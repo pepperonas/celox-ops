@@ -38,7 +38,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.linux.org/)
 [![Zustand](https://img.shields.io/badge/Zustand-State-443E38)](https://zustand-demo.pmnd.rs/)
 [![Axios](https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white)](https://axios-http.com/)
-[![Tests](https://img.shields.io/badge/tests-141%20passing-brightgreen?logo=checkmarx&logoColor=white)](#tests)
+[![Tests](https://img.shields.io/badge/tests-147%20passing-brightgreen?logo=checkmarx&logoColor=white)](#tests)
 [![pytest](https://img.shields.io/badge/pytest-82-0A9EDC?logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-52-6E9F18?logo=vitest&logoColor=white)](frontend/src)
 [![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
@@ -77,7 +77,7 @@ docker compose up -d --build
 - **Professional PDF Invoices** — WeasyPrint + Jinja2, A4 layout with branding
 - **AI Usage Dashboard** — Token Tracker integration with charts, KPIs, CSV/HTML export
 - **Invoice Number Auto-Generation** — `CO-YYYY-NNNN` format, sequential per year
-- **Rainmaker** — action-first acquisition activation: today-queue, pipeline (Kanban), next-action enforcement, streak & points, daily mail reminder
+- **Rainmaker** — action-first acquisition activation: today-queue, pipeline (Kanban), next-action enforcement, streak & points, daily mail reminder, LinkedIn connections import (official CSV export, no API)
 - **Kleinunternehmerregelung** — small business tax exemption support
 - **Material Design 3 Expressive Theme** — responsive React SPA with TailwindCSS, tonal surfaces, pill buttons, spring motion
 - **Docker Compose Deployment** — single command, production-ready

@@ -7,6 +7,7 @@ import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import RainmakerNav from './RainmakerNav'
 import RainmakerFooter from './RainmakerFooter'
+import LinkedInImportModal from './LinkedInImportModal'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
@@ -18,6 +19,7 @@ export default function RainmakerPipeline() {
   const [loading, setLoading] = useState(true)
   const [dragOver, setDragOver] = useState<RainmakerLeadStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -55,7 +57,15 @@ export default function RainmakerPipeline() {
 
   return (
     <div>
-      <PageHeader title="Pipeline" subtitle={`${leads.length} Leads`} />
+      <PageHeader
+        title="Pipeline"
+        subtitle={`${leads.length} Leads`}
+        actions={
+          <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
+            LinkedIn-Import
+          </button>
+        }
+      />
       <RainmakerNav />
 
       <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 260px)' }}>
@@ -126,6 +136,12 @@ export default function RainmakerPipeline() {
       </div>
 
       <Fab onClick={() => navigate('/rainmaker/leads/neu')} label="Neuer Lead" />
+      {showImport && (
+        <LinkedInImportModal
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); fetchLeads() }}
+        />
+      )}
       <RainmakerFooter />
     </div>
   )

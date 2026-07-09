@@ -17,6 +17,9 @@ import type {
   RainmakerGoal,
   RainmakerGoalCreate,
   RainmakerGoalUpdate,
+  LinkedInImportRow,
+  LinkedInPreviewRow,
+  LinkedInImportResult,
   PaginatedResponse,
 } from '../types'
 
@@ -51,6 +54,22 @@ export async function updateRainmakerLead(
 
 export async function deleteRainmakerLead(id: string): Promise<void> {
   await api.delete(`/rainmaker/leads/${id}`)
+}
+
+// --- LinkedIn-Import ---
+export async function previewLinkedInImport(file: File): Promise<LinkedInPreviewRow[]> {
+  const formData = new FormData()
+  formData.append('file', file)
+  // Gotcha: Default-Content-Type des Clients überschreiben, sonst fehlt die multipart boundary
+  const response = await api.post('/rainmaker/import/linkedin/preview', formData, {
+    headers: { 'Content-Type': undefined },
+  })
+  return response.data
+}
+
+export async function importLinkedInLeads(rows: LinkedInImportRow[]): Promise<LinkedInImportResult> {
+  const response = await api.post('/rainmaker/import/linkedin', { rows })
+  return response.data
 }
 
 // --- Activities ---

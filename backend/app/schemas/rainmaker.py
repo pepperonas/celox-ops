@@ -37,6 +37,30 @@ class RainmakerLeadCreate(RainmakerLeadBase):
     pass
 
 
+class LinkedInImportRow(BaseModel):
+    """Eine geparste Zeile aus LinkedIns Connections.csv (kanonische Keys)."""
+    first_name: str = ""
+    last_name: str = ""
+    url: str = ""
+    email: str = ""
+    company: str = ""
+    position: str = ""
+    connected_on: str = ""
+
+
+class LinkedInPreviewRow(LinkedInImportRow):
+    duplicate: bool = False
+
+
+class LinkedInImportRequest(BaseModel):
+    rows: list[LinkedInImportRow]
+
+
+class LinkedInImportResult(BaseModel):
+    created: int
+    skipped_duplicates: int
+
+
 class RainmakerLeadUpdate(BaseModel):
     company: str | None = None
     contact_name: str | None = None
