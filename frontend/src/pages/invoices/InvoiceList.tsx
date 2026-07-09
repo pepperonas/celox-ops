@@ -8,7 +8,8 @@ import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import FilterChips from '../../components/FilterChips'
 import LoadingIndicator from '../../components/LoadingIndicator'
-import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment } from '../../api/invoices'
+import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment, restorePaymentState } from '../../api/invoices'
+import { toastWithUndo } from '../../utils/undoToast'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice } from '../../types'
 
@@ -67,10 +68,17 @@ export default function InvoiceList() {
 
   const handleQuickStatusChange = async (e: React.MouseEvent, inv: Invoice, newStatus: 'gestellt' | 'bezahlt') => {
     e.stopPropagation()
+    const prevStatus = inv.status
     try {
       await updateInvoiceStatus(inv.id, newStatus)
-      toast.success(newStatus === 'bezahlt' ? `${inv.invoice_number} als bezahlt markiert.` : `${inv.invoice_number} als gestellt markiert.`)
       fetchData()
+      toastWithUndo(
+        newStatus === 'bezahlt' ? `${inv.invoice_number} als bezahlt markiert.` : `${inv.invoice_number} als gestellt markiert.`,
+        async () => {
+          await updateInvoiceStatus(inv.id, prevStatus)
+          fetchData()
+        },
+      )
     } catch {
       toast.error('Statusänderung fehlgeschlagen.')
     }
@@ -80,17 +88,27 @@ export default function InvoiceList() {
     if (!selectedIds.size) return
     if (!confirm(`${selectedIds.size} Rechnung(en) als bezahlt markieren?`)) return
     let success = 0, failed = 0
+    // Zahlungsstand VOR der Aktion sichern — fürs Undo (amount_paid + status)
+    const snapshots: { id: string; amountPaid: number; status: Invoice['status'] }[] = []
     for (const id of selectedIds) {
       try {
         const inv = invoices.find((i) => i.id === id)
         if (!inv) continue
         await recordPayment(id, inv.total - (inv.amount_paid || 0))
+        snapshots.push({ id, amountPaid: Number(inv.amount_paid || 0), status: inv.status })
         success++
       } catch { failed++ }
     }
-    toast.success(`${success} bezahlt${failed ? `, ${failed} Fehler` : ''}.`)
     setSelectedIds(new Set())
     fetchData()
+    if (snapshots.length > 0) {
+      toastWithUndo(`${success} bezahlt${failed ? `, ${failed} Fehler` : ''}.`, async () => {
+        await Promise.all(snapshots.map((s) => restorePaymentState(s.id, s.amountPaid, s.status)))
+        fetchData()
+      })
+    } else {
+      toast.success(`${success} bezahlt${failed ? `, ${failed} Fehler` : ''}.`)
+    }
   }
 
   const handleBulkDownloadPdfs = async () => {

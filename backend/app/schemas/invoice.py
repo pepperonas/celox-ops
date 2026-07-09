@@ -132,3 +132,10 @@ class QuickInvoiceCreate(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: Decimal
+
+
+class PaymentStateRestore(BaseModel):
+    """Undo-Payload: setzt Zahlungsstand + Status auf einen früheren Stand
+    zurück (z. B. nach versehentlichem Bulk-„Als bezahlt")."""
+    amount_paid: Decimal
+    status: InvoiceStatus

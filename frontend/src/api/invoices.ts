@@ -106,6 +106,15 @@ export async function recordPayment(id: string, amount: number): Promise<Invoice
   return response.data
 }
 
+export async function restorePaymentState(
+  id: string,
+  amountPaid: number,
+  status: InvoiceStatus,
+): Promise<Invoice> {
+  const response = await api.put(`/invoices/${id}/payment-state`, { amount_paid: amountPaid, status })
+  return response.data
+}
+
 export async function createCreditNote(id: string): Promise<Invoice> {
   const response = await api.post(`/invoices/${id}/credit-note`)
   return response.data

@@ -22,6 +22,7 @@ from app.schemas.invoice import (
     InvoiceStatusUpdate,
     InvoiceUpdate,
     PaymentRequest,
+    PaymentStateRestore,
     QuickInvoiceCreate,
 )
 from pydantic import BaseModel as PydanticBaseModel
@@ -948,6 +949,37 @@ async def record_payment(
         description=f"{float(data.amount):.2f} € — Gesamt bezahlt: {float(invoice.amount_paid):.2f} € von {float(invoice.total):.2f} €",
     )
     db.add(activity)
+
+    resp = InvoiceResponse.model_validate(invoice)
+    resp.customer_name = invoice.customer.name if invoice.customer else ""
+    return resp
+
+
+@router.put("/{invoice_id}/payment-state", response_model=InvoiceResponse)
+async def restore_payment_state(
+    invoice_id: uuid.UUID,
+    data: PaymentStateRestore,
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceResponse:
+    """Undo für Zahlungsaktionen: stellt amount_paid + status eines früheren
+    Stands wieder her (z. B. versehentliches Bulk-„Als bezahlt")."""
+    from decimal import Decimal
+
+    result = await db.execute(
+        select(Invoice)
+        .options(joinedload(Invoice.customer))
+        .where(Invoice.id == invoice_id)
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    if data.amount_paid < Decimal("0"):
+        raise HTTPException(status_code=400, detail="amount_paid darf nicht negativ sein")
+
+    invoice.amount_paid = data.amount_paid
+    invoice.status = data.status
+    await db.flush()
+    await db.refresh(invoice)
 
     resp = InvoiceResponse.model_validate(invoice)
     resp.customer_name = invoice.customer.name if invoice.customer else ""
