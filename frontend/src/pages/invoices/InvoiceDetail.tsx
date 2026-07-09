@@ -18,12 +18,13 @@ import {
   duplicateInvoice,
 } from '../../api/invoices'
 import { getCustomer } from '../../api/customers'
-import StatusBadge from '../../components/StatusBadge'
+import StatusBadge, { statusLabels } from '../../components/StatusBadge'
+import { toastWithUndo } from '../../utils/undoToast'
 import DeleteDialog from '../../components/DeleteDialog'
 import EmailDialog from '../../components/EmailDialog'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import type { Invoice } from '../../types'
+import type { Invoice, InvoiceStatus } from '../../types'
 
 export default function InvoiceDetail() {
   const { id } = useParams()
@@ -99,15 +100,16 @@ export default function InvoiceDetail() {
     }
   }
 
-  const handleStatusChange = async (newStatus: 'gestellt' | 'bezahlt') => {
+  const handleStatusChange = async (newStatus: InvoiceStatus) => {
+    const prevStatus = invoice?.status
+    if (!prevStatus || prevStatus === newStatus) return
     try {
       const updated = await updateInvoiceStatus(id!, newStatus)
       setInvoice(updated)
-      toast.success(
-        newStatus === 'gestellt'
-          ? 'Rechnung als gestellt markiert.'
-          : 'Rechnung als bezahlt markiert.',
-      )
+      toastWithUndo(`Status: ${statusLabels[prevStatus]} → ${statusLabels[newStatus]}`, async () => {
+        const reverted = await updateInvoiceStatus(id!, prevStatus)
+        setInvoice(reverted)
+      })
     } catch {
       toast.error('Fehler beim Aktualisieren des Status.')
     }
@@ -281,6 +283,18 @@ export default function InvoiceDetail() {
               Als bezahlt markieren
             </button>
           )}
+          {/* Status-Korrektur: freie Statuswahl, falls man sich verklickt hat */}
+          <select
+            value={invoice.status}
+            onChange={(e) => handleStatusChange(e.target.value as InvoiceStatus)}
+            className="text-sm !w-auto"
+            title="Status ändern"
+            aria-label="Status ändern"
+          >
+            {(['entwurf', 'gestellt', 'bezahlt', 'ueberfaellig', 'storniert'] as InvoiceStatus[]).map((s) => (
+              <option key={s} value={s}>{statusLabels[s]}</option>
+            ))}
+          </select>
           {!invoice.is_credit_note && (invoice.status === 'gestellt' || invoice.status === 'ueberfaellig' || invoice.status === 'bezahlt') && (
             <button
               onClick={() => setShowPaymentForm(!showPaymentForm)}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
+import { toastWithUndo } from '../../utils/undoToast'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
@@ -43,10 +44,14 @@ export default function RainmakerPipeline() {
     const lead = leads.find((l) => l.id === id)
     if (!lead || lead.status === newStatus) return
 
+    const prevStatus = lead.status
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)))
     try {
       await updateRainmakerLead(id, { status: newStatus })
-      toast.success(`„${lead.company}" → ${STATUS_LABELS[newStatus]}`)
+      toastWithUndo(`„${lead.company}" → ${STATUS_LABELS[newStatus]}`, async () => {
+        await updateRainmakerLead(id, { status: prevStatus })
+        setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: prevStatus } : l)))
+      })
     } catch {
       toast.error('Fehler beim Verschieben.')
       fetchLeads()

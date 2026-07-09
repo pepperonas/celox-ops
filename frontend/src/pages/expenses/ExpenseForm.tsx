@@ -7,6 +7,7 @@ import FileAttachments from '../../components/FileAttachments'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
 import type { ExpenseCreate } from '../../types'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
+import { toastWithUndo } from '../../utils/undoToast'
 
 const categoryOptions = [
   { value: 'hosting', label: 'Hosting' },
@@ -97,10 +98,13 @@ export default function ExpenseForm() {
 
   const handleDelete = async () => {
     if (!id) return
+    const snapshot = { ...form }
     try {
       await deleteExpense(id)
-      toast.success('Ausgabe gelöscht.')
       navigate('/ausgaben')
+      toastWithUndo('Ausgabe gelöscht.', async () => {
+        await createExpense(snapshot)
+      })
     } catch {
       toast.error('Fehler beim Löschen.')
     }

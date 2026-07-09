@@ -7,7 +7,8 @@ import DeleteDialog from '../../components/DeleteDialog'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
-import { getExpenses, getExpenseSummary, deleteExpense } from '../../api/expenses'
+import { getExpenses, getExpenseSummary, deleteExpense, createExpense } from '../../api/expenses'
+import { toastWithUndo } from '../../utils/undoToast'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
@@ -97,12 +98,29 @@ export default function ExpenseList() {
 
   const handleDelete = async () => {
     if (!deleteId) return
+    const deleted = expenses.find((e) => e.id === deleteId)
     try {
       await deleteExpense(deleteId)
-      toast.success('Ausgabe gelöscht.')
       setDeleteId(null)
       fetchData()
       fetchSummary()
+      if (deleted) {
+        toastWithUndo('Ausgabe gelöscht.', async () => {
+          await createExpense({
+            description: deleted.description,
+            category: deleted.category,
+            amount: Number(deleted.amount),
+            date: deleted.date,
+            vendor: deleted.vendor || undefined,
+            recurring: deleted.recurring,
+            notes: deleted.notes || undefined,
+          })
+          fetchData()
+          fetchSummary()
+        })
+      } else {
+        toast.success('Ausgabe gelöscht.')
+      }
     } catch {
       toast.error('Fehler beim Löschen.')
     }

@@ -3,6 +3,7 @@ import LoadingIndicator from '../components/LoadingIndicator'
 import { getOrders, updateOrder } from '../api/orders'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
+import { toastWithUndo } from '../utils/undoToast'
 import type { Order, OrderStatus } from '../types'
 
 interface KanbanColumn {
@@ -74,9 +75,16 @@ export default function Kanban() {
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     )
 
+    const prevStatus = order.status
     try {
       await updateOrder(orderId, { status: newStatus })
-      toast.success(`Auftrag nach "${COLUMNS.find((c) => c.status === newStatus)?.label}" verschoben.`)
+      toastWithUndo(
+        `Auftrag nach „${COLUMNS.find((c) => c.status === newStatus)?.label}" verschoben.`,
+        async () => {
+          await updateOrder(orderId, { status: prevStatus })
+          setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: prevStatus } : o)))
+        },
+      )
     } catch {
       toast.error('Fehler beim Aktualisieren.')
       fetchOrders()

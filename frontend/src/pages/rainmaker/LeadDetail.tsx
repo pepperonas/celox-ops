@@ -8,9 +8,11 @@ import {
   getRainmakerLead,
   deleteRainmakerLead,
   getLeadActivities,
+  createLeadActivity,
   deleteActivity,
   getRainmakerTemplates,
 } from '../../api/rainmaker'
+import { toastWithUndo } from '../../utils/undoToast'
 import type { RainmakerTemplate } from '../../types'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerActivity } from '../../types'
@@ -75,9 +77,23 @@ export default function RainmakerLeadDetail() {
   }
 
   const handleDeleteActivity = async (actId: string) => {
+    const deleted = activities.find((a) => a.id === actId)
     try {
       await deleteActivity(actId)
       load()
+      // Undo nur für geplante Aktionen — erledigte tragen Punkte/Streak und
+      // würden per Neuanlage als "geplant" wiederkehren.
+      if (deleted && deleted.status === 'planned' && lead) {
+        toastWithUndo('Aktion gelöscht.', async () => {
+          await createLeadActivity(lead.id, {
+            type: deleted.type,
+            due_date: deleted.due_date,
+            notes: deleted.notes,
+            goal_id: deleted.goal_id,
+          })
+          load()
+        })
+      }
     } catch {
       toast.error('Konnte nicht gelöscht werden.')
     }

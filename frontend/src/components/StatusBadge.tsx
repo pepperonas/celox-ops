@@ -51,7 +51,7 @@ const statusColors: Record<string, string> = {
   reise: tones.warning,
 }
 
-const statusLabels: Record<string, string> = {
+export const statusLabels: Record<string, string> = {
   angebot: 'Angebot',
   beauftragt: 'Beauftragt',
   in_arbeit: 'In Arbeit',

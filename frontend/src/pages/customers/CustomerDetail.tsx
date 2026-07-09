@@ -8,6 +8,7 @@ import { getOrders } from '../../api/orders'
 import { getContracts } from '../../api/contracts'
 import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import { getActivities, createActivity, deleteActivity } from '../../api/activities'
+import { toastWithUndo } from '../../utils/undoToast'
 import { listAttachments } from '../../api/attachments'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
@@ -127,10 +128,24 @@ export default function CustomerDetail() {
 
   const handleDeleteActivity = async (activityId: string) => {
     if (!id) return
+    const deleted = activities.find((a) => a.id === activityId)
     try {
       await deleteActivity(activityId)
-      toast.success('Eintrag gelöscht.')
-      getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+      const refresh = () => getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
+      refresh()
+      if (deleted) {
+        toastWithUndo('Eintrag gelöscht.', async () => {
+          await createActivity({
+            customer_id: id,
+            type: deleted.type,
+            title: deleted.title,
+            description: deleted.description || undefined,
+          })
+          refresh()
+        })
+      } else {
+        toast.success('Eintrag gelöscht.')
+      }
     } catch {
       toast.error('Fehler beim Löschen.')
     }

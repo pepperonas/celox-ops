@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { toastWithUndo } from '../utils/undoToast'
 import { getCustomers } from '../api/customers'
 import {
   getTimeEntries,
@@ -216,10 +217,25 @@ export default function TimeTracking() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Eintrag wirklich löschen?')) return
+    const deleted = entries.find((e) => e.id === id)
     try {
       await deleteTimeEntry(id)
-      toast.success('Gelöscht')
       loadData()
+      if (deleted) {
+        toastWithUndo('Zeiteintrag gelöscht.', async () => {
+          await createTimeEntry({
+            customer_id: deleted.customer_id,
+            description: deleted.description,
+            date: deleted.date,
+            hours: Number(deleted.hours),
+            hourly_rate: deleted.hourly_rate !== null ? Number(deleted.hourly_rate) : undefined,
+            notes: deleted.notes || undefined,
+          })
+          loadData()
+        })
+      } else {
+        toast.success('Gelöscht')
+      }
     } catch {
       toast.error('Fehler beim Löschen')
     }
