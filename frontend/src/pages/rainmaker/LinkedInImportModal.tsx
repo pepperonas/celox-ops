@@ -115,13 +115,16 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
               <li>
                 Auf LinkedIn{' '}
                 <a href={EXPORT_URL} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">
-                  „Kopie deiner Daten anfordern"
+                  „Ihre Daten herunterladen"
                 </a>{' '}
                 öffnen (Einstellungen → Datenschutz).
               </li>
-              <li>„Bestimmte Daten" wählen und <strong>Kontakte / Connections</strong> ankreuzen → Archiv anfordern.</li>
-              <li>Nach ca. 10–20 Minuten kommt eine E-Mail mit dem Download (ZIP mit <code className="text-xs bg-surface-container px-1.5 py-0.5 rounded">Connections.csv</code>).</li>
-              <li>Die <code className="text-xs bg-surface-container px-1.5 py-0.5 rounded">Connections.csv</code> hier hochladen:</li>
+              <li>
+                Das <strong>größere Datenarchiv</strong> (erste Option, enthält die Kontakte) wählen → „Archiv anfordern".
+                Falls in der „Bestimmte Daten"-Auswahl <strong>Kontakte</strong> angeboten wird, reicht auch das.
+              </li>
+              <li>Nach ca. 10–20 Minuten kommt eine E-Mail mit dem Download-Link (bei großen Archiven bis 24 h).</li>
+              <li>ZIP entpacken und die <code className="text-xs bg-surface-container px-1.5 py-0.5 rounded">Connections.csv</code> hier hochladen:</li>
             </ol>
             <input
               ref={fileInput}
