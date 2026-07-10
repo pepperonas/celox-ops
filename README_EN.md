@@ -294,7 +294,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Statistics**: activities by day/type, conversion funnel (new → won), open value
 - **Configurable acquisition goals**: define your own goals (e.g. "Neukunden Telefon-Akquise", "LinkedIn anschreiben", "Bestandskunde kontaktieren") with a suggested action type + **daily target**; default set seedable in one click. Activities count toward goals → daily progress on "Heute"
 - **Templates** with placeholders (`{company}`, `{contact_name}`, `{role}`) for mail/message
-- **LinkedIn import**: import LinkedIn connections as leads — via LinkedIn's official free data export (`Connections.csv`; no API, no paid tools). Upload → preview with duplicate detection (per user, by profile URL/name) → selective import; German and English column headers supported
+- **LinkedIn import**: import the complete LinkedIn data export (ZIP) or `Connections.csv` — no API. Connections, pending invites (status "contacted") and message history (status "in conversation" + done activities with historical dates, no gamification distortion); preview with source filters, duplicate detection, drag & drop
 
 ---
 
@@ -763,14 +763,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 156 total** (all DB-free, run in CI on every push):
-  - **Backend (pytest, 92):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (6 — Connections.csv parser)
+- **Unit tests — 162 total** (all DB-free, run in CI on every push):
+  - **Backend (pytest, 98):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (12 — export parsers: connections/invitations/messages/ZIP)
   - **Frontend (Vitest, 55):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility)
 
 ## Project size
 
 - **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
-- **~1,050 LoC tests** · 22 DB tables · 156 unit tests · multi-user with isolated workspaces
+- **~1,050 LoC tests** · 22 DB tables · 162 unit tests · multi-user with isolated workspaces
 
 ---
 

@@ -37,8 +37,16 @@ class RainmakerLeadCreate(RainmakerLeadBase):
     pass
 
 
+class LinkedInMessage(BaseModel):
+    """Eine Nachricht aus messages.csv (fürs Anlegen erledigter Aktivitäten)."""
+    date: str = ""
+    direction: str = ""
+    snippet: str = ""
+
+
 class LinkedInImportRow(BaseModel):
-    """Eine geparste Zeile aus LinkedIns Connections.csv (kanonische Keys)."""
+    """Ein Import-Kandidat aus dem LinkedIn-Export (Connections/Invitations,
+    angereichert um Nachrichtenverlauf aus messages.csv)."""
     first_name: str = ""
     last_name: str = ""
     url: str = ""
@@ -46,6 +54,14 @@ class LinkedInImportRow(BaseModel):
     company: str = ""
     position: str = ""
     connected_on: str = ""
+    # Quelle: 'connection' (bestätigter Kontakt) | 'invitation' (offene Anfrage)
+    source: str = "connection"
+    # Status-Vorschlag (new | contacted | in_conversation), beim Import übernommen
+    status: RainmakerLeadStatus = RainmakerLeadStatus.new
+    invited_at: str = ""
+    message_count: int = 0
+    last_message_at: str = ""
+    messages: list[LinkedInMessage] = []
 
 
 class LinkedInPreviewRow(LinkedInImportRow):
@@ -59,6 +75,7 @@ class LinkedInImportRequest(BaseModel):
 class LinkedInImportResult(BaseModel):
     created: int
     skipped_duplicates: int
+    activities_created: int = 0
 
 
 class RainmakerLeadUpdate(BaseModel):

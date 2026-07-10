@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { previewLinkedInImport, importLinkedInLeads } from '../../api/rainmaker'
 import type { LinkedInPreviewRow } from '../../types'
+import { STATUS_LABELS } from './constants'
 
 interface Props {
   onClose: () => void
@@ -22,6 +23,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(false)
   const [filter, setFilter] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'connection' | 'invitation'>('all')
   const [dragOver, setDragOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -42,8 +44,8 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
         return
       }
       setRows(preview)
-      // Neue Kontakte vorauswählen, Duplikate abgewählt
-      setSelected(new Set(preview.map((r, i) => (r.duplicate ? -1 : i)).filter((i) => i >= 0)))
+      // Bestätigte Kontakte vorauswählen; offene Anfragen + Duplikate abgewählt
+      setSelected(new Set(preview.map((r, i) => (!r.duplicate && r.source === 'connection' ? i : -1)).filter((i) => i >= 0)))
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       toast.error(detail || 'Datei konnte nicht gelesen werden. Ist es die Connections.csv aus dem LinkedIn-Export?')
@@ -57,11 +59,12 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
     return rows
       .map((_, i) => i)
       .filter((i) => {
-        if (!q) return true
         const r = rows[i]
+        if (sourceFilter !== 'all' && r.source !== sourceFilter) return false
+        if (!q) return true
         return `${r.first_name} ${r.last_name} ${r.company} ${r.position}`.toLowerCase().includes(q)
       })
-  }, [rows, filter])
+  }, [rows, filter, sourceFilter])
 
   const toggle = (i: number) => {
     setSelected((prev) => {
@@ -90,6 +93,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
       const result = await importLinkedInLeads(chosen)
       toast.success(
         `${result.created} Lead${result.created === 1 ? '' : 's'} importiert` +
+        (result.activities_created > 0 ? ` · ${result.activities_created} Nachrichten als Aktivitäten` : '') +
         (result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} Duplikate übersprungen` : '') + '.'
       )
       onImported()
@@ -100,11 +104,14 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
   }
 
   const dupCount = rows?.filter((r) => r.duplicate).length ?? 0
+  const connCount = rows?.filter((r) => r.source === 'connection').length ?? 0
+  const invCount = rows?.filter((r) => r.source === 'invitation').length ?? 0
+  const msgCount = rows?.filter((r) => r.message_count > 0).length ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[680px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col">
+      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col">
         <h3 className="text-xl font-semibold text-text mb-1">LinkedIn-Kontakte importieren</h3>
         <p className="text-xs text-text-muted mb-5">
           Über LinkedIns offiziellen Datenexport — kostenlos, ohne API, DSGVO-konform.
@@ -125,12 +132,12 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                 Falls in der „Bestimmte Daten"-Auswahl <strong>Kontakte</strong> angeboten wird, reicht auch das.
               </li>
               <li>Nach ca. 10–20 Minuten kommt eine E-Mail mit dem Download-Link (bei großen Archiven bis 24 h).</li>
-              <li>ZIP entpacken und die <code className="text-xs bg-surface-container px-1.5 py-0.5 rounded">Connections.csv</code> hier hochladen:</li>
+              <li>Das <strong>komplette ZIP direkt hochladen</strong> (kein Entpacken nötig) — daraus liest ops Kontakte, offene Kontaktanfragen und den Nachrichtenverlauf. Alternativ geht auch die einzelne <code className="text-xs bg-surface-container px-1.5 py-0.5 rounded">Connections.csv</code>:</li>
             </ol>
             <input
               ref={fileInput}
               type="file"
-              accept=".csv,text/csv"
+              accept=".zip,.csv,application/zip,text/csv"
               className="hidden"
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
@@ -144,8 +151,9 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                 setDragOver(false)
                 const file = e.dataTransfer.files?.[0]
                 if (!file) return
-                if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
-                  toast.error('Bitte eine CSV-Datei ablegen (Connections.csv).')
+                const name = file.name.toLowerCase()
+                if (!name.endsWith('.csv') && !name.endsWith('.zip')) {
+                  toast.error('Bitte das Export-ZIP oder die Connections.csv ablegen.')
                   return
                 }
                 handleFile(file)
@@ -160,7 +168,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                 ? 'Wird gelesen…'
                 : dragOver
                   ? '📥 Loslassen zum Hochladen'
-                  : '📄 Connections.csv hierher ziehen oder klicken'}
+                  : '📦 Export-ZIP oder Connections.csv hierher ziehen — oder klicken'}
             </button>
             <p className="text-[11px] text-text-muted mt-3">
               Hinweis: E-Mail-Adressen sind nur enthalten, wenn der Kontakt den Export erlaubt hat (meist leer).
@@ -172,10 +180,25 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
           </>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <span className="text-sm text-text">
-                <strong>{rows.length}</strong> Kontakte
-                {dupCount > 0 && <span className="text-text-muted"> · {dupCount} bereits vorhanden</span>}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {([
+                ['all', `Alle (${rows.length})`],
+                ['connection', `Kontakte (${connCount})`],
+                ['invitation', `Anfragen offen (${invCount})`],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSourceFilter(key)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-short ${
+                    sourceFilter === key ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <span className="text-xs text-text-muted">
+                {msgCount > 0 && <>💬 {msgCount} im Gespräch · </>}
+                {dupCount > 0 && <>{dupCount} bereits vorhanden</>}
               </span>
               <input
                 type="search"
@@ -195,7 +218,8 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                     <th className="px-2 py-2">Name</th>
                     <th className="px-2 py-2">Firma</th>
                     <th className="px-2 py-2">Position</th>
-                    <th className="px-2 py-2 w-20"></th>
+                    <th className="px-2 py-2">Status</th>
+                    <th className="px-2 py-2 w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,7 +236,11 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                         </td>
                         <td className="px-2 py-1.5 text-text whitespace-nowrap">{r.first_name} {r.last_name}</td>
                         <td className="px-2 py-1.5 text-text-muted truncate max-w-[180px]">{r.company || '–'}</td>
-                        <td className="px-2 py-1.5 text-text-muted truncate max-w-[180px]">{r.position || '–'}</td>
+                        <td className="px-2 py-1.5 text-text-muted truncate max-w-[160px]">{r.position || '–'}</td>
+                        <td className="px-2 py-1.5 text-xs text-text-muted whitespace-nowrap">
+                          {STATUS_LABELS[r.status]}
+                          {r.message_count > 0 && <span className="ml-1" title={`${r.message_count} Nachrichten`}>💬{r.message_count}</span>}
+                        </td>
                         <td className="px-2 py-1.5 text-[10px]">
                           {r.duplicate && <span className="text-warning font-medium">Duplikat</span>}
                         </td>

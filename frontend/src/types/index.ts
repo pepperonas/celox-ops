@@ -588,7 +588,13 @@ export interface RainmakerGoalCreate {
 
 export type RainmakerGoalUpdate = Partial<RainmakerGoalCreate>
 
-// LinkedIn-Import (offizieller Connections.csv-Datenexport)
+// LinkedIn-Import (offizieller Datenexport: ZIP-Archiv oder Connections.csv)
+export interface LinkedInMessage {
+  date: string
+  direction: string
+  snippet: string
+}
+
 export interface LinkedInImportRow {
   first_name: string
   last_name: string
@@ -597,6 +603,12 @@ export interface LinkedInImportRow {
   company: string
   position: string
   connected_on: string
+  source: 'connection' | 'invitation'
+  status: RainmakerLeadStatus
+  invited_at: string
+  message_count: number
+  last_message_at: string
+  messages: LinkedInMessage[]
 }
 
 export interface LinkedInPreviewRow extends LinkedInImportRow {
@@ -606,6 +618,7 @@ export interface LinkedInPreviewRow extends LinkedInImportRow {
 export interface LinkedInImportResult {
   created: number
   skipped_duplicates: number
+  activities_created: number
 }
 
 export interface RainmakerGoalProgress {

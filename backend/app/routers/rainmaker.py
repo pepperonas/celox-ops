@@ -23,6 +23,7 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.rainmaker_activity import (
     RainmakerActivity,
     RainmakerActivityStatus,
+    RainmakerActivityType,
 )
 from app.models.rainmaker_goal import DEFAULT_GOALS, RainmakerGoal
 from app.models.rainmaker_lead import (
@@ -62,7 +63,12 @@ from app.schemas.rainmaker import (
     RmStatusCount,
     RmTypeCount,
 )
-from app.services.linkedin_import import parse_linkedin_connections, row_to_lead_fields
+from app.services.linkedin_import import (
+    normalize_profile_url,
+    parse_linkedin_archive,
+    parse_linkedin_connections,
+    row_to_lead_fields,
+)
 from app.services.rainmaker_service import (
     DREAM_EV_WEIGHTS,
     count_done_today,
@@ -227,36 +233,84 @@ async def linkedin_import_preview(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ) -> list[LinkedInPreviewRow]:
-    """Parst eine hochgeladene Connections.csv und markiert Duplikate
-    (bereits vorhandene Leads per Profil-URL oder Name, plus Mehrfachzeilen
-    innerhalb der Datei). Legt noch nichts an."""
+    """Parst den LinkedIn-Export (komplettes ZIP-Archiv ODER einzelne
+    Connections.csv) und markiert Duplikate. Aus dem ZIP werden zusätzlich
+    offene ausgehende Kontaktanfragen (Invitations.csv → Status 'contacted')
+    und der Nachrichtenverlauf (messages.csv → Status 'in_conversation' +
+    Nachrichten für erledigte Aktivitäten) gezogen. Legt noch nichts an."""
     raw = await file.read()
     if len(raw) > _LINKEDIN_IMPORT_MAX_BYTES:
         raise HTTPException(status_code=413, detail="Datei zu groß (max. 10 MB)")
+
+    invitations: list[dict] = []
+    messages: dict[str, dict] = {}
     try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        text = raw.decode("latin-1")
-    try:
-        rows = parse_linkedin_connections(text)
+        if raw[:2] == b"PK":  # ZIP-Archiv (kompletter Export)
+            archive = parse_linkedin_archive(raw)
+            rows = archive["connections"]
+            invitations = archive["invitations"]
+            messages = archive["messages"]
+        else:
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("latin-1")
+            rows = parse_linkedin_connections(text)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    if len(rows) > _LINKEDIN_IMPORT_MAX_ROWS:
+    if len(rows) + len(invitations) > _LINKEDIN_IMPORT_MAX_ROWS:
         raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
 
     urls, names = await _lead_dedup_keys(db)
     seen_in_file: set[str] = set()
     out: list[LinkedInPreviewRow] = []
-    for r in rows:
-        url_key, name_key = _row_keys(r["first_name"], r["last_name"], r["url"])
+
+    def _is_duplicate(url_key: str | None, name_key: str) -> bool:
         file_key = url_key or name_key
-        duplicate = (
+        dup = (
             (url_key is not None and url_key in urls)
             or (bool(name_key) and name_key in names)
             or file_key in seen_in_file
         )
         seen_in_file.add(file_key)
-        out.append(LinkedInPreviewRow(**r, duplicate=duplicate))
+        return dup
+
+    # Bestätigte Kontakte — mit Nachrichtenverlauf angereichert
+    for r in rows:
+        url_key, name_key = _row_keys(r["first_name"], r["last_name"], r["url"])
+        msg = messages.get(normalize_profile_url(r["url"]), None) if r["url"] else None
+        out.append(LinkedInPreviewRow(
+            **r,
+            source="connection",
+            status=RainmakerLeadStatus.in_conversation if msg else RainmakerLeadStatus.new,
+            message_count=msg["count"] if msg else 0,
+            last_message_at=msg["last_date"] if msg else "",
+            messages=msg["messages"] if msg else [],
+            duplicate=_is_duplicate(url_key, name_key),
+        ))
+
+    # Offene ausgehende Kontaktanfragen (nicht in Connections → noch unbeantwortet)
+    connection_urls = {normalize_profile_url(r["url"]) for r in rows if r["url"]}
+    for inv in invitations:
+        inv_url = normalize_profile_url(inv["url"])
+        if inv_url and inv_url in connection_urls:
+            continue  # inzwischen angenommen → ist als Connection drin
+        parts = inv["name"].split(" ", 1)
+        first, last = parts[0], (parts[1] if len(parts) > 1 else "")
+        url_key, name_key = _row_keys(first, last, inv["url"])
+        msg = messages.get(inv_url, None) if inv_url else None
+        out.append(LinkedInPreviewRow(
+            first_name=first,
+            last_name=last,
+            url=inv["url"],
+            source="invitation",
+            status=RainmakerLeadStatus.in_conversation if msg else RainmakerLeadStatus.contacted,
+            invited_at=inv["sent_at"],
+            message_count=msg["count"] if msg else 0,
+            last_message_at=msg["last_date"] if msg else "",
+            messages=msg["messages"] if msg else [],
+            duplicate=_is_duplicate(url_key, name_key),
+        ))
     return out
 
 
@@ -265,26 +319,61 @@ async def linkedin_import(
     data: LinkedInImportRequest,
     db: AsyncSession = Depends(get_db),
 ) -> LinkedInImportResult:
-    """Legt die (im Frontend ausgewählten) Zeilen als Leads an. Duplikate
-    werden serverseitig erneut geprüft und übersprungen (Doppel-Submit-sicher)."""
+    """Legt die (im Frontend ausgewählten) Zeilen als Leads an — mit dem
+    vorgeschlagenen Status und dem Nachrichtenverlauf als ERLEDIGTE
+    Aktivitäten (historisches Datum, bewusst OHNE Punkte-/Streak-Gutschrift).
+    Duplikate werden serverseitig erneut geprüft (Doppel-Submit-sicher)."""
     if len(data.rows) > _LINKEDIN_IMPORT_MAX_ROWS:
         raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
     urls, names = await _lead_dedup_keys(db)
-    created = skipped = 0
+    created = skipped = activities_created = 0
     for row in data.rows:
         fields = row_to_lead_fields(row.model_dump())
         url_key, name_key = _row_keys(row.first_name, row.last_name, row.url)
         if (url_key is not None and url_key in urls) or (bool(name_key) and name_key in names):
             skipped += 1
             continue
-        db.add(RainmakerLead(**fields))
+        if row.source == "invitation":
+            note = "LinkedIn-Kontaktanfrage gesendet"
+            if row.invited_at:
+                note += f" am {row.invited_at}"
+            note += " (noch nicht angenommen)"
+            fields["notes"] = note
+        fields["status"] = row.status
+        lead = RainmakerLead(**fields)
+        db.add(lead)
+        await db.flush()  # lead.id für Aktivitäten
+
+        # Nachrichtenverlauf als erledigte Aktivitäten (ohne Gamification)
+        for msg in row.messages[:50]:
+            completed = _parse_linkedin_datetime(msg.date)
+            db.add(RainmakerActivity(
+                lead_id=lead.id,
+                type=RainmakerActivityType.message,
+                status=RainmakerActivityStatus.done,
+                completed_at=completed,
+                notes=f"[LinkedIn, {msg.direction}] {msg.snippet}"[:2000],
+            ))
+            activities_created += 1
+
         if url_key:
             urls.add(url_key)
         if name_key:
             names.add(name_key)
         created += 1
     await db.flush()
-    return LinkedInImportResult(created=created, skipped_duplicates=skipped)
+    return LinkedInImportResult(
+        created=created, skipped_duplicates=skipped, activities_created=activities_created,
+    )
+
+
+def _parse_linkedin_datetime(value: str) -> datetime | None:
+    """'2026-07-08 23:03:13 UTC' → aware datetime; None bei Unlesbarem."""
+    v = (value or "").strip().removesuffix(" UTC")
+    try:
+        return datetime.strptime(v, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
 
 
 # --------------------------------------------------------------------------- #
