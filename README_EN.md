@@ -54,7 +54,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Kleinunternehmerregelung** (small business tax exemption) — configurable, affects calculation and PDF text
 - **Partial payments** — record payments, auto-complete when fully paid
 - **Credit notes** (Gutschriften) — separate number series GS-YYYY-NNNN, linked to original invoice
-- **Discount function** — percentage or fixed amount with autocomplete for reasons (over 210 suggestions: friends-and-family, early-payment discount, goodwill, price match, non-profit, and more)
+- **Discount function** — percentage or fixed amount with autocomplete for reasons (275 suggestions: friends-and-family, early-payment discount, functional discount, SLA credit, price match, non-profit, and more)
 - Discount shown as negative position on invoice PDF
 - **Special terms** — unlimited per invoice with autocomplete (hosting, support, SSL, migrations, payment plans, etc.)
 - **Multi-project billing** — select specific Token Tracker projects and GitHub repos per invoice via checkboxes
@@ -74,7 +74,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - One-click creation from customer detail page
 - Single line item with description and amount
 - Auto invoice number, 14-day payment term
-- Autocomplete for description (nearly 400 title suggestions)
+- Autocomplete for description (nearly 500 title suggestions)
 - Comma input for quantity and unit price (mobile shows decimal keyboard)
 
 ### Keyboard Shortcuts
@@ -272,7 +272,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest over 190 IT consulting services while typing (including website changes, security adjustments, IT support, research/reports, DevOps, Cloud, e-commerce, monitoring)
-- Position descriptions suggest over 570 detailed task descriptions (AI automation, webmaster, marketing, GDPR, cybersecurity, NIS2, e-invoicing, and more); invoice titles get nearly 400 project suggestions
+- Position descriptions suggest over 700 detailed task descriptions (AI automation, managed services, webmaster, marketing, GDPR, cybersecurity, NIS2, e-invoicing, and more); invoice titles get nearly 500 project suggestions
 - Keyboard navigation (arrow keys + Enter), filtered as you type
 - Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 

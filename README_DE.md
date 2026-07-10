@@ -54,7 +54,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Kleinunternehmerregelung** — konfigurierbar, beeinflusst Berechnung und PDF-Text
 - **Teilzahlungen** — Zahlungen erfassen, automatisch abgeschlossen bei Vollzahlung
 - **Gutschriften** — eigener Nummernkreis GS-YYYY-NNNN, verknüpft mit Originalrechnung
-- **Rabattfunktion** — prozentual oder Festbetrag mit Autovervollständigung für Begründungen (über 210 Vorschläge: Freundschaftsrabatt, Skonto, Kulanz, Preismatch, Non-Profit u. v. m.)
+- **Rabattfunktion** — prozentual oder Festbetrag mit Autovervollständigung für Begründungen (275 Vorschläge: Freundschaftsrabatt, Skonto, Funktionsrabatt, SLA-Gutschrift, Preismatch, Non-Profit u. v. m.)
 - Rabatt als negative Position auf dem Rechnungs-PDF
 - **Sondervereinbarungen** — beliebig viele pro Rechnung mit Autovervollständigung (Hosting, Support, SSL, Migrationen, Zahlungspläne, etc.)
 - **Multi-Projekt-Abrechnung** — Token-Tracker-Projekte und GitHub-Repos pro Rechnung über Checkboxen auswählen
@@ -74,7 +74,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Ein-Klick-Erstellung von der Kundendetailseite
 - Einzelposition mit Beschreibung und Betrag
 - Automatische Rechnungsnummer, 14 Tage Zahlungsziel
-- Autovervollständigung bei Beschreibung (fast 400 Titel-Vorschläge)
+- Autovervollständigung bei Beschreibung (fast 500 Titel-Vorschläge)
 - Komma-Eingabe bei Menge und Einzelpreis (mobil mit Dezimal-Keyboard)
 
 ### Tastatur-Shortcuts
@@ -273,7 +273,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 
 ### Intelligente Autovervollständigung
 - Titelfelder in Rechnungen und Aufträgen schlagen über 190 IT-Consulting-Leistungen während der Eingabe vor (inkl. Website-Änderungen, Sicherheits-Anpassungen, IT-Betreuung, Recherche/Reports, DevOps, Cloud, E-Commerce, Monitoring)
-- Positionsbeschreibungen schlagen über 570 detaillierte Tätigkeitsbeschreibungen vor (KI-Automatisierung, Webmaster, Marketing, DSGVO, Cybersecurity, NIS2, E-Rechnung u. v. m.); Rechnungstitel fast 400 Projekt-Vorschläge
+- Positionsbeschreibungen schlagen über 700 detaillierte Tätigkeitsbeschreibungen vor (KI-Automatisierung, Managed Services, Webmaster, Marketing, DSGVO, Cybersecurity, NIS2, E-Rechnung u. v. m.); Rechnungstitel fast 500 Projekt-Vorschläge
 - Tastaturnavigation (Pfeiltasten + Enter), gefiltert während der Eingabe
 - Kategorien: Website-Konzeption, Entwicklung (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastruktur, Performance & Sicherheit, Wartung & Support, App & Software, Beratung, KI, Vor-Ort/Remote-Support, E-Mail-Konfiguration (Outlook/Apple Mail/Thunderbird/Mobile), Browser & Software (Chrome/Firefox/Edge/Office/Antivirus), Sicherheit am Kundenrechner (Firewall/Defender/2FA/Backup), Datenrettung & Fehlerdiagnose, Recherche & Dokumentation (techn./rechtl., Reports, Gutachten), Kommunikation & Schulung
 

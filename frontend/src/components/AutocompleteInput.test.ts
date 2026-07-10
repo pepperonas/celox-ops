@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { POSITION_SUGGESTIONS, TITLE_SUGGESTIONS, DISCOUNT_REASON_SUGGESTIONS } from './AutocompleteInput'
 
 describe('POSITION_SUGGESTIONS', () => {
-  it('is a sizable list (>= 550 entries)', () => {
+  it('is a sizable list (>= 700 entries)', () => {
     expect(Array.isArray(POSITION_SUGGESTIONS)).toBe(true)
-    expect(POSITION_SUGGESTIONS.length).toBeGreaterThanOrEqual(550)
+    expect(POSITION_SUGGESTIONS.length).toBeGreaterThanOrEqual(700)
   })
 
   it('contains no duplicates', () => {
@@ -40,13 +40,16 @@ describe('POSITION_SUGGESTIONS', () => {
     expect(has('SharePoint')).toBe(true)
     expect(has('Phishing-Simulation')).toBe(true)
     expect(has('Externer Datenschutzbeauftragter')).toBe(true)
+    expect(has('Managed Server')).toBe(true)
+    expect(has('WooCommerce')).toBe(true)
+    expect(has('Ollama')).toBe(true)
   })
 })
 
 describe('TITLE_SUGGESTIONS', () => {
-  it('is a sizable list (>= 380 entries)', () => {
+  it('is a sizable list (>= 480 entries)', () => {
     expect(Array.isArray(TITLE_SUGGESTIONS)).toBe(true)
-    expect(TITLE_SUGGESTIONS.length).toBeGreaterThanOrEqual(380)
+    expect(TITLE_SUGGESTIONS.length).toBeGreaterThanOrEqual(480)
   })
 
   it('contains no duplicates (Set-wrapped)', () => {
@@ -76,9 +79,9 @@ describe('TITLE_SUGGESTIONS', () => {
 })
 
 describe('DISCOUNT_REASON_SUGGESTIONS', () => {
-  it('is a sizable list (>= 210 entries)', () => {
+  it('is a sizable list (>= 270 entries)', () => {
     expect(Array.isArray(DISCOUNT_REASON_SUGGESTIONS)).toBe(true)
-    expect(DISCOUNT_REASON_SUGGESTIONS.length).toBeGreaterThanOrEqual(210)
+    expect(DISCOUNT_REASON_SUGGESTIONS.length).toBeGreaterThanOrEqual(270)
   })
 
   it('contains no duplicates (Set-wrapped)', () => {
@@ -106,5 +109,8 @@ describe('DISCOUNT_REASON_SUGGESTIONS', () => {
     expect(has('Barter')).toBe(true)
     expect(has('Start-up')).toBe(true)
     expect(has('Gemeinnützige')).toBe(true)
+    expect(has('Funktionsrabatt')).toBe(true)
+    expect(has('KI-Effizienzvorteil')).toBe(true)
+    expect(has('SLA-Gutschrift')).toBe(true)
   })
 })
