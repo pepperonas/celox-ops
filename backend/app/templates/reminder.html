@@ -136,7 +136,7 @@
     <div class="recipient">
         {% if customer.company %}<strong>{{ customer.company }}</strong><br>{% endif %}
         {{ customer.name }}<br>
-        {% if customer.address %}{{ customer.address | replace('\n', '<br>') }}{% endif %}
+        {% if customer.address %}{% for line in customer.address | address_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endif %}
     </div>
 
     <p style="text-align: right; font-size: 9pt; color: #666;">Datum: {{ today.strftime('%d.%m.%Y') }}</p>

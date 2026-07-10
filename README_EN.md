@@ -780,14 +780,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 162 total** (all DB-free, run in CI on every push):
-  - **Backend (pytest, 98):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (12 — export parsers: connections/invitations/messages/ZIP)
+- **Unit tests — 171 total** (all DB-free, run in CI on every push):
+  - **Backend (pytest, 107):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (12 — export parsers: connections/invitations/messages/ZIP), `test_address_format` (9 — DIN 5008 address block)
   - **Frontend (Vitest, 64):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility)
 
 ## Project size
 
 - **~31,700 LoC application code** — ~11,500 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~18,600 frontend (TypeScript/React)
-- **~2,350 LoC tests** · 22 DB tables · 162 unit tests · multi-user with isolated workspaces
+- **~2,350 LoC tests** · 22 DB tables · 171 unit tests · multi-user with isolated workspaces
 
 ---
 

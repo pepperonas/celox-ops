@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from app.config import settings
+from app.services.address_format import format_address_lines
 from app.models.customer import Customer
 from app.models.invoice import Invoice
 from app.models.order import Order
@@ -210,6 +211,7 @@ def generate_invoice_pdf(
 ) -> str:
     template_dir = Path(__file__).parent.parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
+    env.filters["address_lines"] = format_address_lines
     template = env.get_template("invoice.html")
 
     positions = invoice.positions or []
@@ -339,6 +341,7 @@ def generate_quote_pdf(
 
     template_dir = Path(__file__).parent.parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
+    env.filters["address_lines"] = format_address_lines
     template = env.get_template("quote.html")
 
     positions = order.positions or []
@@ -384,6 +387,7 @@ def generate_reminder_pdf(
 
     template_dir = Path(__file__).parent.parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
+    env.filters["address_lines"] = format_address_lines
     template = env.get_template("reminder.html")
 
     # Load signature as base64

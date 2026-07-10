@@ -786,14 +786,14 @@ CO-2026-0001
   - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
   - Logs in `/var/log/celox-auto-deploy.log`
   - Smoke-Test (Health-Check) nach Backend-Rebuild
-- **Unit-Tests — 162 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
-  - **Backend (pytest, 98):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — EZB-Kurs-Parsing/Plausibilität), `test_linkedin_import` (12 — Export-Parser: Connections/Invitations/Messages/ZIP)
+- **Unit-Tests — 171 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
+  - **Backend (pytest, 107):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — EZB-Kurs-Parsing/Plausibilität), `test_linkedin_import` (12 — Export-Parser: Connections/Invitations/Messages/ZIP), `test_address_format` (9 — DIN-5008-Anschriftenblock)
   - **Frontend (Vitest, 64):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität)
 
 ## Projektumfang
 
 - **~31.700 LoC Anwendungscode** — ~11.500 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~18.600 Frontend (TypeScript/React)
-- **~2.350 LoC Tests** · 22 DB-Tabellen · 162 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
+- **~2.350 LoC Tests** · 22 DB-Tabellen · 171 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 
