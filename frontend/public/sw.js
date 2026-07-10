@@ -4,7 +4,7 @@
 // - /api/* is never intercepted.
 // Bump CACHE_VERSION on app-shell changes to purge old caches.
 
-const CACHE_VERSION = 'celox-ops-v5'
+const CACHE_VERSION = 'celox-ops-v6'
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
@@ -39,13 +39,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Immutable hashed build assets → cache-first.
+  // Guard: niemals HTML unter einer Asset-URL cachen — wenn der Server für
+  // einen fehlenden Chunk das SPA-Fallback (index.html, 200 OK) liefert,
+  // würde die .js-URL sonst dauerhaft vergiftet.
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>
           cached ||
           fetch(request).then((res) => {
-            if (res.ok) {
+            const type = res.headers.get('content-type') || ''
+            if (res.ok && !type.includes('text/html')) {
               const clone = res.clone()
               caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone))
             }
