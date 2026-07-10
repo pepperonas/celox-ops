@@ -44,8 +44,13 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
         return
       }
       setRows(preview)
-      // Bestätigte Kontakte vorauswählen; offene Anfragen + Duplikate abgewählt
-      setSelected(new Set(preview.map((r, i) => (!r.duplicate && r.source === 'connection' ? i : -1)).filter((i) => i >= 0)))
+      // Bestätigte Kontakte vorauswählen; offene Anfragen abgewählt.
+      // Duplikate MIT Nachrichtenverlauf ebenfalls vorwählen — die werden nicht
+      // doppelt angelegt, sondern angereichert (Status + Verlauf nachgezogen).
+      setSelected(new Set(preview.map((r, i) => {
+        if (r.duplicate) return r.message_count > 0 ? i : -1
+        return r.source === 'connection' ? i : -1
+      }).filter((i) => i >= 0)))
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       toast.error(detail || 'Datei konnte nicht gelesen werden. Ist es die Connections.csv aus dem LinkedIn-Export?')
@@ -93,8 +98,9 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
       const result = await importLinkedInLeads(chosen)
       toast.success(
         `${result.created} Lead${result.created === 1 ? '' : 's'} importiert` +
+        (result.enriched > 0 ? ` · ${result.enriched} bestehende angereichert` : '') +
         (result.activities_created > 0 ? ` · ${result.activities_created} Nachrichten als Aktivitäten` : '') +
-        (result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} Duplikate übersprungen` : '') + '.'
+        (result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} unverändert` : '') + '.'
       )
       onImported()
     } catch {
@@ -242,7 +248,11 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                           {r.message_count > 0 && <span className="ml-1" title={`${r.message_count} Nachrichten`}>💬{r.message_count}</span>}
                         </td>
                         <td className="px-2 py-1.5 text-[10px]">
-                          {r.duplicate && <span className="text-warning font-medium">Duplikat</span>}
+                          {r.duplicate && (
+                            <span className={r.message_count > 0 ? 'text-accent font-medium' : 'text-warning font-medium'}>
+                              {r.message_count > 0 ? 'wird angereichert' : 'Duplikat'}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     )

@@ -21,11 +21,22 @@ export default function RainmakerPipeline() {
   const [dragOver, setDragOver] = useState<RainmakerLeadStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
+  const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
   const fetchLeads = useCallback(async () => {
     try {
-      const res = await getRainmakerLeads({ page_size: 1000 })
-      setLeads(res.items)
+      // ALLE Seiten laden — die API cappt page_size bei 1000; mit nur der
+      // ersten Seite zeigte das Board bei >1000 Leads falsche Spalten/Zähler.
+      const all: RainmakerLead[] = []
+      let page = 1
+      for (;;) {
+        const res = await getRainmakerLeads({ page, page_size: 1000 })
+        all.push(...res.items)
+        if (page >= res.pages || res.items.length === 0) break
+        page++
+      }
+      setLeads(all)
     } catch {
       toast.error('Fehler beim Laden der Leads.')
     }
@@ -80,6 +91,9 @@ export default function RainmakerPipeline() {
           const color = STATUS_COLORS[statusKey]
           const colLeads = leads.filter((l) => l.status === statusKey)
           const isOver = dragOver === statusKey
+          const expanded = expandedCols.has(statusKey)
+          const visibleLeads = expanded ? colLeads : colLeads.slice(0, 100)
+          const hiddenCount = colLeads.length - visibleLeads.length
           return (
             <div
               key={statusKey}
@@ -106,7 +120,7 @@ export default function RainmakerPipeline() {
                 {colLeads.length === 0 && (
                   <div className="text-center text-text-muted text-xs py-8">Keine Leads</div>
                 )}
-                {colLeads.map((lead) => (
+                {visibleLeads.map((lead) => (
                   <div
                     key={lead.id}
                     draggable
@@ -136,6 +150,14 @@ export default function RainmakerPipeline() {
                     </div>
                   </div>
                 ))}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setExpandedCols((prev) => new Set(prev).add(statusKey))}
+                    className="w-full text-xs text-accent hover:underline underline-offset-2 py-2"
+                  >
+                    +{hiddenCount} weitere anzeigen
+                  </button>
+                )}
               </div>
             </div>
           )

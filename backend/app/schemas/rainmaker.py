@@ -75,6 +75,7 @@ class LinkedInImportRequest(BaseModel):
 class LinkedInImportResult(BaseModel):
     created: int
     skipped_duplicates: int
+    enriched: int = 0
     activities_created: int = 0
 
 

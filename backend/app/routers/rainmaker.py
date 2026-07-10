@@ -322,16 +322,79 @@ async def linkedin_import(
     """Legt die (im Frontend ausgewählten) Zeilen als Leads an — mit dem
     vorgeschlagenen Status und dem Nachrichtenverlauf als ERLEDIGTE
     Aktivitäten (historisches Datum, bewusst OHNE Punkte-/Streak-Gutschrift).
-    Duplikate werden serverseitig erneut geprüft (Doppel-Submit-sicher)."""
+    Duplikate werden nicht doppelt angelegt, sondern ANGEREICHERT: Status-
+    Upgrade (new → contacted → in_conversation, nie über offene Verhandlungs-/
+    Abschluss-Status hinweg), fehlende Felder (E-Mail/Funktion/Website)
+    nachgetragen, Nachrichtenverlauf nachgezogen, falls noch keiner am Lead
+    hängt — so verliert ein erneuter Upload eines reichhaltigeren Exports
+    keine Informationen."""
     if len(data.rows) > _LINKEDIN_IMPORT_MAX_ROWS:
         raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
-    urls, names = await _lead_dedup_keys(db)
-    created = skipped = activities_created = 0
+
+    # Lead-Lookup für Enrichment (owner-scoped via Tenancy-Events)
+    existing = (await db.execute(select(RainmakerLead))).scalars().all()
+    url_map: dict[str, RainmakerLead] = {}
+    name_map: dict[str, RainmakerLead] = {}
+    for lead in existing:
+        if u := _norm_url(lead.website):
+            url_map[u] = lead
+        if n := (lead.contact_name or "").strip().lower():
+            name_map[n] = lead
+
+    _status_rank = {
+        RainmakerLeadStatus.new: 0,
+        RainmakerLeadStatus.contacted: 1,
+        RainmakerLeadStatus.in_conversation: 2,
+    }
+
+    created = skipped = enriched = activities_created = 0
     for row in data.rows:
         fields = row_to_lead_fields(row.model_dump())
         url_key, name_key = _row_keys(row.first_name, row.last_name, row.url)
-        if (url_key is not None and url_key in urls) or (bool(name_key) and name_key in names):
-            skipped += 1
+        existing_lead = (url_map.get(url_key) if url_key else None) or name_map.get(name_key)
+        if existing_lead is not None:
+            changed = False
+            # Status nur AUFwerten und nur solange der Lead im Frühstadium ist
+            cur_rank = _status_rank.get(existing_lead.status)
+            new_rank = _status_rank.get(row.status)
+            if cur_rank is not None and new_rank is not None and new_rank > cur_rank:
+                existing_lead.status = row.status
+                changed = True
+            # Fehlende Felder nachtragen
+            if not existing_lead.email and fields.get("email"):
+                existing_lead.email = fields["email"]
+                changed = True
+            if not existing_lead.role and fields.get("role"):
+                existing_lead.role = fields["role"]
+                changed = True
+            if not existing_lead.website and fields.get("website"):
+                existing_lead.website = fields["website"]
+                changed = True
+            # Nachrichtenverlauf nachziehen, falls noch keiner importiert wurde
+            if row.messages:
+                has_linkedin_msgs = (
+                    await db.execute(
+                        select(func.count()).select_from(RainmakerActivity).where(
+                            RainmakerActivity.lead_id == existing_lead.id,
+                            RainmakerActivity.notes.like("[LinkedIn%"),
+                        )
+                    )
+                ).scalar_one()
+                if not has_linkedin_msgs:
+                    for msg in row.messages[:50]:
+                        db.add(RainmakerActivity(
+                            lead_id=existing_lead.id,
+                            type=RainmakerActivityType.message,
+                            status=RainmakerActivityStatus.done,
+                            completed_at=_parse_linkedin_datetime(msg.date),
+                            notes=f"[LinkedIn, {msg.direction}] {msg.snippet}"[:2000],
+                        ))
+                        activities_created += 1
+                    changed = True
+            if changed:
+                enriched += 1
+            else:
+                skipped += 1
             continue
         if row.source == "invitation":
             note = "LinkedIn-Kontaktanfrage gesendet"
@@ -356,14 +419,19 @@ async def linkedin_import(
             ))
             activities_created += 1
 
+        # Neu angelegte Leads in die Lookup-Maps — Mehrfachzeilen derselben
+        # Person innerhalb eines Batches werden so angereichert statt dupliziert
         if url_key:
-            urls.add(url_key)
+            url_map[url_key] = lead
         if name_key:
-            names.add(name_key)
+            name_map[name_key] = lead
         created += 1
     await db.flush()
     return LinkedInImportResult(
-        created=created, skipped_duplicates=skipped, activities_created=activities_created,
+        created=created,
+        skipped_duplicates=skipped,
+        enriched=enriched,
+        activities_created=activities_created,
     )
 
 

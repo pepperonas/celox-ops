@@ -618,6 +618,7 @@ export interface LinkedInPreviewRow extends LinkedInImportRow {
 export interface LinkedInImportResult {
   created: number
   skipped_duplicates: number
+  enriched: number
   activities_created: number
 }
 
