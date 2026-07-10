@@ -22,6 +22,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(false)
   const [filter, setFilter] = useState('')
+  const [dragOver, setDragOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -136,9 +137,30 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
             <button
               onClick={() => fileInput.current?.click()}
               disabled={uploading}
-              className="w-full border-2 border-dashed border-border rounded-xl py-10 text-sm text-text-muted hover:border-accent hover:text-text transition-colors duration-short"
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                const file = e.dataTransfer.files?.[0]
+                if (!file) return
+                if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+                  toast.error('Bitte eine CSV-Datei ablegen (Connections.csv).')
+                  return
+                }
+                handleFile(file)
+              }}
+              className={`w-full border-2 border-dashed rounded-xl py-10 text-sm transition-colors duration-short ${
+                dragOver
+                  ? 'border-accent bg-accent/10 text-text'
+                  : 'border-border text-text-muted hover:border-accent hover:text-text'
+              }`}
             >
-              {uploading ? 'Wird gelesen…' : '📄 Connections.csv auswählen'}
+              {uploading
+                ? 'Wird gelesen…'
+                : dragOver
+                  ? '📥 Loslassen zum Hochladen'
+                  : '📄 Connections.csv hierher ziehen oder klicken'}
             </button>
             <p className="text-[11px] text-text-muted mt-3">
               Hinweis: E-Mail-Adressen sind nur enthalten, wenn der Kontakt den Export erlaubt hat (meist leer).

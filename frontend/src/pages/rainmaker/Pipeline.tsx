@@ -73,7 +73,9 @@ export default function RainmakerPipeline() {
       />
       <RainmakerNav />
 
-      <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 260px)' }}>
+      {/* Umbruchfähiges Grid statt horizontalem Scroll: alle Status bleiben
+          im Viewport — 6 Spalten auf breiten Screens, sonst 3/2/1 im Umbruch. */}
+      <div className="grid gap-4 pb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {PIPELINE_STATUSES.map((statusKey) => {
           const color = STATUS_COLORS[statusKey]
           const colLeads = leads.filter((l) => l.status === statusKey)
@@ -81,7 +83,7 @@ export default function RainmakerPipeline() {
           return (
             <div
               key={statusKey}
-              className="flex-1 min-w-[240px] flex flex-col"
+              className="min-w-0 flex flex-col"
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statusKey) }}
               onDragLeave={() => setDragOver(null)}
               onDrop={(e) => handleDrop(e, statusKey)}
@@ -97,7 +99,7 @@ export default function RainmakerPipeline() {
               </div>
 
               <div
-                className={`flex-1 bg-surface-container border border-border rounded-b-lg p-3 space-y-3 transition-all duration-short ${
+                className={`flex-1 min-h-[140px] bg-surface-container border border-border rounded-b-lg p-3 space-y-3 transition-all duration-short ${
                   isOver ? 'border-accent border-dashed bg-accent/5' : ''
                 }`}
               >
