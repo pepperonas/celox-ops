@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { POSITION_SUGGESTIONS, TITLE_SUGGESTIONS } from './AutocompleteInput'
+import { POSITION_SUGGESTIONS, TITLE_SUGGESTIONS, DISCOUNT_REASON_SUGGESTIONS } from './AutocompleteInput'
 
 describe('POSITION_SUGGESTIONS', () => {
   it('is a sizable list (>= 550 entries)', () => {
@@ -72,5 +72,39 @@ describe('TITLE_SUGGESTIONS', () => {
     expect(has('Externer Datenschutzbeauftragter')).toBe(true)
     expect(has('Managed IT')).toBe(true)
     expect(has('BFSG')).toBe(true)
+  })
+})
+
+describe('DISCOUNT_REASON_SUGGESTIONS', () => {
+  it('is a sizable list (>= 210 entries)', () => {
+    expect(Array.isArray(DISCOUNT_REASON_SUGGESTIONS)).toBe(true)
+    expect(DISCOUNT_REASON_SUGGESTIONS.length).toBeGreaterThanOrEqual(210)
+  })
+
+  it('contains no duplicates (Set-wrapped)', () => {
+    expect(new Set(DISCOUNT_REASON_SUGGESTIONS).size).toBe(DISCOUNT_REASON_SUGGESTIONS.length)
+  })
+
+  it('has only non-empty, trimmed strings', () => {
+    for (const s of DISCOUNT_REASON_SUGGESTIONS) {
+      expect(typeof s).toBe('string')
+      expect(s.length).toBeGreaterThan(0)
+      expect(s).toBe(s.trim())
+    }
+  })
+
+  it('keeps the legacy reasons and covers the new themes', () => {
+    const has = (needle: string) =>
+      DISCOUNT_REASON_SUGGESTIONS.some((s) => s.toLowerCase().includes(needle.toLowerCase()))
+    // Bestand
+    expect(has('Treuerabatt')).toBe(true)
+    expect(has('Kulanz')).toBe(true)
+    // Neu (explizit gewünscht + Themen)
+    expect(has('Freundschaftsrabatt')).toBe(true)
+    expect(has('Skonto')).toBe(true)
+    expect(has('Preismatch')).toBe(true)
+    expect(has('Barter')).toBe(true)
+    expect(has('Start-up')).toBe(true)
+    expect(has('Gemeinnützige')).toBe(true)
   })
 })

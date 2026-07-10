@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import FormField from '../../components/FormField'
-import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
+import AutocompleteInput, { POSITION_SUGGESTIONS, DISCOUNT_REASON_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { getInvoice, createInvoice, updateInvoice, getUsagePeriodStart } from '../../api/invoices'
 import { getCustomers, getCustomer } from '../../api/customers'
 import axiosRaw from 'axios'
@@ -771,23 +771,7 @@ export default function InvoiceForm() {
                     value={discountReason}
                     onChange={(e) => setDiscountReason(e.target.value)}
                     placeholder="z.B. Treuerabatt, Erstkundenrabatt..."
-                    suggestions={[
-                      'Treuerabatt',
-                      'Erstkundenrabatt',
-                      'Mengenrabatt',
-                      'Projektrabatt',
-                      'Sonderkonditionen',
-                      'Langfristige Zusammenarbeit',
-                      'Empfehlungsrabatt',
-                      'Non-Profit / Verein',
-                      'Vorkasse-Rabatt',
-                      'Paketpreis',
-                      'Frühbucherrabatt',
-                      'Nachlass wegen Verzögerung',
-                      'Kulanz',
-                      'Bestandskundenrabatt',
-                      'Jubiläumsrabatt',
-                    ]}
+                    suggestions={DISCOUNT_REASON_SUGGESTIONS}
                     compact
                   />
                 </div>
