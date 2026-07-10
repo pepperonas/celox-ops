@@ -69,6 +69,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Per-invoice tax control** — checkbox to include/exclude VAT (Kleinunternehmerregelung per invoice, not just globally)
 - **Complete detail view** — invoice detail page shows discount (subtotal, deduction, reason), special terms, service description, and tax exemption notice
 - **Automatic PDF regeneration** — on every edit, an existing PDF is regenerated so changes are immediately visible
+- **Free status correction** — a "Status ändern" dropdown with all 5 statuses (draft/issued/paid/overdue/cancelled) on the detail page, for misclicks
+- **Undo** — every status change (detail page, quick buttons and bulk "mark paid" in the list) shows a toast with an undo button; bulk undo also reverts the recorded payments
 
 ### Quick Invoices
 - One-click creation from customer detail page
@@ -82,6 +84,12 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Esc** — leave form / close dialog
 - **Enter** in delete dialog — confirm
 
+### Undo & Error Tolerance
+- **Global undo pattern** — reversible actions show a success toast with an undo button (8-second window)
+- Covered: invoice status changes (incl. "mark paid" everywhere), order kanban drags, Rainmaker pipeline drags, bulk "mark paid" (incl. reverting recorded payments)
+- **Restorable deletions** — expenses, time entries, customer activities and planned Rainmaker actions are re-created on undo
+- Deliberately without undo: invoice/customer deletions (number sequence, PDFs, references — the confirmation dialog guards those) and completed Rainmaker actions (they carry points/streak)
+
 ### Recurring Invoices
 - Auto-generate draft invoices from active contracts based on billing cycle
 - Calculates due dates from billing_cycle + last_invoiced_date
@@ -93,7 +101,8 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - Import active AI working time and API costs directly into invoice line items
 - Configurable hourly rate (default 95 €/h)
 - Selectable date range for the import period
-- Auto-creates two positions: work hours × rate + API costs as flat fee
+- Auto-creates two positions: work hours × rate + API costs as flat fee (position "Technische Infrastruktur & externe Systemkosten (KI)")
+- **Live USD→EUR** — conversion uses the daily ECB reference rate (Frankfurter API, 12 h cache, safe fallback) instead of a hardcoded factor
 - Only visible when customer has Token Tracker linked
 - Automatically sets the AI usage report attachment period
 
@@ -294,7 +303,15 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Statistics**: activities by day/type, conversion funnel (new → won), open value
 - **Configurable acquisition goals**: define your own goals (e.g. "Neukunden Telefon-Akquise", "LinkedIn anschreiben", "Bestandskunde kontaktieren") with a suggested action type + **daily target**; default set seedable in one click. Activities count toward goals → daily progress on "Heute"
 - **Templates** with placeholders (`{company}`, `{contact_name}`, `{role}`) for mail/message
-- **LinkedIn import**: import the complete LinkedIn data export (ZIP) or `Connections.csv` — no API. Connections, pending invites (status "contacted") and message history (status "in conversation" + done activities with historical dates, no gamification distortion); preview with source filters, duplicate detection, drag & drop
+- **Dream goal** (expected-value motivation): every completed acquisition action statistically contributes € toward a dream object ("a no on the phone is still €225 toward the Porsche") — researched presets (Cayenne Turbo Electric, Brabus Bodo, Taycan Turbo GT …), road visualization (€1,000 = 1 km) with milestones, randomized scenario cards, what-if slider, configurable savings rate/assumptions/start date; can later switch to real paid invoices
+- **Pipeline without horizontal scrolling** — the 6 status columns wrap responsively (6 / 3×2 / 2×3 / 1 column), drag & drop between columns with undo
+- **LinkedIn import** — leverage the complete official LinkedIn data export, no API and no paid tools:
+  - **Upload the ZIP directly** (drag & drop or click; unpacked in-memory server-side with zip-bomb guards) — or the single `Connections.csv`
+  - **Three sources merged** (by normalized profile URL): connections → status "new"; pending outgoing invites (`Invitations.csv`, not yet accepted) → status "contacted" with the invite date as a note; message history (`messages.csv`) → status "in conversation"
+  - **Messages as history**: conversations are attached to the lead as completed activities with historical dates, direction (sent/received) and text snippet — deliberately without points/streak credit
+  - **Preview with source filter chips** (all / connections / pending invites), status column with 💬 badge, text search; connections pre-selected, invites deliberately deselected
+  - **Safe to repeat**: per-user duplicate detection via profile URL/name — re-uploading a newer archive later imports only the additions
+  - Imported fields: name, company, position, profile URL, "connected on", email (if shared), tag `linkedin`
 
 ---
 
@@ -765,12 +782,12 @@ CO-2026-0001
   - Logs to `/var/log/celox-auto-deploy.log`
 - **Unit tests — 162 total** (all DB-free, run in CI on every push):
   - **Backend (pytest, 98):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (12 — export parsers: connections/invitations/messages/ZIP)
-  - **Frontend (Vitest, 55):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility)
+  - **Frontend (Vitest, 64):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility)
 
 ## Project size
 
-- **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
-- **~1,050 LoC tests** · 22 DB tables · 162 unit tests · multi-user with isolated workspaces
+- **~31,700 LoC application code** — ~11,500 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~18,600 frontend (TypeScript/React)
+- **~2,350 LoC tests** · 22 DB tables · 162 unit tests · multi-user with isolated workspaces
 
 ---
 

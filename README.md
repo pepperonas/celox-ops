@@ -77,11 +77,12 @@ docker compose up -d --build
 - **Professional PDF Invoices** — WeasyPrint + Jinja2, A4 layout with branding
 - **AI Usage Dashboard** — Token Tracker integration with charts, KPIs, CSV/HTML export
 - **Invoice Number Auto-Generation** — `CO-YYYY-NNNN` format, sequential per year
-- **Rainmaker** — action-first acquisition activation: today-queue, pipeline (Kanban), next-action enforcement, streak & points, daily mail reminder, LinkedIn connections import (official CSV export, no API)
+- **Rainmaker** — action-first acquisition activation: today-queue, responsive pipeline (Kanban), next-action enforcement, streak & points, dream-goal motivation engine, daily mail reminder, LinkedIn full-export import (ZIP: connections + pending invites + message history, no API)
 - **Kleinunternehmerregelung** — small business tax exemption support
 - **Material Design 3 Expressive Theme** — responsive React SPA with TailwindCSS, tonal surfaces, pill buttons, spring motion
 - **Docker Compose Deployment** — single command, production-ready
-- **JWT Authentication** — secure single-user setup with bcrypt
+- **JWT Authentication** — multi-user with isolated workspaces, bcrypt + optional TOTP 2FA
+- **Global Undo** — reversible actions (status changes, drags, deletions) show an undo toast
 
 ---
 

@@ -69,6 +69,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **USt-Steuerung pro Rechnung** — Checkbox für USt inkl./exkl. (Kleinunternehmerregelung pro Rechnung, nicht nur global)
 - **Vollständige Detailansicht** — Rechnungsdetailseite zeigt Rabatt (Zwischensumme, Abzug, Grund), Sondervereinbarungen, Leistungsbeschreibung und Steuerbefreiungshinweis
 - **Automatische PDF-Regeneration** — bei jeder Bearbeitung wird ein vorhandenes PDF automatisch neu erstellt, damit Änderungen sofort sichtbar sind
+- **Status frei korrigierbar** — „Status ändern"-Dropdown mit allen 5 Status (Entwurf/Gestellt/Bezahlt/Überfällig/Storniert) auf der Detailseite, falls man sich verklickt hat
+- **Rückgängig-Funktion** — jeder Statuswechsel (Detailseite, Schnell-Buttons und Bulk-„Als bezahlt" in der Übersicht) zeigt einen Toast mit „Rückgängig"-Button; beim Bulk-Undo wird auch der gebuchte Zahlungsstand zurückgesetzt
 
 ### Schnellrechnungen
 - Ein-Klick-Erstellung von der Kundendetailseite
@@ -82,6 +84,12 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Esc** — Form verlassen / Dialog schließen
 - **Enter** im Lösch-Dialog — bestätigt
 
+### Undo & Fehlertoleranz
+- **Globales Rückgängig-Muster** — umkehrbare Aktionen zeigen einen Erfolgs-Toast mit „Rückgängig"-Button (8-Sekunden-Fenster)
+- Abgedeckt: Rechnungs-Statuswechsel (inkl. „Als bezahlt markieren" überall), Auftrags-Kanban-Drags, Rainmaker-Pipeline-Drags, Bulk-„Als bezahlt" (inkl. Rücknahme der gebuchten Zahlungen)
+- **Löschungen wiederherstellbar** — Ausgaben, Zeiteinträge, Kunden-Aktivitäten und geplante Rainmaker-Aktionen werden beim Undo neu angelegt
+- Bewusst ohne Undo: Rechnungs-/Kunden-Löschungen (Nummernkreis, PDFs, Referenzen — dort schützt der Bestätigungsdialog) und erledigte Rainmaker-Aktionen (tragen Punkte/Streak)
+
 ### Wiederkehrende Rechnungen
 - Automatische Entwurfserstellung aus aktiven Verträgen basierend auf Zahlungsturnus
 - Berechnet Fälligkeit aus Turnus + letztem Rechnungsdatum
@@ -93,7 +101,8 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - Aktive KI-Arbeitszeit und API-Kosten direkt als Rechnungspositionen importieren
 - Konfigurierbarer Stundensatz (Standard 95 €/h)
 - Wählbarer Zeitraum für den Import
-- Erstellt automatisch zwei Positionen: Arbeitsstunden × Satz + API-Kosten pauschal
+- Erstellt automatisch zwei Positionen: Arbeitsstunden × Satz + API-Kosten pauschal (Position „Technische Infrastruktur & externe Systemkosten (KI)")
+- **USD→EUR tagesaktuell** — Umrechnung mit dem EZB-Referenzkurs (Frankfurter API, 12-h-Cache, sicherer Fallback), nicht mit hartem Faktor
 - Nur sichtbar wenn Kunde Token Tracker verknüpft hat
 - Setzt automatisch den Zeitraum für den KI-Nutzungsbericht-Anhang
 
@@ -295,7 +304,15 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Statistik**: Aktivitäten nach Tag/Typ, Conversion-Funnel (neu → gewonnen), offenes Volumen
 - **Konfigurierbare Akquise-Ziele**: eigene Ziele (z. B. „Neukunden Telefon-Akquise", „LinkedIn anschreiben", „Bestandskunde kontaktieren") mit vorgeschlagenem Aktionstyp + **Tagesziel**; Default-Set per Klick anlegbar. Aktivitäten zählen aufs Ziel → Tagesfortschritt auf „Heute"
 - **Vorlagen** mit Platzhaltern (`{company}`, `{contact_name}`, `{role}`) für Mail/Nachricht
-- **LinkedIn-Import**: kompletten LinkedIn-Datenexport (ZIP) oder `Connections.csv` importieren — ohne API. Kontakte, offene Kontaktanfragen (Status „Kontaktiert") und Nachrichtenverlauf (Status „Im Gespräch" + erledigte Aktivitäten mit historischem Datum, ohne Punkte-Verfälschung); Vorschau mit Quellen-Filter, Duplikat-Erkennung, Drag & Drop
+- **Traumziel** (Erwartungswert-Motivation): jede erledigte Akquise-Aktion trägt statistisch € zu einem Wunschobjekt bei („ein Nein am Telefon sind trotzdem 225 € Richtung Porsche") — recherchierte Presets (Cayenne Turbo Electric, Brabus Bodo, Taycan Turbo GT …), Straßen-Visualisierung (1.000 € = 1 km) mit Meilensteinen, randomisierte Szenario-Karten, What-if-Slider, konfigurierbare Sparquote/Annahmen/Startdatum; später umschaltbar auf echte bezahlte Rechnungen
+- **Pipeline ohne Horizontal-Scroll** — die 6 Status-Spalten brechen responsiv um (6 / 3×2 / 2×3 / 1 Spalte), Drag & Drop zwischen den Spalten mit Undo
+- **LinkedIn-Import** — den kompletten offiziellen LinkedIn-Datenexport verwerten, ohne API und ohne Bezahltools:
+  - **ZIP direkt hochladen** (Drag & Drop oder Klick; serverseitig in-memory entpackt, Zip-Bomb-Guards) — alternativ die einzelne `Connections.csv`
+  - **Drei Quellen zusammengeführt** (per normalisierter Profil-URL): Kontakte → Status „Neu"; offene ausgehende Kontaktanfragen (`Invitations.csv`, noch nicht angenommen) → Status „Kontaktiert" mit Anfrage-Datum als Notiz; Nachrichtenverlauf (`messages.csv`) → Status „Im Gespräch"
+  - **Nachrichten als Historie**: Konversationen werden dem Lead als erledigte Aktivitäten mit historischem Datum, Richtung (gesendet/erhalten) und Textauszug angehängt — bewusst ohne Punkte-/Streak-Gutschrift
+  - **Vorschau mit Quellen-Filter-Chips** (Alle / Kontakte / Anfragen offen), Status-Spalte mit 💬-Badge, Textsuche; Kontakte vorausgewählt, Anfragen bewusst abgewählt
+  - **Wiederhol-sicher**: Duplikat-Erkennung pro Nutzer über Profil-URL/Name — ein neueres Archiv später erneut hochladen importiert nur die Neuzugänge
+  - Übernommen werden Name, Firma, Position, Profil-URL, „Verbunden seit", E-Mail (falls freigegeben), Tag `linkedin`
 
 ---
 
@@ -771,12 +788,12 @@ CO-2026-0001
   - Smoke-Test (Health-Check) nach Backend-Rebuild
 - **Unit-Tests — 162 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
   - **Backend (pytest, 98):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — EZB-Kurs-Parsing/Plausibilität), `test_linkedin_import` (12 — Export-Parser: Connections/Invitations/Messages/ZIP)
-  - **Frontend (Vitest, 55):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (4 — Positionsvorschläge), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität)
+  - **Frontend (Vitest, 64):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität)
 
 ## Projektumfang
 
-- **~27.400 LoC Anwendungscode** — ~9.840 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~15.900 Frontend (TypeScript/React)
-- **~1.050 LoC Tests** · 22 DB-Tabellen · 162 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
+- **~31.700 LoC Anwendungscode** — ~11.500 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~18.600 Frontend (TypeScript/React)
+- **~2.350 LoC Tests** · 22 DB-Tabellen · 162 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 
