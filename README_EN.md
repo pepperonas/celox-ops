@@ -74,7 +74,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - One-click creation from customer detail page
 - Single line item with description and amount
 - Auto invoice number, 14-day payment term
-- Autocomplete for description (over 380 task suggestions)
+- Autocomplete for description (nearly 400 title suggestions)
 - Comma input for quantity and unit price (mobile shows decimal keyboard)
 
 ### Keyboard Shortcuts
@@ -272,7 +272,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 
 ### Smart Autocomplete
 - Title fields in invoices and orders suggest over 190 IT consulting services while typing (including website changes, security adjustments, IT support, research/reports, DevOps, Cloud, e-commerce, monitoring)
-- Position descriptions suggest over 380 detailed task descriptions (webmaster, marketing, GDPR, cybersecurity, and more)
+- Position descriptions suggest over 570 detailed task descriptions (AI automation, webmaster, marketing, GDPR, cybersecurity, NIS2, e-invoicing, and more); invoice titles get nearly 400 project suggestions
 - Keyboard navigation (arrow keys + Enter), filtered as you type
 - Categories: Website concept, Development (React/Next.js/Node.js/Python), Content & SEO, Hosting & Infrastructure, Performance & Security, Maintenance & Support, App & Software, Consulting, AI, On-site/Remote support, Email setup (Outlook/Apple Mail/Thunderbird/Mobile), Browsers & Software (Chrome/Firefox/Edge/Office/Antivirus), Workstation security (Firewall/Defender/2FA/Backup), Data recovery & Diagnostics, Research & Documentation (technical/legal, reports, expert opinions), Communication & Training
 
@@ -763,14 +763,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 147 total** (all DB-free, run in CI on every push):
+- **Unit tests — 152 total** (all DB-free, run in CI on every push):
   - **Backend (pytest, 92):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (6 — Connections.csv parser)
   - **Frontend (Vitest, 55):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (4 — position suggestions), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility)
 
 ## Project size
 
 - **~27,400 LoC application code** — ~9,840 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~15,900 frontend (TypeScript/React)
-- **~1,050 LoC tests** · 22 DB tables · 147 unit tests · multi-user with isolated workspaces
+- **~1,050 LoC tests** · 22 DB tables · 152 unit tests · multi-user with isolated workspaces
 
 ---
 
