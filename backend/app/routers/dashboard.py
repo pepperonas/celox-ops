@@ -186,6 +186,11 @@ def invalidate_stats_cache() -> None:
     _charts_cache.clear()
 
 
+# "Rausgegangene" Rechnungen für den gestrichelten Zähl-Balken:
+# alles, was an Kunden gestellt wurde — unabhängig vom Bezahlt-Status.
+_ISSUED_STATUSES = [InvoiceStatus.gestellt, InvoiceStatus.bezahlt, InvoiceStatus.ueberfaellig]
+
+
 @router.get("/charts")
 async def get_chart_data(
     period: str = Query("30d", regex="^(30d|12m)$"),
@@ -210,13 +215,28 @@ async def get_chart_data(
             select(
                 Invoice.invoice_date,
                 func.coalesce(func.sum(Invoice.total), 0),
+                func.count(Invoice.id),
+                func.min(Customer.name),  # bei genau 1 Rechnung = deren Kunde
             )
+            .join(Customer, Customer.id == Invoice.customer_id)
             .where(Invoice.status.in_(statuses), Invoice.invoice_date >= start_date)
             .group_by(Invoice.invoice_date)
         )
-        rev_map: dict[str, float] = {}
-        for d, total in rev_result.all():
-            rev_map[d.isoformat()] = float(total)
+        rev_map: dict[str, dict] = {}
+        for d, total, cnt, cust in rev_result.all():
+            rev_map[d.isoformat()] = {"revenue": float(total), "count": int(cnt), "customer": cust}
+
+        # Gestellte Rechnungen (rausgegangen: gestellt/bezahlt/überfällig) —
+        # bewusst unabhängig vom include_drafts-Toggle (Fakturierungs-Aktivität)
+        issued_result = await db.execute(
+            select(Invoice.invoice_date, func.count(Invoice.id))
+            .where(
+                Invoice.status.in_(_ISSUED_STATUSES),
+                Invoice.invoice_date >= start_date,
+            )
+            .group_by(Invoice.invoice_date)
+        )
+        issued_map = {d.isoformat(): int(cnt) for d, cnt in issued_result.all()}
 
         exp_result = await db.execute(
             select(
@@ -234,10 +254,14 @@ async def get_chart_data(
         for i in range(30):
             d = start_date + relativedelta(days=i)
             key = d.isoformat()
+            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None})
             revenue_by_period.append({
                 "label": d.strftime("%d.%m."),
-                "revenue": rev_map.get(key, 0.0),
+                "revenue": rev["revenue"],
                 "expenses": exp_map.get(key, 0.0),
+                "invoice_count": rev["count"],
+                "customer_name": rev["customer"] if rev["count"] == 1 else None,
+                "issued_count": issued_map.get(key, 0),
             })
     else:
         # Monthly for last 12 months (original logic)
@@ -251,17 +275,34 @@ async def get_chart_data(
                 func.extract("year", Invoice.invoice_date).label("y"),
                 func.extract("month", Invoice.invoice_date).label("m"),
                 func.coalesce(func.sum(Invoice.total), 0),
+                func.count(Invoice.id),
+                func.min(Customer.name),  # bei genau 1 Rechnung = deren Kunde
             )
+            .join(Customer, Customer.id == Invoice.customer_id)
             .where(
                 Invoice.status.in_(statuses),
                 Invoice.invoice_date >= twelve_months_ago,
             )
             .group_by("y", "m")
         )
-        rev_map: dict[str, float] = {}
-        for y, m, total in rev_result.all():
+        rev_map: dict[str, dict] = {}
+        for y, m, total, cnt, cust in rev_result.all():
             key = f"{int(y)}-{int(m):02d}"
-            rev_map[key] = float(total)
+            rev_map[key] = {"revenue": float(total), "count": int(cnt), "customer": cust}
+
+        issued_result = await db.execute(
+            select(
+                func.extract("year", Invoice.invoice_date).label("y"),
+                func.extract("month", Invoice.invoice_date).label("m"),
+                func.count(Invoice.id),
+            )
+            .where(
+                Invoice.status.in_(_ISSUED_STATUSES),
+                Invoice.invoice_date >= twelve_months_ago,
+            )
+            .group_by("y", "m")
+        )
+        issued_map = {f"{int(y)}-{int(m):02d}": int(cnt) for y, m, cnt in issued_result.all()}
 
         exp_result = await db.execute(
             select(
@@ -282,10 +323,14 @@ async def get_chart_data(
         for i in range(12):
             d = today.replace(day=1) - relativedelta(months=11 - i)
             key = f"{d.year}-{d.month:02d}"
+            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None})
             revenue_by_period.append({
                 "label": f"{months_de[d.month - 1]} {str(d.year)[2:]}",
-                "revenue": rev_map.get(key, 0.0),
+                "revenue": rev["revenue"],
                 "expenses": exp_map.get(key, 0.0),
+                "invoice_count": rev["count"],
+                "customer_name": rev["customer"] if rev["count"] == 1 else None,
+                "issued_count": issued_map.get(key, 0),
             })
 
     # --- invoice_status_distribution ---

@@ -7,6 +7,7 @@ import { Bar, Doughnut } from 'react-chartjs-2'
 import { api } from '../api/client'
 import TiltCard from '../components/TiltCard'
 import type { DashboardStats, Invoice } from '../types'
+import { revenueTooltipLabel } from '../utils/chartTooltip'
 import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters'
 
 const colors = {
@@ -22,8 +23,33 @@ const colors = {
   purple: '#c4abff',
 }
 
+// Chart.js-Bars unterstützen kein natives borderDash — dieses Mini-Plugin
+// aktiviert setLineDash für Datensätze mit `dashedBorder: true` (der
+// „Rechnungen gestellt"-Zähl-Balken wird so gestrichelt umrandet).
+const dashedBarsPlugin = {
+  id: 'dashedBars',
+  beforeDatasetDraw(chart: any, args: any) {
+    if ((chart.data.datasets[args.index] as any)?.dashedBorder) {
+      chart.ctx.save()
+      chart.ctx.setLineDash([5, 4])
+    }
+  },
+  afterDatasetDraw(chart: any, args: any) {
+    if ((chart.data.datasets[args.index] as any)?.dashedBorder) {
+      chart.ctx.restore()
+    }
+  },
+}
+
 interface ChartData {
-  revenue_by_period: { label: string; revenue: number; expenses: number }[]
+  revenue_by_period: {
+    label: string
+    revenue: number
+    expenses: number
+    invoice_count: number
+    customer_name: string | null
+    issued_count: number
+  }[]
   invoice_status_distribution: { status: string; count: number; total: number }[]
   top_customers: { name: string; revenue: number; invoices_count: number }[]
   recent_invoices: {
@@ -336,8 +362,21 @@ export default function Dashboard() {
                       barPercentage: 0.7,
                       categoryPercentage: 0.8,
                     },
+                    {
+                      label: 'Rechnungen gestellt',
+                      data: chartData.revenue_by_period.map((d) => d.issued_count),
+                      backgroundColor: 'transparent',
+                      borderColor: colors.muted,
+                      borderWidth: 1.5,
+                      borderRadius: 4,
+                      barPercentage: 0.7,
+                      categoryPercentage: 0.8,
+                      yAxisID: 'y1',
+                      dashedBorder: true,
+                    } as any,
                   ],
                 }}
+                plugins={[dashedBarsPlugin]}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -359,7 +398,12 @@ export default function Dashboard() {
                       borderColor: colors.border,
                       borderWidth: 1,
                       callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.raw as number)}`,
+                        label: (ctx) => revenueTooltipLabel(
+                          ctx.dataset.label || '',
+                          ctx.datasetIndex,
+                          ctx.raw as number,
+                          chartData.revenue_by_period[ctx.dataIndex],
+                        ),
                       },
                     },
                   },
@@ -376,6 +420,18 @@ export default function Dashboard() {
                         color: colors.muted,
                         font: { size: 11 },
                         callback: (v) => `${Number(v).toLocaleString('de-DE')} \u20AC`,
+                      },
+                    },
+                    y1: {
+                      position: 'right',
+                      beginAtZero: true,
+                      grid: { display: false },
+                      border: { display: false },
+                      ticks: {
+                        color: colors.muted,
+                        font: { size: 11 },
+                        precision: 0,
+                        stepSize: 1,
                       },
                     },
                   },
