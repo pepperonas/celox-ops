@@ -38,7 +38,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.linux.org/)
 [![Zustand](https://img.shields.io/badge/Zustand-State-443E38)](https://zustand-demo.pmnd.rs/)
 [![Axios](https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white)](https://axios-http.com/)
-[![Tests](https://img.shields.io/badge/tests-176%20passing-brightgreen?logo=checkmarx&logoColor=white)](#tests)
+[![Tests](https://img.shields.io/badge/tests-178%20passing-brightgreen?logo=checkmarx&logoColor=white)](#tests)
 [![pytest](https://img.shields.io/badge/pytest-82-0A9EDC?logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-52-6E9F18?logo=vitest&logoColor=white)](frontend/src)
 [![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)

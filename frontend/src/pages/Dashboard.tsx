@@ -49,6 +49,9 @@ interface ChartData {
     invoice_count: number
     customer_name: string | null
     issued_count: number
+    paid_count: number
+    open_count: number
+    draft_count: number
   }[]
   invoice_status_distribution: { status: string; count: number; total: number }[]
   top_customers: { name: string; revenue: number; invoices_count: number }[]
@@ -323,7 +326,7 @@ export default function Dashboard() {
                 <div className="flex rounded-[6px] overflow-hidden border border-border" role="group" aria-label="Datenbasis">
                   {([
                     ['paid', 'Nur bezahlt', 'Nur bezahlte Rechnungen'],
-                    ['drafts', 'Inkl. Entwürfe', 'Bezahlte Rechnungen + Entwürfe (erwarteter Umsatz)'],
+                    ['drafts', 'Inkl. Entwürfe', 'Erwarteter Umsatz: bezahlte + gestellte/überfällige Rechnungen + Entwürfe'],
                   ] as const).map(([key, label, tip]) => {
                     const active = (key === 'drafts') === includeDrafts
                     return (
@@ -347,7 +350,7 @@ export default function Dashboard() {
                   labels: chartData.revenue_by_period.map((d) => d.label),
                   datasets: [
                     {
-                      label: includeDrafts ? 'Umsatz + Entwürfe' : 'Umsatz',
+                      label: includeDrafts ? 'Erwarteter Umsatz' : 'Umsatz',
                       data: chartData.revenue_by_period.map((d) => d.revenue),
                       backgroundColor: includeDrafts ? colors.accent : colors.green,
                       borderRadius: 4,

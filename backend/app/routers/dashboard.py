@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
-from sqlalchemy import desc, func, select
+from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from weasyprint import HTML
@@ -209,7 +209,9 @@ async def get_chart_data(
         start_date = today - relativedelta(days=29)
         statuses = [InvoiceStatus.bezahlt]
         if include_drafts:
-            statuses.append(InvoiceStatus.entwurf)
+            # Erwarteter Umsatz: auch gestellte/überfällige (sicherer als
+            # Entwürfe!) und Entwürfe einbeziehen — nicht nur bezahlt+entwurf.
+            statuses += [InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig, InvoiceStatus.entwurf]
 
         rev_result = await db.execute(
             select(
@@ -217,14 +219,20 @@ async def get_chart_data(
                 func.coalesce(func.sum(Invoice.total), 0),
                 func.count(Invoice.id),
                 func.min(Customer.name),  # bei genau 1 Rechnung = deren Kunde
+                func.sum(case((Invoice.status == InvoiceStatus.bezahlt, 1), else_=0)),
+                func.sum(case((Invoice.status.in_([InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig]), 1), else_=0)),
+                func.sum(case((Invoice.status == InvoiceStatus.entwurf, 1), else_=0)),
             )
             .join(Customer, Customer.id == Invoice.customer_id)
             .where(Invoice.status.in_(statuses), Invoice.invoice_date >= start_date)
             .group_by(Invoice.invoice_date)
         )
         rev_map: dict[str, dict] = {}
-        for d, total, cnt, cust in rev_result.all():
-            rev_map[d.isoformat()] = {"revenue": float(total), "count": int(cnt), "customer": cust}
+        for d, total, cnt, cust, paid_c, open_c, draft_c in rev_result.all():
+            rev_map[d.isoformat()] = {
+                "revenue": float(total), "count": int(cnt), "customer": cust,
+                "paid": int(paid_c or 0), "open": int(open_c or 0), "draft": int(draft_c or 0),
+            }
 
         # Gestellte Rechnungen (rausgegangen: gestellt/bezahlt/überfällig) —
         # bewusst unabhängig vom include_drafts-Toggle (Fakturierungs-Aktivität)
@@ -254,7 +262,7 @@ async def get_chart_data(
         for i in range(30):
             d = start_date + relativedelta(days=i)
             key = d.isoformat()
-            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None})
+            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None, "paid": 0, "open": 0, "draft": 0})
             revenue_by_period.append({
                 "label": d.strftime("%d.%m."),
                 "revenue": rev["revenue"],
@@ -262,13 +270,18 @@ async def get_chart_data(
                 "invoice_count": rev["count"],
                 "customer_name": rev["customer"] if rev["count"] == 1 else None,
                 "issued_count": issued_map.get(key, 0),
+                "paid_count": rev["paid"],
+                "open_count": rev["open"],
+                "draft_count": rev["draft"],
             })
     else:
         # Monthly for last 12 months (original logic)
         twelve_months_ago = today.replace(day=1) - relativedelta(months=11)
         statuses = [InvoiceStatus.bezahlt]
         if include_drafts:
-            statuses.append(InvoiceStatus.entwurf)
+            # Erwarteter Umsatz: auch gestellte/überfällige (sicherer als
+            # Entwürfe!) und Entwürfe einbeziehen — nicht nur bezahlt+entwurf.
+            statuses += [InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig, InvoiceStatus.entwurf]
 
         rev_result = await db.execute(
             select(
@@ -277,6 +290,9 @@ async def get_chart_data(
                 func.coalesce(func.sum(Invoice.total), 0),
                 func.count(Invoice.id),
                 func.min(Customer.name),  # bei genau 1 Rechnung = deren Kunde
+                func.sum(case((Invoice.status == InvoiceStatus.bezahlt, 1), else_=0)),
+                func.sum(case((Invoice.status.in_([InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig]), 1), else_=0)),
+                func.sum(case((Invoice.status == InvoiceStatus.entwurf, 1), else_=0)),
             )
             .join(Customer, Customer.id == Invoice.customer_id)
             .where(
@@ -286,9 +302,12 @@ async def get_chart_data(
             .group_by("y", "m")
         )
         rev_map: dict[str, dict] = {}
-        for y, m, total, cnt, cust in rev_result.all():
+        for y, m, total, cnt, cust, paid_c, open_c, draft_c in rev_result.all():
             key = f"{int(y)}-{int(m):02d}"
-            rev_map[key] = {"revenue": float(total), "count": int(cnt), "customer": cust}
+            rev_map[key] = {
+                "revenue": float(total), "count": int(cnt), "customer": cust,
+                "paid": int(paid_c or 0), "open": int(open_c or 0), "draft": int(draft_c or 0),
+            }
 
         issued_result = await db.execute(
             select(
@@ -323,7 +342,7 @@ async def get_chart_data(
         for i in range(12):
             d = today.replace(day=1) - relativedelta(months=11 - i)
             key = f"{d.year}-{d.month:02d}"
-            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None})
+            rev = rev_map.get(key, {"revenue": 0.0, "count": 0, "customer": None, "paid": 0, "open": 0, "draft": 0})
             revenue_by_period.append({
                 "label": f"{months_de[d.month - 1]} {str(d.year)[2:]}",
                 "revenue": rev["revenue"],
@@ -331,6 +350,9 @@ async def get_chart_data(
                 "invoice_count": rev["count"],
                 "customer_name": rev["customer"] if rev["count"] == 1 else None,
                 "issued_count": issued_map.get(key, 0),
+                "paid_count": rev["paid"],
+                "open_count": rev["open"],
+                "draft_count": rev["draft"],
             })
 
     # --- invoice_status_distribution ---
