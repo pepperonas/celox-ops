@@ -195,7 +195,7 @@ export default function Login() {
               </svg>
               Mit Google anmelden
             </div>
-            <div ref={googleBtnRef} className="absolute inset-0 flex justify-center opacity-[0.02]" />
+            <div ref={googleBtnRef} className="absolute inset-0 flex justify-center opacity-[0.001]" />
           </div>
         </div>
       </div>
