@@ -13,7 +13,7 @@ celox ops is a full-stack business management webapp for freelancers/IT consulta
 docker compose up -d --build          # Build and start all services
 docker compose up -d --build backend   # Rebuild backend only
 docker compose up -d --build frontend  # Rebuild frontend only
-docker compose restart backend         # Restart without rebuild (picks up .env changes)
+docker compose up -d backend           # Recreate ohne Rebuild — nötig für .env-Änderungen! (restart übernimmt sie NICHT: Container behält seine Start-Umgebung)
 docker compose down                    # Stop all
 ```
 
