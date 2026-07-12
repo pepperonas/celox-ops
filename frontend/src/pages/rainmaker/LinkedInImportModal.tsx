@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { previewLinkedInImport, importLinkedInLeads } from '../../api/rainmaker'
 import type { LinkedInPreviewRow } from '../../types'
@@ -140,7 +141,9 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
   const invCount = rows?.filter((r) => r.source === 'invitation').length ?? 0
   const msgCount = rows?.filter((r) => r.message_count > 0).length ?? 0
 
-  return (
+  // Portal an <body>: hält `position: fixed` viewport-relativ, unabhängig von
+  // transform-Vorfahren (Seiten-Übergang `.page-enter`).
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
       <div
@@ -298,6 +301,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

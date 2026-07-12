@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { discoverLeadsPreview, importDiscoveredLeads } from '../../api/rainmaker'
 import {
@@ -147,7 +148,11 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
   const dupCount = candidates.filter((c) => c.duplicate).length
   const progress = combos ? combos.filter((c) => c.status === 'done' || c.status === 'error').length : 0
 
-  return (
+  // Per Portal an <body>, damit `position: fixed` immer relativ zum Viewport
+  // liegt — ein transform-Vorfahre (Seiten-Übergang `.page-enter`) würde sonst
+  // zum Bezugspunkt und das Panel verschieben/klippen (Dialog „unsichtbar" bis
+  // Refresh).
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={() => { if (!running) onClose() }} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[880px] w-full mx-4 animate-md-scale max-h-[88vh] flex flex-col">
@@ -287,6 +292,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
