@@ -781,14 +781,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 223 total** (all DB-free, run in CI on every push):
+- **Unit tests — 231 total** (all DB-free, run in CI on every push):
   - **Backend (pytest, 135):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (8 — ECB rate: parsing, TTL cache, last-known-good, implausibility guard), `test_linkedin_import` (15 — export parsers incl. snippet truncation, message cap, field lengths), `test_address_format` (9 — DIN 5008 address block), `test_rainmaker_helpers` (5 — LinkedIn datetime + dedup keys), `test_google_auth` (6 — Google token claims), `test_lead_discovery` (10 — Overpass/Google parsing)
-  - **Frontend (Vitest, 82):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility), `chartTooltip` (7 — revenue tooltip incl. status breakdown), `undoToast` (4 — undo flow with mocked toast), `exchangeRateFetch` (3 — rate cache/fallback)
+  - **Frontend (Vitest, 90):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility), `chartTooltip` (7 — revenue tooltip incl. status breakdown), `undoToast` (4 — undo flow with mocked toast), `exchangeRateFetch` (3 — rate cache/fallback)
 
 ## Project size
 
 - **~31,700 LoC application code** — ~11,500 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~18,600 frontend (TypeScript/React)
-- **~2,350 LoC tests** · 22 DB tables · 223 unit tests · multi-user with isolated workspaces
+- **~2,350 LoC tests** · 22 DB tables · 231 unit tests · multi-user with isolated workspaces
 
 ---
 

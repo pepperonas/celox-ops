@@ -787,14 +787,14 @@ CO-2026-0001
   - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
   - Logs in `/var/log/celox-auto-deploy.log`
   - Smoke-Test (Health-Check) nach Backend-Rebuild
-- **Unit-Tests — 223 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
+- **Unit-Tests — 231 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
   - **Backend (pytest, 135):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (8 — EZB-Kurs: Parsing, TTL-Cache, Last-Known-Good, Implausibilitäts-Schutz), `test_linkedin_import` (15 — Export-Parser inkl. Snippet-Kappung, Nachrichten-Limit, Feldlängen), `test_address_format` (9 — DIN-5008-Anschriftenblock), `test_rainmaker_helpers` (5 — LinkedIn-Datum + Dedup-Keys), `test_google_auth` (6 — Google-Token-Claims), `test_lead_discovery` (10 — Overpass/Google-Parsing)
-  - **Frontend (Vitest, 82):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität), `chartTooltip` (7 — Umsatz-Tooltip inkl. Status-Aufschlüsselung), `undoToast` (4 — Undo-Flow mit gemocktem Toast), `exchangeRateFetch` (3 — Kurs-Cache/Fallback)
+  - **Frontend (Vitest, 90):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität), `chartTooltip` (7 — Umsatz-Tooltip inkl. Status-Aufschlüsselung), `undoToast` (4 — Undo-Flow mit gemocktem Toast), `exchangeRateFetch` (3 — Kurs-Cache/Fallback)
 
 ## Projektumfang
 
 - **~31.700 LoC Anwendungscode** — ~11.500 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~18.600 Frontend (TypeScript/React)
-- **~2.350 LoC Tests** · 22 DB-Tabellen · 223 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
+- **~2.350 LoC Tests** · 22 DB-Tabellen · 231 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 

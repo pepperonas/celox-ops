@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { discoverLeadsPreview, importDiscoveredLeads } from '../../api/rainmaker'
-import type { DiscoveredCandidate } from '../../types'
+import {
+  hasContact, mergeCandidates, parseLocations, sortByContact,
+  type BatchCandidate,
+} from './discoveryBatch'
 
 interface Props {
   onClose: () => void
   onImported: () => void
 }
 
-// Segment-Presets (spiegeln SEGMENT_OSM_TAGS im Backend).
 const SEGMENTS: { key: string; label: string }[] = [
   { key: 'hausverwaltung', label: 'Hausverwaltung' },
   { key: 'steuerkanzlei', label: 'Steuerkanzlei' },
@@ -18,78 +20,122 @@ const SEGMENTS: { key: string; label: string }[] = [
   { key: 'arzt_praxis', label: 'Arzt-/Zahnarztpraxis' },
   { key: 'handwerk', label: 'Handwerksbetrieb' },
 ]
+const LABEL = Object.fromEntries(SEGMENTS.map((s) => [s.key, s.label]))
+const DELAY_MS = 800  // höfliche Pause zwischen Overpass-Abfragen
+
+type ComboStatus = 'pending' | 'running' | 'done' | 'error'
+interface Combo {
+  segment: string
+  location: string
+  status: ComboStatus
+  count?: number
+  error?: string
+}
 
 /**
- * Automatische Lead-Suche: Branche + Ort → Vorschau (Duplikate markiert) →
- * Auswahl → Import. Quelle OpenStreetMap (kostenlos) oder Google Places
- * (falls serverseitig ein Key hinterlegt ist — sonst 503, Hinweis unten).
+ * Batch-Lead-Suche: mehrere Branchen × mehrere Städte. Zieht alle Kombinationen
+ * nacheinander (Live-Fortschritt), führt die Treffer mit Cross-Kombi-Dedup
+ * zusammen und zeigt sie sortiert (kontaktfähige zuerst) zur Auswahl.
  */
 export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
+  const [segments, setSegments] = useState<Set<string>>(new Set(['steuerkanzlei']))
+  const [locationsInput, setLocationsInput] = useState('Berlin')
+  const [limit, setLimit] = useState(50)
   const [source, setSource] = useState<'osm' | 'google'>('osm')
-  const [segment, setSegment] = useState('steuerkanzlei')
-  const [location, setLocation] = useState('Berlin')
-  const [rows, setRows] = useState<DiscoveredCandidate[] | null>(null)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [searching, setSearching] = useState(false)
+
+  const [combos, setCombos] = useState<Combo[] | null>(null)
+  const [candidates, setCandidates] = useState<BatchCandidate[]>([])
+  const [running, setRunning] = useState(false)
+  const [onlyContact, setOnlyContact] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
+  const cancelRef = useRef(false)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && !running) onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [onClose, running])
 
-  const search = async () => {
-    if (!location.trim() || searching) return
-    setSearching(true)
-    try {
-      const res = await discoverLeadsPreview({ source, category: segment, location: location.trim(), limit: 60 })
-      if (res.length === 0) {
-        toast.error('Keine Treffer. Anderen Ort oder andere Branche versuchen.')
-      }
-      setRows(res)
-      // Neue (nicht-Duplikate) vorauswählen
-      setSelected(new Set(res.map((r, i) => (r.duplicate ? -1 : i)).filter((i) => i >= 0)))
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(detail || 'Suche fehlgeschlagen.')
-    }
-    setSearching(false)
-  }
-
-  const toggle = (i: number) => setSelected((prev) => {
+  const toggleSegment = (key: string) => setSegments((prev) => {
     const next = new Set(prev)
-    next.has(i) ? next.delete(i) : next.add(i)
+    next.has(key) ? next.delete(key) : next.add(key)
     return next
   })
 
-  const allNewSelected = useMemo(() => {
-    if (!rows) return false
-    const newIdx = rows.map((r, i) => (r.duplicate ? -1 : i)).filter((i) => i >= 0)
-    return newIdx.length > 0 && newIdx.every((i) => selected.has(i))
-  }, [rows, selected])
+  const run = async () => {
+    const segs = [...segments]
+    const locs = parseLocations(locationsInput)
+    if (segs.length === 0 || locs.length === 0) {
+      toast.error('Mindestens eine Branche und einen Ort wählen.')
+      return
+    }
+    const plan: Combo[] = []
+    for (const s of segs) for (const l of locs) plan.push({ segment: s, location: l, status: 'pending' })
+    cancelRef.current = false
+    setCombos(plan)
+    setCandidates([])
+    setSelected(new Set())
+    setRunning(true)
 
-  const toggleAll = () => {
-    if (!rows) return
-    setSelected((prev) => {
-      const next = new Set(prev)
-      const newIdx = rows.map((r, i) => (r.duplicate ? -1 : i)).filter((i) => i >= 0)
-      if (allNewSelected) newIdx.forEach((i) => next.delete(i))
-      else newIdx.forEach((i) => next.add(i))
-      return next
-    })
+    let acc: BatchCandidate[] = []
+    for (let i = 0; i < plan.length; i++) {
+      if (cancelRef.current) break
+      setCombos((prev) => prev!.map((c, idx) => idx === i ? { ...c, status: 'running' } : c))
+      try {
+        const res = await discoverLeadsPreview({
+          source, category: plan[i].segment, location: plan[i].location, limit,
+        })
+        acc = mergeCandidates(acc, res, plan[i].segment, `${LABEL[plan[i].segment] || plan[i].segment} · ${plan[i].location}`)
+        setCandidates(acc)
+        setCombos((prev) => prev!.map((c, idx) => idx === i ? { ...c, status: 'done', count: res.length } : c))
+      } catch (err: unknown) {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        setCombos((prev) => prev!.map((c, idx) => idx === i ? { ...c, status: 'error', error: detail || 'Fehler' } : c))
+      }
+      if (i < plan.length - 1 && !cancelRef.current) await new Promise((r) => setTimeout(r, DELAY_MS))
+    }
+    // Nicht-Duplikate vorauswählen.
+    setSelected(new Set(acc.filter((c) => !c.duplicate).map((c) => c._key)))
+    setRunning(false)
   }
 
+  const visible = useMemo(() => {
+    const list = onlyContact ? candidates.filter(hasContact) : candidates
+    return sortByContact(list)
+  }, [candidates, onlyContact])
+
+  const toggle = (key: string) => setSelected((prev) => {
+    const next = new Set(prev)
+    next.has(key) ? next.delete(key) : next.add(key)
+    return next
+  })
+
+  const allVisibleSelected = visible.length > 0 && visible.every((c) => c.duplicate || selected.has(c._key))
+  const toggleAll = () => setSelected((prev) => {
+    const next = new Set(prev)
+    const sel = visible.filter((c) => !c.duplicate)
+    if (allVisibleSelected) sel.forEach((c) => next.delete(c._key))
+    else sel.forEach((c) => next.add(c._key))
+    return next
+  })
+
   const doImport = async () => {
-    if (!rows || selected.size === 0 || importing) return
+    if (selected.size === 0 || importing) return
     setImporting(true)
     try {
-      const chosen = [...selected].map((i) => rows[i])
-      const result = await importDiscoveredLeads(chosen, segment)
-      toast.success(
-        `${result.created} Lead${result.created === 1 ? '' : 's'} importiert` +
-        (result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} Duplikate übersprungen` : '') + '.'
-      )
+      const chosen = candidates.filter((c) => selected.has(c._key))
+      // Pro Branche gruppieren, damit der richtige Segment-Tag gesetzt wird.
+      const bySeg = new Map<string, BatchCandidate[]>()
+      for (const c of chosen) (bySeg.get(c._segment) ?? bySeg.set(c._segment, []).get(c._segment)!).push(c)
+      let created = 0, skipped = 0
+      for (const [seg, rows] of bySeg) {
+        const r = await importDiscoveredLeads(rows, seg)
+        created += r.created
+        skipped += r.skipped_duplicates
+      }
+      toast.success(`${created} Lead${created === 1 ? '' : 's'} importiert` +
+        (skipped > 0 ? ` · ${skipped} Duplikate übersprungen` : '') + '.')
       onImported()
     } catch {
       toast.error('Import fehlgeschlagen.')
@@ -97,79 +143,127 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
     }
   }
 
-  const dupCount = rows?.filter((r) => r.duplicate).length ?? 0
+  const done = combos !== null && !running
+  const dupCount = candidates.filter((c) => c.duplicate).length
+  const progress = combos ? combos.filter((c) => c.status === 'done' || c.status === 'error').length : 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
-      <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[860px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col">
+      <div className="fixed inset-0" onClick={() => { if (!running) onClose() }} />
+      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[880px] w-full mx-4 animate-md-scale max-h-[88vh] flex flex-col">
         <h3 className="text-xl font-semibold text-text mb-1">Leads finden</h3>
-        <p className="text-xs text-text-muted mb-5">
-          Passende Firmen automatisch nach Branche und Ort suchen — kostenlos über OpenStreetMap.
+        <p className="text-xs text-text-muted mb-4">
+          Mehrere Branchen und Orte auf einmal — kostenlos über OpenStreetMap.
         </p>
 
-        {/* Suchformular */}
-        <div className="flex flex-wrap items-end gap-3 mb-4">
+        {/* Konfiguration */}
+        <div className="space-y-3 mb-4">
           <div>
-            <label className="block text-xs text-text-muted mb-1">Branche</label>
-            <select value={segment} onChange={(e) => setSegment(e.target.value)} className="text-sm">
-              {SEGMENTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </select>
+            <label className="block text-xs text-text-muted mb-1.5">Branchen</label>
+            <div className="flex flex-wrap gap-2">
+              {SEGMENTS.map((s) => (
+                <button key={s.key} onClick={() => toggleSegment(s.key)} disabled={running}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors duration-short ${
+                    segments.has(s.key) ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+                  }`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-text-muted mb-1">Ort / Bezirk</label>
-            <input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') search() }}
-              placeholder="z. B. Berlin, Pankow, München"
-              className="text-sm w-48"
-            />
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <label className="block text-xs text-text-muted mb-1.5">Orte / Bezirke (mehrere durch Komma)</label>
+              <input value={locationsInput} onChange={(e) => setLocationsInput(e.target.value)} disabled={running}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !running) run() }}
+                placeholder="Berlin, Potsdam, München" className="text-sm w-full" />
+            </div>
+            <div>
+              <label className="block text-xs text-text-muted mb-1.5">Max. je Suche</label>
+              <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} disabled={running} className="text-sm">
+                {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-text-muted mb-1.5">Quelle</label>
+              <select value={source} onChange={(e) => setSource(e.target.value as 'osm' | 'google')} disabled={running} className="text-sm">
+                <option value="osm">OpenStreetMap</option>
+                <option value="google">Google Places</option>
+              </select>
+            </div>
+            {running
+              ? <button onClick={() => { cancelRef.current = true }} className="btn-secondary text-sm">Stoppen</button>
+              : <button onClick={run} className="btn-primary text-sm">
+                  {combos ? 'Neu suchen' : 'Suchen'} ({segments.size}×{parseLocations(locationsInput).length})
+                </button>}
           </div>
-          <div>
-            <label className="block text-xs text-text-muted mb-1">Quelle</label>
-            <select value={source} onChange={(e) => setSource(e.target.value as 'osm' | 'google')} className="text-sm">
-              <option value="osm">OpenStreetMap</option>
-              <option value="google">Google Places</option>
-            </select>
-          </div>
-          <button onClick={search} disabled={searching || !location.trim()} className="btn-primary text-sm">
-            {searching ? 'Suche…' : 'Suchen'}
-          </button>
         </div>
 
-        {rows && (
+        {/* Fortschritt pro Kombination */}
+        {combos && (
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-xs text-text-muted mb-1.5">
+              <span>{running ? 'Suche läuft…' : 'Suche abgeschlossen'}</span>
+              <span>{progress}/{combos.length} Kombinationen · {candidates.length} Treffer</span>
+            </div>
+            <div className="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2">
+              <div className="h-full bg-accent transition-all duration-short" style={{ width: `${(progress / combos.length) * 100}%` }} />
+            </div>
+            <div className="max-h-24 overflow-y-auto text-xs space-y-0.5 pr-1">
+              {combos.map((c, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-text-muted">
+                    {c.status === 'done' ? '✓' : c.status === 'running' ? '◷' : c.status === 'error' ? '✕' : '·'}{' '}
+                    {LABEL[c.segment] || c.segment} · {c.location}
+                  </span>
+                  <span className={c.status === 'error' ? 'text-danger' : 'text-text-muted'}>
+                    {c.status === 'done' ? `${c.count} gefunden` : c.status === 'error' ? (c.error || 'Fehler')
+                      : c.status === 'running' ? 'läuft…' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ergebnis-Tabelle */}
+        {done && candidates.length > 0 && (
           <>
-            <div className="flex items-center gap-3 mb-2 text-sm">
-              <span className="text-text"><strong>{rows.length}</strong> Treffer</span>
+            <div className="flex flex-wrap items-center gap-3 mb-2 text-sm">
+              <span className="text-text"><strong>{candidates.length}</strong> Firmen</span>
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
+              <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+                <input type="checkbox" checked={onlyContact} onChange={(e) => setOnlyContact(e.target.checked)} />
+                nur mit Website/Telefon
+              </label>
               <span className="ml-auto text-text-muted text-xs">{selected.size} ausgewählt</span>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-lg">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-surface-container">
                   <tr className="text-left text-xs text-text-muted">
-                    <th className="px-3 py-2 w-8"><input type="checkbox" checked={allNewSelected} onChange={toggleAll} /></th>
+                    <th className="px-3 py-2 w-8"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} /></th>
                     <th className="px-2 py-2">Firma</th>
-                    <th className="px-2 py-2">Adresse</th>
-                    <th className="px-2 py-2">Website</th>
-                    <th className="px-2 py-2 w-20"></th>
+                    <th className="px-2 py-2">Branche · Ort</th>
+                    <th className="px-2 py-2">Website / Tel.</th>
+                    <th className="px-2 py-2 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={i} onClick={() => toggle(i)}
-                        className={`border-t border-border cursor-pointer hover:bg-surface-container ${r.duplicate ? 'opacity-50' : ''}`}>
+                  {visible.map((c) => (
+                    <tr key={c._key} onClick={() => !c.duplicate && toggle(c._key)}
+                        className={`border-t border-border ${c.duplicate ? 'opacity-50' : 'cursor-pointer hover:bg-surface-container'}`}>
                       <td className="px-3 py-1.5">
-                        <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} onClick={(e) => e.stopPropagation()} />
+                        <input type="checkbox" checked={selected.has(c._key)} disabled={c.duplicate}
+                               onChange={() => toggle(c._key)} onClick={(e) => e.stopPropagation()} />
                       </td>
-                      <td className="px-2 py-1.5 text-text whitespace-nowrap max-w-[220px] truncate">{r.name}</td>
-                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[200px]">{r.address || '–'}</td>
-                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[160px]">
-                        {r.website ? r.website.replace(/^https?:\/\//, '') : '–'}
+                      <td className="px-2 py-1.5 text-text truncate max-w-[200px]">{c.name}</td>
+                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[170px]">{c._combo}</td>
+                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[170px]">
+                        {c.website ? c.website.replace(/^https?:\/\//, '') : (c.phone || '–')}
                       </td>
                       <td className="px-2 py-1.5 text-[10px]">
-                        {r.duplicate && <span className="text-warning font-medium">vorhanden</span>}
+                        {c.duplicate && <span className="text-warning font-medium">vorhanden</span>}
                       </td>
                     </tr>
                   ))}
@@ -178,23 +272,19 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
             </div>
           </>
         )}
+        {done && candidates.length === 0 && (
+          <p className="text-sm text-text-muted py-6 text-center">Keine Treffer. Andere Branchen oder Orte versuchen.</p>
+        )}
 
-        <p className="text-[11px] text-text-muted mt-3">
-          Hinweis: Nicht jede Firma hat in OpenStreetMap Website/Telefon hinterlegt — diese Felder ergänzt
-          du später beim Lead. „Google Places" braucht einen serverseitigen API-Key.
-        </p>
-        <div className="flex justify-between gap-2 mt-5">
-          {rows
-            ? <button onClick={() => { setRows(null); setSelected(new Set()) }} className="btn-secondary" disabled={importing}>Neue Suche</button>
-            : <span />}
-          <div className="flex gap-2">
-            <button onClick={onClose} className="btn-secondary" disabled={importing}>Abbrechen</button>
-            {rows && (
-              <button onClick={doImport} className="btn-primary" disabled={selected.size === 0 || importing}>
-                {importing ? 'Importiere…' : `${selected.size} als Leads anlegen`}
-              </button>
-            )}
-          </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="btn-secondary" disabled={running || importing}>
+            {done && candidates.length ? 'Abbrechen' : 'Schließen'}
+          </button>
+          {done && candidates.length > 0 && (
+            <button onClick={doImport} className="btn-primary" disabled={selected.size === 0 || importing}>
+              {importing ? 'Importiere…' : `${selected.size} als Leads anlegen`}
+            </button>
+          )}
         </div>
       </div>
     </div>
