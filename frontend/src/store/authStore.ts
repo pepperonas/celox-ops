@@ -10,6 +10,7 @@ interface AuthState {
   loading: boolean
   error: string | null
   login: (username: string, password: string, totp?: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   logout: () => void
   initialize: () => void
   fetchMe: () => Promise<void>
@@ -43,6 +44,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const message =
         err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.'
       set({ error: message, loading: false })
+      throw err
+    }
+  },
+
+  loginWithGoogle: async (credential: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await api.post<AuthResponse>('/auth/google', { credential })
+      const { access_token } = response.data
+      localStorage.setItem('token', access_token)
+      set({ token: access_token, isAuthenticated: true, loading: false })
+      await get().fetchMe()
+    } catch (err: unknown) {
+      set({ error: 'Google-Anmeldung fehlgeschlagen.', loading: false })
       throw err
     }
   },

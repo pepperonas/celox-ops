@@ -32,6 +32,9 @@ class User(Base):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    # Verknüpftes Google-Konto für "Sign in with Google" (nullable = kein
+    # Google-Login für diesen Nutzer). Vergleich case-insensitiv.
+    google_email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
     # Per-user TOTP secret (nullable = 2FA off for this user).
     totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Per-user secret token for the personal iCal feed (scoped to this user's data).

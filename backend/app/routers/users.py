@@ -15,8 +15,8 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 def _to_response(u: User) -> UserResponse:
     return UserResponse(
-        id=u.id, username=u.username, email=u.email, role=u.role.value,
-        is_active=u.is_active, created_at=u.created_at,
+        id=u.id, username=u.username, email=u.email, google_email=u.google_email,
+        role=u.role.value, is_active=u.is_active, created_at=u.created_at,
     )
 
 
@@ -100,6 +100,8 @@ async def update_user(
 
     if data.email is not None:
         user.email = data.email
+    if data.google_email is not None:
+        user.google_email = data.google_email.strip().lower() or None
     if data.role is not None:
         try:
             new_role = UserRole(data.role)

@@ -140,6 +140,76 @@ async def login(
     return TokenResponse(access_token=access_token)
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str  # Google-ID-Token aus dem GIS-Button
+
+
+def validate_google_claims(claims: dict, client_id: str) -> str:
+    """Prüft die Claims eines (signatur-verifizierten) Google-ID-Tokens und
+    gibt die normalisierte E-Mail zurück. Pure Funktion — DB-frei testbar.
+    google-auth prüft Signatur/exp/aud bereits; hier die Duplikat-Checks als
+    Defense-in-Depth plus email_verified (das prüft google-auth NICHT)."""
+    if claims.get("aud") != client_id:
+        raise ValueError("Token für falsche Client-ID ausgestellt")
+    if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise ValueError("Ungültiger Token-Aussteller")
+    email = (claims.get("email") or "").strip().lower()
+    if not email or not claims.get("email_verified"):
+        raise ValueError("Google-E-Mail fehlt oder ist nicht verifiziert")
+    return email
+
+
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def google_login(
+    request: Request,
+    data: GoogleLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """"Sign in with Google": verifiziert das ID-Token (Signatur gegen Googles
+    JWKS, aud = unsere Client-ID) und meldet den Benutzer an, dessen
+    `google_email` zur verifizierten Google-E-Mail passt. Kein Auto-Signup —
+    unverknüpfte Google-Konten werden abgewiesen (Konten sind admin-verwaltet).
+    TOTP wird hier bewusst nicht zusätzlich verlangt (Google-Konto ist der
+    zweite Faktor)."""
+    import asyncio
+
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google-Login ist nicht konfiguriert")
+    try:
+        # verify_oauth2_token macht einen blockierenden JWKS-Fetch → Thread.
+        claims = await asyncio.to_thread(
+            google_id_token.verify_oauth2_token,
+            data.credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+        email = validate_google_claims(claims, settings.GOOGLE_CLIENT_ID)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google-Anmeldung fehlgeschlagen (Token ungültig)",
+        )
+
+    from sqlalchemy import func as sa_func
+
+    user = (
+        await db.execute(select(User).where(sa_func.lower(User.google_email) == email))
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dieses Google-Konto ist mit keinem Benutzer verknüpft",
+        )
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Konto deaktiviert")
+
+    return TokenResponse(access_token=create_access_token(data={"sub": user.username}))
+
+
 @router.get("/me", response_model=UserInfo)
 async def me(current_user: User = Depends(get_current_user)) -> UserInfo:
     return UserInfo(
@@ -152,8 +222,9 @@ async def me(current_user: User = Depends(get_current_user)) -> UserInfo:
 @router.get("/info")
 async def auth_info() -> dict:
     """Public endpoint for the login page. 2FA is per-user now, so the login flow
-    surfaces the 2FA prompt via a 401 on the first attempt."""
-    return {"totp_enabled": False}
+    surfaces the 2FA prompt via a 401 on the first attempt. `google_client_id`
+    steuert den "Sign in with Google"-Button (leer = Button ausgeblendet)."""
+    return {"totp_enabled": False, "google_client_id": settings.GOOGLE_CLIENT_ID or None}
 
 
 @router.get("/2fa/setup")
