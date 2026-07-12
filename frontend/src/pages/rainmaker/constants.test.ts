@@ -13,9 +13,9 @@ describe('Rainmaker constants', () => {
     }
   })
 
-  it('covers all seven lead statuses', () => {
-    expect(Object.keys(STATUS_LABELS)).toHaveLength(7)
-    expect(PIPELINE_STATUSES).toHaveLength(7)
+  it('covers all eight lead statuses', () => {
+    expect(Object.keys(STATUS_LABELS)).toHaveLength(8)
+    expect(PIPELINE_STATUSES).toHaveLength(8)
   })
 
   it('priority labels and tones share the same keys', () => {

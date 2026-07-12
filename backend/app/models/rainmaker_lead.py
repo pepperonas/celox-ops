@@ -14,7 +14,8 @@ from app.tenancy import OwnedMixin
 
 class RainmakerLeadStatus(str, enum.Enum):
     new = "new"
-    contacted = "contacted"
+    contacted = "contacted"          # angeschrieben, Annahme/Antwort steht aus
+    connected = "connected"          # LinkedIn: Anfrage angenommen (vernetzt)
     in_conversation = "in_conversation"
     proposal = "proposal"
     won = "won"

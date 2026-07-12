@@ -469,6 +469,7 @@ export interface EmailTemplateUpdate {
 export type RainmakerLeadStatus =
   | 'new'
   | 'contacted'
+  | 'connected'
   | 'in_conversation'
   | 'proposal'
   | 'won'

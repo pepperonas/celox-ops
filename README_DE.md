@@ -309,7 +309,7 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Pipeline ohne Horizontal-Scroll** — die 6 Status-Spalten brechen responsiv um (6 / 3×2 / 2×3 / 1 Spalte), Drag & Drop zwischen den Spalten mit Undo
 - **LinkedIn-Import** — den kompletten offiziellen LinkedIn-Datenexport verwerten, ohne API und ohne Bezahltools:
   - **ZIP direkt hochladen** (Drag & Drop oder Klick; serverseitig in-memory entpackt, Zip-Bomb-Guards) — alternativ die einzelne `Connections.csv`
-  - **Drei Quellen zusammengeführt** (per normalisierter Profil-URL): Kontakte → Status „Neu"; offene ausgehende Kontaktanfragen (`Invitations.csv`, noch nicht angenommen) → Status „Kontaktiert" mit Anfrage-Datum als Notiz; Nachrichtenverlauf (`messages.csv`) → Status „Im Gespräch"
+  - **Drei Quellen zusammengeführt** (per normalisierter Profil-URL): Kontakte → Status „Neu"; offene ausgehende Kontaktanfragen (`Invitations.csv`, noch nicht angenommen) → Status „Kontaktiert" mit Anfrage-Datum als Notiz; Nachrichtenverlauf (`messages.csv`) → Status „Im Gespräch"; bestätigte Kontakte → eigene Stufe „Vernetzt"
   - **Nachrichten als Historie**: Konversationen werden dem Lead als erledigte Aktivitäten mit historischem Datum, Richtung (gesendet/erhalten) und Textauszug angehängt — bewusst ohne Punkte-/Streak-Gutschrift
   - **Vorschau mit Quellen-Filter-Chips** (Alle / Kontakte / Anfragen offen), Status-Spalte mit 💬-Badge, Textsuche; Kontakte vorausgewählt, Anfragen bewusst abgewählt
   - **Wiederhol-sicher**: Duplikat-Erkennung pro Nutzer über Profil-URL/Name — ein neueres Archiv später erneut hochladen importiert nur die Neuzugänge

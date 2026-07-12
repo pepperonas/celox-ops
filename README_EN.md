@@ -308,7 +308,7 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Pipeline without horizontal scrolling** — the 6 status columns wrap responsively (6 / 3×2 / 2×3 / 1 column), drag & drop between columns with undo
 - **LinkedIn import** — leverage the complete official LinkedIn data export, no API and no paid tools:
   - **Upload the ZIP directly** (drag & drop or click; unpacked in-memory server-side with zip-bomb guards) — or the single `Connections.csv`
-  - **Three sources merged** (by normalized profile URL): connections → status "new"; pending outgoing invites (`Invitations.csv`, not yet accepted) → status "contacted" with the invite date as a note; message history (`messages.csv`) → status "in conversation"
+  - **Three sources merged** (by normalized profile URL): connections → status "new"; pending outgoing invites (`Invitations.csv`, not yet accepted) → status "contacted" with the invite date as a note; message history (`messages.csv`) → status "in conversation"; confirmed connections → own stage "connected"
   - **Messages as history**: conversations are attached to the lead as completed activities with historical dates, direction (sent/received) and text snippet — deliberately without points/streak credit
   - **Preview with source filter chips** (all / connections / pending invites), status column with 💬 badge, text search; connections pre-selected, invites deliberately deselected
   - **Safe to repeat**: per-user duplicate detection via profile URL/name — re-uploading a newer archive later imports only the additions

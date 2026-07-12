@@ -8,6 +8,7 @@ import type {
 export const STATUS_LABELS: Record<RainmakerLeadStatus, string> = {
   new: 'Neu',
   contacted: 'Kontaktiert',
+  connected: 'Vernetzt',
   in_conversation: 'Im Gespräch',
   proposal: 'Angebot',
   won: 'Gewonnen',
@@ -18,6 +19,7 @@ export const STATUS_LABELS: Record<RainmakerLeadStatus, string> = {
 export const STATUS_COLORS: Record<RainmakerLeadStatus, string> = {
   new: '#c9a227',
   contacted: '#7cb0ff',
+  connected: '#57a6ff',
   in_conversation: '#a371f7',
   proposal: '#57dccb',
   won: '#74d98a',
@@ -29,6 +31,7 @@ export const STATUS_COLORS: Record<RainmakerLeadStatus, string> = {
 export const PIPELINE_STATUSES: RainmakerLeadStatus[] = [
   'new',
   'contacted',
+  'connected',
   'in_conversation',
   'proposal',
   'won',

@@ -282,7 +282,7 @@ async def linkedin_import_preview(
         out.append(LinkedInPreviewRow(
             **r,
             source="connection",
-            status=RainmakerLeadStatus.in_conversation if msg else RainmakerLeadStatus.new,
+            status=RainmakerLeadStatus.in_conversation if msg else RainmakerLeadStatus.connected,
             message_count=msg["count"] if msg else 0,
             last_message_at=msg["last_date"] if msg else "",
             messages=msg["messages"] if msg else [],
@@ -344,7 +344,8 @@ async def linkedin_import(
     _status_rank = {
         RainmakerLeadStatus.new: 0,
         RainmakerLeadStatus.contacted: 1,
-        RainmakerLeadStatus.in_conversation: 2,
+        RainmakerLeadStatus.connected: 2,
+        RainmakerLeadStatus.in_conversation: 3,
     }
 
     created = skipped = enriched = activities_created = 0
@@ -634,6 +635,7 @@ async def today(db: AsyncSession = Depends(get_db)) -> RainmakerTodayResponse:
 _FUNNEL_ORDER = [
     RainmakerLeadStatus.new,
     RainmakerLeadStatus.contacted,
+    RainmakerLeadStatus.connected,
     RainmakerLeadStatus.in_conversation,
     RainmakerLeadStatus.proposal,
     RainmakerLeadStatus.won,
