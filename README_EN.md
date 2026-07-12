@@ -218,8 +218,9 @@ Business-management web app for freelancers and IT consultants. Manages customer
 - **Overdue KPI card** as additional card (red, clickable → filtered invoice list)
 - 5 KPI cards: revenue (month/year), draft invoices (count + sum) with **one-click refresh** button, open invoices, active contracts
 - **Period toggle**: 30 days (daily bars, default) or 12 months (monthly bars)
-- **Data toggle**: paid invoices only or including drafts
-- **Revenue & expenses bar chart** (last 12 months)
+- **Data toggle**: "paid only" or "incl. drafts" = **expected revenue** (paid + issued + overdue + drafts)
+- **Revenue & expenses bar chart** with a rich tooltip: multiple invoices show "(from N invoices)" with a status breakdown ("1 paid · 1 issued · 3 drafts"), a single invoice shows the customer name (plus status if unpaid)
+- **Dashed "invoices issued" count bar** on its own right-hand axis — invoicing activity regardless of payment status
 - **Invoice status doughnut chart** (distribution by status)
 - **Top 5 customers** by revenue with bar indicators
 - **Recent activities** timeline
@@ -780,14 +781,14 @@ CO-2026-0001
 - **Auto-deploy** on VPS (5-min cron):
   - `scripts/auto-deploy.sh` polls `origin/main`, rebuilds only what changed
   - Logs to `/var/log/celox-auto-deploy.log`
-- **Unit tests — 178 total** (all DB-free, run in CI on every push):
-  - **Backend (pytest, 107):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — ECB rate parsing/plausibility), `test_linkedin_import` (12 — export parsers: connections/invitations/messages/ZIP), `test_address_format` (9 — DIN 5008 address block)
-  - **Frontend (Vitest, 71):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility), `chartTooltip` (7 — revenue tooltip incl. status breakdown)
+- **Unit tests — 197 total** (all DB-free, run in CI on every push):
+  - **Backend (pytest, 119):** `test_smoke` (8), `test_invoice_service` (12 — totals/discounts/rounding), `test_auth` (6 — JWT), `test_rainmaker` (19 — activation engine/streak/points), `test_compliance` (6 — required-doc engine), `test_github_summary` (11 — commit grouping C1), `test_dashboard` (5 — sargable month bounds B5), `test_rainmaker_dream` (12 — dream-goal expected-value engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (8 — ECB rate: parsing, TTL cache, last-known-good, implausibility guard), `test_linkedin_import` (15 — export parsers incl. snippet truncation, message cap, field lengths), `test_address_format` (9 — DIN 5008 address block), `test_rainmaker_helpers` (5 — LinkedIn datetime + dedup keys)
+  - **Frontend (Vitest, 78):** `formatters` (14), `validators` (9), `decimal` (6 — comma/dot parsing), `positions` (5 — auto-position detection), `AutocompleteInput` (13 — position/title/discount suggestion pools: size, dedup, theme coverage), Rainmaker `constants` (5), `dreamPresets` (9 — dream-goal presets/motivation math), `exchangeRate` (3 — rate plausibility), `chartTooltip` (7 — revenue tooltip incl. status breakdown), `undoToast` (4 — undo flow with mocked toast), `exchangeRateFetch` (3 — rate cache/fallback)
 
 ## Project size
 
 - **~31,700 LoC application code** — ~11,500 backend (Python/FastAPI) · ~1,620 Jinja PDF templates · ~18,600 frontend (TypeScript/React)
-- **~2,350 LoC tests** · 22 DB tables · 178 unit tests · multi-user with isolated workspaces
+- **~2,350 LoC tests** · 22 DB tables · 197 unit tests · multi-user with isolated workspaces
 
 ---
 

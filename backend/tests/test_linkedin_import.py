@@ -140,3 +140,54 @@ def test_parse_archive_rejects_non_zip():
 def test_normalize_profile_url():
     assert normalize_profile_url("https://www.linkedin.com/in/max/") == "linkedin.com/in/max"
     assert normalize_profile_url("http://linkedin.com/in/max") == "linkedin.com/in/max"
+    assert normalize_profile_url(None) == ""
+    assert normalize_profile_url("") == ""
+
+
+def _messages_csv(rows: list[tuple[str, str]]) -> str:
+    """Baut eine messages.csv: Martin schreibt an Erika, (date, content)-Paare."""
+    header = '"CONVERSATION ID","CONVERSATION TITLE","FROM","SENDER PROFILE URL","TO","RECIPIENT PROFILE URLS","DATE","SUBJECT","CONTENT","FOLDER","ATTACHMENTS"'
+    lines = [header]
+    for date, content in rows:
+        lines.append(
+            f'"c1","","Martin Pfeffer","https://www.linkedin.com/in/martin-x","Erika","https://www.linkedin.com/in/erika","{date}","","{content}","INBOX",""'
+        )
+    # Zweite Konversation, damit Martins URL als häufigster Absender erkannt wird
+    lines.append(
+        '"c2","","Martin Pfeffer","https://www.linkedin.com/in/martin-x","Max","https://www.linkedin.com/in/max","2026-01-01 00:00:00 UTC","","Hi","INBOX",""'
+    )
+    return "\n".join(lines) + "\n"
+
+
+def test_message_snippet_is_truncated():
+    long_text = "A" * 400
+    partners = parse_messages(_messages_csv([("2026-07-01 10:00:00 UTC", long_text)]))
+    erika = partners[normalize_profile_url("https://www.linkedin.com/in/erika")]
+    snippet = erika["messages"][0]["snippet"]
+    assert len(snippet) == 301  # 300 Zeichen + Ellipse
+    assert snippet.endswith("…")
+
+
+def test_messages_capped_to_latest_per_lead():
+    rows = [(f"2026-06-{day:02d} 10:00:00 UTC", f"Nachricht {day}") for day in range(1, 26)]
+    partners = parse_messages(_messages_csv(rows))
+    erika = partners[normalize_profile_url("https://www.linkedin.com/in/erika")]
+    assert erika["count"] == 25  # Zähler bleibt vollständig
+    assert len(erika["messages"]) == 20  # aber nur die letzten 20 als Aktivitäten
+    assert erika["messages"][0]["snippet"] == "Nachricht 6"  # die ältesten 5 gekappt
+    assert erika["messages"][-1]["snippet"] == "Nachricht 25"
+
+
+def test_lead_fields_are_length_capped():
+    fields = row_to_lead_fields({
+        "first_name": "Max",
+        "last_name": "Mustermann",
+        "company": "X" * 300,
+        "position": "Y" * 300,
+        "url": "https://www.linkedin.com/in/" + "z" * 600,
+        "email": "",
+        "connected_on": "",
+    })
+    assert len(fields["company"]) == 255
+    assert len(fields["role"]) == 255
+    assert len(fields["website"]) == 500

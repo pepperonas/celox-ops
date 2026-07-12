@@ -219,8 +219,9 @@ Gesch&auml;ftsverwaltungs-Webapp f&uuml;r Freelancer und IT-Berater. Verwaltet K
 - **Überfällig-Karte** als zusätzliche KPI-Karte (rot, klickbar → gefilterte Rechnungsliste)
 - 5 KPI-Karten: Umsatz (Monat/Jahr), Entwürfe (Anzahl + Summe) mit **Ein-Klick-Aktualisierung**, offene Rechnungen, aktive Verträge
 - **Zeitraum-Umschalter**: 30 Tage (tägliche Balken, Standard) oder 12 Monate (monatlich)
-- **Daten-Umschalter**: nur bezahlte Rechnungen oder inklusive Entwürfe
-- **Umsatz- und Ausgaben-Balkendiagramm** (letzte 12 Monate)
+- **Daten-Umschalter**: „Nur bezahlt" oder „Inkl. Entwürfe" = **erwarteter Umsatz** (bezahlt + gestellt + überfällig + Entwürfe)
+- **Umsatz- und Ausgaben-Balkendiagramm** mit sprechendem Tooltip: bei mehreren Rechnungen im Zeitraum „(aus N Rechnungen)" mit Status-Aufschlüsselung („1 bezahlt · 1 gestellt · 3 Entwürfe"), bei genau einer der Kundenname (plus Status, falls nicht bezahlt)
+- **Gestrichelter Zähl-Balken „Rechnungen gestellt"** auf eigener rechter Achse — zeigt die Fakturierungs-Aktivität (alle rausgegangenen Rechnungen), unabhängig vom Bezahlt-Status
 - **Rechnungsstatus-Kreisdiagramm** (Verteilung nach Status)
 - **Top 5 Kunden** nach Umsatz mit Balkenindikatoren
 - **Letzte Aktivitäten** Timeline
@@ -786,14 +787,14 @@ CO-2026-0001
   - `scripts/auto-deploy.sh` pollt `origin/main`, rebuildet nur was sich geändert hat
   - Logs in `/var/log/celox-auto-deploy.log`
   - Smoke-Test (Health-Check) nach Backend-Rebuild
-- **Unit-Tests — 178 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
-  - **Backend (pytest, 107):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (4 — EZB-Kurs-Parsing/Plausibilität), `test_linkedin_import` (12 — Export-Parser: Connections/Invitations/Messages/ZIP), `test_address_format` (9 — DIN-5008-Anschriftenblock)
-  - **Frontend (Vitest, 71):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität), `chartTooltip` (7 — Umsatz-Tooltip inkl. Status-Aufschlüsselung)
+- **Unit-Tests — 197 gesamt** (alle DB-frei, laufen in CI bei jedem Push):
+  - **Backend (pytest, 119):** `test_smoke` (8), `test_invoice_service` (12 — Summen/Rabatte/Rundung), `test_auth` (6 — JWT), `test_rainmaker` (19 — Aktivierungs-Engine/Streak/Punkte), `test_compliance` (6 — Pflichtdoc-Engine), `test_github_summary` (11 — Commit-Gruppierung C1), `test_dashboard` (5 — sargbare Monatsgrenzen B5), `test_rainmaker_dream` (12 — Traumziel-Erwartungswert-Engine), `test_invoice_discount_clear` (3), `test_exchange_rate` (8 — EZB-Kurs: Parsing, TTL-Cache, Last-Known-Good, Implausibilitäts-Schutz), `test_linkedin_import` (15 — Export-Parser inkl. Snippet-Kappung, Nachrichten-Limit, Feldlängen), `test_address_format` (9 — DIN-5008-Anschriftenblock), `test_rainmaker_helpers` (5 — LinkedIn-Datum + Dedup-Keys)
+  - **Frontend (Vitest, 78):** `formatters` (14), `validators` (9), `decimal` (6 — Komma/Punkt-Parsing), `positions` (5 — Auto-Positions-Erkennung), `AutocompleteInput` (13 — Positions-/Titel-/Rabatt-Vorschlagspools: Umfang, Dubletten, Themenabdeckung), Rainmaker-`constants` (5), `dreamPresets` (9 — Traumziel-Presets/Motivations-Mathe), `exchangeRate` (3 — Kurs-Plausibilität), `chartTooltip` (7 — Umsatz-Tooltip inkl. Status-Aufschlüsselung), `undoToast` (4 — Undo-Flow mit gemocktem Toast), `exchangeRateFetch` (3 — Kurs-Cache/Fallback)
 
 ## Projektumfang
 
 - **~31.700 LoC Anwendungscode** — ~11.500 Backend (Python/FastAPI) · ~1.620 Jinja-PDF-Templates · ~18.600 Frontend (TypeScript/React)
-- **~2.350 LoC Tests** · 22 DB-Tabellen · 178 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
+- **~2.350 LoC Tests** · 22 DB-Tabellen · 197 Unit-Tests · Mehrbenutzer mit isolierten Arbeitsbereichen
 
 ---
 
