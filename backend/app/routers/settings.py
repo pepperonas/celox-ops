@@ -6,6 +6,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models.app_settings import AppSettings
 from app.schemas.app_settings import AppSettingsResponse, AppSettingsUpdate
+from app.services.places_usage import calls_this_month, mask_key
 
 router = APIRouter(
     prefix="/api/settings",
@@ -23,10 +24,20 @@ async def get_or_create_settings(db: AsyncSession) -> AppSettings:
     return row
 
 
+def _to_response(row: AppSettings) -> AppSettingsResponse:
+    key = row.google_places_api_key
+    return AppSettingsResponse(
+        default_unit_price=float(row.default_unit_price),
+        invoice_prefix=row.invoice_prefix,
+        google_places_configured=bool(key),
+        google_places_key_hint=mask_key(key),
+        google_places_calls_this_month=calls_this_month(row.google_places_period, row.google_places_calls),
+    )
+
+
 @router.get("", response_model=AppSettingsResponse)
 async def read_settings(db: AsyncSession = Depends(get_db)) -> AppSettingsResponse:
-    row = await get_or_create_settings(db)
-    return AppSettingsResponse.model_validate(row)
+    return _to_response(await get_or_create_settings(db))
 
 
 @router.put("", response_model=AppSettingsResponse)
@@ -42,5 +53,8 @@ async def update_settings(
         clean = re.sub(r"[^A-Za-z0-9]", "", data.invoice_prefix).upper()[:10]
         if clean:
             row.invoice_prefix = clean
+    if data.google_places_api_key is not None:
+        # "" entfernt den Key, sonst setzen (getrimmt).
+        row.google_places_api_key = data.google_places_api_key.strip() or None
     await db.flush()
-    return AppSettingsResponse.model_validate(row)
+    return _to_response(row)

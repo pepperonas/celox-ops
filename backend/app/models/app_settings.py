@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Numeric, String
+from sqlalchemy import Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,3 +25,9 @@ class AppSettings(OwnedMixin, Base):
     invoice_prefix: Mapped[str] = mapped_column(
         String(10), default="CO", server_default="CO", nullable=False
     )
+    # Pro-Workspace Google-Places-API-Key für die Lead-Suche (nullable = keiner
+    # → Fallback auf die globale env-Variable GOOGLE_PLACES_API_KEY).
+    google_places_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Eigener Nutzungszähler (Google gibt das Restkontingent per Key nicht her).
+    google_places_calls: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    google_places_period: Mapped[str | None] = mapped_column(String(7), nullable=True)  # "YYYY-MM"

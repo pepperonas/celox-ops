@@ -98,14 +98,55 @@ export default function Settings() {
     setTwofaBusy(false)
   }
   const [savingPrice, setSavingPrice] = useState(false)
+  // Google Places (Lead-Suche)
+  const [placesConfigured, setPlacesConfigured] = useState(false)
+  const [placesHint, setPlacesHint] = useState<string | null>(null)
+  const [placesCalls, setPlacesCalls] = useState(0)
+  const [placesKeyInput, setPlacesKeyInput] = useState('')
+  const [placesSaving, setPlacesSaving] = useState(false)
+  const [placesGuideOpen, setPlacesGuideOpen] = useState(false)
+
+  const applySettings = (s: { default_unit_price?: number; invoice_prefix?: string
+    google_places_configured?: boolean; google_places_key_hint?: string | null
+    google_places_calls_this_month?: number }) => {
+    if (s.default_unit_price != null) setDefaultPrice(String(s.default_unit_price))
+    if (s.invoice_prefix != null) setInvoicePrefix(s.invoice_prefix)
+    setPlacesConfigured(Boolean(s.google_places_configured))
+    setPlacesHint(s.google_places_key_hint ?? null)
+    setPlacesCalls(s.google_places_calls_this_month ?? 0)
+  }
 
   useEffect(() => {
     loadConfig()
     loadTemplates()
-    getSettings()
-      .then((s) => { setDefaultPrice(String(s.default_unit_price ?? 95)); setInvoicePrefix(s.invoice_prefix ?? 'CO') })
-      .catch(() => {})
+    getSettings().then(applySettings).catch(() => {})
   }, [])
+
+  const handleSavePlacesKey = async () => {
+    const key = placesKeyInput.trim()
+    if (!key) { toast.error('Bitte einen API-Key eingeben.'); return }
+    setPlacesSaving(true)
+    try {
+      applySettings(await updateSettings({ google_places_api_key: key }))
+      setPlacesKeyInput('')
+      toast.success('Google-Places-Key gespeichert.')
+    } catch {
+      toast.error('Fehler beim Speichern.')
+    }
+    setPlacesSaving(false)
+  }
+
+  const handleRemovePlacesKey = async () => {
+    if (!window.confirm('Google-Places-Key wirklich entfernen?')) return
+    setPlacesSaving(true)
+    try {
+      applySettings(await updateSettings({ google_places_api_key: '' }))
+      toast.success('Key entfernt.')
+    } catch {
+      toast.error('Fehler beim Entfernen.')
+    }
+    setPlacesSaving(false)
+  }
 
   const handleSavePrice = async () => {
     const value = parseFloat(defaultPrice.replace(',', '.'))
@@ -354,6 +395,90 @@ export default function Settings() {
             {savingPrice ? 'Speichere...' : 'Speichern'}
           </button>
         </div>
+      </div>
+
+      {/* Google Places (Lead-Suche) */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">Google Places (Lead-Suche)</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Optional. Mit einem Google-Places-API-Key findet die Lead-Suche (Rainmaker → Pipeline →
+          „Leads finden") zusätzlich zu OpenStreetMap auch über Google. Ohne Key läuft die Suche
+          weiterhin kostenlos über OpenStreetMap.
+        </p>
+
+        {/* Status */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`w-2.5 h-2.5 rounded-full inline-block ${placesConfigured ? 'bg-success' : 'bg-text-muted'}`}></span>
+          <span className="text-sm">
+            {placesConfigured
+              ? <>Key hinterlegt <span className="text-text-muted font-mono">({placesHint})</span></>
+              : <span className="text-text-muted">Kein Key hinterlegt</span>}
+          </span>
+          {placesConfigured && (
+            <button onClick={handleRemovePlacesKey} disabled={placesSaving}
+                    className="ml-2 text-xs text-danger hover:underline">entfernen</button>
+          )}
+        </div>
+
+        {/* Eingabe */}
+        <div className="flex items-end gap-3 flex-wrap mb-4">
+          <div className="flex-1 min-w-[260px]">
+            <label htmlFor="places-key" className="block text-xs text-text-muted mb-2">
+              {placesConfigured ? 'Neuen Key eintragen (ersetzt den bestehenden)' : 'API-Key'}
+            </label>
+            <input
+              id="places-key"
+              type="password"
+              autoComplete="off"
+              value={placesKeyInput}
+              onChange={(e) => setPlacesKeyInput(e.target.value)}
+              placeholder="AIza…"
+              className="w-full font-mono"
+            />
+          </div>
+          <button onClick={handleSavePlacesKey} disabled={placesSaving || !placesKeyInput.trim()} className="btn-primary">
+            {placesSaving ? 'Speichere…' : 'Key speichern'}
+          </button>
+        </div>
+
+        {/* Nutzung */}
+        <div className="rounded-lg bg-surface-container border border-border p-3 mb-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-text-muted">Von ops ausgelöste Places-Suchen diesen Monat</span>
+            <span className="text-text font-semibold tabular-nums">{placesCalls}</span>
+          </div>
+          <p className="text-[11px] text-text-muted mt-1.5">
+            Das ist der Zähler von ops. Das echte Restkontingent und die Kosten siehst du in der{' '}
+            <a href="https://console.cloud.google.com/apis/api/places-backend.googleapis.com/quotas"
+               target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">
+              Google Cloud Console → Places API → Kontingente</a> bzw. unter{' '}
+            <a href="https://console.cloud.google.com/billing" target="_blank" rel="noreferrer"
+               className="text-accent underline underline-offset-2">Abrechnung</a>.
+          </p>
+        </div>
+
+        {/* Anleitung */}
+        <button onClick={() => setPlacesGuideOpen((o) => !o)}
+                className="text-sm text-accent hover:underline underline-offset-2">
+          {placesGuideOpen ? '▾ Anleitung ausblenden' : '▸ Wie erstelle ich einen Key?'}
+        </button>
+        {placesGuideOpen && (
+          <div className="mt-3 text-sm text-text-muted space-y-2 border-l-2 border-border pl-4">
+            <ol className="list-decimal list-inside space-y-1.5">
+              <li><a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">Google Cloud Console</a> öffnen und ein Projekt anlegen (oder auswählen).</li>
+              <li>Ein <strong>Rechnungskonto verknüpfen</strong> (Places verlangt das, auch im kostenlosen Kontingent).</li>
+              <li>Unter <em>APIs &amp; Dienste → Bibliothek</em> die <strong>„Places API"</strong> aktivieren.</li>
+              <li>Unter <em>APIs &amp; Dienste → Anmeldedaten → Anmeldedaten erstellen → API-Schlüssel</em> einen Key erzeugen.</li>
+              <li>Den Key hier oben einfügen und speichern.</li>
+            </ol>
+            <p className="font-medium text-text pt-1">Worauf du achten solltest:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong>Key einschränken</strong> (Anmeldedaten → Key → „API-Einschränkungen"): nur die <em>Places API</em> zulassen — begrenzt den Schaden, falls der Key mal abhandenkommt.</li>
+              <li><strong>Budget-Alarm setzen</strong> (Abrechnung → Budgets): z. B. 10 €/Monat mit E-Mail-Benachrichtigung, damit keine Überraschungen entstehen.</li>
+              <li><strong>Key geheim halten</strong> — nicht in E-Mails/Screenshots teilen. ops zeigt ihn nur maskiert und gibt ihn nie im Klartext zurück.</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="bg-surface border border-border rounded-card p-5 mb-6">

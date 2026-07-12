@@ -472,13 +472,23 @@ async def discover_preview(
     vorhanden, per Website-Domain oder Firmenname; owner-scoped). Legt nichts an."""
     import httpx
 
+    from app.models.app_settings import AppSettings
+    from app.services.places_usage import bump
+
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    # Pro-Workspace-Key hat Vorrang, sonst globale env-Variable.
+    places_key = (app_row.google_places_api_key if app_row else None) or settings.GOOGLE_PLACES_API_KEY
+
     try:
         async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
             if data.source == "google":
-                if not settings.GOOGLE_PLACES_API_KEY:
-                    raise HTTPException(status_code=503, detail="Google Places ist nicht konfiguriert (kein API-Key)")
-                candidates = await discover_google(data.category, data.location, data.limit,
-                                                   settings.GOOGLE_PLACES_API_KEY, client)
+                if not places_key:
+                    raise HTTPException(status_code=503, detail="Google Places ist nicht konfiguriert — API-Key in den Einstellungen hinterlegen.")
+                candidates = await discover_google(data.category, data.location, data.limit, places_key, client)
+                # Eigenen Nutzungszähler hochzählen (nur bei echter Google-Suche).
+                if app_row is not None:
+                    app_row.google_places_period, app_row.google_places_calls = bump(
+                        app_row.google_places_period, app_row.google_places_calls)
             else:
                 candidates = await discover_osm(data.category, data.location, data.limit, client)
     except ValueError as exc:

@@ -79,6 +79,16 @@ def test_parse_overpass_contact_website_fallback():
     assert r["website"] == "https://kontakt.de" and r["phone"] == "030-999"
 
 
+def test_parse_google_request_denied_raises():
+    import pytest as _pt
+    with _pt.raises(ValueError):
+        parse_google({"status": "REQUEST_DENIED", "error_message": "invalid key"}, 10)
+
+
+def test_parse_google_zero_results_ok():
+    assert parse_google({"status": "ZERO_RESULTS", "results": []}, 10) == []
+
+
 def test_parse_google_limits_and_maps():
     data = {"results": [
         {"name": "A GmbH", "formatted_address": "Str. 1, Berlin", "place_id": "p1"},

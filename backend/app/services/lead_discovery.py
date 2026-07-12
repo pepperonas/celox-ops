@@ -97,7 +97,19 @@ async def discover_osm(category: str, location: str, limit, client) -> list[dict
     return parse_overpass(resp.json())
 
 
+# Google-Text-Search-Status, die kein echtes Ergebnis sind → als Fehler melden.
+_GOOGLE_OK = {"OK", "ZERO_RESULTS"}
+
+
 def parse_google(data: dict, limit: int) -> list[dict]:
+    status = data.get("status")
+    if status and status not in _GOOGLE_OK:
+        msg = data.get("error_message") or status
+        if status == "REQUEST_DENIED":
+            raise ValueError(f"Google Places lehnt den Key ab: {msg} (Key/Places-API/Abrechnung prüfen)")
+        if status == "OVER_QUERY_LIMIT":
+            raise ValueError(f"Google-Kontingent erschöpft: {msg}")
+        raise ValueError(f"Google Places: {msg}")
     out = []
     for res in (data.get("results") or [])[:limit]:
         name = (res.get("name") or "").strip()
