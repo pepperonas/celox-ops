@@ -33,6 +33,32 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // Solange der Dialog offen ist, verhindern, dass ein daneben abgelegtes ZIP
+  // vom Browser geöffnet wird (Standardverhalten = zur Datei navigieren).
+  useEffect(() => {
+    const prevent = (e: DragEvent) => { e.preventDefault() }
+    window.addEventListener('dragover', prevent)
+    window.addEventListener('drop', prevent)
+    return () => {
+      window.removeEventListener('dragover', prevent)
+      window.removeEventListener('drop', prevent)
+    }
+  }, [])
+
+  // Gemeinsamer Drop-Handler für Panel + Button.
+  const handleDroppedFile = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    const name = file.name.toLowerCase()
+    if (!name.endsWith('.csv') && !name.endsWith('.zip')) {
+      toast.error('Bitte das Export-ZIP oder die Connections.csv ablegen.')
+      return
+    }
+    handleFile(file)
+  }
+
   const handleFile = async (file: File | undefined) => {
     if (!file) return
     setUploading(true)
@@ -117,7 +143,17 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col">
+      <div
+        className={`relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col transition-all duration-short ${
+          !rows && dragOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-black/60' : ''
+        }`}
+        onDragOver={!rows ? (e) => { e.preventDefault(); setDragOver(true) } : undefined}
+        onDragLeave={!rows ? (e) => {
+          // Nur zurücksetzen, wenn der Cursor das Panel wirklich verlässt
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false)
+        } : undefined}
+        onDrop={!rows ? handleDroppedFile : undefined}
+      >
         <h3 className="text-xl font-semibold text-text mb-1">LinkedIn-Kontakte importieren</h3>
         <p className="text-xs text-text-muted mb-5">
           Über LinkedIns offiziellen Datenexport — kostenlos, ohne API, DSGVO-konform.
@@ -151,19 +187,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
               onClick={() => fileInput.current?.click()}
               disabled={uploading}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setDragOver(false)
-                const file = e.dataTransfer.files?.[0]
-                if (!file) return
-                const name = file.name.toLowerCase()
-                if (!name.endsWith('.csv') && !name.endsWith('.zip')) {
-                  toast.error('Bitte das Export-ZIP oder die Connections.csv ablegen.')
-                  return
-                }
-                handleFile(file)
-              }}
+              onDrop={handleDroppedFile}
               className={`w-full border-2 border-dashed rounded-xl py-10 text-sm transition-colors duration-short ${
                 dragOver
                   ? 'border-accent bg-accent/10 text-text'
