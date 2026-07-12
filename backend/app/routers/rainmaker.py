@@ -35,6 +35,10 @@ from app.models.rainmaker_lead import (
 from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
+    DiscoveredCandidate,
+    LeadDiscoveryImportRequest,
+    LeadDiscoveryRequest,
+    LeadDiscoveryResult,
     LinkedInImportRequest,
     LinkedInImportResult,
     LinkedInPreviewRow,
@@ -63,6 +67,8 @@ from app.schemas.rainmaker import (
     RmStatusCount,
     RmTypeCount,
 )
+from app.config import settings
+from app.services.lead_discovery import discover_google, discover_osm
 from app.services.linkedin_import import (
     normalize_profile_url,
     parse_linkedin_archive,
@@ -214,13 +220,18 @@ def _norm_url(url: str | None) -> str | None:
 async def _lead_dedup_keys(db: AsyncSession) -> tuple[set, set]:
     """(URL-Keys, Namens-Keys) der bestehenden Leads des Owners — für die
     Duplikat-Erkennung. Query ist via Tenancy-Events automatisch owner-scoped."""
-    res = await db.execute(select(RainmakerLead.website, RainmakerLead.contact_name))
+    res = await db.execute(select(RainmakerLead.website, RainmakerLead.contact_name, RainmakerLead.company))
     urls, names = set(), set()
-    for website, contact_name in res.all():
+    for website, contact_name, company in res.all():
         if u := _norm_url(website):
             urls.add(u)
+        # Sowohl Ansprechpartner- als auch Firmenname aufnehmen: Discovery-Leads
+        # führen den Firmennamen in company (contact_name leer), LinkedIn den
+        # Personennamen in contact_name — beide müssen dedupen.
         if n := (contact_name or "").strip().lower():
             names.add(n)
+        if c := (company or "").strip().lower():
+            names.add(c)
     return urls, names
 
 
@@ -443,6 +454,88 @@ def _parse_linkedin_datetime(value: str) -> datetime | None:
         return datetime.strptime(v, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
+
+
+# --------------------------------------------------------------------------- #
+#  Lead-Discovery (automatische Suche: OpenStreetMap + optional Google Places)
+# --------------------------------------------------------------------------- #
+def _candidate_keys(name: str, website: str | None) -> tuple[str | None, str]:
+    return _norm_url(website), (name or "").strip().lower()
+
+
+@router.post("/discover/preview", response_model=list[DiscoveredCandidate])
+async def discover_preview(
+    data: LeadDiscoveryRequest,
+    db: AsyncSession = Depends(get_db),
+) -> list[DiscoveredCandidate]:
+    """Sucht Firmen nach Branche + Ort und markiert Duplikate (bereits als Lead
+    vorhanden, per Website-Domain oder Firmenname; owner-scoped). Legt nichts an."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
+            if data.source == "google":
+                if not settings.GOOGLE_PLACES_API_KEY:
+                    raise HTTPException(status_code=503, detail="Google Places ist nicht konfiguriert (kein API-Key)")
+                candidates = await discover_google(data.category, data.location, data.limit,
+                                                   settings.GOOGLE_PLACES_API_KEY, client)
+            else:
+                candidates = await discover_osm(data.category, data.location, data.limit, client)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Suche fehlgeschlagen: {exc}")
+
+    urls, names = await _lead_dedup_keys(db)
+    seen: set[str] = set()
+    out: list[DiscoveredCandidate] = []
+    for c in candidates:
+        url_key, name_key = _candidate_keys(c["name"], c.get("website"))
+        file_key = url_key or name_key
+        dup = ((url_key is not None and url_key in urls)
+               or (bool(name_key) and name_key in names)
+               or file_key in seen)
+        seen.add(file_key)
+        out.append(DiscoveredCandidate(**c, duplicate=dup))
+    return out
+
+
+@router.post("/discover/import", response_model=LeadDiscoveryResult)
+async def discover_import(
+    data: LeadDiscoveryImportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LeadDiscoveryResult:
+    """Legt die ausgewählten Kandidaten als Leads an (Status 'new'), mit Quelle
+    und owner-scoped Dedup-Wiederprüfung (Doppel-Submit-sicher)."""
+    if len(data.rows) > 5000:
+        raise HTTPException(status_code=413, detail="Zu viele Kandidaten (max. 5000)")
+    urls, names = await _lead_dedup_keys(db)
+    created = skipped = 0
+    tags = ["discovery"]
+    if data.segment:
+        tags.append(data.segment)
+    for c in data.rows:
+        url_key, name_key = _candidate_keys(c.name, c.website)
+        if (url_key is not None and url_key in urls) or (bool(name_key) and name_key in names):
+            skipped += 1
+            continue
+        db.add(RainmakerLead(
+            company=(c.name or "").strip()[:255] or "Unbenannt",
+            website=(c.website or "").strip()[:500] or None,
+            phone=(c.phone or "").strip()[:50] or None,
+            address=(c.address or "").strip() or None,
+            source=c.source,
+            status=RainmakerLeadStatus.new,
+            tags=tags,
+            notes=f"Automatisch gefunden ({c.source})" + (f" · Ref {c.source_ref}" if c.source_ref else ""),
+        ))
+        if url_key:
+            urls.add(url_key)
+        if name_key:
+            names.add(name_key)
+        created += 1
+    await db.flush()
+    return LeadDiscoveryResult(created=created, skipped_duplicates=skipped)
 
 
 # --------------------------------------------------------------------------- #

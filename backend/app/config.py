@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     TOKEN_TRACKER_BASE_URL: str = ""
     # Google OAuth Client-ID (Web) für "Sign in with Google" — leer = Feature aus
     GOOGLE_CLIENT_ID: str = ""
+    # Optionaler Google-Places-Key für die Lead-Suche (leer = nur OpenStreetMap)
+    GOOGLE_PLACES_API_KEY: str = ""
     TOKEN_TRACKER_PUBLIC_URL: str = ""
     TOKEN_TRACKER_ADMIN_KEY: str = ""
 

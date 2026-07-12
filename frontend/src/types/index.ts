@@ -616,6 +616,21 @@ export interface LinkedInPreviewRow extends LinkedInImportRow {
   duplicate: boolean
 }
 
+export interface DiscoveredCandidate {
+  name: string
+  website: string | null
+  phone: string | null
+  address: string | null
+  source: string
+  source_ref: string | null
+  duplicate: boolean
+}
+
+export interface LeadDiscoveryResult {
+  created: number
+  skipped_duplicates: number
+}
+
 export interface LinkedInImportResult {
   created: number
   skipped_duplicates: number

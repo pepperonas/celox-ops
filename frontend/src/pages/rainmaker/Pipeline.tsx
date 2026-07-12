@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
@@ -9,10 +9,12 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import RainmakerNav from './RainmakerNav'
 import RainmakerFooter from './RainmakerFooter'
 import LinkedInImportModal from './LinkedInImportModal'
+import LeadDiscoveryModal from './LeadDiscoveryModal'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
+import { sourceBadge, sourceKey } from './leadSources'
 
 export default function RainmakerPipeline() {
   const navigate = useAppNavigate()
@@ -21,6 +23,8 @@ export default function RainmakerPipeline() {
   const [dragOver, setDragOver] = useState<RainmakerLeadStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [showDiscovery, setShowDiscovery] = useState(false)
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null)  // null = alle
   // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
   const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
@@ -69,6 +73,23 @@ export default function RainmakerPipeline() {
     }
   }
 
+  // Quellen-Chips (nach Häufigkeit) + aktuell gefilterte Leads.
+  const sourceChips = useMemo(() => {
+    const map = new Map<string, { key: string; count: number; color: string }>()
+    for (const l of leads) {
+      const key = sourceKey(l.source)
+      const entry = map.get(key)
+      if (entry) entry.count++
+      else map.set(key, { key, count: 1, color: sourceBadge(l.source).color })
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count)
+  }, [leads])
+
+  const filteredLeads = useMemo(
+    () => (sourceFilter === null ? leads : leads.filter((l) => sourceKey(l.source) === sourceFilter)),
+    [leads, sourceFilter],
+  )
+
   if (loading) return <LoadingIndicator />
 
   return (
@@ -77,19 +98,53 @@ export default function RainmakerPipeline() {
         title="Pipeline"
         subtitle={`${leads.length} Leads`}
         actions={
-          <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
-            LinkedIn-Import
-          </button>
+          <>
+            <button onClick={() => setShowDiscovery(true)} className="btn-primary text-sm">
+              Leads finden
+            </button>
+            <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
+              LinkedIn-Import
+            </button>
+          </>
         }
       />
       <RainmakerNav />
+
+      {/* Quellen-Filter: eine Chip pro vorkommender Quelle + „Alle". */}
+      {sourceChips.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-text-muted mr-1">Quelle:</span>
+          <button
+            onClick={() => setSourceFilter(null)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short ${
+              sourceFilter === null ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+            }`}
+          >
+            Alle ({leads.length})
+          </button>
+          {sourceChips.map(({ key, count, color }) => (
+            <button
+              key={key}
+              onClick={() => setSourceFilter(key)}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short ${
+                sourceFilter === key ? 'text-text' : 'text-text-muted hover:text-text'
+              }`}
+              style={sourceFilter === key
+                ? { borderColor: color, backgroundColor: color + '26' }
+                : { borderColor: 'var(--c-border,#333)' }}
+            >
+              {key} ({count})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Umbruchfähiges Grid statt horizontalem Scroll: alle Status bleiben
           im Viewport — 6 Spalten auf breiten Screens, sonst 3/2/1 im Umbruch. */}
       <div className="grid gap-4 pb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {PIPELINE_STATUSES.map((statusKey) => {
           const color = STATUS_COLORS[statusKey]
-          const colLeads = leads.filter((l) => l.status === statusKey)
+          const colLeads = filteredLeads.filter((l) => l.status === statusKey)
           const isOver = dragOver === statusKey
           const expanded = expandedCols.has(statusKey)
           const visibleLeads = expanded ? colLeads : colLeads.slice(0, 100)
@@ -140,12 +195,19 @@ export default function RainmakerPipeline() {
                     {lead.contact_name && (
                       <div className="text-xs text-text-muted mb-1.5 truncate">{lead.contact_name}</div>
                     )}
-                    <div className="flex items-center justify-between text-xs">
-                      {lead.value_estimate ? (
-                        <span className="font-medium tabular-nums" style={{ color }}>{formatCurrency(lead.value_estimate)}</span>
-                      ) : <span className="text-text-muted">&ndash;</span>}
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {(() => { const b = sourceBadge(lead.source); return (
+                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                style={{ backgroundColor: b.color + '22', color: b.color }}
+                                title={`Quelle: ${lead.source || 'Manuell'}`}>{b.label}</span>
+                        ) })()}
+                        {lead.value_estimate ? (
+                          <span className="font-medium tabular-nums truncate" style={{ color }}>{formatCurrency(lead.value_estimate)}</span>
+                        ) : null}
+                      </div>
                       {lead.needs_next_action && (
-                        <span className="text-danger text-[10px] font-semibold">⚠ kein Schritt</span>
+                        <span className="shrink-0 text-danger text-[10px] font-semibold">⚠ kein Schritt</span>
                       )}
                     </div>
                   </div>
@@ -169,6 +231,12 @@ export default function RainmakerPipeline() {
         <LinkedInImportModal
           onClose={() => setShowImport(false)}
           onImported={() => { setShowImport(false); fetchLeads() }}
+        />
+      )}
+      {showDiscovery && (
+        <LeadDiscoveryModal
+          onClose={() => setShowDiscovery(false)}
+          onImported={() => { setShowDiscovery(false); fetchLeads() }}
         />
       )}
       <RainmakerFooter />

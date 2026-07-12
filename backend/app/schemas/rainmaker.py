@@ -79,6 +79,33 @@ class LinkedInImportResult(BaseModel):
     activities_created: int = 0
 
 
+class LeadDiscoveryRequest(BaseModel):
+    source: str = "osm"            # 'osm' | 'google'
+    category: str                  # Segment-Key oder OSM-Tag 'key=value'
+    location: str                  # Ort/Bezirk (z. B. "Berlin")
+    limit: int = 60
+
+
+class DiscoveredCandidate(BaseModel):
+    name: str
+    website: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    source: str
+    source_ref: str | None = None
+    duplicate: bool = False
+
+
+class LeadDiscoveryImportRequest(BaseModel):
+    rows: list[DiscoveredCandidate]
+    segment: str | None = None     # optionales Tag für die angelegten Leads
+
+
+class LeadDiscoveryResult(BaseModel):
+    created: int
+    skipped_duplicates: int
+
+
 class RainmakerLeadUpdate(BaseModel):
     company: str | None = None
     contact_name: str | None = None

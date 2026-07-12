@@ -20,6 +20,8 @@ import type {
   LinkedInImportRow,
   LinkedInPreviewRow,
   LinkedInImportResult,
+  DiscoveredCandidate,
+  LeadDiscoveryResult,
   PaginatedResponse,
 } from '../types'
 
@@ -69,6 +71,21 @@ export async function previewLinkedInImport(file: File): Promise<LinkedInPreview
 
 export async function importLinkedInLeads(rows: LinkedInImportRow[]): Promise<LinkedInImportResult> {
   const response = await api.post('/rainmaker/import/linkedin', { rows })
+  return response.data
+}
+
+// --- Lead-Discovery (automatische Suche) ---
+export async function discoverLeadsPreview(params: {
+  source: 'osm' | 'google'; category: string; location: string; limit?: number
+}): Promise<DiscoveredCandidate[]> {
+  const response = await api.post('/rainmaker/discover/preview', params)
+  return response.data
+}
+
+export async function importDiscoveredLeads(
+  rows: DiscoveredCandidate[], segment?: string,
+): Promise<LeadDiscoveryResult> {
+  const response = await api.post('/rainmaker/discover/import', { rows, segment })
   return response.data
 }
 
