@@ -4,7 +4,7 @@
 // - /api/* is never intercepted.
 // Bump CACHE_VERSION on app-shell changes to purge old caches.
 
-const CACHE_VERSION = 'celox-ops-v6'
+const CACHE_VERSION = 'celox-ops-v7'
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',

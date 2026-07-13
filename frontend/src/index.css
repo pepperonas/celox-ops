@@ -440,6 +440,11 @@ input:-webkit-autofill:focus {
   .animate-md-pop {
     animation: md-pop var(--md-dur-medium) var(--md-ease-spring) both;
   }
+  /* Modal panel entrance: scale only, NO opacity + NO `both` fill — the panel
+     stays fully visible even if the animation never runs (reduced-motion,
+     data-pop, interrupted mount). Prevents "overlay darkens but panel invisible". */
+  @keyframes modal-pop-in { from { transform: scale(0.96); } to { transform: scale(1); } }
+  .animate-modal-in { animation: modal-pop-in var(--md-dur-medium) var(--md-ease-spring); }
 
   /* Staggered list/grid entrance: parent gets .md-stagger, children animate */
   .md-stagger > * {

@@ -155,7 +155,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={() => { if (!running) onClose() }} />
-      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[880px] w-full mx-4 animate-md-scale max-h-[88vh] flex flex-col">
+      <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[880px] w-full mx-4 animate-modal-in max-h-[88vh] flex flex-col">
         <h3 className="text-xl font-semibold text-text mb-1">Leads finden</h3>
         <p className="text-xs text-text-muted mb-4">
           Mehrere Branchen und Orte auf einmal — kostenlos über OpenStreetMap.

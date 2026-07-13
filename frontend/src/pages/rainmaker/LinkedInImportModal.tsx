@@ -147,7 +147,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
       <div
-        className={`relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-md-scale max-h-[85vh] flex flex-col transition-all duration-short ${
+        className={`relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-modal-in max-h-[85vh] flex flex-col transition-all duration-short ${
           !rows && dragOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-black/60' : ''
         }`}
         onDragOver={!rows ? (e) => { e.preventDefault(); setDragOver(true) } : undefined}
