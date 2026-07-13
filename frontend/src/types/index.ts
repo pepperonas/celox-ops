@@ -625,11 +625,19 @@ export interface DiscoveredCandidate {
   source: string
   source_ref: string | null
   duplicate: boolean
+  duplicate_reason?: string | null   // "email" | "website" | "name"
+}
+
+export interface ImportSkipped {
+  name: string
+  reason: string                     // "email" | "website" | "name"
 }
 
 export interface LeadDiscoveryResult {
   created: number
   skipped_duplicates: number
+  enriched?: number
+  skipped_rows?: ImportSkipped[]
 }
 
 export interface LinkedInImportResult {
@@ -637,6 +645,7 @@ export interface LinkedInImportResult {
   skipped_duplicates: number
   enriched: number
   activities_created: number
+  skipped_rows?: ImportSkipped[]
 }
 
 export interface RainmakerGoalProgress {

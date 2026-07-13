@@ -3,13 +3,25 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, Numeric, String, Text, func
+from sqlalchemy import (
+    Computed, DateTime, Enum, Index, Numeric, String, Text, func, text,
+)
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.customer import Base
 from app.tenancy import OwnedMixin
+
+# Normalisierungs-SQL für die generierten Dedup-Spalten. MUSS deckungsgleich mit
+# services/lead_dedup.py::norm_email/norm_website sein — sonst greifen die
+# Unique-Indizes woanders als der App-Code.
+_EMAIL_NORM_SQL = "nullif(lower(btrim(email)), '')"
+_WEBSITE_NORM_SQL = (
+    "nullif(btrim(rtrim("
+    "regexp_replace(regexp_replace(lower(btrim(website)), '^https?://', '', 'i'),"
+    " '^www\\.', '', 'i'), '/')), '')"
+)
 
 
 class RainmakerLeadStatus(str, enum.Enum):
@@ -68,6 +80,14 @@ class RainmakerLead(OwnedMixin, Base):
     # Stored as a JSON array of strings.
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Generierte, normalisierte Dedup-Schlüssel (read-only) — treiben die
+    # partiellen Unique-Indizes (race-sicher gegen parallele Importe).
+    email_norm: Mapped[str | None] = mapped_column(
+        Text, Computed(_EMAIL_NORM_SQL, persisted=True), nullable=True
+    )
+    website_norm: Mapped[str | None] = mapped_column(
+        Text, Computed(_WEBSITE_NORM_SQL, persisted=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -81,4 +101,17 @@ class RainmakerLead(OwnedMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
         order_by="RainmakerActivity.created_at",
+    )
+
+    __table_args__ = (
+        # Pro Owner: keine zwei Leads mit gleicher E-Mail bzw. gleicher Website.
+        # Partiell (nur wo der Schlüssel gesetzt ist) → viele NULLs bleiben erlaubt.
+        Index(
+            "uq_rainmaker_lead_owner_email", "owner_id", "email_norm",
+            unique=True, postgresql_where=text("email_norm IS NOT NULL"),
+        ),
+        Index(
+            "uq_rainmaker_lead_owner_website", "owner_id", "website_norm",
+            unique=True, postgresql_where=text("website_norm IS NOT NULL"),
+        ),
     )

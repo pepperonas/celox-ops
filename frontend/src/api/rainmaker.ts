@@ -41,8 +41,11 @@ export async function getRainmakerLead(id: string): Promise<RainmakerLead> {
   return response.data
 }
 
-export async function createRainmakerLead(data: RainmakerLeadCreate): Promise<RainmakerLead> {
-  const response = await api.post('/rainmaker/leads', data)
+export async function createRainmakerLead(
+  data: RainmakerLeadCreate,
+  force = false,
+): Promise<RainmakerLead> {
+  const response = await api.post('/rainmaker/leads', data, { params: force ? { force: true } : {} })
   return response.data
 }
 

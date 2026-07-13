@@ -15,6 +15,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -36,6 +37,7 @@ from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
     DiscoveredCandidate,
+    ImportSkipped,
     LeadDiscoveryImportRequest,
     LeadDiscoveryRequest,
     LeadDiscoveryResult,
@@ -68,6 +70,15 @@ from app.schemas.rainmaker import (
     RmTypeCount,
 )
 from app.config import settings
+from app.services.lead_dedup import (
+    MATCH_EMAIL,
+    MATCH_NAME,
+    MATCH_WEBSITE,
+    DedupIndex,
+    norm_email,
+    norm_name,
+    norm_website,
+)
 from app.services.lead_discovery import discover_google, discover_osm
 from app.services.linkedin_import import (
     normalize_profile_url,
@@ -173,11 +184,28 @@ async def get_lead(
 @router.post("/leads", response_model=RainmakerLeadResponse, status_code=status.HTTP_201_CREATED)
 async def create_lead(
     data: RainmakerLeadCreate,
+    force: bool = Query(False, description="Duplikat-Warnung übergehen und trotzdem anlegen"),
     db: AsyncSession = Depends(get_db),
 ) -> RainmakerLeadResponse:
+    # Duplikat-Warnung (kein hartes Blocken — bewusstes Anlegen via force=true).
+    if not force:
+        dup, reason = await find_duplicate_lead(
+            db, email=data.email, website=data.website, contact_name=data.contact_name)
+        if dup is not None:
+            raise HTTPException(status_code=409, detail={
+                "message": f"Ähnlicher Lead existiert bereits ({_REASON_LABEL.get(reason, reason)}: "
+                           f"„{dup.company}“). Trotzdem anlegen?",
+                "reason": reason,
+                "existing_id": str(dup.id),
+                "existing_company": dup.company,
+            })
     lead = RainmakerLead(**data.model_dump())
-    db.add(lead)
-    await db.flush()
+    if not await _safe_flush_lead(db, lead):
+        # Race: ein paralleler Insert war schneller.
+        raise HTTPException(status_code=409, detail={
+            "message": "Ein identischer Lead wurde gerade parallel angelegt.",
+            "reason": MATCH_WEBSITE,
+        })
     await db.refresh(lead)
     return lead_response(lead)
 
@@ -212,31 +240,60 @@ _LINKEDIN_IMPORT_MAX_BYTES = 10 * 1024 * 1024
 _LINKEDIN_IMPORT_MAX_ROWS = 20_000
 
 
-def _norm_url(url: str | None) -> str | None:
-    u = (url or "").strip().rstrip("/").lower()
-    return u.removeprefix("https://").removeprefix("http://").removeprefix("www.") or None
+# Menschenlesbare Match-Gründe für den Import-Report.
+_REASON_LABEL = {MATCH_EMAIL: "E-Mail", MATCH_WEBSITE: "Website", MATCH_NAME: "Name"}
 
 
-async def _lead_dedup_keys(db: AsyncSession) -> tuple[set, set]:
-    """(URL-Keys, Namens-Keys) der bestehenden Leads des Owners — für die
-    Duplikat-Erkennung. Query ist via Tenancy-Events automatisch owner-scoped."""
-    res = await db.execute(select(RainmakerLead.website, RainmakerLead.contact_name, RainmakerLead.company))
-    urls, names = set(), set()
-    for website, contact_name, company in res.all():
-        if u := _norm_url(website):
-            urls.add(u)
-        # Sowohl Ansprechpartner- als auch Firmenname aufnehmen: Discovery-Leads
-        # führen den Firmennamen in company (contact_name leer), LinkedIn den
-        # Personennamen in contact_name — beide müssen dedupen.
-        if n := (contact_name or "").strip().lower():
-            names.add(n)
-        if c := (company or "").strip().lower():
-            names.add(c)
-    return urls, names
+async def _build_dedup_index(db: AsyncSession) -> tuple[DedupIndex, dict]:
+    """DedupIndex + {id: lead} aller bestehenden Leads des Owners (owner-scoped
+    via Tenancy-Events). Auto-Skip-Keys: E-Mail, Website, exakter Ansprechpartner-
+    Name — NICHT der Firmenname (verschiedene Personen, gleicher Arbeitgeber)."""
+    leads = (await db.execute(select(RainmakerLead))).scalars().all()
+    idx = DedupIndex()
+    by_id: dict = {}
+    for lead in leads:
+        idx.add(lead, email=lead.email, website=lead.website, name=lead.contact_name)
+        by_id[str(lead.id)] = lead
+    return idx, by_id
 
 
-def _row_keys(first_name: str, last_name: str, url: str) -> tuple[str | None, str]:
-    return _norm_url(url), f"{first_name} {last_name}".strip().lower()
+async def find_duplicate_lead(
+    db: AsyncSession, *, email: str | None, website: str | None,
+    contact_name: str | None,
+) -> tuple[RainmakerLead | None, str | None]:
+    """Einzel-Lookup (für die manuelle Anlage) über die generierten Dedup-Spalten
+    (indexgestützt). Rückgabe: (Lead, Grund) oder (None, None)."""
+    e, w, n = norm_email(email), norm_website(website), norm_name(contact_name)
+    conds = []
+    if e:
+        conds.append(RainmakerLead.email_norm == e)
+    if w:
+        conds.append(RainmakerLead.website_norm == w)
+    if n:
+        conds.append(func.lower(func.btrim(RainmakerLead.contact_name)) == n)
+    if not conds:
+        return None, None
+    lead = (await db.execute(select(RainmakerLead).where(or_(*conds)).limit(1))).scalar_one_or_none()
+    if lead is None:
+        return None, None
+    if e and lead.email_norm == e:
+        return lead, MATCH_EMAIL
+    if w and lead.website_norm == w:
+        return lead, MATCH_WEBSITE
+    return lead, MATCH_NAME
+
+
+async def _safe_flush_lead(db: AsyncSession, lead: RainmakerLead) -> bool:
+    """Fügt einen Lead in einem SAVEPOINT ein und fängt eine Unique-Verletzung
+    (paralleler Import / Race gegen die partiellen Unique-Indizes) ab → False,
+    ohne die ganze Transaktion zu zerstören. True bei Erfolg."""
+    db.add(lead)
+    try:
+        async with db.begin_nested():
+            await db.flush()
+        return True
+    except IntegrityError:
+        return False
 
 
 @router.post("/import/linkedin/preview", response_model=list[LinkedInPreviewRow])
@@ -272,23 +329,18 @@ async def linkedin_import_preview(
     if len(rows) + len(invitations) > _LINKEDIN_IMPORT_MAX_ROWS:
         raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
 
-    urls, names = await _lead_dedup_keys(db)
-    seen_in_file: set[str] = set()
+    idx, _ = await _build_dedup_index(db)
     out: list[LinkedInPreviewRow] = []
 
-    def _is_duplicate(url_key: str | None, name_key: str) -> bool:
-        file_key = url_key or name_key
-        dup = (
-            (url_key is not None and url_key in urls)
-            or (bool(name_key) and name_key in names)
-            or file_key in seen_in_file
-        )
-        seen_in_file.add(file_key)
-        return dup
+    def _is_duplicate(email: str | None, website: str | None, name: str) -> bool:
+        lead, _reason = idx.match(email=email, website=website, name=name)
+        # Datensatz in den Index aufnehmen → Batch-interne Duplikate erkennen.
+        idx.add(object(), email=email, website=website, name=name)
+        return lead is not None
 
     # Bestätigte Kontakte — mit Nachrichtenverlauf angereichert
     for r in rows:
-        url_key, name_key = _row_keys(r["first_name"], r["last_name"], r["url"])
+        full_name = f"{r['first_name']} {r['last_name']}".strip()
         msg = messages.get(normalize_profile_url(r["url"]), None) if r["url"] else None
         out.append(LinkedInPreviewRow(
             **r,
@@ -297,7 +349,7 @@ async def linkedin_import_preview(
             message_count=msg["count"] if msg else 0,
             last_message_at=msg["last_date"] if msg else "",
             messages=msg["messages"] if msg else [],
-            duplicate=_is_duplicate(url_key, name_key),
+            duplicate=_is_duplicate(r.get("email"), r["url"], full_name),
         ))
 
     # Offene ausgehende Kontaktanfragen (nicht in Connections → noch unbeantwortet)
@@ -308,7 +360,6 @@ async def linkedin_import_preview(
             continue  # inzwischen angenommen → ist als Connection drin
         parts = inv["name"].split(" ", 1)
         first, last = parts[0], (parts[1] if len(parts) > 1 else "")
-        url_key, name_key = _row_keys(first, last, inv["url"])
         msg = messages.get(inv_url, None) if inv_url else None
         out.append(LinkedInPreviewRow(
             first_name=first,
@@ -320,7 +371,7 @@ async def linkedin_import_preview(
             message_count=msg["count"] if msg else 0,
             last_message_at=msg["last_date"] if msg else "",
             messages=msg["messages"] if msg else [],
-            duplicate=_is_duplicate(url_key, name_key),
+            duplicate=_is_duplicate(None, inv["url"], inv["name"].strip()),
         ))
     return out
 
@@ -342,15 +393,9 @@ async def linkedin_import(
     if len(data.rows) > _LINKEDIN_IMPORT_MAX_ROWS:
         raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 20.000)")
 
-    # Lead-Lookup für Enrichment (owner-scoped via Tenancy-Events)
-    existing = (await db.execute(select(RainmakerLead))).scalars().all()
-    url_map: dict[str, RainmakerLead] = {}
-    name_map: dict[str, RainmakerLead] = {}
-    for lead in existing:
-        if u := _norm_url(lead.website):
-            url_map[u] = lead
-        if n := (lead.contact_name or "").strip().lower():
-            name_map[n] = lead
+    # Lead-Lookup für Enrichment (owner-scoped via Tenancy-Events).
+    # DedupIndex matcht auf E-Mail → Website/Profil-URL → exakten Namen.
+    idx, _ = await _build_dedup_index(db)
 
     _status_rank = {
         RainmakerLeadStatus.new: 0,
@@ -360,10 +405,11 @@ async def linkedin_import(
     }
 
     created = skipped = enriched = activities_created = 0
+    skipped_rows: list[ImportSkipped] = []
     for row in data.rows:
         fields = row_to_lead_fields(row.model_dump())
-        url_key, name_key = _row_keys(row.first_name, row.last_name, row.url)
-        existing_lead = (url_map.get(url_key) if url_key else None) or name_map.get(name_key)
+        full_name = f"{row.first_name} {row.last_name}".strip()
+        existing_lead, reason = idx.match(email=fields.get("email"), website=row.url, name=full_name)
         if existing_lead is not None:
             changed = False
             # Status nur AUFwerten und nur solange der Lead im Frühstadium ist
@@ -407,6 +453,8 @@ async def linkedin_import(
                 enriched += 1
             else:
                 skipped += 1
+                skipped_rows.append(ImportSkipped(
+                    name=full_name or existing_lead.company, reason=reason or MATCH_WEBSITE))
             continue
         if row.source == "invitation":
             note = "LinkedIn-Kontaktanfrage gesendet"
@@ -416,8 +464,11 @@ async def linkedin_import(
             fields["notes"] = note
         fields["status"] = row.status
         lead = RainmakerLead(**fields)
-        db.add(lead)
-        await db.flush()  # lead.id für Aktivitäten
+        if not await _safe_flush_lead(db, lead):
+            # Race gegen einen parallelen Import (partieller Unique-Index) → Skip
+            skipped += 1
+            skipped_rows.append(ImportSkipped(name=full_name, reason=MATCH_WEBSITE))
+            continue
 
         # Nachrichtenverlauf als erledigte Aktivitäten (ohne Gamification)
         for msg in row.messages[:50]:
@@ -431,12 +482,9 @@ async def linkedin_import(
             ))
             activities_created += 1
 
-        # Neu angelegte Leads in die Lookup-Maps — Mehrfachzeilen derselben
-        # Person innerhalb eines Batches werden so angereichert statt dupliziert
-        if url_key:
-            url_map[url_key] = lead
-        if name_key:
-            name_map[name_key] = lead
+        # Neu angelegten Lead in den Index — Mehrfachzeilen derselben Person
+        # innerhalb eines Batches werden so angereichert/übersprungen statt dupliziert
+        idx.add(lead, email=fields.get("email"), website=row.url, name=full_name)
         created += 1
     await db.flush()
     return LinkedInImportResult(
@@ -444,6 +492,7 @@ async def linkedin_import(
         skipped_duplicates=skipped,
         enriched=enriched,
         activities_created=activities_created,
+        skipped_rows=skipped_rows,
     )
 
 
@@ -459,17 +508,14 @@ def _parse_linkedin_datetime(value: str) -> datetime | None:
 # --------------------------------------------------------------------------- #
 #  Lead-Discovery (automatische Suche: OpenStreetMap + optional Google Places)
 # --------------------------------------------------------------------------- #
-def _candidate_keys(name: str, website: str | None) -> tuple[str | None, str]:
-    return _norm_url(website), (name or "").strip().lower()
-
-
 @router.post("/discover/preview", response_model=list[DiscoveredCandidate])
 async def discover_preview(
     data: LeadDiscoveryRequest,
     db: AsyncSession = Depends(get_db),
 ) -> list[DiscoveredCandidate]:
     """Sucht Firmen nach Branche + Ort und markiert Duplikate (bereits als Lead
-    vorhanden, per Website-Domain oder Firmenname; owner-scoped). Legt nichts an."""
+    vorhanden, per E-Mail oder Website; owner-scoped). Legt nichts an. Der
+    Firmenname ist bewusst KEIN Auto-Key (verschiedene Betriebe/Personen)."""
     import httpx
 
     from app.models.app_settings import AppSettings
@@ -496,17 +542,17 @@ async def discover_preview(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Suche fehlgeschlagen: {exc}")
 
-    urls, names = await _lead_dedup_keys(db)
-    seen: set[str] = set()
+    idx, _ = await _build_dedup_index(db)
     out: list[DiscoveredCandidate] = []
     for c in candidates:
-        url_key, name_key = _candidate_keys(c["name"], c.get("website"))
-        file_key = url_key or name_key
-        dup = ((url_key is not None and url_key in urls)
-               or (bool(name_key) and name_key in names)
-               or file_key in seen)
-        seen.add(file_key)
-        out.append(DiscoveredCandidate(**c, duplicate=dup))
+        lead, reason = idx.match(email=c.get("email"), website=c.get("website"))
+        # Batch-intern: Kandidat in den Index aufnehmen (mehrere Kombinationen
+        # können dieselbe Firma liefern).
+        idx.add(object(), email=c.get("email"), website=c.get("website"))
+        out.append(DiscoveredCandidate(
+            **c, duplicate=lead is not None,
+            duplicate_reason=reason if lead is not None else None,
+        ))
     return out
 
 
@@ -516,20 +562,23 @@ async def discover_import(
     db: AsyncSession = Depends(get_db),
 ) -> LeadDiscoveryResult:
     """Legt die ausgewählten Kandidaten als Leads an (Status 'new'), mit Quelle
-    und owner-scoped Dedup-Wiederprüfung (Doppel-Submit-sicher)."""
+    und owner-scoped Dedup-Wiederprüfung (E-Mail/Website, Doppel-Submit- und
+    Race-sicher via partielle Unique-Indizes)."""
     if len(data.rows) > 5000:
         raise HTTPException(status_code=413, detail="Zu viele Kandidaten (max. 5000)")
-    urls, names = await _lead_dedup_keys(db)
+    idx, _ = await _build_dedup_index(db)
     created = skipped = 0
+    skipped_rows: list[ImportSkipped] = []
     tags = ["discovery"]
     if data.segment:
         tags.append(data.segment)
     for c in data.rows:
-        url_key, name_key = _candidate_keys(c.name, c.website)
-        if (url_key is not None and url_key in urls) or (bool(name_key) and name_key in names):
+        lead, reason = idx.match(email=c.email, website=c.website)
+        if lead is not None:
             skipped += 1
+            skipped_rows.append(ImportSkipped(name=c.name or "?", reason=reason or MATCH_WEBSITE))
             continue
-        db.add(RainmakerLead(
+        new_lead = RainmakerLead(
             company=(c.name or "").strip()[:255] or "Unbenannt",
             website=(c.website or "").strip()[:500] or None,
             email=(c.email or "").strip()[:255] or None,
@@ -539,14 +588,16 @@ async def discover_import(
             status=RainmakerLeadStatus.new,
             tags=tags,
             notes=f"Automatisch gefunden ({c.source})" + (f" · Ref {c.source_ref}" if c.source_ref else ""),
-        ))
-        if url_key:
-            urls.add(url_key)
-        if name_key:
-            names.add(name_key)
+        )
+        if not await _safe_flush_lead(db, new_lead):
+            skipped += 1
+            skipped_rows.append(ImportSkipped(name=c.name or "?", reason=MATCH_WEBSITE))
+            continue
+        idx.add(new_lead, email=c.email, website=c.website)
         created += 1
     await db.flush()
-    return LeadDiscoveryResult(created=created, skipped_duplicates=skipped)
+    return LeadDiscoveryResult(
+        created=created, skipped_duplicates=skipped, skipped_rows=skipped_rows)
 
 
 # --------------------------------------------------------------------------- #

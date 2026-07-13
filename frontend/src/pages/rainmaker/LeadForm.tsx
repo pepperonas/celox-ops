@@ -94,7 +94,20 @@ export default function RainmakerLeadForm() {
         toast.success('Lead aktualisiert.')
         navigate(`/rainmaker/leads/${id}`)
       } else {
-        const created = await createRainmakerLead(payload)
+        let created
+        try {
+          created = await createRainmakerLead(payload)
+        } catch (err: unknown) {
+          const resp = (err as { response?: { status?: number; data?: { detail?: { message?: string } } } })?.response
+          // 409 = ähnlicher Lead existiert → nachfragen, dann ggf. mit force anlegen
+          if (resp?.status === 409) {
+            const msg = resp.data?.detail?.message || 'Ähnlicher Lead existiert bereits. Trotzdem anlegen?'
+            if (!window.confirm(msg)) { setLoading(false); return }
+            created = await createRainmakerLead(payload, true)
+          } else {
+            throw err
+          }
+        }
         toast.success('Lead erstellt.')
         navigate(`/rainmaker/leads/${created.id}`)
       }

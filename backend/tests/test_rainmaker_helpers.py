@@ -1,9 +1,10 @@
 """Unit tests für die reinen Helfer des Rainmaker-Routers (DB-frei):
-LinkedIn-Zeitstempel-Parsing und URL-/Namens-Normalisierung der
-Duplikat-Erkennung."""
+LinkedIn-Zeitstempel-Parsing. Die URL-/Namens-Normalisierung der Duplikat-
+Erkennung ist nach `services/lead_dedup.py` gewandert (siehe test_lead_dedup.py)."""
 from datetime import timezone
 
-from app.routers.rainmaker import _norm_url, _parse_linkedin_datetime, _row_keys
+from app.routers.rainmaker import _parse_linkedin_datetime
+from app.services.lead_dedup import norm_name, norm_website
 
 
 def test_parse_linkedin_datetime_valid():
@@ -21,23 +22,19 @@ def test_parse_linkedin_datetime_invalid_returns_none():
     assert _parse_linkedin_datetime("7/8/26, 3:43 PM") is None
 
 
-def test_norm_url_strips_protocol_www_and_slash():
-    assert _norm_url("https://www.linkedin.com/in/max/") == "linkedin.com/in/max"
-    assert _norm_url("http://linkedin.com/in/max") == "linkedin.com/in/max"
-    assert _norm_url("LinkedIn.com/in/Max") == "linkedin.com/in/max"
+def test_norm_website_strips_protocol_www_and_slash():
+    assert norm_website("https://www.linkedin.com/in/max/") == "linkedin.com/in/max"
+    assert norm_website("http://linkedin.com/in/max") == "linkedin.com/in/max"
+    assert norm_website("LinkedIn.com/in/Max") == "linkedin.com/in/max"
 
 
-def test_norm_url_empty_is_none():
-    assert _norm_url(None) is None
-    assert _norm_url("") is None
-    assert _norm_url("   ") is None
+def test_norm_website_empty_is_none():
+    assert norm_website(None) is None
+    assert norm_website("") is None
+    assert norm_website("   ") is None
 
 
-def test_row_keys_name_is_lowercased_and_trimmed():
-    url_key, name_key = _row_keys("Max", "Mustermann", "https://www.linkedin.com/in/max")
-    assert url_key == "linkedin.com/in/max"
-    assert name_key == "max mustermann"
-    # Ohne URL: nur Namens-Key
-    url_key, name_key = _row_keys("Erika", "", "")
-    assert url_key is None
-    assert name_key == "erika"
+def test_norm_name_is_lowercased_and_trimmed():
+    assert norm_name("  Max   Mustermann ") == "max mustermann"
+    assert norm_name("Erika") == "erika"
+    assert norm_name("") is None

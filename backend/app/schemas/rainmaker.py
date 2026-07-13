@@ -72,11 +72,18 @@ class LinkedInImportRequest(BaseModel):
     rows: list[LinkedInImportRow]
 
 
+class ImportSkipped(BaseModel):
+    """Ein übersprungener Datensatz mit Grund (welches Feld gematcht hat)."""
+    name: str
+    reason: str            # "email" | "website" | "name"
+
+
 class LinkedInImportResult(BaseModel):
     created: int
     skipped_duplicates: int
     enriched: int = 0
     activities_created: int = 0
+    skipped_rows: list[ImportSkipped] = []
 
 
 class LeadDiscoveryRequest(BaseModel):
@@ -95,6 +102,7 @@ class DiscoveredCandidate(BaseModel):
     source: str
     source_ref: str | None = None
     duplicate: bool = False
+    duplicate_reason: str | None = None   # "email" | "website" | "name" (wenn duplicate)
 
 
 class LeadDiscoveryImportRequest(BaseModel):
@@ -105,6 +113,8 @@ class LeadDiscoveryImportRequest(BaseModel):
 class LeadDiscoveryResult(BaseModel):
     created: int
     skipped_duplicates: int
+    enriched: int = 0
+    skipped_rows: list[ImportSkipped] = []
 
 
 class RainmakerLeadUpdate(BaseModel):

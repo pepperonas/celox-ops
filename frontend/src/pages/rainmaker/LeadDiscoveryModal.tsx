@@ -22,6 +22,8 @@ const SEGMENTS: { key: string; label: string }[] = [
   { key: 'handwerk', label: 'Handwerksbetrieb' },
 ]
 const LABEL = Object.fromEntries(SEGMENTS.map((s) => [s.key, s.label]))
+// Duplikat-Grund (welches Feld gematcht hat) → Anzeige.
+const REASON_LABEL: Record<string, string> = { email: 'E-Mail', website: 'Website', name: 'Name' }
 const DELAY_MS = 800  // höfliche Pause zwischen Overpass-Abfragen
 
 type ComboStatus = 'pending' | 'running' | 'done' | 'error'
@@ -136,7 +138,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
         skipped += r.skipped_duplicates
       }
       toast.success(`${created} Lead${created === 1 ? '' : 's'} importiert` +
-        (skipped > 0 ? ` · ${skipped} Duplikate übersprungen` : '') + '.')
+        (skipped > 0 ? ` · ${skipped} Duplikat${skipped === 1 ? '' : 'e'} übersprungen` : '') + '.')
       onImported()
     } catch {
       toast.error('Import fehlgeschlagen.')
@@ -273,7 +275,12 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
                         {c.email ? <span className="text-success">✉ {c.email}</span> : <span className="opacity-50">–</span>}
                       </td>
                       <td className="px-2 py-1.5 text-[10px]">
-                        {c.duplicate && <span className="text-warning font-medium">vorhanden</span>}
+                        {c.duplicate && (
+                          <span className="text-warning font-medium"
+                                title={`Bereits als Lead vorhanden (${REASON_LABEL[c.duplicate_reason || ''] || 'Treffer'})`}>
+                            vorhanden{c.duplicate_reason ? ` · ${REASON_LABEL[c.duplicate_reason] || c.duplicate_reason}` : ''}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
