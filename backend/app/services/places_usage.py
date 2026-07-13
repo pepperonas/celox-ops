@@ -13,10 +13,13 @@ def calls_this_month(period: str | None, calls: int, now_period: str | None = No
     return int(calls or 0) if period == (now_period or current_period()) else 0
 
 
-def bump(period: str | None, calls: int, now_period: str | None = None) -> tuple[str, int]:
-    """Nach einer Suche: (neuer_period, neuer_zählerstand). Reset bei Monatswechsel."""
+def bump(period: str | None, calls: int, now_period: str | None = None,
+         increment: int = 1) -> tuple[str, int]:
+    """Nach einer Suche: (neuer_period, neuer_zählerstand). `increment` = Anzahl
+    echter API-Calls (Google: Text-Suche + Place-Details). Reset bei Monatswechsel."""
     p = now_period or current_period()
-    return (p, (int(calls or 0) + 1) if period == p else 1)
+    inc = max(1, int(increment or 1))
+    return (p, (int(calls or 0) + inc) if period == p else inc)
 
 
 def mask_key(key: str | None) -> str | None:

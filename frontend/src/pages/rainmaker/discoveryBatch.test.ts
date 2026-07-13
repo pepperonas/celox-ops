@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
-  candidateKey, hasContact, mergeCandidates, parseLocations, sortByContact,
-  type BatchCandidate,
+  candidateKey, hasContact, hasEmail, mergeCandidates, parseLocations,
+  sortByContact, sortByQuality, type BatchCandidate,
 } from './discoveryBatch'
 import type { DiscoveredCandidate } from '../../types'
 
 const cand = (over: Partial<DiscoveredCandidate>): DiscoveredCandidate => ({
-  name: 'X', website: null, phone: null, address: null,
+  name: 'X', website: null, email: null, phone: null, address: null,
   source: 'OpenStreetMap', source_ref: null, duplicate: false, ...over,
 })
 
@@ -58,5 +58,22 @@ describe('hasContact / sortByContact', () => {
     const sorted = sortByContact(merged)
     expect(sorted[0].name).toBe('Mit')
     expect(sorted[1].name).toBe('Ohne')
+  })
+})
+
+describe('hasEmail / sortByQuality', () => {
+  it('erkennt E-Mail', () => {
+    expect(hasEmail(cand({ email: 'a@b.de' }))).toBe(true)
+    expect(hasEmail(cand({ email: '  ' }))).toBe(false)
+    expect(hasEmail(cand({}))).toBe(false)
+  })
+  it('sortiert E-Mail-Leads nach vorn (alle haben Website)', () => {
+    const merged = mergeCandidates([], [
+      cand({ name: 'OhneMail', website: 'https://a.de' }),
+      cand({ name: 'MitMail', website: 'https://b.de', email: 'x@b.de' }),
+    ], 's', 'c')
+    const sorted = sortByQuality(merged)
+    expect(sorted[0].name).toBe('MitMail')
+    expect(sorted[1].name).toBe('OhneMail')
   })
 })

@@ -36,6 +36,10 @@ export function hasContact(c: DiscoveredCandidate): boolean {
   return Boolean((c.website || '').trim() || (c.phone || '').trim())
 }
 
+export function hasEmail(c: DiscoveredCandidate): boolean {
+  return Boolean((c.email || '').trim())
+}
+
 /**
  * Führt neue Treffer in den Bestand ein — Cross-Kombi-Dedup über candidateKey.
  * Erster Fund gewinnt; ein späterer Duplikat-Treffer (bereits als Lead) hebt
@@ -66,6 +70,16 @@ export function sortByContact(cands: BatchCandidate[]): BatchCandidate[] {
     const ca = hasContact(a) ? 0 : 1
     const cb = hasContact(b) ? 0 : 1
     if (ca !== cb) return ca - cb
+    return (a.name || '').localeCompare(b.name || '')
+  })
+}
+
+/** E-Mail-Leads zuerst (alle Treffer haben bereits Website); dann stabil nach Name. */
+export function sortByQuality(cands: BatchCandidate[]): BatchCandidate[] {
+  return [...cands].sort((a, b) => {
+    const ea = hasEmail(a) ? 0 : 1
+    const eb = hasEmail(b) ? 0 : 1
+    if (ea !== eb) return ea - eb
     return (a.name || '').localeCompare(b.name || '')
   })
 }

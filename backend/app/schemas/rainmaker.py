@@ -89,6 +89,7 @@ class LeadDiscoveryRequest(BaseModel):
 class DiscoveredCandidate(BaseModel):
     name: str
     website: str | None = None
+    email: str | None = None
     phone: str | None = None
     address: str | None = None
     source: str

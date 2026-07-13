@@ -484,11 +484,11 @@ async def discover_preview(
             if data.source == "google":
                 if not places_key:
                     raise HTTPException(status_code=503, detail="Google Places ist nicht konfiguriert — API-Key in den Einstellungen hinterlegen.")
-                candidates = await discover_google(data.category, data.location, data.limit, places_key, client)
-                # Eigenen Nutzungszähler hochzählen (nur bei echter Google-Suche).
+                candidates, api_calls = await discover_google(data.category, data.location, data.limit, places_key, client)
+                # Eigenen Nutzungszähler um die echten API-Calls (Text-Suche + Details) hochzählen.
                 if app_row is not None:
                     app_row.google_places_period, app_row.google_places_calls = bump(
-                        app_row.google_places_period, app_row.google_places_calls)
+                        app_row.google_places_period, app_row.google_places_calls, increment=api_calls)
             else:
                 candidates = await discover_osm(data.category, data.location, data.limit, client)
     except ValueError as exc:
@@ -532,6 +532,7 @@ async def discover_import(
         db.add(RainmakerLead(
             company=(c.name or "").strip()[:255] or "Unbenannt",
             website=(c.website or "").strip()[:500] or None,
+            email=(c.email or "").strip()[:255] or None,
             phone=(c.phone or "").strip()[:50] or None,
             address=(c.address or "").strip() or None,
             source=c.source,

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { discoverLeadsPreview, importDiscoveredLeads } from '../../api/rainmaker'
 import {
-  hasContact, mergeCandidates, parseLocations, sortByContact,
+  hasEmail, mergeCandidates, parseLocations, sortByQuality,
   type BatchCandidate,
 } from './discoveryBatch'
 
@@ -47,7 +47,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
   const [combos, setCombos] = useState<Combo[] | null>(null)
   const [candidates, setCandidates] = useState<BatchCandidate[]>([])
   const [running, setRunning] = useState(false)
-  const [onlyContact, setOnlyContact] = useState(false)
+  const [onlyEmail, setOnlyEmail] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
   const cancelRef = useRef(false)
@@ -102,9 +102,9 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
   }
 
   const visible = useMemo(() => {
-    const list = onlyContact ? candidates.filter(hasContact) : candidates
-    return sortByContact(list)
-  }, [candidates, onlyContact])
+    const list = onlyEmail ? candidates.filter(hasEmail) : candidates
+    return sortByQuality(list)
+  }, [candidates, onlyEmail])
 
   const toggle = (key: string) => setSelected((prev) => {
     const next = new Set(prev)
@@ -236,10 +236,11 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
           <>
             <div className="flex flex-wrap items-center gap-3 mb-2 text-sm">
               <span className="text-text"><strong>{candidates.length}</strong> Firmen</span>
+              <span className="text-success text-xs" title="Nur Firmen mit erreichbarer Website (Live-Check); OSM zusätzlich mit E-Mail. Keine Karteileichen.">✓ geprüft</span>
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
               <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
-                <input type="checkbox" checked={onlyContact} onChange={(e) => setOnlyContact(e.target.checked)} />
-                nur mit Website/Telefon
+                <input type="checkbox" checked={onlyEmail} onChange={(e) => setOnlyEmail(e.target.checked)} />
+                nur mit E-Mail
               </label>
               <span className="ml-auto text-text-muted text-xs">{selected.size} ausgewählt</span>
             </div>
@@ -250,7 +251,8 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
                     <th className="px-3 py-2 w-8"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} /></th>
                     <th className="px-2 py-2">Firma</th>
                     <th className="px-2 py-2">Branche · Ort</th>
-                    <th className="px-2 py-2">Website / Tel.</th>
+                    <th className="px-2 py-2">Website</th>
+                    <th className="px-2 py-2">E-Mail</th>
                     <th className="px-2 py-2 w-16"></th>
                   </tr>
                 </thead>
@@ -263,9 +265,12 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
                                onChange={() => toggle(c._key)} onClick={(e) => e.stopPropagation()} />
                       </td>
                       <td className="px-2 py-1.5 text-text truncate max-w-[200px]">{c.name}</td>
-                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[170px]">{c._combo}</td>
-                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[170px]">
-                        {c.website ? c.website.replace(/^https?:\/\//, '') : (c.phone || '–')}
+                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">{c._combo}</td>
+                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">
+                        {c.website ? c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : (c.phone || '–')}
+                      </td>
+                      <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">
+                        {c.email ? <span className="text-success">✉ {c.email}</span> : <span className="opacity-50">–</span>}
                       </td>
                       <td className="px-2 py-1.5 text-[10px]">
                         {c.duplicate && <span className="text-warning font-medium">vorhanden</span>}
