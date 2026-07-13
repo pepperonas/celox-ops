@@ -632,6 +632,7 @@ async def list_duplicates(db: AsyncSession = Depends(get_db)) -> list[DuplicateG
 @router.post("/duplicates/merge", response_model=DuplicateMergeResult)
 async def merge_duplicates(
     data: DuplicateMergeRequest,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> DuplicateMergeResult:
     """Führt die angegebenen Duplikate in den Keeper zusammen: **Aktivitäten
@@ -646,11 +647,11 @@ async def merge_duplicates(
 
     keeper = (await db.execute(
         select(RainmakerLead).where(RainmakerLead.id == data.keeper_id))).scalar_one_or_none()
-    if keeper is None:
+    if keeper is None or keeper.owner_id != current_user.id:
         raise HTTPException(status_code=404, detail="Behalten-Lead nicht gefunden.")
     dups = list((await db.execute(
         select(RainmakerLead).where(RainmakerLead.id.in_(dup_ids)))).scalars().all())
-    if len(dups) != len(dup_ids):
+    if len(dups) != len(dup_ids) or any(d.owner_id != current_user.id for d in dups):
         raise HTTPException(status_code=404, detail="Mindestens ein Duplikat wurde nicht gefunden.")
 
     # Fehlende Keeper-Felder aus den Duplikaten sammeln (nur LEERE füllen).
@@ -669,17 +670,24 @@ async def merge_duplicates(
     for d in dups:
         db.expunge(d)
 
-    # 1) Aktivitäten auf den Keeper umhängen (Historie retten). Owner-scoped via Events.
+    # 1) Aktivitäten auf den Keeper umhängen (Historie retten). Bulk-DML wird von
+    #    den Tenancy-Events NICHT gescopet → owner_id explizit in die WHERE (Defense-
+    #    in-Depth: destruktive Ops dürfen nie fremde Zeilen treffen, unabhängig von
+    #    der Vorab-Validierung).
     moved = (await db.execute(
-        sa_update(RainmakerActivity).where(RainmakerActivity.lead_id.in_(dup_ids))
-        .values(lead_id=keeper.id).execution_options(synchronize_session=False)
+        sa_update(RainmakerActivity).where(
+            RainmakerActivity.lead_id.in_(dup_ids),
+            RainmakerActivity.owner_id == current_user.id,
+        ).values(lead_id=keeper.id).execution_options(synchronize_session=False)
     )).rowcount or 0
 
     # 2) Duplikate löschen (Aktivitäten zeigen nicht mehr auf sie → DB-Cascade leer,
-    #    Unique-Keys werden frei).
+    #    Unique-Keys werden frei). owner_id explizit als harte Grenze.
     await db.execute(
-        sa_delete(RainmakerLead).where(RainmakerLead.id.in_(dup_ids))
-        .execution_options(synchronize_session=False))
+        sa_delete(RainmakerLead).where(
+            RainmakerLead.id.in_(dup_ids),
+            RainmakerLead.owner_id == current_user.id,
+        ).execution_options(synchronize_session=False))
 
     # 3) Leere Keeper-Felder anwenden (jetzt kollisionsfrei) + Tags-Union.
     for f, v in fill.items():
