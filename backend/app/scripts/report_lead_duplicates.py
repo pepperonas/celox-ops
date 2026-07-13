@@ -19,6 +19,9 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from app.database import async_session_factory
+# RainmakerActivity muss mit-registriert sein, sonst kann der Mapper die
+# String-Relationship auf RainmakerLead nicht auflösen (Standalone-Script).
+from app.models.rainmaker_activity import RainmakerActivity  # noqa: F401
 from app.models.rainmaker_lead import RainmakerLead
 from app.services.lead_dedup import norm_company, norm_email, norm_website
 
