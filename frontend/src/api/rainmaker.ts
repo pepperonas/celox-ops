@@ -27,6 +27,16 @@ import type {
   PaginatedResponse,
 } from '../types'
 
+export async function verifyLeadEmail(id: string): Promise<RainmakerLead> {
+  const response = await api.post(`/rainmaker/leads/${id}/verify-email`)
+  return response.data
+}
+
+export async function verifyAllEmails(onlyUnchecked = true): Promise<{ checked: number; by_status: Record<string, number> }> {
+  const response = await api.post('/rainmaker/leads/verify-emails', null, { params: { only_unchecked: onlyUnchecked } })
+  return response.data
+}
+
 export async function getDuplicates(): Promise<DuplicateGroup[]> {
   const response = await api.get('/rainmaker/duplicates')
   return response.data

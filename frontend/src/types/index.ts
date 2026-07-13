@@ -503,6 +503,8 @@ export interface RainmakerLead {
   notes: string | null
   created_at: string
   updated_at: string
+  // E-Mail-Qualitätsurteil (SMTP-frei): valid/role/disposable/no_mx/invalid_syntax/unknown/null
+  email_status: string | null
   // Activation-engine computed fields
   next_action_type: RainmakerActivityType | null
   next_action_due: string | null

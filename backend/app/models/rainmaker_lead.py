@@ -64,6 +64,9 @@ class RainmakerLead(OwnedMixin, Base):
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # E-Mail-Qualitätsurteil (services/email_verifier.py): valid/role/disposable/
+    # no_mx/invalid_syntax/unknown/None(=ungeprüft). SMTP-frei.
+    email_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[RainmakerLeadStatus] = mapped_column(
         Enum(RainmakerLeadStatus, native_enum=False, length=20),
         default=RainmakerLeadStatus.new,

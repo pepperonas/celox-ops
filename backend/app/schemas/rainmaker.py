@@ -174,6 +174,7 @@ class RainmakerLeadResponse(RainmakerLeadBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    email_status: str | None = None      # valid/role/disposable/no_mx/invalid_syntax/unknown/None
 
     # Computed "next action" summary (populated by the activation engine).
     next_action_type: RainmakerActivityType | None = None

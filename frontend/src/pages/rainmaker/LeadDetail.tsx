@@ -11,7 +11,9 @@ import {
   createLeadActivity,
   deleteActivity,
   getRainmakerTemplates,
+  verifyLeadEmail,
 } from '../../api/rainmaker'
+import { emailStatusInfo } from './emailStatus'
 import { toastWithUndo } from '../../utils/undoToast'
 import type { RainmakerTemplate } from '../../types'
 import { formatCurrency, formatDate } from '../../utils/formatters'
@@ -31,6 +33,7 @@ export default function RainmakerLeadDetail() {
   const { id } = useParams()
   const navigate = useAppNavigate()
   const [lead, setLead] = useState<RainmakerLead | null>(null)
+  const [verifyingEmail, setVerifyingEmail] = useState(false)
   const [activities, setActivities] = useState<RainmakerActivity[]>([])
   const [templates, setTemplates] = useState<RainmakerTemplate[]>([])
   const [showDelete, setShowDelete] = useState(false)
@@ -85,6 +88,20 @@ export default function RainmakerLeadDetail() {
     window.open(linkedInUrl, '_blank', 'noopener')
   }
 
+  const handleVerifyEmail = async () => {
+    if (!lead?.email) return
+    setVerifyingEmail(true)
+    try {
+      const updated = await verifyLeadEmail(lead.id)
+      setLead(updated)
+      const info = emailStatusInfo(updated.email_status)
+      toast.success(`E-Mail geprüft: ${info?.label ?? updated.email_status ?? 'unbekannt'}`)
+    } catch {
+      toast.error('E-Mail-Prüfung fehlgeschlagen.')
+    }
+    setVerifyingEmail(false)
+  }
+
   const handleDelete = async () => {
     if (!id) return
     try {
@@ -128,11 +145,21 @@ export default function RainmakerLeadDetail() {
   const nextAction = planned[0] ?? null
   const isClosed = ['won', 'lost', 'dormant'].includes(lead.status)
 
+  const emailInfo = emailStatusInfo(lead.email_status)
   const rows: [string, React.ReactNode][] = [
     ['Ansprechpartner', lead.contact_name || '–'],
     ['Funktion', lead.role || '–'],
     ['Telefon', lead.phone || '–'],
-    ['E-Mail', lead.email || '–'],
+    ['E-Mail', lead.email ? (
+      <span className="inline-flex items-center gap-2 flex-wrap">
+        <span>{lead.email}</span>
+        {emailInfo && <span className={`text-xs font-medium ${emailInfo.cls}`} title={emailInfo.title}>{emailInfo.label}</span>}
+        <button onClick={handleVerifyEmail} disabled={verifyingEmail}
+                className="text-xs text-accent hover:text-accent-hover disabled:opacity-50">
+          {verifyingEmail ? 'prüfe…' : 'prüfen'}
+        </button>
+      </span>
+    ) : '–'],
     ['Website', lead.website ? <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="text-accent hover:text-accent-hover">{lead.website.replace(/^https?:\/\//, '')}</a> : '–'],
     ['Quelle', lead.source || '–'],
     ['Geschätzter Wert', lead.value_estimate != null ? formatCurrency(lead.value_estimate) : '–'],

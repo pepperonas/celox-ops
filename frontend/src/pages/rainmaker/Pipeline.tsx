@@ -15,6 +15,7 @@ import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
 import { sourceBadge, sourceKey } from './leadSources'
+import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
 
 export default function RainmakerPipeline() {
   const navigate = useAppNavigate()
@@ -25,6 +26,7 @@ export default function RainmakerPipeline() {
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)  // null = alle
+  const [emailFilter, setEmailFilter] = useState<string | null>(null)    // null|deliverable|problem
   // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
   const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
@@ -85,10 +87,21 @@ export default function RainmakerPipeline() {
     return [...map.values()].sort((a, b) => b.count - a.count)
   }, [leads])
 
-  const filteredLeads = useMemo(
-    () => (sourceFilter === null ? leads : leads.filter((l) => sourceKey(l.source) === sourceFilter)),
-    [leads, sourceFilter],
-  )
+  const filteredLeads = useMemo(() => {
+    let ls = sourceFilter === null ? leads : leads.filter((l) => sourceKey(l.source) === sourceFilter)
+    if (emailFilter === 'deliverable') ls = ls.filter((l) => l.email_status && EMAIL_DELIVERABLE.has(l.email_status))
+    else if (emailFilter === 'problem') ls = ls.filter((l) => l.email_status && EMAIL_PROBLEM.has(l.email_status))
+    return ls
+  }, [leads, sourceFilter, emailFilter])
+
+  const emailCounts = useMemo(() => {
+    let deliverable = 0, problem = 0
+    for (const l of leads) {
+      if (l.email_status && EMAIL_DELIVERABLE.has(l.email_status)) deliverable++
+      else if (l.email_status && EMAIL_PROBLEM.has(l.email_status)) problem++
+    }
+    return { deliverable, problem }
+  }, [leads])
 
   if (loading) return <LoadingIndicator />
 
@@ -134,6 +147,28 @@ export default function RainmakerPipeline() {
                 : { borderColor: 'var(--c-border,#333)' }}
             >
               {key} ({count})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* E-Mail-Qualitätsfilter (nur wenn Urteile vorliegen). */}
+      {(emailCounts.deliverable > 0 || emailCounts.problem > 0) && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-text-muted mr-1">E-Mail:</span>
+          {([
+            { key: null, label: 'Alle' },
+            { key: 'deliverable', label: `✓ Zustellbar (${emailCounts.deliverable})` },
+            { key: 'problem', label: `⚠ Problem (${emailCounts.problem})` },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={label}
+              onClick={() => setEmailFilter(key)}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short ${
+                emailFilter === key ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+              }`}
+            >
+              {label}
             </button>
           ))}
         </div>

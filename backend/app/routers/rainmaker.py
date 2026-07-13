@@ -85,6 +85,7 @@ from app.services.lead_dedup import (
     norm_website,
 )
 from app.services.duplicate_finder import find_groups
+from app.services.email_verifier import verify_email
 from app.services.lead_discovery import discover_google, discover_osm
 from app.services.linkedin_import import (
     normalize_profile_url,
@@ -206,6 +207,7 @@ async def create_lead(
                 "existing_company": dup.company,
             })
     lead = RainmakerLead(**data.model_dump())
+    lead.email_status = await _email_status_for(data.email)
     if not await _safe_flush_lead(db, lead):
         # Race: ein paralleler Insert war schneller.
         raise HTTPException(status_code=409, detail={
@@ -223,8 +225,12 @@ async def update_lead(
     db: AsyncSession = Depends(get_db),
 ) -> RainmakerLeadResponse:
     lead = await _get_lead_or_404(lead_id, db)
-    for key, value in data.model_dump(exclude_unset=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
         setattr(lead, key, value)
+    # E-Mail geändert → Qualitätsurteil neu berechnen
+    if "email" in update_data:
+        lead.email_status = await _email_status_for(lead.email)
     await db.flush()
     await db.refresh(lead)
     return lead_response(lead)
@@ -237,6 +243,41 @@ async def delete_lead(
 ) -> None:
     lead = await _get_lead_or_404(lead_id, db)
     await db.delete(lead)
+
+
+@router.post("/leads/verify-emails")
+async def verify_all_emails(
+    only_unchecked: bool = Query(True, description="Nur noch nicht geprüfte Leads"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Backfill/Sammelprüfung: berechnet das E-Mail-Urteil für alle Leads mit
+    E-Mail (owner-scoped via Events), geteilter MX-Cache. Report als Zähler."""
+    q = select(RainmakerLead).where(
+        RainmakerLead.email.isnot(None), RainmakerLead.email != "")
+    if only_unchecked:
+        q = q.where(RainmakerLead.email_status.is_(None))
+    leads = (await db.execute(q)).scalars().all()
+    cache: dict = {}
+    counts: dict[str, int] = {}
+    for lead in leads:
+        st = await _email_status_for(lead.email, cache)
+        lead.email_status = st
+        counts[st or "none"] = counts.get(st or "none", 0) + 1
+    await db.flush()
+    return {"checked": len(leads), "by_status": counts}
+
+
+@router.post("/leads/{lead_id}/verify-email", response_model=RainmakerLeadResponse)
+async def verify_lead_email(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> RainmakerLeadResponse:
+    """E-Mail eines einzelnen Leads (neu) prüfen und Urteil speichern."""
+    lead = await _get_lead_or_404(lead_id, db)
+    lead.email_status = await _email_status_for(lead.email)
+    await db.flush()
+    await db.refresh(lead)
+    return lead_response(lead)
 
 
 # --------------------------------------------------------------------------- #
@@ -287,6 +328,15 @@ async def find_duplicate_lead(
     if w and lead.website_norm == w:
         return lead, MATCH_WEBSITE
     return lead, MATCH_NAME
+
+
+async def _email_status_for(email: str | None, cache: dict | None = None) -> str | None:
+    """E-Mail-Qualitätsurteil (SMTP-frei) für einen Lead — None ohne E-Mail.
+    `cache` teilt MX-Ergebnisse über einen Import-Batch."""
+    if not (email or "").strip():
+        return None
+    check = await verify_email(email, mx_cache=cache)
+    return check.status.value
 
 
 async def _safe_flush_lead(db: AsyncSession, lead: RainmakerLead) -> bool:
@@ -412,6 +462,7 @@ async def linkedin_import(
 
     created = skipped = enriched = activities_created = 0
     skipped_rows: list[ImportSkipped] = []
+    mx_cache: dict = {}
     for row in data.rows:
         fields = row_to_lead_fields(row.model_dump())
         full_name = f"{row.first_name} {row.last_name}".strip()
@@ -427,6 +478,7 @@ async def linkedin_import(
             # Fehlende Felder nachtragen
             if not existing_lead.email and fields.get("email"):
                 existing_lead.email = fields["email"]
+                existing_lead.email_status = await _email_status_for(fields["email"], mx_cache)
                 changed = True
             if not existing_lead.role and fields.get("role"):
                 existing_lead.role = fields["role"]
@@ -470,6 +522,7 @@ async def linkedin_import(
             fields["notes"] = note
         fields["status"] = row.status
         lead = RainmakerLead(**fields)
+        lead.email_status = await _email_status_for(fields.get("email"), mx_cache)
         if not await _safe_flush_lead(db, lead):
             # Race gegen einen parallelen Import (partieller Unique-Index) → Skip
             skipped += 1
@@ -575,6 +628,7 @@ async def discover_import(
     idx, _ = await _build_dedup_index(db)
     created = skipped = 0
     skipped_rows: list[ImportSkipped] = []
+    mx_cache: dict = {}
     tags = ["discovery"]
     if data.segment:
         tags.append(data.segment)
@@ -595,6 +649,7 @@ async def discover_import(
             tags=tags,
             notes=f"Automatisch gefunden ({c.source})" + (f" · Ref {c.source_ref}" if c.source_ref else ""),
         )
+        new_lead.email_status = await _email_status_for(c.email, mx_cache)
         if not await _safe_flush_lead(db, new_lead):
             skipped += 1
             skipped_rows.append(ImportSkipped(name=c.name or "?", reason=MATCH_WEBSITE))
