@@ -22,8 +22,26 @@ import type {
   LinkedInImportResult,
   DiscoveredCandidate,
   LeadDiscoveryResult,
+  DuplicateGroup,
+  DuplicateMergeResult,
   PaginatedResponse,
 } from '../types'
+
+export async function getDuplicates(): Promise<DuplicateGroup[]> {
+  const response = await api.get('/rainmaker/duplicates')
+  return response.data
+}
+
+export async function mergeDuplicates(
+  keeperId: string,
+  duplicateIds: string[],
+): Promise<DuplicateMergeResult> {
+  const response = await api.post('/rainmaker/duplicates/merge', {
+    keeper_id: keeperId,
+    duplicate_ids: duplicateIds,
+  })
+  return response.data
+}
 
 export async function getRainmakerLeads(params?: {
   page?: number

@@ -648,6 +648,33 @@ export interface LinkedInImportResult {
   skipped_rows?: ImportSkipped[]
 }
 
+export interface DuplicateMember {
+  id: string
+  company: string
+  contact_name: string | null
+  role: string | null
+  email: string | null
+  website: string | null
+  phone: string | null
+  source: string | null
+  status: string
+  activity_count: number
+  created_at: string | null
+}
+
+export interface DuplicateGroup {
+  score: number
+  reason: 'same_person' | 'firm' | 'colleagues' | 'fuzzy' | string
+  suggested_keeper_id: string
+  members: DuplicateMember[]
+}
+
+export interface DuplicateMergeResult {
+  keeper: RainmakerLead
+  merged_leads: number
+  moved_activities: number
+}
+
 export interface RainmakerGoalProgress {
   id: string
   name: string

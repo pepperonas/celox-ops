@@ -117,6 +117,41 @@ class LeadDiscoveryResult(BaseModel):
     skipped_rows: list[ImportSkipped] = []
 
 
+# --------------------------------------------------------------------------- #
+#  Duplikat-Bereinigung (find + merge)
+# --------------------------------------------------------------------------- #
+class DuplicateMember(BaseModel):
+    id: uuid.UUID
+    company: str
+    contact_name: str | None = None
+    role: str | None = None
+    email: str | None = None
+    website: str | None = None
+    phone: str | None = None
+    source: str | None = None
+    status: RainmakerLeadStatus
+    activity_count: int = 0
+    created_at: datetime | None = None
+
+
+class DuplicateGroup(BaseModel):
+    score: float                       # Konfidenz 0..1
+    reason: str                        # same_person | firm | colleagues | fuzzy
+    suggested_keeper_id: uuid.UUID
+    members: list[DuplicateMember]
+
+
+class DuplicateMergeRequest(BaseModel):
+    keeper_id: uuid.UUID
+    duplicate_ids: list[uuid.UUID]
+
+
+class DuplicateMergeResult(BaseModel):
+    keeper: "RainmakerLeadResponse"
+    merged_leads: int
+    moved_activities: int
+
+
 class RainmakerLeadUpdate(BaseModel):
     company: str | None = None
     contact_name: str | None = None
@@ -404,3 +439,8 @@ class RainmakerDreamResponse(BaseModel):
     pace_per_day: Decimal         # Ø €/day over the last 28 days (mode-aware)
     projected_date: DateType | None = None
     days_active: int
+
+
+# Forward-Ref: DuplicateMergeResult referenziert die später definierte
+# RainmakerLeadResponse — hier auflösen.
+DuplicateMergeResult.model_rebuild()

@@ -43,6 +43,7 @@ const RainmakerDreamGoal = lazy(() => import('./pages/rainmaker/DreamGoal'))
 const RainmakerLeadForm = lazy(() => import('./pages/rainmaker/LeadForm'))
 const RainmakerLeadDetail = lazy(() => import('./pages/rainmaker/LeadDetail'))
 const RainmakerStatistics = lazy(() => import('./pages/rainmaker/Statistics'))
+const RainmakerDuplicates = lazy(() => import('./pages/rainmaker/Duplicates'))
 const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
 
 export default function App() {
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/rainmaker/pipeline" element={<RainmakerPipeline />} />
           <Route path="/rainmaker/traumziel" element={<RainmakerDreamGoal />} />
           <Route path="/rainmaker/statistik" element={<RainmakerStatistics />} />
+          <Route path="/rainmaker/duplikate" element={<RainmakerDuplicates />} />
           <Route path="/rainmaker/einstellungen" element={<RainmakerSettingsPage />} />
           <Route path="/rainmaker/leads/neu" element={<RainmakerLeadForm />} />
           <Route path="/rainmaker/leads/:id" element={<RainmakerLeadDetail />} />

@@ -14,7 +14,9 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +39,9 @@ from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
     DiscoveredCandidate,
+    DuplicateGroup,
+    DuplicateMergeRequest,
+    DuplicateMergeResult,
     ImportSkipped,
     LeadDiscoveryImportRequest,
     LeadDiscoveryRequest,
@@ -79,6 +84,7 @@ from app.services.lead_dedup import (
     norm_name,
     norm_website,
 )
+from app.services.duplicate_finder import find_groups
 from app.services.lead_discovery import discover_google, discover_osm
 from app.services.linkedin_import import (
     normalize_profile_url,
@@ -598,6 +604,92 @@ async def discover_import(
     await db.flush()
     return LeadDiscoveryResult(
         created=created, skipped_duplicates=skipped, skipped_rows=skipped_rows)
+
+
+# --------------------------------------------------------------------------- #
+#  Duplikat-Bereinigung (find + merge)
+# --------------------------------------------------------------------------- #
+@router.get("/duplicates", response_model=list[DuplicateGroup])
+async def list_duplicates(db: AsyncSession = Depends(get_db)) -> list[DuplicateGroup]:
+    """Kandidaten-Duplikatgruppen des Owners (nach Konfidenz sortiert). Da E-Mail
+    und Website bereits pro Owner unique sind, greift dies über den Firmennamen
+    (exakt + fuzzy) und gewichtet nach Typ (dieselbe Person / Firma doppelt /
+    evtl. Kollegen). Legt oder löscht nichts."""
+    leads = (await db.execute(select(RainmakerLead))).scalars().all()
+    counts = dict((await db.execute(
+        select(RainmakerActivity.lead_id, func.count())
+        .group_by(RainmakerActivity.lead_id)
+    )).all())
+    dicts = [{
+        "id": le.id, "company": le.company, "contact_name": le.contact_name,
+        "role": le.role, "email": le.email, "website": le.website, "phone": le.phone,
+        "source": le.source, "status": le.status, "created_at": le.created_at,
+        "activity_count": counts.get(le.id, 0),
+    } for le in leads]
+    return [DuplicateGroup(**g) for g in find_groups(dicts)]
+
+
+@router.post("/duplicates/merge", response_model=DuplicateMergeResult)
+async def merge_duplicates(
+    data: DuplicateMergeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> DuplicateMergeResult:
+    """Führt die angegebenen Duplikate in den Keeper zusammen: **Aktivitäten
+    werden umgehängt** (Historie bleibt), leere Keeper-Felder aus den Duplikaten
+    gefüllt, Tags vereinigt — dann die Duplikate gelöscht. Eine Transaktion,
+    owner-scoped. Bewusst OHNE Undo (Klartext-Bestätigung im Frontend)."""
+    dup_ids = list(dict.fromkeys(data.duplicate_ids))   # dedupe, Reihenfolge erhalten
+    if not dup_ids:
+        raise HTTPException(status_code=400, detail="Keine Duplikate angegeben.")
+    if data.keeper_id in dup_ids:
+        raise HTTPException(status_code=400, detail="Der Behalten-Lead darf nicht in den Duplikaten stehen.")
+
+    keeper = (await db.execute(
+        select(RainmakerLead).where(RainmakerLead.id == data.keeper_id))).scalar_one_or_none()
+    if keeper is None:
+        raise HTTPException(status_code=404, detail="Behalten-Lead nicht gefunden.")
+    dups = list((await db.execute(
+        select(RainmakerLead).where(RainmakerLead.id.in_(dup_ids)))).scalars().all())
+    if len(dups) != len(dup_ids):
+        raise HTTPException(status_code=404, detail="Mindestens ein Duplikat wurde nicht gefunden.")
+
+    # Fehlende Keeper-Felder aus den Duplikaten sammeln (nur LEERE füllen).
+    fill: dict = {}
+    tags = set(keeper.tags or [])
+    for d in dups:
+        for f in ("contact_name", "role", "email", "website", "phone", "address"):
+            if not getattr(keeper, f) and f not in fill and getattr(d, f):
+                fill[f] = getattr(d, f)
+        if keeper.value_estimate is None and "value_estimate" not in fill and d.value_estimate is not None:
+            fill["value_estimate"] = d.value_estimate
+        tags.update(d.tags or [])
+
+    # Aus dem Identity-Map nehmen → kein ORM-Cascade auf die (gleich umgehängten)
+    # Aktivitäten, keine Stale-State-Überraschungen.
+    for d in dups:
+        db.expunge(d)
+
+    # 1) Aktivitäten auf den Keeper umhängen (Historie retten). Owner-scoped via Events.
+    moved = (await db.execute(
+        sa_update(RainmakerActivity).where(RainmakerActivity.lead_id.in_(dup_ids))
+        .values(lead_id=keeper.id).execution_options(synchronize_session=False)
+    )).rowcount or 0
+
+    # 2) Duplikate löschen (Aktivitäten zeigen nicht mehr auf sie → DB-Cascade leer,
+    #    Unique-Keys werden frei).
+    await db.execute(
+        sa_delete(RainmakerLead).where(RainmakerLead.id.in_(dup_ids))
+        .execution_options(synchronize_session=False))
+
+    # 3) Leere Keeper-Felder anwenden (jetzt kollisionsfrei) + Tags-Union.
+    for f, v in fill.items():
+        setattr(keeper, f, v)
+    if tags != set(keeper.tags or []):
+        keeper.tags = sorted(tags)
+    await db.flush()
+    await db.refresh(keeper)
+    return DuplicateMergeResult(
+        keeper=lead_response(keeper), merged_leads=len(dups), moved_activities=moved)
 
 
 # --------------------------------------------------------------------------- #
