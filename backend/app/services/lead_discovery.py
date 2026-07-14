@@ -214,10 +214,15 @@ async def _overpass_query(query: str, client) -> dict:
     ) from last
 
 
-async def discover_osm(category: str, location: str, limit, client) -> list[dict]:
+async def discover_osm(category: str, location: str, limit, client, *,
+                       verify_websites: bool = True) -> list[dict]:
     query = build_overpass_query(resolve_tags(category), location, limit)
     data = await _overpass_query(query, client)
     rows = filter_osm_quality(parse_overpass(data))          # Website + E-Mail Pflicht
+    if not verify_websites:
+        # KI-Pfad: kein HTTP-Live-Check (blockt/timeoutet zu viele echte Firmen aus
+        # dem Rechenzentrum) — die E-Mail-MX-Prüfung im Aufrufer ist das Signal.
+        return rows
     return await filter_live_websites(rows, client)          # tote Domains raus
 
 

@@ -25,8 +25,8 @@ from app.services.lead_discovery import SEGMENT_LABELS, discover_osm, website_al
 class DiscoveryCaps:
     max_segments: int = 4
     max_cities: int = 4
-    per_combo_limit: int = 40
-    max_candidates: int = 60       # Obergrenze für Verifikations-/Rank-Aufwand
+    per_combo_limit: int = 150     # Overpass-Objekte je Kombi (nur ~15 % haben Website+E-Mail)
+    max_candidates: int = 80       # Obergrenze für MX-/Rank-Aufwand
     max_web_uses: int = 5          # max Web-Suchen pro Lauf
 
 
@@ -119,7 +119,9 @@ async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
     for seg in (params.get("segments") or [])[:caps.max_segments]:
         for city in (params.get("cities") or [])[:caps.max_cities]:
             try:
-                rows = await discover_osm(seg, city, caps.per_combo_limit, http_client)
+                # Kein HTTP-Live-Check (zu viele False-Negatives) — MX-Prüfung unten ist das Gate.
+                rows = await discover_osm(seg, city, caps.per_combo_limit, http_client,
+                                          verify_websites=False)
             except ValueError as exc:
                 notes.append(f"{seg} · {city}: {exc}")
                 continue

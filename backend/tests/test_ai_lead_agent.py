@@ -76,7 +76,7 @@ def test_rank_empty_candidates():
 
 # ---- gather_candidates ---------------------------------------------------- #
 def test_gather_dedups_and_keeps_only_deliverable(monkeypatch):
-    async def fake_discover(seg, city, limit, client):
+    async def fake_discover(seg, city, limit, client, **kw):
         return [
             {"name": "X", "website": "https://x.de", "email": "a@x.de"},
             {"name": "X-dup", "website": "https://www.x.de/", "email": "a@x.de"},  # gleiche Domain → dedup
@@ -95,7 +95,7 @@ def test_gather_dedups_and_keeps_only_deliverable(monkeypatch):
 
 
 def test_gather_handles_overpass_error(monkeypatch):
-    async def boom(seg, city, limit, client):
+    async def boom(seg, city, limit, client, **kw):
         raise ValueError("Overpass überlastet")
     monkeypatch.setattr(agent, "discover_osm", boom)
     notes: list[str] = []
