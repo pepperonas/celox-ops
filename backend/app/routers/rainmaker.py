@@ -726,7 +726,7 @@ async def ai_discover_preview(
     try:
         async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
             result = await run_ai_discovery(
-                brief=data.brief, model=model,
+                brief=data.brief, model=model, use_web_search=data.use_web_search,
                 api_key=settings.ANTHROPIC_API_KEY, http_client=client)
     except Exception as exc:  # noqa: BLE001
         db.add(AiLeadRun(brief=data.brief[:2000], model=model,

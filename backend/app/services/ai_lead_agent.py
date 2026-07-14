@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from app.services.ai_pricing import DEFAULT_MODEL, Usage
 from app.services.email_verifier import verify_email
 from app.services.lead_dedup import norm_name, norm_website
-from app.services.lead_discovery import SEGMENT_LABELS, discover_osm
+from app.services.lead_discovery import SEGMENT_LABELS, discover_osm, website_alive
 
 
 @dataclass
@@ -146,6 +146,92 @@ async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
 
 
 # --------------------------------------------------------------------------- #
+#  Web-Suche (opt-in) — zusätzliche Quellen über OSM hinaus
+# --------------------------------------------------------------------------- #
+_WEB_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "companies": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "website": {"type": "string"},
+                    "email": {"type": "string", "description": "E-Mail, z. B. aus dem Impressum."},
+                    "address": {"type": "string"},
+                },
+                "required": ["name", "website", "email"],
+            },
+        },
+    },
+    "required": ["companies"],
+}
+
+_WEB_SYSTEM = (
+    "Du recherchierst reale Firmen im Web für die Akquise. Nutze die Websuche. Gib über das "
+    "Tool found_companies NUR echte Einzelfirmen zurück, die eine EIGENE Website UND eine "
+    "E-Mail-Adresse haben (z. B. aus dem Impressum) — KEINE Verzeichnis-/Portal-/Vergleichsseiten. "
+    "Achte auf die Fit-Kriterien und Ausschlüsse des Nutzers."
+)
+
+
+async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryCaps,
+                     usage: Usage, notes: list[str]) -> list[dict]:
+    """Web-Recherche via Claude (server-seitige Websuche) → strukturierte Firmen,
+    dann deterministisch verifiziert (Website live + E-Mail-MX). Defensiv: fällt
+    die Websuche aus, gibt es eine Notiz statt eines Fehlers."""
+    seg = ", ".join(SEGMENT_LABELS.get(s, s) for s in (params.get("segments") or [])) or "Firmen"
+    cities = ", ".join(params.get("cities") or []) or "Deutschland"
+    user = (
+        f"Finde bis zu {caps.max_candidates} {seg} in {cities}.\n"
+        f"Fit-Kriterien: {params.get('fit_criteria') or '-'}\nAusschluss: {params.get('exclude') or '-'}\n"
+        "Gib je Firma: Name, Website, E-Mail (aus dem Impressum), Adresse."
+    )
+    try:
+        resp = await ai.messages.create(
+            model=model, max_tokens=4000,
+            system=[{"type": "text", "text": _WEB_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": user}],
+            tools=[
+                {"type": "web_search_20250305", "name": "web_search", "max_uses": caps.max_web_uses},
+                {"name": "found_companies", "description": "Gefundene Firmen strukturiert zurückgeben.",
+                 "input_schema": _WEB_SCHEMA},
+            ],
+            tool_choice={"type": "auto"},
+        )
+    except Exception as exc:  # noqa: BLE001 — Websuche darf den Lauf nicht kippen
+        notes.append(f"Web-Suche nicht verfügbar: {type(exc).__name__}")
+        return []
+    usage.add(getattr(resp, "usage", None))
+
+    raw: list[dict] = []
+    for block in getattr(resp, "content", []):
+        if getattr(block, "type", None) == "tool_use" and getattr(block, "name", None) == "found_companies":
+            raw = list(block.input.get("companies") or [])
+
+    out: list[dict] = []
+    mx_cache: dict = {}
+    for co in raw[:caps.max_candidates]:
+        name = (co.get("name") or "").strip()
+        website = (co.get("website") or "").strip()
+        email = (co.get("email") or "").strip()
+        if not (name and website and email):
+            continue
+        if not await website_alive(website, http_client):
+            continue
+        ev = await verify_email(email, mx_cache=mx_cache)
+        if ev.status.value not in ("valid", "role"):
+            continue
+        out.append({
+            "name": name, "website": website, "email": email, "phone": None,
+            "address": (co.get("address") or "").strip() or None,
+            "source": "Web", "source_ref": None, "email_status": ev.status.value,
+        })
+    return out
+
+
+# --------------------------------------------------------------------------- #
 #  Stufe C — ranken + begründen
 # --------------------------------------------------------------------------- #
 _RANK_SCHEMA = {
@@ -202,10 +288,10 @@ async def rank_candidates(ai, model: str, brief: str, params: dict,
 #  Orchestrierung
 # --------------------------------------------------------------------------- #
 async def run_ai_discovery(*, brief: str, model: str, api_key: str, http_client,
-                           caps: DiscoveryCaps | None = None, ai=None) -> AiDiscoveryResult:
-    """Vollständiger Lauf. `ai` (Anthropic-Client) ist für Tests injizierbar;
-    sonst wird er aus `api_key` erzeugt. Web-Suche ist in v1 noch nicht aktiv
-    (OSM-first); die Struktur ist darauf vorbereitet."""
+                           use_web_search: bool = False, caps: DiscoveryCaps | None = None,
+                           ai=None) -> AiDiscoveryResult:
+    """Vollständiger Lauf. `ai` (Anthropic-Client) ist für Tests injizierbar.
+    OSM ist immer die Basis; `use_web_search` ergänzt Web-Treffer (opt-in, kostet)."""
     caps = caps or DiscoveryCaps()
     usage = Usage()
     notes: list[str] = []
@@ -214,5 +300,16 @@ async def run_ai_discovery(*, brief: str, model: str, api_key: str, http_client,
 
     params = await parse_brief(ai, model, brief, usage)
     cands = await gather_candidates(params, http_client, caps, notes)
+
+    if use_web_search:
+        web = await gather_web(ai, model, params, http_client, caps, usage, notes)
+        seen = {_cand_key(c) for c in cands}
+        for w in web:
+            k = _cand_key(w)
+            if k and k not in seen:
+                seen.add(k)
+                cands.append(w)
+        cands = cands[:caps.max_candidates]
+
     ranked = await rank_candidates(ai, model, brief, params, cands, usage)
     return AiDiscoveryResult(candidates=ranked, params=params, usage=usage, notes=notes)

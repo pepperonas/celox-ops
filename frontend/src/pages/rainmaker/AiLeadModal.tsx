@@ -15,6 +15,7 @@ const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2,
 
 export default function AiLeadModal({ onClose, onImported }: Props) {
   const [brief, setBrief] = useState('')
+  const [useWeb, setUseWeb] = useState(false)
   const [running, setRunning] = useState(false)
   const [res, setRes] = useState<AiDiscoverResponse | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -24,7 +25,7 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
     if (!brief.trim() || running) return
     setRunning(true); setRes(null); setSelected(new Set())
     try {
-      const r = await aiDiscoverPreview(brief.trim())
+      const r = await aiDiscoverPreview(brief.trim(), useWeb)
       setRes(r)
       // Nicht-Duplikate vorauswählen
       setSelected(new Set(r.candidates.map((c, i) => (c.duplicate ? -1 : i)).filter((i) => i >= 0)))
@@ -78,11 +79,15 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
           rows={3}
           className="w-full bg-surface-container border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted resize-none mb-2"
         />
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <button onClick={run} disabled={running || !brief.trim()} className="btn-primary text-sm disabled:opacity-40">
             {running ? 'KI recherchiert…' : 'Leads finden'}
           </button>
-          <span className="text-xs text-text-muted">OpenStreetMap + Fit-Bewertung durch Claude. Website & E-Mail werden geprüft.</span>
+          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer" title="Zusätzlich das Web durchsuchen — findet mehr, kostet aber API-Geld (~0,30–0,60 $/Lauf).">
+            <input type="checkbox" checked={useWeb} onChange={(e) => setUseWeb(e.target.checked)} />
+            auch Web durchsuchen <span className="text-[10px]">(kostet mehr)</span>
+          </label>
+          <span className="text-xs text-text-muted">OSM{useWeb ? ' + Web' : ''} · Website &amp; E-Mail geprüft · Fit-Ranking durch Claude.</span>
         </div>
 
         {res?.notes?.length ? (
