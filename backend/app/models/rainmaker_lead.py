@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Computed, DateTime, Enum, Index, Numeric, String, Text, func, text,
+    Computed, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, func, text,
 )
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
@@ -80,6 +80,10 @@ class RainmakerLead(OwnedMixin, Base):
         nullable=False,
     )
     value_estimate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # Verknüpfter Kunde nach Lead→Kunde-Konvertierung (nullable).
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     # Stored as a JSON array of strings.
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

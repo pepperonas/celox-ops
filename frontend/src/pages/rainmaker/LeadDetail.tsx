@@ -13,6 +13,7 @@ import {
   getRainmakerTemplates,
   verifyLeadEmail,
 } from '../../api/rainmaker'
+import { analyzeWebsite, type AnalyzeResult } from '../../api/leads'
 import { emailStatusInfo } from './emailStatus'
 import { toastWithUndo } from '../../utils/undoToast'
 import type { RainmakerTemplate } from '../../types'
@@ -39,6 +40,20 @@ export default function RainmakerLeadDetail() {
   const [showDelete, setShowDelete] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
+
+  const handleAnalyze = async () => {
+    if (!lead?.website) return
+    setAnalyzing(true)
+    setAnalysis(null)
+    try {
+      setAnalysis(await analyzeWebsite(lead.website))
+    } catch {
+      toast.error('Website konnte nicht geprüft werden.')
+    }
+    setAnalyzing(false)
+  }
 
   const load = useCallback(async () => {
     if (!id) return
@@ -107,7 +122,7 @@ export default function RainmakerLeadDetail() {
     try {
       await deleteRainmakerLead(id)
       toast.success('Lead gelöscht.')
-      navigate('/rainmaker/pipeline', { back: true })
+      navigate('/pipeline', { back: true })
     } catch {
       toast.error('Fehler beim Löschen.')
     }
@@ -172,7 +187,7 @@ export default function RainmakerLeadDetail() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/rainmaker/pipeline', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
+          <button onClick={() => navigate('/pipeline', { back: true })} className="md-state grid place-items-center w-10 h-10 rounded-full text-text-muted hover:text-text transition-colors duration-short">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
             </svg>
@@ -182,7 +197,12 @@ export default function RainmakerLeadDetail() {
           <span className={`shrink-0 text-xs font-medium px-3 py-1 rounded-full ${PRIORITY_TONE[lead.priority]}`}>{PRIORITY_LABELS[lead.priority]}</span>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => navigate(`/rainmaker/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
+          {lead.customer_id ? (
+            <button onClick={() => navigate(`/kunden/${lead.customer_id}`)} className="btn-secondary">→ Kunde ansehen</button>
+          ) : (
+            <button onClick={() => navigate(`/kunden/neu?fromLead=${lead.id}`)} className="btn-primary">Als Kunde anlegen</button>
+          )}
+          <button onClick={() => navigate(`/pipeline/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
           <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>
         </div>
       </div>
@@ -206,6 +226,12 @@ export default function RainmakerLeadDetail() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={ACTIVITY_TYPE_ICONS.visit} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Route
           </a>
+        )}
+        {lead.website && (
+          <button onClick={handleAnalyze} disabled={analyzing} className="btn-secondary !py-2.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            {analyzing ? 'Prüfe…' : 'Website prüfen'}
+          </button>
         )}
         {linkedInUrl && (
           <a href={linkedInUrl} target="_blank" rel="noreferrer" className="btn-secondary !py-2.5">
@@ -240,6 +266,43 @@ export default function RainmakerLeadDetail() {
           </select>
         )}
       </div>
+
+      {/* Website-Analyse (Kaltakquise-Argumente) */}
+      {analysis && (
+        <div className="rounded-card p-5 mb-6 border border-border bg-surface-container">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <span
+                className="inline-flex items-center justify-center w-12 h-12 rounded-full text-lg font-bold"
+                style={{
+                  backgroundColor: (analysis.score >= 80 ? '#22c55e' : analysis.score >= 50 ? '#f59e0b' : '#ef4444') + '26',
+                  color: analysis.score >= 80 ? '#22c55e' : analysis.score >= 50 ? '#f59e0b' : '#ef4444',
+                }}
+              >{analysis.score}</span>
+              <div>
+                <p className="text-text font-medium">Website-Score</p>
+                <p className="text-xs text-text-muted">Ladezeit {(analysis.load_time_ms / 1000).toFixed(1)}s · {analysis.findings.length} Befunde</p>
+              </div>
+            </div>
+            <button onClick={() => setAnalysis(null)} className="text-text-muted hover:text-text text-xs">Schließen</button>
+          </div>
+          {analysis.findings.length === 0 ? (
+            <p className="text-sm text-text-muted">Keine Auffälligkeiten gefunden.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {analysis.findings.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <span
+                    className="shrink-0 mt-1.5 w-2 h-2 rounded-full"
+                    style={{ backgroundColor: f.severity === 'critical' ? '#ef4444' : f.severity === 'warning' ? '#f59e0b' : '#60a5fa' }}
+                  />
+                  <span className="text-text-muted"><span className="text-text font-medium">{f.category}:</span> {f.issue}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Next action */}
       <div className={`rounded-card p-5 mb-6 border ${nextAction ? 'bg-surface-container border-border' : isClosed ? 'bg-surface-container border-border' : 'bg-danger/10 border-danger/40'}`}>

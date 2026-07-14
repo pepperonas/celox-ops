@@ -1,14 +1,12 @@
 import { NavLink } from 'react-router-dom'
 
 const items = [
-  { to: '/rainmaker', label: 'Heute', end: true },
-  { to: '/rainmaker/traumziel', label: '🏁 Traumziel', end: false },
-  { to: '/rainmaker/statistik', label: 'Statistik', end: false },
-  { to: '/rainmaker/einstellungen', label: 'Einstellungen', end: false },
+  { to: '/pipeline', label: 'Pipeline', end: true },
+  { to: '/pipeline/duplikate', label: 'Duplikate', end: false },
 ]
 
-/** MD3 pill sub-navigation shared across all Rainmaker screens. */
-export default function RainmakerNav() {
+/** MD3 pill sub-navigation für die Pipeline (Akquise). */
+export default function PipelineNav() {
   return (
     <div className="flex gap-1 mb-5 p-1 rounded-full bg-surface-high w-fit">
       {items.map((item) => (

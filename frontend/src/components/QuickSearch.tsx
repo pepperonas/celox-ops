@@ -35,7 +35,7 @@ const ACTIONS: { keywords: string; title: string; subtitle: string; url: string 
   { keywords: 'neuer auftrag create order angebot', title: 'Neuen Auftrag anlegen', subtitle: 'Auftrags-Formular öffnen', url: '/auftraege/neu' },
   { keywords: 'neuer vertrag create contract', title: 'Neuen Vertrag anlegen', subtitle: 'Vertrags-Formular öffnen', url: '/vertraege/neu' },
   { keywords: 'neue ausgabe create expense spese beleg', title: 'Neue Ausgabe', subtitle: 'Ausgaben-Formular öffnen', url: '/ausgaben/neu' },
-  { keywords: 'neuer lead create lead vorgemerkt', title: 'Neuen Lead anlegen', subtitle: 'Lead-Formular öffnen', url: '/vorgemerkt/neu' },
+  { keywords: 'neuer lead create lead pipeline akquise', title: 'Neuen Lead anlegen', subtitle: 'Lead-Formular öffnen', url: '/pipeline/leads/neu' },
   { keywords: 'kalender termine fristen', title: 'Kalender öffnen', subtitle: 'Termine und Fristen', url: '/kalender' },
   { keywords: 'kanban board', title: 'Kanban-Board öffnen', subtitle: 'Aufträge visuell', url: '/kanban' },
   { keywords: 'aufgaben tasks todo', title: 'Aufgaben anzeigen', subtitle: 'Anstehende Aktionen', url: '/aufgaben' },

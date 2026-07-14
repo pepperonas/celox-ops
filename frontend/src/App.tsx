@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -23,8 +23,11 @@ const ContractDetail = lazy(() => import('./pages/contracts/ContractDetail'))
 const InvoiceList = lazy(() => import('./pages/invoices/InvoiceList'))
 const InvoiceForm = lazy(() => import('./pages/invoices/InvoiceForm'))
 const InvoiceDetail = lazy(() => import('./pages/invoices/InvoiceDetail'))
-const LeadList = lazy(() => import('./pages/leads/LeadList'))
-const LeadForm = lazy(() => import('./pages/leads/LeadForm'))
+// Alte /rainmaker/leads/:id-URLs auf die neue Pipeline umleiten (Params erhalten).
+function LeadUrlRedirect({ edit }: { edit?: boolean }) {
+  const { id } = useParams()
+  return <Navigate to={`/pipeline/leads/${id}${edit ? '/bearbeiten' : ''}`} replace />
+}
 const Tasks = lazy(() => import('./pages/Tasks'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 const TimeTracking = lazy(() => import('./pages/TimeTracking'))
@@ -68,15 +71,26 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          {/* Rainmaker = Motivations-/Coaching-Ebene */}
           <Route path="/rainmaker" element={<RainmakerToday />} />
-          <Route path="/rainmaker/pipeline" element={<RainmakerPipeline />} />
           <Route path="/rainmaker/traumziel" element={<RainmakerDreamGoal />} />
           <Route path="/rainmaker/statistik" element={<RainmakerStatistics />} />
-          <Route path="/rainmaker/duplikate" element={<RainmakerDuplicates />} />
           <Route path="/rainmaker/einstellungen" element={<RainmakerSettingsPage />} />
-          <Route path="/rainmaker/leads/neu" element={<RainmakerLeadForm />} />
-          <Route path="/rainmaker/leads/:id" element={<RainmakerLeadDetail />} />
-          <Route path="/rainmaker/leads/:id/bearbeiten" element={<RainmakerLeadForm />} />
+          {/* Pipeline = eigenständige Akquise (Lead-Gewinnung + Nachverfolgung) */}
+          <Route path="/pipeline" element={<RainmakerPipeline />} />
+          <Route path="/pipeline/duplikate" element={<RainmakerDuplicates />} />
+          <Route path="/pipeline/leads/neu" element={<RainmakerLeadForm />} />
+          <Route path="/pipeline/leads/:id" element={<RainmakerLeadDetail />} />
+          <Route path="/pipeline/leads/:id/bearbeiten" element={<RainmakerLeadForm />} />
+          {/* Alt-URLs weiterleiten (Bookmarks/Deep-Links) */}
+          <Route path="/rainmaker/pipeline" element={<Navigate to="/pipeline" replace />} />
+          <Route path="/rainmaker/duplikate" element={<Navigate to="/pipeline/duplikate" replace />} />
+          <Route path="/rainmaker/leads/neu" element={<Navigate to="/pipeline/leads/neu" replace />} />
+          <Route path="/rainmaker/leads/:id" element={<LeadUrlRedirect />} />
+          <Route path="/rainmaker/leads/:id/bearbeiten" element={<LeadUrlRedirect edit />} />
+          {/* „Vorgemerkt" abgelöst durch die Pipeline */}
+          <Route path="/vorgemerkt" element={<Navigate to="/pipeline" replace />} />
+          <Route path="/vorgemerkt/neu" element={<Navigate to="/pipeline/leads/neu" replace />} />
           <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kalender" element={<Calendar />} />
           <Route path="/zeiterfassung" element={<TimeTracking />} />
@@ -96,9 +110,6 @@ export default function App() {
           <Route path="/rechnungen/neu" element={<InvoiceForm />} />
           <Route path="/rechnungen/:id" element={<InvoiceDetail />} />
           <Route path="/rechnungen/:id/bearbeiten" element={<InvoiceForm />} />
-          <Route path="/vorgemerkt" element={<LeadList />} />
-          <Route path="/vorgemerkt/neu" element={<LeadForm />} />
-          <Route path="/vorgemerkt/:id/bearbeiten" element={<LeadForm />} />
           <Route path="/ausgaben" element={<ExpenseList />} />
           <Route path="/ausgaben/neu" element={<ExpenseForm />} />
           <Route path="/ausgaben/:id/bearbeiten" element={<ExpenseForm />} />

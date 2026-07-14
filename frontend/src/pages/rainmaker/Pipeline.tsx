@@ -6,8 +6,7 @@ import { toastWithUndo } from '../../utils/undoToast'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
-import RainmakerNav from './RainmakerNav'
-import RainmakerFooter from './RainmakerFooter'
+import PipelineNav from './PipelineNav'
 import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
 import AiLeadModal from './AiLeadModal'
@@ -194,7 +193,7 @@ export default function RainmakerPipeline() {
           </>
         }
       />
-      <RainmakerNav />
+      <PipelineNav />
 
       {/* Quellen-Filter: eine Chip pro vorkommender Quelle + „Alle". */}
       {sourceChips.length > 1 && (
@@ -297,7 +296,7 @@ export default function RainmakerPipeline() {
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', lead.id); e.dataTransfer.effectAllowed = 'move'; setDraggingId(lead.id) }}
                     onDragEnd={() => { setDraggingId(null); setDragOver(null) }}
-                    onClick={() => navigate(`/rainmaker/leads/${lead.id}`)}
+                    onClick={() => navigate(`/pipeline/leads/${lead.id}`)}
                     className={`bg-surface-high border border-border rounded-md p-3 cursor-grab active:cursor-grabbing transition-all duration-short hover:border-text-muted hover:shadow-elev-1 ${
                       draggingId === lead.id ? 'opacity-40' : ''
                     }`}
@@ -342,7 +341,7 @@ export default function RainmakerPipeline() {
         })}
       </div>
 
-      <Fab onClick={() => navigate('/rainmaker/leads/neu')} label="Neuer Lead" />
+      <Fab onClick={() => navigate('/pipeline/leads/neu')} label="Neuer Lead" />
       {showImport && (
         <LinkedInImportModal
           onClose={() => setShowImport(false)}
@@ -361,7 +360,6 @@ export default function RainmakerPipeline() {
           onImported={(created) => { setShowAi(false); handleImported(created) }}
         />
       )}
-      <RainmakerFooter />
     </div>
   )
 }

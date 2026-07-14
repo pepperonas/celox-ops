@@ -59,6 +59,11 @@ export async function verifyLeadEmail(id: string): Promise<RainmakerLead> {
   return response.data
 }
 
+export async function linkLeadCustomer(leadId: string, customerId: string): Promise<RainmakerLead> {
+  const response = await api.post(`/rainmaker/leads/${leadId}/link-customer`, { customer_id: customerId })
+  return response.data
+}
+
 export async function verifyAllEmails(onlyUnchecked = true): Promise<{ checked: number; by_status: Record<string, number> }> {
   const response = await api.post('/rainmaker/leads/verify-emails', null, { params: { only_unchecked: onlyUnchecked } })
   return response.data

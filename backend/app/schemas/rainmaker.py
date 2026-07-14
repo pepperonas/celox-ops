@@ -244,6 +244,10 @@ class RainmakerLeadUpdate(BaseModel):
     notes: str | None = None
 
 
+class LeadLinkCustomer(BaseModel):
+    customer_id: uuid.UUID
+
+
 class RainmakerLeadResponse(RainmakerLeadBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -251,6 +255,7 @@ class RainmakerLeadResponse(RainmakerLeadBase):
     created_at: datetime
     updated_at: datetime
     email_status: str | None = None      # valid/role/disposable/no_mx/invalid_syntax/unknown/None
+    customer_id: uuid.UUID | None = None  # verknüpfter Kunde (nach Konvertierung)
 
     # Computed "next action" summary (populated by the activation engine).
     next_action_type: RainmakerActivityType | None = None

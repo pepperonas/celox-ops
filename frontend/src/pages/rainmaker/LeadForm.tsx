@@ -92,7 +92,7 @@ export default function RainmakerLeadForm() {
       if (isEdit) {
         await updateRainmakerLead(id!, payload)
         toast.success('Lead aktualisiert.')
-        navigate(`/rainmaker/leads/${id}`)
+        navigate(`/pipeline/leads/${id}`)
       } else {
         let created
         try {
@@ -109,7 +109,7 @@ export default function RainmakerLeadForm() {
           }
         }
         toast.success('Lead erstellt.')
-        navigate(`/rainmaker/leads/${created.id}`)
+        navigate(`/pipeline/leads/${created.id}`)
       }
     } catch {
       toast.error('Fehler beim Speichern.')

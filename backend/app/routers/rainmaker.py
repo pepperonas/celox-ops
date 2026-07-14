@@ -51,6 +51,7 @@ from app.schemas.rainmaker import (
     DuplicateMergeRequest,
     DuplicateMergeResult,
     ImportSkipped,
+    LeadLinkCustomer,
     LeadDiscoveryImportRequest,
     LeadDiscoveryRequest,
     LeadDiscoveryResult,
@@ -276,6 +277,29 @@ async def verify_all_emails(
         counts[st or "none"] = counts.get(st or "none", 0) + 1
     await db.flush()
     return {"checked": len(leads), "by_status": counts}
+
+
+@router.post("/leads/{lead_id}/link-customer", response_model=RainmakerLeadResponse)
+async def link_lead_customer(
+    lead_id: uuid.UUID,
+    data: LeadLinkCustomer,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> RainmakerLeadResponse:
+    """Verknüpft den Lead mit einem (gerade angelegten) Kunden und setzt ihn auf
+    „won" — der Abschluss der Lead→Kunde-Konvertierung."""
+    from app.models.customer import Customer
+
+    lead = await _get_lead_or_404(lead_id, db)
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == data.customer_id))).scalar_one_or_none()
+    if customer is None or customer.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden.")
+    lead.customer_id = customer.id
+    lead.status = RainmakerLeadStatus.won
+    await db.flush()
+    await db.refresh(lead)
+    return lead_response(lead)
 
 
 @router.post("/leads/{lead_id}/verify-email", response_model=RainmakerLeadResponse)

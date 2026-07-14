@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
-import RainmakerNav from './RainmakerNav'
+import PipelineNav from './PipelineNav'
 import { getDuplicates, mergeDuplicatesBatch } from '../../api/rainmaker'
 import type { DuplicateGroup, DuplicateMember } from '../../types'
 import { buildBatchSummary, type BatchSummary, type GroupSel } from './batchSummary'
@@ -210,7 +210,7 @@ export default function Duplicates() {
   return (
     <div className="max-w-3xl">
       <PageHeader title="Duplikate" subtitle="Ähnliche Leads prüfen und zusammenführen" />
-      <RainmakerNav />
+      <PipelineNav />
 
       {groups === null && <p className="text-text-muted text-sm py-8 text-center">Lade…</p>}
       {groups !== null && visible.length === 0 && (

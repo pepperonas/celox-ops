@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import { getCustomer, createCustomer, updateCustomer } from '../../api/customers'
+import { getRainmakerLead, linkLeadCustomer } from '../../api/rainmaker'
 import { getTrackerProjects, createTrackerShare, type TrackerProject } from '../../api/tokenTracker'
 import { getGithubRepos } from '../../api/github'
 import type { GithubRepo } from '../../types'
@@ -29,6 +30,8 @@ const emptyForm: CustomerCreate = {
 export default function CustomerForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromLead = searchParams.get('fromLead')
   const isEdit = Boolean(id)
   const [form, setForm] = useState<CustomerCreate>(emptyForm)
   const [loading, setLoading] = useState(false)
@@ -57,6 +60,24 @@ export default function CustomerForm() {
       )
     }
   }, [id])
+
+  // Vorbefüllung aus einem Pipeline-Lead („Als Kunde anlegen"): Firmenname → name+company,
+  // Kontaktfelder übernehmen; nach dem Speichern wird der Lead verknüpft + auf „won" gesetzt.
+  useEffect(() => {
+    if (id || !fromLead) return
+    getRainmakerLead(fromLead).then((l) => {
+      setForm((prev) => ({
+        ...prev,
+        name: l.contact_name || l.company,
+        company: l.company,
+        email: l.email ?? '',
+        phone: l.phone ?? '',
+        address: l.address ?? '',
+        website: l.website ?? '',
+        notes: l.notes ?? '',
+      }))
+    }).catch(() => toast.error('Lead konnte nicht geladen werden.'))
+  }, [id, fromLead])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -145,7 +166,14 @@ export default function CustomerForm() {
         navigate(`/kunden/${id}`)
       } else {
         const created = await createCustomer(form)
-        toast.success('Kunde erstellt.')
+        if (fromLead) {
+          try {
+            await linkLeadCustomer(fromLead, created.id)
+          } catch {
+            toast.error('Kunde erstellt, aber Lead-Verknüpfung fehlgeschlagen.')
+          }
+        }
+        toast.success(fromLead ? 'Kunde erstellt & Lead auf „Gewonnen" gesetzt.' : 'Kunde erstellt.')
         navigate(`/kunden/${created.id}`)
       }
     } catch {

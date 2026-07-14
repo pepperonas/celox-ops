@@ -505,6 +505,8 @@ export interface RainmakerLead {
   updated_at: string
   // E-Mail-Qualitätsurteil (SMTP-frei): valid/role/disposable/no_mx/invalid_syntax/unknown/null
   email_status: string | null
+  // Verknüpfter Kunde nach Lead→Kunde-Konvertierung
+  customer_id: string | null
   // Activation-engine computed fields
   next_action_type: RainmakerActivityType | null
   next_action_due: string | null
