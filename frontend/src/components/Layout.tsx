@@ -304,22 +304,23 @@ export default function Layout() {
           <h1 className="text-base font-semibold text-text hidden lg:block shrink-0">
             Verwaltung
           </h1>
-          <button
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-            className="md-state flex-1 max-w-md flex items-center gap-2 text-xs h-10 px-4 bg-surface-high rounded-full text-text-muted transition-colors duration-short"
-            title="Globale Suche (Ctrl+K / ⌘K)"
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span className="flex-1 text-left">Suchen…</span>
-            <kbd className="hidden sm:inline text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
-          </button>
-          {/* Spacer schiebt den Abmelden-Button bündig an den rechten Rand */}
-          <div className="flex-1" aria-hidden="true" />
+          {/* Mittlere Region füllt den gesamten Freiraum → Abmelden bündig rechts */}
+          <div className="flex-1 min-w-0 flex">
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+              className="md-state w-full max-w-md flex items-center gap-2 text-xs h-10 px-4 bg-surface-high rounded-full text-text-muted transition-colors duration-short"
+              title="Globale Suche (Ctrl+K / ⌘K)"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="flex-1 text-left">Suchen…</span>
+              <kbd className="hidden sm:inline text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
+            </button>
+          </div>
           <button
             onClick={handleLogout}
-            className="btn-secondary text-xs !py-2 !px-3 shrink-0"
+            className="btn-secondary text-xs !py-2 !px-3 shrink-0 ml-auto"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
