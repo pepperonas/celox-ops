@@ -2,9 +2,25 @@
 LinkedIn-Zeitstempel-Parsing. Die URL-/Namens-Normalisierung der Duplikat-
 Erkennung ist nach `services/lead_dedup.py` gewandert (siehe test_lead_dedup.py)."""
 from datetime import timezone
+from types import SimpleNamespace
 
-from app.routers.rainmaker import _parse_linkedin_datetime
+from app.routers.rainmaker import _parse_linkedin_datetime, merge_overlap_indices
 from app.services.lead_dedup import norm_name, norm_website
+
+
+def _m(keeper, dups):
+    return SimpleNamespace(keeper_id=keeper, duplicate_ids=dups)
+
+
+def test_merge_overlap_indices():
+    # keine Überschneidung → leer
+    assert merge_overlap_indices([_m("a", ["b"]), _m("c", ["d"])]) == set()
+    # Lead "b" einmal Duplikat, einmal Keeper → beide Gruppen kollidieren
+    assert merge_overlap_indices([_m("a", ["b"]), _m("b", ["e"])]) == {0, 1}
+    # gleiches Duplikat in zwei Gruppen
+    assert merge_overlap_indices([_m("a", ["x"]), _m("c", ["x"])]) == {0, 1}
+    # nur Gruppe 1 & 2 überlappen (dup "d")
+    assert merge_overlap_indices([_m("a", ["b"]), _m("c", ["d"]), _m("e", ["d"])]) == {1, 2}
 
 
 def test_parse_linkedin_datetime_valid():

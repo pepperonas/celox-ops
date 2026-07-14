@@ -211,6 +211,22 @@ class DuplicateMergeResult(BaseModel):
     moved_activities: int
 
 
+class DuplicateMergeBatchRequest(BaseModel):
+    merges: list[DuplicateMergeRequest]
+
+
+class DuplicateMergeFailure(BaseModel):
+    company: str
+    reason: str
+
+
+class DuplicateMergeBatchResult(BaseModel):
+    merged_groups: int
+    deleted_leads: int
+    moved_activities: int
+    failed: list[DuplicateMergeFailure] = []
+
+
 class RainmakerLeadUpdate(BaseModel):
     company: str | None = None
     contact_name: str | None = None

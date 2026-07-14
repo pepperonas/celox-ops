@@ -24,6 +24,7 @@ import type {
   LeadDiscoveryResult,
   DuplicateGroup,
   DuplicateMergeResult,
+  DuplicateMergeBatchResult,
   AiDiscoverResponse,
   AiUsageResponse,
   PaginatedResponse,
@@ -76,6 +77,13 @@ export async function mergeDuplicates(
     keeper_id: keeperId,
     duplicate_ids: duplicateIds,
   })
+  return response.data
+}
+
+export async function mergeDuplicatesBatch(
+  merges: { keeper_id: string; duplicate_ids: string[] }[],
+): Promise<DuplicateMergeBatchResult> {
+  const response = await api.post('/rainmaker/duplicates/merge-batch', { merges })
   return response.data
 }
 

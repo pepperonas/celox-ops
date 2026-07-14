@@ -45,6 +45,9 @@ from app.schemas.rainmaker import (
     AiUsageResponse,
     DiscoveredCandidate,
     DuplicateGroup,
+    DuplicateMergeBatchRequest,
+    DuplicateMergeBatchResult,
+    DuplicateMergeFailure,
     DuplicateMergeRequest,
     DuplicateMergeResult,
     ImportSkipped,
@@ -812,32 +815,42 @@ async def list_duplicates(db: AsyncSession = Depends(get_db)) -> list[DuplicateG
     return [DuplicateGroup(**g) for g in find_groups(dicts)]
 
 
-@router.post("/duplicates/merge", response_model=DuplicateMergeResult)
-async def merge_duplicates(
-    data: DuplicateMergeRequest,
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> DuplicateMergeResult:
-    """Führt die angegebenen Duplikate in den Keeper zusammen: **Aktivitäten
-    werden umgehängt** (Historie bleibt), leere Keeper-Felder aus den Duplikaten
-    gefüllt, Tags vereinigt — dann die Duplikate gelöscht. Eine Transaktion,
-    owner-scoped. Bewusst OHNE Undo (Klartext-Bestätigung im Frontend)."""
-    dup_ids = list(dict.fromkeys(data.duplicate_ids))   # dedupe, Reihenfolge erhalten
+def merge_overlap_indices(merges: list) -> set:
+    """Indizes der Merges, deren Leads (Keeper oder Duplikat) in mehr als einer
+    Gruppe vorkommen — die dürfen im Batch nicht ausgeführt werden. Rein/testbar
+    (jedes Element braucht `.keeper_id` + `.duplicate_ids`)."""
+    lead_to_group: dict = {}
+    overlap: set = set()
+    for i, m in enumerate(merges):
+        for lid in {m.keeper_id, *m.duplicate_ids}:
+            if lid in lead_to_group and lead_to_group[lid] != i:
+                overlap.add(i)
+                overlap.add(lead_to_group[lid])
+            lead_to_group[lid] = i
+    return overlap
+
+
+async def _merge_lead_group(db: AsyncSession, current_user, keeper_id: uuid.UUID,
+                            duplicate_ids: list) -> tuple[RainmakerLead, int, int]:
+    """Führt `duplicate_ids` in den Keeper zusammen (Aktivitäten umhängen, leere
+    Keeper-Felder + Tags übernehmen, Duplikate löschen). Owner-scoped validiert;
+    `ValueError` bei Validierungsfehler. Ruft KEIN flush/refresh (macht der
+    Aufrufer — beim Batch im SAVEPOINT). Rückgabe: (keeper, moved, deleted)."""
+    dup_ids = list(dict.fromkeys(duplicate_ids))
     if not dup_ids:
-        raise HTTPException(status_code=400, detail="Keine Duplikate angegeben.")
-    if data.keeper_id in dup_ids:
-        raise HTTPException(status_code=400, detail="Der Behalten-Lead darf nicht in den Duplikaten stehen.")
+        raise ValueError("Keine Duplikate angegeben.")
+    if keeper_id in dup_ids:
+        raise ValueError("Der Behalten-Lead darf nicht in den Duplikaten stehen.")
 
     keeper = (await db.execute(
-        select(RainmakerLead).where(RainmakerLead.id == data.keeper_id))).scalar_one_or_none()
+        select(RainmakerLead).where(RainmakerLead.id == keeper_id))).scalar_one_or_none()
     if keeper is None or keeper.owner_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Behalten-Lead nicht gefunden.")
+        raise ValueError("Behalten-Lead nicht gefunden.")
     dups = list((await db.execute(
         select(RainmakerLead).where(RainmakerLead.id.in_(dup_ids)))).scalars().all())
     if len(dups) != len(dup_ids) or any(d.owner_id != current_user.id for d in dups):
-        raise HTTPException(status_code=404, detail="Mindestens ein Duplikat wurde nicht gefunden.")
+        raise ValueError("Mindestens ein Duplikat wurde nicht gefunden.")
 
-    # Fehlende Keeper-Felder aus den Duplikaten sammeln (nur LEERE füllen).
     fill: dict = {}
     tags = set(keeper.tags or [])
     for d in dups:
@@ -848,39 +861,95 @@ async def merge_duplicates(
             fill["value_estimate"] = d.value_estimate
         tags.update(d.tags or [])
 
-    # Aus dem Identity-Map nehmen → kein ORM-Cascade auf die (gleich umgehängten)
-    # Aktivitäten, keine Stale-State-Überraschungen.
     for d in dups:
-        db.expunge(d)
+        db.expunge(d)   # kein ORM-Cascade auf die gleich umgehängten Aktivitäten
 
-    # 1) Aktivitäten auf den Keeper umhängen (Historie retten). Bulk-DML wird von
-    #    den Tenancy-Events NICHT gescopet → owner_id explizit in die WHERE (Defense-
-    #    in-Depth: destruktive Ops dürfen nie fremde Zeilen treffen, unabhängig von
-    #    der Vorab-Validierung).
+    # Aktivitäten auf den Keeper umhängen (Historie retten); owner_id explizit (Bulk-
+    # DML wird von den Tenancy-Events nicht gescopet).
     moved = (await db.execute(
         sa_update(RainmakerActivity).where(
             RainmakerActivity.lead_id.in_(dup_ids),
             RainmakerActivity.owner_id == current_user.id,
         ).values(lead_id=keeper.id).execution_options(synchronize_session=False)
     )).rowcount or 0
-
-    # 2) Duplikate löschen (Aktivitäten zeigen nicht mehr auf sie → DB-Cascade leer,
-    #    Unique-Keys werden frei). owner_id explizit als harte Grenze.
+    # Duplikate löschen (Unique-Keys werden frei), dann leere Keeper-Felder + Tags.
     await db.execute(
         sa_delete(RainmakerLead).where(
             RainmakerLead.id.in_(dup_ids),
             RainmakerLead.owner_id == current_user.id,
         ).execution_options(synchronize_session=False))
-
-    # 3) Leere Keeper-Felder anwenden (jetzt kollisionsfrei) + Tags-Union.
     for f, v in fill.items():
         setattr(keeper, f, v)
     if tags != set(keeper.tags or []):
         keeper.tags = sorted(tags)
+    return keeper, moved, len(dups)
+
+
+@router.post("/duplicates/merge", response_model=DuplicateMergeResult)
+async def merge_duplicates(
+    data: DuplicateMergeRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DuplicateMergeResult:
+    """Führt die angegebenen Duplikate in den Keeper zusammen (Aktivitäten bleiben,
+    leere Felder/Tags übernommen, Duplikate gelöscht). Owner-scoped, ohne Undo."""
+    try:
+        keeper, moved, deleted = await _merge_lead_group(
+            db, current_user, data.keeper_id, data.duplicate_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     await db.flush()
     await db.refresh(keeper)
     return DuplicateMergeResult(
-        keeper=lead_response(keeper), merged_leads=len(dups), moved_activities=moved)
+        keeper=lead_response(keeper), merged_leads=deleted, moved_activities=moved)
+
+
+@router.post("/duplicates/merge-batch", response_model=DuplicateMergeBatchResult)
+async def merge_duplicates_batch(
+    data: DuplicateMergeBatchRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DuplicateMergeBatchResult:
+    """Mehrere Gruppen in einem Rutsch zusammenführen. **Kollisionsprüfung vorab**
+    (kein Lead darf in mehreren Merges vorkommen) + **jeder Merge isoliert im
+    SAVEPOINT** → ein Fehler stoppt die anderen nicht, wird aber berichtet."""
+    if not data.merges:
+        raise HTTPException(status_code=400, detail="Keine Gruppen angegeben.")
+    if len(data.merges) > 500:
+        raise HTTPException(status_code=413, detail="Zu viele Gruppen (max. 500).")
+
+    # Firmennamen der Keeper für verständliche Fehlermeldungen.
+    keeper_ids = [m.keeper_id for m in data.merges]
+    names = dict((await db.execute(
+        select(RainmakerLead.id, RainmakerLead.company)
+        .where(RainmakerLead.id.in_(keeper_ids)))).all())
+
+    # Vorab-Overlap: ein Lead (Keeper oder Duplikat) darf nur in EINER Gruppe stehen.
+    overlap = merge_overlap_indices(data.merges)
+
+    merged_groups = deleted_total = moved_total = 0
+    failed: list[DuplicateMergeFailure] = []
+    for i, m in enumerate(data.merges):
+        company = names.get(m.keeper_id) or "?"
+        if i in overlap:
+            failed.append(DuplicateMergeFailure(
+                company=company, reason="Lead kommt in mehreren Gruppen vor — übersprungen"))
+            continue
+        try:
+            async with db.begin_nested():
+                _keeper, moved, deleted = await _merge_lead_group(
+                    db, current_user, m.keeper_id, m.duplicate_ids)
+                await db.flush()
+            merged_groups += 1
+            deleted_total += deleted
+            moved_total += moved
+        except (ValueError, IntegrityError) as exc:
+            failed.append(DuplicateMergeFailure(company=company, reason=str(exc)[:150]))
+
+    await db.flush()
+    return DuplicateMergeBatchResult(
+        merged_groups=merged_groups, deleted_leads=deleted_total,
+        moved_activities=moved_total, failed=failed)
 
 
 # --------------------------------------------------------------------------- #

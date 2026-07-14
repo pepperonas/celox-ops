@@ -726,6 +726,18 @@ export interface DuplicateMergeResult {
   moved_activities: number
 }
 
+export interface DuplicateMergeFailure {
+  company: string
+  reason: string
+}
+
+export interface DuplicateMergeBatchResult {
+  merged_groups: number
+  deleted_leads: number
+  moved_activities: number
+  failed: DuplicateMergeFailure[]
+}
+
 export interface RainmakerGoalProgress {
   id: string
   name: string
