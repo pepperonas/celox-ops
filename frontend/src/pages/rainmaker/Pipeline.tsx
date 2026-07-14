@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
@@ -10,6 +10,8 @@ import PipelineNav from './PipelineNav'
 import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
 import AiLeadModal from './AiLeadModal'
+import AiLeadPill from './AiLeadPill'
+import { useAiLeadRun } from './useAiLeadRun'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
@@ -38,7 +40,12 @@ export default function RainmakerPipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
-  const [showAi, setShowAi] = useState(false)
+  // KI-Lead-Suche: der Lauf lebt im Hook (überlebt das Schließen des Dialogs);
+  // aiOpen steuert nur die Sichtbarkeit des Dialogs. Minimiert = geschlossen, aber
+  // noch laufend → Pill; bei Lauf-Ende öffnet sich der Dialog automatisch wieder.
+  const ai = useAiLeadRun()
+  const [aiOpen, setAiOpen] = useState(false)
+  const prevAiRunning = useRef(false)
   // Filter überstehen die Zurück-Navigation (Pipeline remountet) via localStorage.
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
@@ -100,6 +107,19 @@ export default function RainmakerPipeline() {
       toast('Filter: gerade importierte Leads · „Alle" zum Zurücksetzen', { icon: '✦' })
     }
   }, [fetchLeads, patchTimeFilter])
+
+  // Lauf gerade fertig (true→false) → Dialog wieder in den Vordergrund holen,
+  // damit die Ergebnisse (oder ein Fehler) sichtbar sind — auch wenn minimiert war.
+  useEffect(() => {
+    if (prevAiRunning.current && !ai.running) setAiOpen(true)
+    prevAiRunning.current = ai.running
+  }, [ai.running])
+
+  // Dialog schließen: läuft eine Suche → nur minimieren (Pill), sonst verwerfen.
+  const closeAi = useCallback(() => {
+    setAiOpen(false)
+    if (!ai.running) ai.reset()
+  }, [ai])
 
   const handleDrop = async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
     e.preventDefault()
@@ -181,8 +201,8 @@ export default function RainmakerPipeline() {
         subtitle={`${leads.length} Leads`}
         actions={
           <>
-            <button onClick={() => setShowAi(true)} className="btn-primary text-sm">
-              ✨ KI-Leads
+            <button onClick={() => setAiOpen(true)} className="btn-primary text-sm">
+              ✨ KI-Leads{ai.running && !aiOpen ? ' · läuft…' : ''}
             </button>
             <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
               Leads finden
@@ -354,12 +374,14 @@ export default function RainmakerPipeline() {
           onImported={(created) => { setShowDiscovery(false); handleImported(created) }}
         />
       )}
-      {showAi && (
+      {aiOpen && (
         <AiLeadModal
-          onClose={() => setShowAi(false)}
-          onImported={(created) => { setShowAi(false); handleImported(created) }}
+          run={ai}
+          onClose={closeAi}
+          onImported={(created) => { setAiOpen(false); ai.reset(); handleImported(created) }}
         />
       )}
+      {!aiOpen && ai.running && <AiLeadPill run={ai} onOpen={() => setAiOpen(true)} />}
     </div>
   )
 }

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
-import { aiDiscoverPreview, importDiscoveredLeads } from '../../api/rainmaker'
-import type { AiDiscoverResponse, DiscoveredCandidate } from '../../types'
+import { importDiscoveredLeads } from '../../api/rainmaker'
+import type { DiscoveredCandidate } from '../../types'
 import { emailStatusInfo } from './emailStatus'
 import { matchBriefs } from './briefSuggestions'
+import type { AiLeadRun } from './useAiLeadRun'
 
 interface Props {
+  run: AiLeadRun
   onClose: () => void
   onImported: (created: number) => void
 }
@@ -14,54 +16,20 @@ interface Props {
 const REASON_LABEL: Record<string, string> = { email: 'E-Mail', website: 'Website', name: 'Name' }
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' €'
 
-export default function AiLeadModal({ onClose, onImported }: Props) {
-  const [brief, setBrief] = useState('')
-  const [useWeb, setUseWeb] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [res, setRes] = useState<AiDiscoverResponse | null>(null)
+export default function AiLeadModal({ run, onClose, onImported }: Props) {
+  // Suchzustand kommt aus dem Hook (überlebt Minimieren); nur UI-State ist lokal.
+  const { brief, setBrief, useWeb, setUseWeb, running, ranWeb, res, elapsed, phase, phaseLabels } = run
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importing, setImporting] = useState(false)
-  const [phase, setPhase] = useState(0)
-  const [elapsed, setElapsed] = useState(0)
-  const [ranWeb, setRanWeb] = useState(false)
   const [showSug, setShowSug] = useState(false)
   const suggestions = useMemo(() => matchBriefs(brief, 6), [brief])
 
-  // Fortschritts-Stufen (die letzte hält, bis die Antwort da ist).
-  const phaseLabels = ranWeb
-    ? ['Brief analysieren', 'OSM + Web durchsuchen', 'Websites & E-Mails prüfen', 'Fit-Bewertung durch Claude']
-    : ['Brief analysieren', 'Firmen in OpenStreetMap suchen', 'Websites & E-Mails prüfen', 'Fit-Bewertung durch Claude']
-
+  // Ergebnis kann aus einem Hintergrundlauf kommen (Dialog war zu) → Auswahl
+  // beim (Wieder-)Auftauchen von Kandidaten neu setzen: Nicht-Duplikate vorwählen.
   useEffect(() => {
-    if (!running) return
-    const start = Date.now()
-    setPhase(0); setElapsed(0)
-    const id = setInterval(() => {
-      const s = Math.floor((Date.now() - start) / 1000)
-      setElapsed(s)
-      // grobe Zeit-Schätzung; Web dauert länger, letzte Stufe hält bis Ergebnis
-      const t = ranWeb ? [3, 30, 45] : [2, 8, 14]
-      setPhase(s < t[0] ? 0 : s < t[1] ? 1 : s < t[2] ? 2 : 3)
-    }, 400)
-    return () => clearInterval(id)
-  }, [running, ranWeb])
-
-  const run = async () => {
-    if (!brief.trim() || running) return
-    setRanWeb(useWeb)
-    setRunning(true); setRes(null); setSelected(new Set())
-    try {
-      const r = await aiDiscoverPreview(brief.trim(), useWeb)
-      setRes(r)
-      // Nicht-Duplikate vorauswählen
-      setSelected(new Set(r.candidates.map((c, i) => (c.duplicate ? -1 : i)).filter((i) => i >= 0)))
-      if (r.candidates.length === 0) toast('Keine passenden Treffer.', { icon: '🔍' })
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { detail?: string } } }
-      toast.error(e?.response?.data?.detail || 'KI-Suche fehlgeschlagen.')
-    }
-    setRunning(false)
-  }
+    if (!res) { setSelected(new Set()); return }
+    setSelected(new Set(res.candidates.map((c, i) => (c.duplicate ? -1 : i)).filter((i) => i >= 0)))
+  }, [res])
 
   const toggle = (i: number) => setSelected((prev) => {
     const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n
@@ -86,7 +54,7 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
-      <div className="fixed inset-0" onClick={() => { if (!running && !importing) onClose() }} />
+      <div className="fixed inset-0" onClick={() => { if (!importing) onClose() }} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-modal-in max-h-[88vh] flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-text">✨ KI-Lead-Suche</h3>
@@ -128,7 +96,7 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3 mb-3">
-          <button onClick={run} disabled={running || !brief.trim()} className="btn-primary text-sm disabled:opacity-40">
+          <button onClick={run.run} disabled={running || !brief.trim()} className="btn-primary text-sm disabled:opacity-40">
             {running ? 'KI recherchiert…' : 'Leads finden'}
           </button>
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer" title="Zusätzlich das Web durchsuchen — findet mehr, kostet aber API-Geld (~0,30–0,60 $/Lauf).">
@@ -157,6 +125,7 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
               ))}
             </ol>
             {ranWeb && <p className="text-[11px] text-text-muted mt-2">Die Web-Suche kann bis zu ~1 Minute dauern.</p>}
+            <p className="text-[11px] text-accent mt-2">Du kannst den Dialog schließen — die Suche läuft im Hintergrund weiter und öffnet sich bei Fertigstellung wieder.</p>
           </div>
         )}
 
@@ -216,7 +185,9 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
         )}
 
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="btn-secondary" disabled={running || importing}>Schließen</button>
+          <button onClick={onClose} className="btn-secondary" disabled={importing}>
+            {running ? 'Im Hintergrund' : 'Schließen'}
+          </button>
           {res && res.candidates.length > 0 && (
             <button onClick={doImport} className="btn-primary" disabled={selected.size === 0 || importing}>
               {importing ? 'Importiere…' : `${selected.size} importieren`}
