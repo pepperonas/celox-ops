@@ -3,10 +3,13 @@ Overpass-Query-Bau, Ergebnis-Parsing, Tag-Auflösung, Qualitätsfilter,
 URL-Normalisierung, Google-Details, Live-Website-Check."""
 import asyncio
 
+import httpx
 import pytest
 
 from app.services.lead_discovery import (
+    OVERPASS_ENDPOINTS,
     SEGMENT_OSM_TAGS,
+    _overpass_query,
     build_overpass_query,
     filter_live_websites,
     filter_osm_quality,
@@ -231,3 +234,64 @@ def test_filter_live_websites_drops_dead():
     c = _FakeClient(head_map={"https://live.de": 200}, raise_on={"https://dead.de"})
     kept = _run(filter_live_websites(rows, c))
     assert [r["name"] for r in kept] == ["Lebt"]
+
+
+# --------------------------------------------------------------------------- #
+#  Overpass-Mirror-Fallback (504-Überlastung)
+# --------------------------------------------------------------------------- #
+class _OResp:
+    def __init__(self, status, payload=None):
+        self.status_code = status
+        self._payload = payload or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                "err", request=httpx.Request("POST", "https://overpass/"),
+                response=httpx.Response(self.status_code))
+
+    def json(self):
+        return self._payload
+
+
+class _SeqClient:
+    """post() liefert der Reihe nach: dict→200+json, int→Status, Exception→raise."""
+    def __init__(self, outcomes):
+        self.outcomes = list(outcomes)
+        self.calls = 0
+
+    async def post(self, url, data=None):
+        o = self.outcomes[self.calls]
+        self.calls += 1
+        if isinstance(o, Exception):
+            raise o
+        if isinstance(o, int):
+            return _OResp(o)
+        return _OResp(200, o)
+
+
+def test_overpass_falls_back_on_504():
+    c = _SeqClient([504, {"elements": [{"type": "node", "id": 1, "tags": {"name": "X"}}]}])
+    data = _run(_overpass_query("q", c))
+    assert data["elements"][0]["tags"]["name"] == "X"
+    assert c.calls == 2                      # erster 504 → zweiter Server liefert
+
+
+def test_overpass_falls_back_on_timeout():
+    c = _SeqClient([httpx.ConnectError("boom"), {"elements": []}])
+    assert _run(_overpass_query("q", c)) == {"elements": []}
+    assert c.calls == 2
+
+
+def test_overpass_all_down_raises_valueerror():
+    c = _SeqClient([504] * len(OVERPASS_ENDPOINTS))
+    with pytest.raises(ValueError):
+        _run(_overpass_query("q", c))
+    assert c.calls == len(OVERPASS_ENDPOINTS)
+
+
+def test_overpass_non_transient_aborts_immediately():
+    c = _SeqClient([400, {"elements": []}])
+    with pytest.raises(ValueError):
+        _run(_overpass_query("q", c))
+    assert c.calls == 1                      # 400 → sofort Abbruch, kein weiterer Server

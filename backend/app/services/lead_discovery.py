@@ -21,7 +21,21 @@ injizierten httpx-Client.
 import asyncio
 import re
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+import httpx
+
+# Overpass-Server in Fallback-Reihenfolge: primär offiziell, dann ein
+# unabhängiger Mirror (CH), dann eine weitere Instanz. Bei Überlastung (504)
+# eines Servers wird der nächste versucht. (kumi/private.coffee sind von der
+# VPS-IP nicht erreichbar → bewusst nicht gelistet.)
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.osm.ch/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+]
+OVERPASS_URL = OVERPASS_ENDPOINTS[0]   # Rückwärtskompatibilität
+# Transiente Overpass-Antworten → nächster Server (statt hartem Fehler).
+_OVERPASS_TRANSIENT = {429, 500, 502, 503, 504}
+
 GOOGLE_TEXTSEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 # Nur die Felder, die wir wirklich brauchen — hält den Details-Call günstig.
@@ -176,11 +190,34 @@ async def filter_live_websites(rows: list[dict], client, concurrency: int = 8,
     return [r for r, ok in zip(rows, results) if ok]
 
 
+async def _overpass_query(query: str, client) -> dict:
+    """POST an Overpass mit **Mirror-Fallback**: bei Überlastung (429/5xx) oder
+    Timeout/Connect-Fehler wird der nächste Server versucht. Erst wenn ALLE
+    ausfallen → ValueError mit klarer Meldung (der Router meldet sie als 422).
+    Ein echter Fehler (z. B. 400 = kaputte Query) bricht sofort ab."""
+    last: Exception | None = None
+    for url in OVERPASS_ENDPOINTS:
+        try:
+            resp = await client.post(url, data={"data": query})
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            last = exc
+            if exc.response.status_code not in _OVERPASS_TRANSIENT:
+                raise ValueError(f"Overpass-Anfrage abgelehnt (HTTP {exc.response.status_code}).") from exc
+            # transient → nächster Server
+        except httpx.RequestError as exc:      # Timeout/Connect/Read → nächster Server
+            last = exc
+    raise ValueError(
+        "OpenStreetMap/Overpass ist gerade überlastet — alle Server antworten mit "
+        "Timeout/Fehler. Bitte in ein paar Minuten erneut versuchen oder Google Places nutzen."
+    ) from last
+
+
 async def discover_osm(category: str, location: str, limit, client) -> list[dict]:
     query = build_overpass_query(resolve_tags(category), location, limit)
-    resp = await client.post(OVERPASS_URL, data={"data": query})
-    resp.raise_for_status()
-    rows = filter_osm_quality(parse_overpass(resp.json()))   # Website + E-Mail Pflicht
+    data = await _overpass_query(query, client)
+    rows = filter_osm_quality(parse_overpass(data))          # Website + E-Mail Pflicht
     return await filter_live_websites(rows, client)          # tote Domains raus
 
 
