@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { aiDiscoverPreview, importDiscoveredLeads } from '../../api/rainmaker'
 import type { AiDiscoverResponse, DiscoveredCandidate } from '../../types'
 import { emailStatusInfo } from './emailStatus'
+import { matchBriefs } from './briefSuggestions'
 
 interface Props {
   onClose: () => void
@@ -23,6 +24,8 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
   const [phase, setPhase] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [ranWeb, setRanWeb] = useState(false)
+  const [showSug, setShowSug] = useState(false)
+  const suggestions = useMemo(() => matchBriefs(brief, 6), [brief])
 
   // Fortschritts-Stufen (die letzte hält, bis die Antwort da ist).
   const phaseLabels = ranWeb
@@ -96,12 +99,34 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
           )}
         </div>
 
-        <textarea
-          value={brief} onChange={(e) => setBrief(e.target.value)}
-          placeholder="Beschreibe deine Wunschkunden, z. B.: „10 kleine unabhängige Hausverwaltungen in Berlin mit E-Mail und Website, keine Großkonzerne.“"
-          rows={3}
-          className="w-full bg-surface-container border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted resize-none mb-2"
-        />
+        <div className="relative mb-2">
+          <textarea
+            value={brief}
+            onChange={(e) => { setBrief(e.target.value); setShowSug(true) }}
+            onFocus={() => setShowSug(true)}
+            onBlur={() => setTimeout(() => setShowSug(false), 150)}
+            placeholder="Beschreibe deine Wunschkunden, z. B.: „10 mittelständische Hausverwaltungen in Berlin mit E-Mail und Website“ — oder tippen und einen Vorschlag wählen."
+            rows={3}
+            className="w-full bg-surface-container border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted resize-none"
+          />
+          {showSug && !running && suggestions.length > 0 && (
+            <ul className="absolute z-10 left-0 right-0 mt-1 bg-surface-high border border-border rounded-lg shadow-elev-3 max-h-60 overflow-y-auto">
+              <li className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-text-muted">Vorschläge</li>
+              {suggestions.map((s, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setBrief(s); setShowSug(false) }}
+                    className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface-container transition-colors duration-short"
+                  >
+                    {s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3 mb-3">
           <button onClick={run} disabled={running || !brief.trim()} className="btn-primary text-sm disabled:opacity-40">
             {running ? 'KI recherchiert…' : 'Leads finden'}
