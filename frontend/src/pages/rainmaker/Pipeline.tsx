@@ -19,6 +19,11 @@ import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
 import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from './PipelineTimeFilter'
 import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
 
+// Generische Auto-Tags, die keine Branche sind → auf der Karte nicht als Branche zeigen.
+const GENERIC_TAGS = new Set(['discovery', 'rainmaker', 'linkedin', 'ki-recherche'])
+const brancheTag = (tags: string[] | null): string | null =>
+  tags?.find((t) => !GENERIC_TAGS.has(t.trim().toLowerCase())) ?? null
+
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
 const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
@@ -113,6 +118,18 @@ export default function RainmakerPipeline() {
     seenAiSignal.current = aiImportedSignal
     handleImported(useAiLeadStore.getState().importedCount)
   }, [aiImportedSignal, handleImported])
+
+  // Bookmark umschalten (optimistisch; revert bei Fehler).
+  const togglePin = useCallback(async (lead: RainmakerLead) => {
+    const next = !lead.pinned
+    setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, pinned: next } : l)))
+    try {
+      await updateRainmakerLead(lead.id, { pinned: next })
+    } catch {
+      toast.error('Konnte den Pin nicht ändern.')
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, pinned: !next } : l)))
+    }
+  }, [])
 
   const handleDrop = async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
     e.preventDefault()
@@ -272,7 +289,10 @@ export default function RainmakerPipeline() {
       <div className="grid gap-4 pb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {PIPELINE_STATUSES.map((statusKey) => {
           const color = STATUS_COLORS[statusKey]
-          const colLeads = filteredLeads.filter((l) => l.status === statusKey)
+          // Gepinnte Leads oben (stabile Sortierung erhält die restliche Reihenfolge).
+          const colLeads = filteredLeads
+            .filter((l) => l.status === statusKey)
+            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
           const isOver = dragOver === statusKey
           const expanded = expandedCols.has(statusKey)
           const visibleLeads = expanded ? colLeads : colLeads.slice(0, 100)
@@ -303,25 +323,45 @@ export default function RainmakerPipeline() {
                 {colLeads.length === 0 && (
                   <div className="text-center text-text-muted text-xs py-8">Keine Leads</div>
                 )}
-                {visibleLeads.map((lead) => (
+                {visibleLeads.map((lead) => {
+                  const branche = brancheTag(lead.tags)
+                  return (
                   <div
                     key={lead.id}
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', lead.id); e.dataTransfer.effectAllowed = 'move'; setDraggingId(lead.id) }}
                     onDragEnd={() => { setDraggingId(null); setDragOver(null) }}
                     onClick={() => navigate(`/pipeline/leads/${lead.id}`)}
+                    style={lead.pinned ? { borderColor: '#e0a500' } : undefined}
                     className={`bg-surface-high border border-border rounded-md p-3 cursor-grab active:cursor-grabbing transition-all duration-short hover:border-text-muted hover:shadow-elev-1 ${
                       draggingId === lead.id ? 'opacity-40' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <span className="text-sm font-medium text-text line-clamp-2">{lead.company}</span>
-                      <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_TONE[lead.priority]}`}>
-                        {PRIORITY_LABELS[lead.priority]}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); togglePin(lead) }}
+                          title={lead.pinned ? 'Pin lösen' : 'Anpinnen (oben in der Spalte)'}
+                          aria-label={lead.pinned ? 'Pin lösen' : 'Anpinnen'}
+                          className="leading-none text-sm hover:scale-110 transition-transform"
+                          style={{ color: lead.pinned ? '#e0a500' : 'var(--c-text-muted, #888)' }}
+                        >
+                          {lead.pinned ? '★' : '☆'}
+                        </button>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_TONE[lead.priority]}`}>
+                          {PRIORITY_LABELS[lead.priority]}
+                        </span>
+                      </div>
                     </div>
                     {lead.contact_name && (
                       <div className="text-xs text-text-muted mb-1.5 truncate">{lead.contact_name}</div>
+                    )}
+                    {branche && (
+                      <div className="mb-1.5">
+                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-text-muted truncate max-w-full"
+                              title={`Branche: ${branche}`}>{branche}</span>
+                      </div>
                     )}
                     <div className="flex items-center justify-between text-xs gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -339,7 +379,8 @@ export default function RainmakerPipeline() {
                       )}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
                 {hiddenCount > 0 && (
                   <button
                     onClick={() => setExpandedCols((prev) => new Set(prev).add(statusKey))}

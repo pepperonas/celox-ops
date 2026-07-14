@@ -12,6 +12,7 @@ import {
   deleteActivity,
   getRainmakerTemplates,
   verifyLeadEmail,
+  updateRainmakerLead,
 } from '../../api/rainmaker'
 import { analyzeWebsite, type AnalyzeResult } from '../../api/leads'
 import { emailStatusInfo } from './emailStatus'
@@ -42,6 +43,18 @@ export default function RainmakerLeadDetail() {
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
+
+  const togglePin = async () => {
+    if (!lead) return
+    const next = !lead.pinned
+    setLead({ ...lead, pinned: next })
+    try {
+      await updateRainmakerLead(lead.id, { pinned: next })
+    } catch {
+      toast.error('Konnte den Pin nicht ändern.')
+      setLead({ ...lead, pinned: !next })
+    }
+  }
 
   const handleAnalyze = async () => {
     if (!lead?.website) return
@@ -196,7 +209,16 @@ export default function RainmakerLeadDetail() {
           <span className="shrink-0 text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: color + '26', color }}>{STATUS_LABELS[lead.status]}</span>
           <span className={`shrink-0 text-xs font-medium px-3 py-1 rounded-full ${PRIORITY_TONE[lead.priority]}`}>{PRIORITY_LABELS[lead.priority]}</span>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 items-center">
+          <button
+            onClick={togglePin}
+            title={lead.pinned ? 'Pin lösen' : 'Anpinnen (oben in der Pipeline-Spalte)'}
+            aria-label={lead.pinned ? 'Pin lösen' : 'Anpinnen'}
+            className="text-xl leading-none hover:scale-110 transition-transform"
+            style={{ color: lead.pinned ? '#e0a500' : 'var(--c-text-muted, #888)' }}
+          >
+            {lead.pinned ? '★' : '☆'}
+          </button>
           {lead.customer_id ? (
             <button onClick={() => navigate(`/kunden/${lead.customer_id}`)} className="btn-secondary">→ Kunde ansehen</button>
           ) : (

@@ -105,6 +105,7 @@ class DiscoveredCandidate(BaseModel):
     duplicate_reason: str | None = None   # "email" | "website" | "name" (wenn duplicate)
     email_status: str | None = None       # aus dem Verifier (valid/role/…)
     fit_reason: str | None = None         # KI-Begründung, warum passend
+    segment: str | None = None            # Branche (Segment-Label), z. B. "Steuerberater"
 
 
 class LeadDiscoveryImportRequest(BaseModel):
@@ -241,6 +242,7 @@ class RainmakerLeadUpdate(BaseModel):
     priority: RainmakerPriority | None = None
     value_estimate: Decimal | None = None
     tags: list[str] | None = None
+    pinned: bool | None = None
     notes: str | None = None
 
 
@@ -256,6 +258,7 @@ class RainmakerLeadResponse(RainmakerLeadBase):
     updated_at: datetime
     email_status: str | None = None      # valid/role/disposable/no_mx/invalid_syntax/unknown/None
     customer_id: uuid.UUID | None = None  # verknüpfter Kunde (nach Konvertierung)
+    pinned: bool = False                  # Bookmark → oben in der Pipeline-Spalte
 
     # Computed "next action" summary (populated by the activation engine).
     next_action_type: RainmakerActivityType | None = None

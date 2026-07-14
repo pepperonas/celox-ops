@@ -500,6 +500,7 @@ export interface RainmakerLead {
   priority: RainmakerPriority
   value_estimate: number | null
   tags: string[] | null
+  pinned: boolean
   notes: string | null
   created_at: string
   updated_at: string
@@ -527,6 +528,7 @@ export interface RainmakerLeadCreate {
   priority?: RainmakerPriority
   value_estimate?: number | null
   tags?: string[] | null
+  pinned?: boolean
   notes?: string | null
 }
 
@@ -632,6 +634,7 @@ export interface DiscoveredCandidate {
   duplicate_reason?: string | null   // "email" | "website" | "name"
   email_status?: string | null
   fit_reason?: string | null         // KI-Begründung
+  segment?: string | null            // Branche (z. B. "Steuerberater")
 }
 
 export interface AiRunCost {

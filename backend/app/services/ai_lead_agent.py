@@ -128,9 +128,11 @@ async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
             except Exception as exc:  # noqa: BLE001 — eine Kombi darf den Lauf nicht kippen
                 notes.append(f"{seg} · {city}: {type(exc).__name__}")
                 continue
+            seg_label = SEGMENT_LABELS.get(seg, seg)
             for r in rows:
                 k = _cand_key(r)
                 if k and k not in seen:
+                    r.setdefault("segment", seg_label)  # Branche zur Identifikation
                     seen[k] = r
             if len(seen) >= caps.max_candidates:
                 break
@@ -221,6 +223,7 @@ async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryC
 
     out: list[dict] = []
     mx_cache: dict = {}
+    web_segment = seg if seg != "Firmen" else None  # Branche (Label) für die Tags
     for co in raw[:caps.max_candidates]:
         name = (co.get("name") or "").strip()
         website = (co.get("website") or "").strip()
@@ -236,6 +239,7 @@ async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryC
             "name": name, "website": website, "email": email, "phone": None,
             "address": (co.get("address") or "").strip() or None,
             "source": "Web", "source_ref": None, "email_status": ev.status.value,
+            "segment": web_segment,
         })
     return out
 

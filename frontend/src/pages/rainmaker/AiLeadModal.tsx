@@ -41,7 +41,8 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
     setImporting(true)
     try {
       const rows: DiscoveredCandidate[] = [...selected].map((i) => res.candidates[i])
-      const r = await importDiscoveredLeads(rows, 'ki-recherche')
+      // Kein Batch-Segment: die Branche steckt pro Kandidat in `segment` (→ Lead-Tag).
+      const r = await importDiscoveredLeads(rows)
       toast.success(`${r.created} Lead${r.created === 1 ? '' : 's'} importiert`
         + (r.skipped_duplicates > 0 ? ` · ${r.skipped_duplicates} Duplikate übersprungen` : '') + '.')
       onImported(r.created)

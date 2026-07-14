@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Computed, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, func, text,
+    Boolean, Computed, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, func, text,
 )
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
@@ -86,6 +86,10 @@ class RainmakerLead(OwnedMixin, Base):
     )
     # Stored as a JSON array of strings.
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # Bookmark: gepinnte Leads sortieren in ihrer Pipeline-Spalte nach oben.
+    pinned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Generierte, normalisierte Dedup-Schlüssel (read-only) — treiben die
     # partiellen Unique-Indizes (race-sicher gegen parallele Importe).

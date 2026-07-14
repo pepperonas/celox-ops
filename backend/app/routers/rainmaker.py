@@ -664,15 +664,17 @@ async def discover_import(
     created = skipped = 0
     skipped_rows: list[ImportSkipped] = []
     mx_cache: dict = {}
-    tags = ["discovery"]
-    if data.segment:
-        tags.append(data.segment)
     for c in data.rows:
         lead, reason = idx.match(email=c.email, website=c.website)
         if lead is not None:
             skipped += 1
             skipped_rows.append(ImportSkipped(name=c.name or "?", reason=reason or MATCH_WEBSITE))
             continue
+        # Branche pro Kandidat (z. B. "Steuerberater") gewinnt vor dem Batch-Segment.
+        tags = ["discovery"]
+        branche = (c.segment or data.segment or "").strip()
+        if branche:
+            tags.append(branche)
         new_lead = RainmakerLead(
             company=(c.name or "").strip()[:255] or "Unbenannt",
             website=(c.website or "").strip()[:500] or None,
@@ -784,7 +786,7 @@ async def ai_discover_preview(
             name=c.get("name") or "?", website=c.get("website"), email=c.get("email"),
             phone=c.get("phone"), address=c.get("address"), source="KI-Recherche",
             source_ref=c.get("source_ref"), email_status=c.get("email_status"),
-            fit_reason=c.get("fit_reason"),
+            fit_reason=c.get("fit_reason"), segment=c.get("segment"),
             duplicate=lead is not None, duplicate_reason=reason if lead is not None else None))
 
     return AiDiscoverResponse(
