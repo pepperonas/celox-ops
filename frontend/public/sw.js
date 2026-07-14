@@ -4,7 +4,7 @@
 // - /api/* is never intercepted.
 // Bump CACHE_VERSION on app-shell changes to purge old caches.
 
-const CACHE_VERSION = 'celox-ops-v7'
+const CACHE_VERSION = 'celox-ops-v8'
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
@@ -60,20 +60,31 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Navigations (HTML) → network-first; cache the shell; offline fallback.
+  // Navigations (HTML) → network-first; cache NUR OK-Antworten; robuster Fallback.
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
+    event.respondWith((async () => {
+      const shell = async () => {
+        const cache = await caches.open(CACHE_VERSION)
+        return (await cache.match('/index.html')) || (await cache.match('/offline.html'))
+      }
+      try {
+        const res = await fetch(request)
+        if (res && res.ok) {
+          // nur erfolgreiche Shell cachen (verhindert Vergiftung durch 502/504)
           const clone = res.clone()
           caches.open(CACHE_VERSION).then((cache) => cache.put('/index.html', clone))
           return res
-        })
-        .catch(async () => {
-          const cache = await caches.open(CACHE_VERSION)
-          return (await cache.match('/index.html')) || (await cache.match('/offline.html'))
-        }),
-    )
+        }
+        // Nicht-OK (z. B. 502/504 im Deploy-Fenster) → gecachte App-Shell statt Fehlerseite
+        return (await shell()) || res
+      } catch {
+        // Netzfehler → App-Shell; als letzte Instanz eine echte Response (nie undefined)
+        return (await shell()) || new Response(
+          '<!doctype html><meta charset="utf-8"><title>Offline</title>'
+          + '<body style="font-family:sans-serif;padding:2rem"><p>Verbindung unterbrochen – bitte neu laden.</p>',
+          { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+      }
+    })())
     return
   }
 

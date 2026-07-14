@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { aiDiscoverPreview, importDiscoveredLeads } from '../../api/rainmaker'
@@ -20,9 +20,32 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
   const [res, setRes] = useState<AiDiscoverResponse | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importing, setImporting] = useState(false)
+  const [phase, setPhase] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const [ranWeb, setRanWeb] = useState(false)
+
+  // Fortschritts-Stufen (die letzte hält, bis die Antwort da ist).
+  const phaseLabels = ranWeb
+    ? ['Brief analysieren', 'OSM + Web durchsuchen', 'Websites & E-Mails prüfen', 'Fit-Bewertung durch Claude']
+    : ['Brief analysieren', 'Firmen in OpenStreetMap suchen', 'Websites & E-Mails prüfen', 'Fit-Bewertung durch Claude']
+
+  useEffect(() => {
+    if (!running) return
+    const start = Date.now()
+    setPhase(0); setElapsed(0)
+    const id = setInterval(() => {
+      const s = Math.floor((Date.now() - start) / 1000)
+      setElapsed(s)
+      // grobe Zeit-Schätzung; Web dauert länger, letzte Stufe hält bis Ergebnis
+      const t = ranWeb ? [3, 30, 45] : [2, 8, 14]
+      setPhase(s < t[0] ? 0 : s < t[1] ? 1 : s < t[2] ? 2 : 3)
+    }, 400)
+    return () => clearInterval(id)
+  }, [running, ranWeb])
 
   const run = async () => {
     if (!brief.trim() || running) return
+    setRanWeb(useWeb)
     setRunning(true); setRes(null); setSelected(new Set())
     try {
       const r = await aiDiscoverPreview(brief.trim(), useWeb)
@@ -89,6 +112,28 @@ export default function AiLeadModal({ onClose, onImported }: Props) {
           </label>
           <span className="text-xs text-text-muted">OSM{useWeb ? ' + Web' : ''} · Website &amp; E-Mail geprüft · Fit-Ranking durch Claude.</span>
         </div>
+
+        {running && (
+          <div className="rounded-lg bg-surface-container border border-border p-3 mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-text font-medium">KI-Recherche läuft…</span>
+              <span className="text-xs text-text-muted tabular-nums">{elapsed}s</span>
+            </div>
+            <ol className="space-y-1.5">
+              {phaseLabels.map((label, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  {i < phase
+                    ? <span className="text-success w-3.5 text-center">✓</span>
+                    : i === phase
+                      ? <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                      : <span className="inline-block w-3.5 h-3.5 rounded-full border border-border" />}
+                  <span className={i < phase ? 'text-text-muted' : i === phase ? 'text-text font-medium' : 'text-text-muted opacity-60'}>{label}</span>
+                </li>
+              ))}
+            </ol>
+            {ranWeb && <p className="text-[11px] text-text-muted mt-2">Die Web-Suche kann bis zu ~1 Minute dauern.</p>}
+          </div>
+        )}
 
         {res?.notes?.length ? (
           <div className="text-xs text-warning mb-2">{res.notes.join(' · ')}</div>
