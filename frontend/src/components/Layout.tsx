@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useAppNavigate, useScrollRestoration } from '../utils/transitions'
 import QuickSearch from './QuickSearch'
+import AiLeadHost from './AiLeadHost'
 
 const navItems = [
   {
@@ -343,6 +344,7 @@ export default function Layout() {
         </main>
       </div>
       <QuickSearch />
+      <AiLeadHost />
     </div>
   )
 }

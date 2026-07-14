@@ -5,7 +5,7 @@ import { importDiscoveredLeads } from '../../api/rainmaker'
 import type { DiscoveredCandidate } from '../../types'
 import { emailStatusInfo } from './emailStatus'
 import { matchBriefs } from './briefSuggestions'
-import type { AiLeadRun } from './useAiLeadRun'
+import type { AiLeadRun } from './aiLeadRun'
 
 interface Props {
   run: AiLeadRun
@@ -17,7 +17,7 @@ const REASON_LABEL: Record<string, string> = { email: 'E-Mail', website: 'Websit
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' €'
 
 export default function AiLeadModal({ run, onClose, onImported }: Props) {
-  // Suchzustand kommt aus dem Hook (überlebt Minimieren); nur UI-State ist lokal.
+  // Suchzustand kommt aus dem globalen Store (überlebt Minimieren + Seitenwechsel); nur UI-State ist lokal.
   const { brief, setBrief, useWeb, setUseWeb, running, ranWeb, res, elapsed, phase, phaseLabels } = run
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importing, setImporting] = useState(false)

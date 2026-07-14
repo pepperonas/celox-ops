@@ -9,9 +9,7 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import PipelineNav from './PipelineNav'
 import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
-import AiLeadModal from './AiLeadModal'
-import AiLeadPill from './AiLeadPill'
-import { useAiLeadRun } from './useAiLeadRun'
+import { useAiLeadStore } from '../../store/aiLeadStore'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
@@ -40,12 +38,13 @@ export default function RainmakerPipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
-  // KI-Lead-Suche: der Lauf lebt im Hook (überlebt das Schließen des Dialogs);
-  // aiOpen steuert nur die Sichtbarkeit des Dialogs. Minimiert = geschlossen, aber
-  // noch laufend → Pill; bei Lauf-Ende öffnet sich der Dialog automatisch wieder.
-  const ai = useAiLeadRun()
-  const [aiOpen, setAiOpen] = useState(false)
-  const prevAiRunning = useRef(false)
+  // KI-Lead-Suche lebt global im Store (AiLeadHost rendert Dialog/Pill) → überlebt
+  // Dialog-Schließen UND Seitenwechsel. Hier nur: Dialog öffnen + auf Import reagieren.
+  const openAi = useAiLeadStore((st) => st.setOpen)
+  const aiRunning = useAiLeadStore((st) => st.running)
+  const aiOpen = useAiLeadStore((st) => st.open)
+  const aiImportedSignal = useAiLeadStore((st) => st.importedSignal)
+  const seenAiSignal = useRef(aiImportedSignal)
   // Filter überstehen die Zurück-Navigation (Pipeline remountet) via localStorage.
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
@@ -108,18 +107,12 @@ export default function RainmakerPipeline() {
     }
   }, [fetchLeads, patchTimeFilter])
 
-  // Lauf gerade fertig (true→false) → Dialog wieder in den Vordergrund holen,
-  // damit die Ergebnisse (oder ein Fehler) sichtbar sind — auch wenn minimiert war.
+  // KI-Import erfolgte (im global gehosteten Dialog) → Board neu laden + filtern.
   useEffect(() => {
-    if (prevAiRunning.current && !ai.running) setAiOpen(true)
-    prevAiRunning.current = ai.running
-  }, [ai.running])
-
-  // Dialog schließen: läuft eine Suche → nur minimieren (Pill), sonst verwerfen.
-  const closeAi = useCallback(() => {
-    setAiOpen(false)
-    if (!ai.running) ai.reset()
-  }, [ai])
+    if (aiImportedSignal === seenAiSignal.current) return
+    seenAiSignal.current = aiImportedSignal
+    handleImported(useAiLeadStore.getState().importedCount)
+  }, [aiImportedSignal, handleImported])
 
   const handleDrop = async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
     e.preventDefault()
@@ -201,8 +194,8 @@ export default function RainmakerPipeline() {
         subtitle={`${leads.length} Leads`}
         actions={
           <>
-            <button onClick={() => setAiOpen(true)} className="btn-primary text-sm">
-              ✨ KI-Leads{ai.running && !aiOpen ? ' · läuft…' : ''}
+            <button onClick={() => openAi(true)} className="btn-primary text-sm">
+              ✨ KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
             </button>
             <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
               Leads finden
@@ -374,14 +367,6 @@ export default function RainmakerPipeline() {
           onImported={(created) => { setShowDiscovery(false); handleImported(created) }}
         />
       )}
-      {aiOpen && (
-        <AiLeadModal
-          run={ai}
-          onClose={closeAi}
-          onImported={(created) => { setAiOpen(false); ai.reset(); handleImported(created) }}
-        />
-      )}
-      {!aiOpen && ai.running && <AiLeadPill run={ai} onOpen={() => setAiOpen(true)} />}
     </div>
   )
 }
