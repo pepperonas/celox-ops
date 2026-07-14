@@ -32,6 +32,8 @@ def _to_response(row: AppSettings) -> AppSettingsResponse:
         google_places_configured=bool(key),
         google_places_key_hint=mask_key(key),
         google_places_calls_this_month=calls_this_month(row.google_places_period, row.google_places_calls),
+        ai_model=row.ai_model,
+        ai_monthly_budget_eur=float(row.ai_monthly_budget_eur),
     )
 
 
@@ -56,5 +58,10 @@ async def update_settings(
     if data.google_places_api_key is not None:
         # "" entfernt den Key, sonst setzen (getrimmt).
         row.google_places_api_key = data.google_places_api_key.strip() or None
+    if data.ai_model is not None:
+        from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
+        row.ai_model = data.ai_model if data.ai_model in ALLOWED_MODELS else DEFAULT_MODEL
+    if data.ai_monthly_budget_eur is not None:
+        row.ai_monthly_budget_eur = data.ai_monthly_budget_eur
     await db.flush()
     return _to_response(row)

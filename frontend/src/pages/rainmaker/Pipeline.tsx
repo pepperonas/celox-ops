@@ -10,6 +10,7 @@ import RainmakerNav from './RainmakerNav'
 import RainmakerFooter from './RainmakerFooter'
 import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
+import AiLeadModal from './AiLeadModal'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
@@ -38,6 +39,7 @@ export default function RainmakerPipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
+  const [showAi, setShowAi] = useState(false)
   // Filter überstehen die Zurück-Navigation (Pipeline remountet) via localStorage.
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
@@ -180,7 +182,10 @@ export default function RainmakerPipeline() {
         subtitle={`${leads.length} Leads`}
         actions={
           <>
-            <button onClick={() => setShowDiscovery(true)} className="btn-primary text-sm">
+            <button onClick={() => setShowAi(true)} className="btn-primary text-sm">
+              ✨ KI-Leads
+            </button>
+            <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
               Leads finden
             </button>
             <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
@@ -348,6 +353,12 @@ export default function RainmakerPipeline() {
         <LeadDiscoveryModal
           onClose={() => setShowDiscovery(false)}
           onImported={(created) => { setShowDiscovery(false); handleImported(created) }}
+        />
+      )}
+      {showAi && (
+        <AiLeadModal
+          onClose={() => setShowAi(false)}
+          onImported={(created) => { setShowAi(false); handleImported(created) }}
         />
       )}
       <RainmakerFooter />

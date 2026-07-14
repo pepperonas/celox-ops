@@ -628,6 +628,55 @@ export interface DiscoveredCandidate {
   source_ref: string | null
   duplicate: boolean
   duplicate_reason?: string | null   // "email" | "website" | "name"
+  email_status?: string | null
+  fit_reason?: string | null         // KI-Begründung
+}
+
+export interface AiRunCost {
+  model: string
+  input_tokens: number
+  output_tokens: number
+  cache_write_tokens: number
+  cache_read_tokens: number
+  web_searches: number
+  cost_usd: number
+  cost_eur: number
+}
+
+export interface AiBudget {
+  budget_eur: number
+  spent_eur: number
+  remaining_eur: number
+  warn: boolean
+}
+
+export interface AiDiscoverResponse {
+  candidates: DiscoveredCandidate[]
+  run: AiRunCost
+  budget: AiBudget
+  notes: string[]
+}
+
+export interface AiRunSummary {
+  id: string
+  brief: string
+  model: string
+  cost_eur: number
+  cost_usd: number
+  candidates_found: number
+  leads_imported: number
+  status: string
+  created_at: string
+}
+
+export interface AiUsageResponse {
+  budget: AiBudget
+  runs_this_month: number
+  spent_usd: number
+  avg_cost_eur: number
+  configured: boolean
+  model: string
+  recent: AiRunSummary[]
 }
 
 export interface ImportSkipped {

@@ -6,6 +6,8 @@ export interface AppSettings {
   google_places_configured: boolean
   google_places_key_hint: string | null
   google_places_calls_this_month: number
+  ai_model: string
+  ai_monthly_budget_eur: number
 }
 
 export interface AppSettingsUpdate {
@@ -13,6 +15,8 @@ export interface AppSettingsUpdate {
   invoice_prefix?: string
   // "" entfernt den Key
   google_places_api_key?: string
+  ai_model?: string
+  ai_monthly_budget_eur?: number
 }
 
 export async function getSettings(): Promise<AppSettings> {

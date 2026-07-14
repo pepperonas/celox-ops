@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     # Optionaler Google-Places-Key für die Lead-Suche (leer = nur OpenStreetMap)
     GOOGLE_PLACES_API_KEY: str = ""
+    # Anthropic-Key für die KI-Lead-Suche (leer = Feature deaktiviert → 503)
+    ANTHROPIC_API_KEY: str = ""
     TOKEN_TRACKER_PUBLIC_URL: str = ""
     TOKEN_TRACKER_ADMIN_KEY: str = ""
 

@@ -38,6 +38,11 @@ from app.models.rainmaker_lead import (
 from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
+    AiBudget,
+    AiDiscoverRequest,
+    AiDiscoverResponse,
+    AiRunCost,
+    AiUsageResponse,
     DiscoveredCandidate,
     DuplicateGroup,
     DuplicateMergeRequest,
@@ -84,6 +89,9 @@ from app.services.lead_dedup import (
     norm_name,
     norm_website,
 )
+from app.models.ai_lead_run import AiLeadRun
+from app.services.ai_lead_agent import run_ai_discovery
+from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
 from app.services.duplicate_finder import find_groups
 from app.services.email_verifier import verify_email
 from app.services.lead_discovery import discover_google, discover_osm
@@ -659,6 +667,126 @@ async def discover_import(
     await db.flush()
     return LeadDiscoveryResult(
         created=created, skipped_duplicates=skipped, skipped_rows=skipped_rows)
+
+
+# --------------------------------------------------------------------------- #
+#  KI-Lead-Suche (Anthropic) — Brief → verifizierte, gerankte Kandidaten
+# --------------------------------------------------------------------------- #
+def _budget_status(spent_eur: float, budget_eur: float) -> AiBudget:
+    return AiBudget(
+        budget_eur=round(budget_eur, 2), spent_eur=round(spent_eur, 4),
+        remaining_eur=round(max(0.0, budget_eur - spent_eur), 4),
+        warn=budget_eur > 0 and spent_eur >= 0.8 * budget_eur,
+    )
+
+
+def _month_start() -> datetime:
+    now = datetime.now(timezone.utc)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def _ai_month_spent_eur(db: AsyncSession) -> float:
+    """EUR-Verbrauch der KI-Läufe im laufenden Monat (owner-scoped via Events)."""
+    total = (await db.execute(
+        select(func.coalesce(func.sum(AiLeadRun.cost_eur), 0))
+        .where(AiLeadRun.created_at >= _month_start())
+    )).scalar_one()
+    return float(total or 0)
+
+
+@router.post("/discover/ai/preview", response_model=AiDiscoverResponse)
+async def ai_discover_preview(
+    data: AiDiscoverRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AiDiscoverResponse:
+    """Freitext-Brief → KI-recherchierte, verifizierte (Website live + E-Mail-MX)
+    und nach Fit gerankte Kandidaten. Legt nichts an. Protokolliert Kosten und
+    setzt das Monatsbudget hart durch."""
+    import httpx
+
+    from app.models.app_settings import AppSettings
+    from app.services.exchange_service import get_usd_eur_rate
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503,
+                            detail="KI-Lead-Suche ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    model = data.model or (app_row.ai_model if app_row else DEFAULT_MODEL)
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_MODEL
+    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+
+    spent = await _ai_month_spent_eur(db)
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen, um weitere Läufe zu starten."))
+
+    try:
+        async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
+            result = await run_ai_discovery(
+                brief=data.brief, model=model,
+                api_key=settings.ANTHROPIC_API_KEY, http_client=client)
+    except Exception as exc:  # noqa: BLE001
+        db.add(AiLeadRun(brief=data.brief[:2000], model=model,
+                         used_web_search=data.use_web_search, status="failed",
+                         error=str(exc)[:1000]))
+        await db.flush()
+        raise HTTPException(status_code=502, detail=f"KI-Lauf fehlgeschlagen: {exc}")
+
+    usage = result.usage
+    cost_usd = usage.cost_usd(model)
+    cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+
+    db.add(AiLeadRun(
+        brief=data.brief[:2000], model=model, used_web_search=data.use_web_search,
+        cost_usd=cost_usd, cost_eur=cost_eur,
+        candidates_found=len(result.candidates), status="ok", **usage.as_dict()))
+    await db.flush()
+
+    # Duplikat-Markierung gegen den Bestand (wie bei der normalen Discovery).
+    idx, _ = await _build_dedup_index(db)
+    out: list[DiscoveredCandidate] = []
+    for c in result.candidates:
+        lead, reason = idx.match(email=c.get("email"), website=c.get("website"))
+        idx.add(object(), email=c.get("email"), website=c.get("website"))
+        out.append(DiscoveredCandidate(
+            name=c.get("name") or "?", website=c.get("website"), email=c.get("email"),
+            phone=c.get("phone"), address=c.get("address"), source="KI-Recherche",
+            source_ref=c.get("source_ref"), email_status=c.get("email_status"),
+            fit_reason=c.get("fit_reason"),
+            duplicate=lead is not None, duplicate_reason=reason if lead is not None else None))
+
+    return AiDiscoverResponse(
+        candidates=out,
+        run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur, **usage.as_dict()),
+        budget=_budget_status(spent + cost_eur, budget_eur),
+        notes=result.notes)
+
+
+@router.get("/ai/usage", response_model=AiUsageResponse)
+async def ai_usage(db: AsyncSession = Depends(get_db)) -> AiUsageResponse:
+    """Kosten-Übersicht der KI-Lead-Suche: Monatsverbrauch, Budget, letzte Läufe."""
+    from app.models.app_settings import AppSettings
+
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+    model = app_row.ai_model if app_row else DEFAULT_MODEL
+
+    month_rows = list((await db.execute(
+        select(AiLeadRun).where(AiLeadRun.created_at >= _month_start()))).scalars().all())
+    spent_eur = sum(float(r.cost_eur) for r in month_rows)
+    spent_usd = sum(float(r.cost_usd) for r in month_rows)
+    runs = len(month_rows)
+    recent = list((await db.execute(
+        select(AiLeadRun).order_by(AiLeadRun.created_at.desc()).limit(10))).scalars().all())
+
+    return AiUsageResponse(
+        budget=_budget_status(spent_eur, budget_eur),
+        runs_this_month=runs, spent_usd=round(spent_usd, 4),
+        avg_cost_eur=round(spent_eur / runs, 4) if runs else 0.0,
+        configured=bool(settings.ANTHROPIC_API_KEY), model=model, recent=recent)
 
 
 # --------------------------------------------------------------------------- #

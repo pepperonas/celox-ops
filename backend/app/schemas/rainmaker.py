@@ -103,6 +103,8 @@ class DiscoveredCandidate(BaseModel):
     source_ref: str | None = None
     duplicate: bool = False
     duplicate_reason: str | None = None   # "email" | "website" | "name" (wenn duplicate)
+    email_status: str | None = None       # aus dem Verifier (valid/role/…)
+    fit_reason: str | None = None         # KI-Begründung, warum passend
 
 
 class LeadDiscoveryImportRequest(BaseModel):
@@ -115,6 +117,63 @@ class LeadDiscoveryResult(BaseModel):
     skipped_duplicates: int
     enriched: int = 0
     skipped_rows: list[ImportSkipped] = []
+
+
+# --------------------------------------------------------------------------- #
+#  KI-Lead-Suche
+# --------------------------------------------------------------------------- #
+class AiDiscoverRequest(BaseModel):
+    brief: str
+    use_web_search: bool = False
+    model: str | None = None              # überschreibt das Workspace-Default-Modell
+
+
+class AiRunCost(BaseModel):
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    web_searches: int = 0
+    cost_usd: float = 0.0
+    cost_eur: float = 0.0
+
+
+class AiBudget(BaseModel):
+    budget_eur: float
+    spent_eur: float
+    remaining_eur: float
+    warn: bool = False                    # ≥ 80 % verbraucht
+
+
+class AiDiscoverResponse(BaseModel):
+    candidates: list[DiscoveredCandidate]
+    run: AiRunCost
+    budget: AiBudget
+    notes: list[str] = []
+
+
+class AiRunSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    brief: str
+    model: str
+    cost_eur: float
+    cost_usd: float
+    candidates_found: int
+    leads_imported: int
+    status: str
+    created_at: datetime
+
+
+class AiUsageResponse(BaseModel):
+    budget: AiBudget
+    runs_this_month: int
+    spent_usd: float
+    avg_cost_eur: float
+    configured: bool                      # ANTHROPIC_API_KEY gesetzt?
+    model: str
+    recent: list[AiRunSummary] = []
 
 
 # --------------------------------------------------------------------------- #

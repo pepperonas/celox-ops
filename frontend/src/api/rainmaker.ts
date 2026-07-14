@@ -24,8 +24,20 @@ import type {
   LeadDiscoveryResult,
   DuplicateGroup,
   DuplicateMergeResult,
+  AiDiscoverResponse,
+  AiUsageResponse,
   PaginatedResponse,
 } from '../types'
+
+export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string): Promise<AiDiscoverResponse> {
+  const response = await api.post('/rainmaker/discover/ai/preview', { brief, use_web_search: useWebSearch, model })
+  return response.data
+}
+
+export async function getAiUsage(): Promise<AiUsageResponse> {
+  const response = await api.get('/rainmaker/ai/usage')
+  return response.data
+}
 
 export async function verifyLeadEmail(id: string): Promise<RainmakerLead> {
   const response = await api.post(`/rainmaker/leads/${id}/verify-email`)

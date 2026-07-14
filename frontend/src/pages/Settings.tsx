@@ -9,8 +9,9 @@ import {
   seedEmailTemplates,
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
+import { getAiUsage } from '../api/rainmaker'
 import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
-import type { EmailTemplate, EmailTemplateCreate } from '../types'
+import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse } from '../types'
 
 interface TrackerConfig {
   base_url: string
@@ -105,22 +106,44 @@ export default function Settings() {
   const [placesKeyInput, setPlacesKeyInput] = useState('')
   const [placesSaving, setPlacesSaving] = useState(false)
   const [placesGuideOpen, setPlacesGuideOpen] = useState(false)
+  // KI-Lead-Suche
+  const [aiModel, setAiModel] = useState('claude-sonnet-5')
+  const [aiBudget, setAiBudget] = useState('20')
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiUsage, setAiUsage] = useState<AiUsageResponse | null>(null)
 
   const applySettings = (s: { default_unit_price?: number; invoice_prefix?: string
     google_places_configured?: boolean; google_places_key_hint?: string | null
-    google_places_calls_this_month?: number }) => {
+    google_places_calls_this_month?: number; ai_model?: string; ai_monthly_budget_eur?: number }) => {
     if (s.default_unit_price != null) setDefaultPrice(String(s.default_unit_price))
     if (s.invoice_prefix != null) setInvoicePrefix(s.invoice_prefix)
     setPlacesConfigured(Boolean(s.google_places_configured))
     setPlacesHint(s.google_places_key_hint ?? null)
     setPlacesCalls(s.google_places_calls_this_month ?? 0)
+    if (s.ai_model != null) setAiModel(s.ai_model)
+    if (s.ai_monthly_budget_eur != null) setAiBudget(String(s.ai_monthly_budget_eur))
   }
+
+  const loadAiUsage = () => { getAiUsage().then(setAiUsage).catch(() => {}) }
 
   useEffect(() => {
     loadConfig()
     loadTemplates()
     getSettings().then(applySettings).catch(() => {})
+    loadAiUsage()
   }, [])
+
+  const handleSaveAi = async () => {
+    setAiSaving(true)
+    try {
+      applySettings(await updateSettings({ ai_model: aiModel, ai_monthly_budget_eur: Number(aiBudget.replace(',', '.')) || 0 }))
+      loadAiUsage()
+      toast.success('KI-Einstellungen gespeichert.')
+    } catch {
+      toast.error('Speichern fehlgeschlagen.')
+    }
+    setAiSaving(false)
+  }
 
   const handleSavePlacesKey = async () => {
     const key = placesKeyInput.trim()
@@ -477,6 +500,79 @@ export default function Settings() {
               <li><strong>Budget-Alarm setzen</strong> (Abrechnung → Budgets): z. B. 10 €/Monat mit E-Mail-Benachrichtigung, damit keine Überraschungen entstehen.</li>
               <li><strong>Key geheim halten</strong> — nicht in E-Mails/Screenshots teilen. ops zeigt ihn nur maskiert und gibt ihn nie im Klartext zurück.</li>
             </ul>
+          </div>
+        )}
+      </div>
+
+      {/* KI-Lead-Suche */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">✨ KI-Lead-Suche</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Freitext-Brief → Claude recherchiert, verifiziert (Website + E-Mail) und rankt Leads
+          (Rainmaker → Pipeline → „✨ KI-Leads"). Der Anthropic-API-Key liegt server-seitig in der
+          <span className="font-mono"> .env</span>.
+        </p>
+
+        {/* Status */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`w-2.5 h-2.5 rounded-full inline-block ${aiUsage?.configured ? 'bg-success' : 'bg-text-muted'}`}></span>
+          <span className="text-sm">
+            {aiUsage?.configured
+              ? <>Aktiv <span className="text-text-muted">(Modell {aiModel.replace('claude-', '')})</span></>
+              : <span className="text-text-muted">ANTHROPIC_API_KEY fehlt in der .env — Feature deaktiviert</span>}
+          </span>
+        </div>
+
+        {/* Modell + Budget */}
+        <div className="flex items-end gap-3 flex-wrap mb-4">
+          <div>
+            <label htmlFor="ai-model" className="block text-xs text-text-muted mb-2">Modell</label>
+            <select id="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                    className="bg-surface-container border border-border rounded-lg px-3 py-2 text-sm">
+              <option value="claude-sonnet-5">Sonnet (empfohlen)</option>
+              <option value="claude-haiku-4-5">Haiku (günstiger)</option>
+              <option value="claude-opus-4-8">Opus (teurer)</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="ai-budget" className="block text-xs text-text-muted mb-2">Monatsbudget (€)</label>
+            <input id="ai-budget" type="number" min={0} step="1" value={aiBudget}
+                   onChange={(e) => setAiBudget(e.target.value)} className="w-28" />
+          </div>
+          <button onClick={handleSaveAi} disabled={aiSaving} className="btn-primary">
+            {aiSaving ? 'Speichere…' : 'Speichern'}
+          </button>
+        </div>
+
+        {/* Kosten-Übersicht */}
+        {aiUsage && (
+          <div className="rounded-lg bg-surface-container border border-border p-3 text-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-text-muted">Verbraucht diesen Monat</span>
+              <span className="text-text font-semibold tabular-nums">
+                {aiUsage.budget.spent_eur.toFixed(2)} € / {aiUsage.budget.budget_eur.toFixed(2)} €
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-surface-high overflow-hidden mb-2">
+              <div className={`h-full ${aiUsage.budget.warn ? 'bg-warning' : 'bg-accent'}`}
+                   style={{ width: `${aiUsage.budget.budget_eur > 0 ? Math.min(100, (aiUsage.budget.spent_eur / aiUsage.budget.budget_eur) * 100) : 0}%` }} />
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-text-muted">
+              <span>{aiUsage.runs_this_month} Läufe</span>
+              <span>Ø {aiUsage.avg_cost_eur.toFixed(3)} €/Lauf</span>
+              <span>${aiUsage.spent_usd.toFixed(2)} (Basis USD)</span>
+              {aiUsage.budget.warn && <span className="text-warning">⚠ Budget zu ≥80 % verbraucht</span>}
+            </div>
+            {aiUsage.recent.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2 space-y-1">
+                {aiUsage.recent.slice(0, 5).map((r) => (
+                  <div key={r.id} className="flex items-center justify-between text-[11px] text-text-muted">
+                    <span className="truncate max-w-[60%]" title={r.brief}>{r.brief}</span>
+                    <span className="tabular-nums">{r.candidates_found} Treffer · {r.cost_eur.toFixed(3)} €</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

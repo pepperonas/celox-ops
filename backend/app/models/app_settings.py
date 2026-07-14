@@ -31,3 +31,8 @@ class AppSettings(OwnedMixin, Base):
     # Eigener Nutzungszähler (Google gibt das Restkontingent per Key nicht her).
     google_places_calls: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     google_places_period: Mapped[str | None] = mapped_column(String(7), nullable=True)  # "YYYY-MM"
+    # KI-Lead-Suche: Standard-Modell + hartes Monatsbudget (EUR).
+    ai_model: Mapped[str] = mapped_column(
+        String(40), default="claude-sonnet-5", server_default="claude-sonnet-5", nullable=False)
+    ai_monthly_budget_eur: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), default=Decimal("20"), server_default="20", nullable=False)
