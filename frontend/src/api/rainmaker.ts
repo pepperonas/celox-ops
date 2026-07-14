@@ -30,8 +30,22 @@ import type {
 } from '../types'
 
 export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string): Promise<AiDiscoverResponse> {
-  const response = await api.post('/rainmaker/discover/ai/preview', { brief, use_web_search: useWebSearch, model })
-  return response.data
+  const body = { brief, use_web_search: useWebSearch, model }
+  // 502 = Backend gerade nicht erreichbar (z. B. kurzes Deploy-Fenster). Die Anfrage
+  // hat den Server nicht erreicht → sicher & kostenfrei erneut versuchen.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await api.post('/rainmaker/discover/ai/preview', body)
+      return response.data
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 502 && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 3000))
+        continue
+      }
+      throw err
+    }
+  }
 }
 
 export async function getAiUsage(): Promise<AiUsageResponse> {
