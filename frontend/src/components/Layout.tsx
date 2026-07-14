@@ -315,6 +315,8 @@ export default function Layout() {
             <span className="flex-1 text-left">Suchen…</span>
             <kbd className="hidden sm:inline text-[10px] bg-bg px-1.5 py-0.5 rounded-full">⌘K</kbd>
           </button>
+          {/* Spacer schiebt den Abmelden-Button bündig an den rechten Rand */}
+          <div className="flex-1" aria-hidden="true" />
           <button
             onClick={handleLogout}
             className="btn-secondary text-xs !py-2 !px-3 shrink-0"
