@@ -20,6 +20,8 @@ import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from '.
 import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
 
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
+const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
+const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 function loadTimeFilter(): TimeFilterValue {
   try {
     return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
@@ -36,9 +38,19 @@ export default function RainmakerPipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
-  const [sourceFilter, setSourceFilter] = useState<string | null>(null)  // null = alle
-  const [emailFilter, setEmailFilter] = useState<string | null>(null)    // null|deliverable|problem
+  // Filter überstehen die Zurück-Navigation (Pipeline remountet) via localStorage.
+  const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
+  const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
   const [timeFilter, setTimeFilter] = useState<TimeFilterValue>(loadTimeFilter)
+
+  useEffect(() => {
+    if (sourceFilter) localStorage.setItem(SOURCE_FILTER_KEY, sourceFilter)
+    else localStorage.removeItem(SOURCE_FILTER_KEY)
+  }, [sourceFilter])
+  useEffect(() => {
+    if (emailFilter) localStorage.setItem(EMAIL_FILTER_KEY, emailFilter)
+    else localStorage.removeItem(EMAIL_FILTER_KEY)
+  }, [emailFilter])
 
   const patchTimeFilter = useCallback((patch: Partial<TimeFilterValue>) => {
     setTimeFilter((prev) => {
@@ -145,6 +157,19 @@ export default function RainmakerPipeline() {
     }
     return { deliverable, problem }
   }, [leads])
+
+  // Persistierten Filter zurücksetzen, wenn er ins Leere zeigt (sonst leeres Board
+  // ohne Reset-Chip, weil die zugehörige Filterleiste dann ausgeblendet ist).
+  useEffect(() => {
+    if (leads.length && sourceFilter && !sourceChips.some((c) => c.key === sourceFilter)) {
+      setSourceFilter(null)
+    }
+  }, [leads.length, sourceFilter, sourceChips])
+  useEffect(() => {
+    if (leads.length && emailFilter && (emailCounts[emailFilter as 'deliverable' | 'problem'] ?? 0) === 0) {
+      setEmailFilter(null)
+    }
+  }, [leads.length, emailFilter, emailCounts])
 
   if (loading) return <LoadingIndicator />
 
