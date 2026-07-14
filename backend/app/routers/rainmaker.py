@@ -738,8 +738,10 @@ async def ai_discover_preview(
         await db.flush()
         raise HTTPException(status_code=502, detail=f"KI-Lauf fehlgeschlagen: {exc}")
 
+    from app.services.ai_pricing import get_pricing
+
     usage = result.usage
-    cost_usd = usage.cost_usd(model)
+    cost_usd = usage.cost_with(await get_pricing(model))   # dynamische Preise (12-h-Cache)
     cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
 
     db.add(AiLeadRun(
@@ -772,10 +774,12 @@ async def ai_discover_preview(
 async def ai_usage(db: AsyncSession = Depends(get_db)) -> AiUsageResponse:
     """Kosten-Übersicht der KI-Lead-Suche: Monatsverbrauch, Budget, letzte Läufe."""
     from app.models.app_settings import AppSettings
+    from app.services.ai_pricing import get_pricing, pricing_source
 
     app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
     budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
     model = app_row.ai_model if app_row else DEFAULT_MODEL
+    await get_pricing(model)              # Preise (dynamisch) laden/cachen → Quelle bekannt
 
     month_rows = list((await db.execute(
         select(AiLeadRun).where(AiLeadRun.created_at >= _month_start()))).scalars().all())
@@ -789,7 +793,8 @@ async def ai_usage(db: AsyncSession = Depends(get_db)) -> AiUsageResponse:
         budget=_budget_status(spent_eur, budget_eur),
         runs_this_month=runs, spent_usd=round(spent_usd, 4),
         avg_cost_eur=round(spent_eur / runs, 4) if runs else 0.0,
-        configured=bool(settings.ANTHROPIC_API_KEY), model=model, recent=recent)
+        configured=bool(settings.ANTHROPIC_API_KEY), model=model,
+        pricing_source=pricing_source(), recent=recent)
 
 
 # --------------------------------------------------------------------------- #

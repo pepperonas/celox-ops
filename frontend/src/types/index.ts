@@ -676,6 +676,7 @@ export interface AiUsageResponse {
   avg_cost_eur: number
   configured: boolean
   model: string
+  pricing_source?: string
   recent: AiRunSummary[]
 }
 

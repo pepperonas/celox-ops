@@ -561,6 +561,9 @@ export default function Settings() {
               <span>{aiUsage.runs_this_month} Läufe</span>
               <span>Ø {aiUsage.avg_cost_eur.toFixed(3)} €/Lauf</span>
               <span>${aiUsage.spent_usd.toFixed(2)} (Basis USD)</span>
+              <span title="Preise werden dynamisch aus einer gepflegten Tabelle geladen; „Fallback“ = hinterlegte Konstanten.">
+                Preise: {aiUsage.pricing_source === 'live' ? <span className="text-success">live ✓</span> : 'Fallback'}
+              </span>
               {aiUsage.budget.warn && <span className="text-warning">⚠ Budget zu ≥80 % verbraucht</span>}
             </div>
             {aiUsage.recent.length > 0 && (

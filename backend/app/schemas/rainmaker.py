@@ -173,6 +173,7 @@ class AiUsageResponse(BaseModel):
     avg_cost_eur: float
     configured: bool                      # ANTHROPIC_API_KEY gesetzt?
     model: str
+    pricing_source: str = "fallback"      # "live" = Preise dynamisch geladen
     recent: list[AiRunSummary] = []
 
 
