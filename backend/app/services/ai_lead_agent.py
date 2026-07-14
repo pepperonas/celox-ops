@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from app.services.ai_pricing import DEFAULT_MODEL, Usage
 from app.services.email_verifier import verify_email
 from app.services.lead_dedup import norm_name, norm_website
-from app.services.lead_discovery import SEGMENT_LABELS, discover_osm, website_alive
+from app.services.lead_discovery import SEGMENT_LABELS, discover_osm
 
 
 @dataclass
@@ -185,32 +185,39 @@ async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryC
     die Websuche aus, gibt es eine Notiz statt eines Fehlers."""
     seg = ", ".join(SEGMENT_LABELS.get(s, s) for s in (params.get("segments") or [])) or "Firmen"
     cities = ", ".join(params.get("cities") or []) or "Deutschland"
-    user = (
-        f"Finde bis zu {caps.max_candidates} {seg} in {cities}.\n"
+    research_prompt = (
+        f"Recherchiere im Web bis zu {caps.max_candidates} echte {seg} in {cities}.\n"
         f"Fit-Kriterien: {params.get('fit_criteria') or '-'}\nAusschluss: {params.get('exclude') or '-'}\n"
-        "Gib je Firma: Name, Website, E-Mail (aus dem Impressum), Adresse."
+        "Sammle je Firma: Name, Website, E-Mail (aus dem Impressum), Adresse. "
+        "Liste am Ende ALLE gefundenen Firmen mit diesen Angaben auf. Keine Portal-/Verzeichnisseiten."
     )
+    # Call 1: Websuche (server-seitig) → Recherche-Text.
     try:
-        resp = await ai.messages.create(
+        r1 = await ai.messages.create(
             model=model, max_tokens=4000,
             system=[{"type": "text", "text": _WEB_SYSTEM, "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": user}],
-            tools=[
-                {"type": "web_search_20250305", "name": "web_search", "max_uses": caps.max_web_uses},
-                {"name": "found_companies", "description": "Gefundene Firmen strukturiert zurückgeben.",
-                 "input_schema": _WEB_SCHEMA},
-            ],
-            tool_choice={"type": "auto"},
+            messages=[{"role": "user", "content": research_prompt}],
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": caps.max_web_uses}],
         )
     except Exception as exc:  # noqa: BLE001 — Websuche darf den Lauf nicht kippen
         notes.append(f"Web-Suche nicht verfügbar: {type(exc).__name__}")
         return []
-    usage.add(getattr(resp, "usage", None))
+    usage.add(getattr(r1, "usage", None))
+    research = "".join(getattr(b, "text", "") for b in getattr(r1, "content", [])
+                       if getattr(b, "type", None) == "text")
+    if not research.strip():
+        return []
 
-    raw: list[dict] = []
-    for block in getattr(resp, "content", []):
-        if getattr(block, "type", None) == "tool_use" and getattr(block, "name", None) == "found_companies":
-            raw = list(block.input.get("companies") or [])
+    # Call 2: strukturieren (erzwungenes Tool, keine Websuche) → garantiert eine Liste.
+    try:
+        out = await _structured(
+            ai, model,
+            "Extrahiere aus dem Recherche-Text die Firmen mit Website UND E-Mail als Liste "
+            "(keine Portale/Verzeichnisse).",
+            research, "found_companies", _WEB_SCHEMA, usage, max_tokens=3000)
+    except ValueError:
+        return []
+    raw: list[dict] = list(out.get("companies") or [])
 
     out: list[dict] = []
     mx_cache: dict = {}
@@ -220,8 +227,8 @@ async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryC
         email = (co.get("email") or "").strip()
         if not (name and website and email):
             continue
-        if not await website_alive(website, http_client):
-            continue
+        # KEIN HTTP-Live-Check (wirft aus dem Rechenzentrum zu viele echte Firmen
+        # raus: 403/Timeout bei Bot-Schutz/langsamen Seiten). E-Mail-MX ist das Gate.
         ev = await verify_email(email, mx_cache=mx_cache)
         if ev.status.value not in ("valid", "role"):
             continue

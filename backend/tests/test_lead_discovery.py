@@ -278,9 +278,23 @@ def test_overpass_falls_back_on_504():
 
 
 def test_overpass_falls_back_on_timeout():
-    c = _SeqClient([httpx.ConnectError("boom"), {"elements": []}])
-    assert _run(_overpass_query("q", c)) == {"elements": []}
+    c = _SeqClient([httpx.ConnectError("boom"),
+                    {"elements": [{"type": "node", "id": 1, "tags": {"name": "Y"}}]}])
+    assert _run(_overpass_query("q", c))["elements"][0]["tags"]["name"] == "Y"
     assert c.calls == 2
+
+
+def test_overpass_retries_on_empty_response():
+    # 200 aber leer (Throttle) → nächster Mirror; erst der dritte liefert Daten
+    c = _SeqClient([{"elements": []}, {"elements": []},
+                    {"elements": [{"type": "node", "id": 1, "tags": {"name": "X"}}]}])
+    data = _run(_overpass_query("q", c))
+    assert data["elements"][0]["tags"]["name"] == "X" and c.calls == 3
+
+
+def test_overpass_all_empty_returns_empty():
+    c = _SeqClient([{"elements": []}] * len(OVERPASS_ENDPOINTS))
+    assert _run(_overpass_query("q", c)) == {"elements": []}
 
 
 def test_overpass_all_down_raises_valueerror():

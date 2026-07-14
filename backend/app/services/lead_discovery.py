@@ -196,18 +196,26 @@ async def _overpass_query(query: str, client) -> dict:
     ausfallen → ValueError mit klarer Meldung (der Router meldet sie als 422).
     Ein echter Fehler (z. B. 400 = kaputte Query) bricht sofort ab."""
     last: Exception | None = None
+    last_empty: dict | None = None
     for url in OVERPASS_ENDPOINTS:
         try:
             resp = await client.post(url, data={"data": query})
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
         except httpx.HTTPStatusError as exc:
             last = exc
             if exc.response.status_code not in _OVERPASS_TRANSIENT:
                 raise ValueError(f"Overpass-Anfrage abgelehnt (HTTP {exc.response.status_code}).") from exc
-            # transient → nächster Server
-        except httpx.RequestError as exc:      # Timeout/Connect/Read → nächster Server
+            continue                            # transient → nächster Server
+        except httpx.RequestError as exc:       # Timeout/Connect/Read → nächster Server
             last = exc
+            continue
+        if data.get("elements"):
+            return data
+        # 200, aber leer → oft Throttle statt echtem Nichts → nächsten Mirror versuchen
+        last_empty = data
+    if last_empty is not None:                  # alle lieferten leer → als echt-leer akzeptieren
+        return last_empty
     raise ValueError(
         "OpenStreetMap/Overpass ist gerade überlastet — alle Server antworten mit "
         "Timeout/Fehler. Bitte in ein paar Minuten erneut versuchen oder Google Places nutzen."
