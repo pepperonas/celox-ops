@@ -24,6 +24,7 @@ interface AiLeadState {
   setOpen: (v: boolean) => void
   run: () => Promise<void>
   close: () => void
+  discard: () => void
   reset: () => void
   notifyImported: (created: number) => void
 }
@@ -60,10 +61,21 @@ export const useAiLeadStore = create<AiLeadState>((set, get) => ({
     }
   },
 
-  // Dialog schließen: läuft eine Suche → nur minimieren (Pill), sonst verwerfen.
+  // Dialog schließen OHNE Ergebnisverlust: läuft eine Suche ODER liegen Kandidaten
+  // vor → nur minimieren (Pill bleibt, Ergebnisse erhalten). Nur ein leerer Dialog
+  // (kein Lauf, keine Treffer) wird beim Schließen verworfen. Ergebnisse gezielt
+  // wegwerfen geht ausschließlich über discard().
   close: () => {
+    const { running, res } = get()
+    const hasResults = !!res && res.candidates.length > 0
     set({ open: false })
-    if (!get().running) get().reset()
+    if (!running && !hasResults) get().reset()
+  },
+
+  // Explizites Verwerfen (Button „Verwerfen" / ✕ an der Pill).
+  discard: () => {
+    set({ open: false })
+    get().reset()
   },
 
   reset: () => set({ res: null, brief: '', startedAt: null }),

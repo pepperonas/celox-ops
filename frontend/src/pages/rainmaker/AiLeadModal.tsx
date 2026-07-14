@@ -10,13 +10,14 @@ import type { AiLeadRun } from './aiLeadRun'
 interface Props {
   run: AiLeadRun
   onClose: () => void
+  onDiscard: () => void
   onImported: (created: number) => void
 }
 
 const REASON_LABEL: Record<string, string> = { email: 'E-Mail', website: 'Website', name: 'Name' }
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' €'
 
-export default function AiLeadModal({ run, onClose, onImported }: Props) {
+export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Props) {
   // Suchzustand kommt aus dem globalen Store (überlebt Minimieren + Seitenwechsel); nur UI-State ist lokal.
   const { brief, setBrief, useWeb, setUseWeb, running, ranWeb, res, elapsed, phase, phaseLabels } = run
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -51,6 +52,7 @@ export default function AiLeadModal({ run, onClose, onImported }: Props) {
   }
 
   const dupCount = useMemo(() => res?.candidates.filter((c) => c.duplicate).length ?? 0, [res])
+  const hasResults = !!res && res.candidates.length > 0
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
@@ -185,10 +187,16 @@ export default function AiLeadModal({ run, onClose, onImported }: Props) {
         )}
 
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="btn-secondary" disabled={importing}>
-            {running ? 'Im Hintergrund' : 'Schließen'}
+          {hasResults && (
+            <button onClick={onDiscard} className="btn-secondary !text-danger" disabled={importing} title="Ergebnisse endgültig verwerfen">
+              Verwerfen
+            </button>
+          )}
+          <button onClick={onClose} className="btn-secondary" disabled={importing}
+                  title={hasResults || running ? 'Dialog schließen — Ergebnisse bleiben erhalten (Pill unten rechts)' : undefined}>
+            {running || hasResults ? 'Minimieren' : 'Schließen'}
           </button>
-          {res && res.candidates.length > 0 && (
+          {hasResults && (
             <button onClick={doImport} className="btn-primary" disabled={selected.size === 0 || importing}>
               {importing ? 'Importiere…' : `${selected.size} importieren`}
             </button>

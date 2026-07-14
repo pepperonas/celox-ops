@@ -57,11 +57,17 @@ export default function AiLeadHost() {
         <AiLeadModal
           run={run}
           onClose={store.close}
+          onDiscard={store.discard}
           onImported={(created) => store.notifyImported(created)}
         />
       )}
       {showPill && (
-        <AiLeadPill run={run} count={store.res?.candidates.length} onOpen={openHere} />
+        <AiLeadPill
+          run={run}
+          count={store.res?.candidates.length}
+          onOpen={openHere}
+          onDiscard={store.discard}
+        />
       )}
     </>
   )
