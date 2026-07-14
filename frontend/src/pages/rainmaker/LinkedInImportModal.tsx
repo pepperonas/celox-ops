@@ -7,7 +7,7 @@ import { STATUS_LABELS } from './constants'
 
 interface Props {
   onClose: () => void
-  onImported: () => void
+  onImported: (created: number) => void
 }
 
 const EXPORT_URL = 'https://www.linkedin.com/mypreferences/d/download-my-data'
@@ -129,7 +129,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
         (result.activities_created > 0 ? ` · ${result.activities_created} Nachrichten als Aktivitäten` : '') +
         (result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} unverändert` : '') + '.'
       )
-      onImported()
+      onImported(result.created)
     } catch {
       toast.error('Import fehlgeschlagen.')
       setImporting(false)

@@ -9,7 +9,7 @@ import {
 
 interface Props {
   onClose: () => void
-  onImported: () => void
+  onImported: (created: number) => void
 }
 
 const SEGMENTS: { key: string; label: string }[] = [
@@ -139,7 +139,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
       }
       toast.success(`${created} Lead${created === 1 ? '' : 's'} importiert` +
         (skipped > 0 ? ` · ${skipped} Duplikat${skipped === 1 ? '' : 'e'} übersprungen` : '') + '.')
-      onImported()
+      onImported(created)
     } catch {
       toast.error('Import fehlgeschlagen.')
       setImporting(false)

@@ -16,6 +16,17 @@ import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
 import { sourceBadge, sourceKey } from './leadSources'
 import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
+import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from './PipelineTimeFilter'
+import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
+
+const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
+function loadTimeFilter(): TimeFilterValue {
+  try {
+    return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
+  } catch {
+    return DEFAULT_TIME_FILTER
+  }
+}
 
 export default function RainmakerPipeline() {
   const navigate = useAppNavigate()
@@ -27,6 +38,20 @@ export default function RainmakerPipeline() {
   const [showDiscovery, setShowDiscovery] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)  // null = alle
   const [emailFilter, setEmailFilter] = useState<string | null>(null)    // null|deliverable|problem
+  const [timeFilter, setTimeFilter] = useState<TimeFilterValue>(loadTimeFilter)
+
+  const patchTimeFilter = useCallback((patch: Partial<TimeFilterValue>) => {
+    setTimeFilter((prev) => {
+      const next = { ...prev, ...patch }
+      try { localStorage.setItem(TIME_FILTER_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }, [])
+
+  const leadTs = useCallback(
+    (l: RainmakerLead) => toMs(timeFilter.field === 'created' ? l.created_at : l.updated_at),
+    [timeFilter.field],
+  )
   // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
   const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
@@ -52,6 +77,16 @@ export default function RainmakerPipeline() {
   useEffect(() => {
     fetchLeads()
   }, [fetchLeads])
+
+  // Nach einem Import: neu laden und — bei echten Neuanlagen — direkt auf den
+  // gerade angelegten Batch filtern (Preset „Letzter Import", Feld = Erstellt).
+  const handleImported = useCallback((created: number) => {
+    fetchLeads()
+    if (created > 0) {
+      patchTimeFilter({ preset: 'lastImport', field: 'created' })
+      toast('Filter: gerade importierte Leads · „Alle" zum Zurücksetzen', { icon: '✦' })
+    }
+  }, [fetchLeads, patchTimeFilter])
 
   const handleDrop = async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
     e.preventDefault()
@@ -87,12 +122,20 @@ export default function RainmakerPipeline() {
     return [...map.values()].sort((a, b) => b.count - a.count)
   }, [leads])
 
+  const timeWindow = useMemo(() => {
+    if (timeFilter.preset === 'lastImport') {
+      return detectLastImportWindow(leads.map(leadTs), Date.now())
+    }
+    return presetWindow(timeFilter.preset, Date.now(), timeFilter.from, timeFilter.to)
+  }, [timeFilter, leads, leadTs])
+
   const filteredLeads = useMemo(() => {
     let ls = sourceFilter === null ? leads : leads.filter((l) => sourceKey(l.source) === sourceFilter)
     if (emailFilter === 'deliverable') ls = ls.filter((l) => l.email_status && EMAIL_DELIVERABLE.has(l.email_status))
     else if (emailFilter === 'problem') ls = ls.filter((l) => l.email_status && EMAIL_PROBLEM.has(l.email_status))
+    if (timeFilter.preset !== 'all') ls = ls.filter((l) => inWindow(leadTs(l), timeWindow))
     return ls
-  }, [leads, sourceFilter, emailFilter])
+  }, [leads, sourceFilter, emailFilter, timeFilter.preset, timeWindow, leadTs])
 
   const emailCounts = useMemo(() => {
     let deliverable = 0, problem = 0
@@ -173,6 +216,14 @@ export default function RainmakerPipeline() {
           ))}
         </div>
       )}
+
+      {/* Zeitfilter: Erstellt/Geändert × Presets/Von–Bis/Letzter Import. */}
+      <PipelineTimeFilter
+        value={timeFilter}
+        onChange={patchTimeFilter}
+        matchCount={filteredLeads.length}
+        totalCount={leads.length}
+      />
 
       {/* Umbruchfähiges Grid statt horizontalem Scroll: alle Status bleiben
           im Viewport — 6 Spalten auf breiten Screens, sonst 3/2/1 im Umbruch. */}
@@ -265,13 +316,13 @@ export default function RainmakerPipeline() {
       {showImport && (
         <LinkedInImportModal
           onClose={() => setShowImport(false)}
-          onImported={() => { setShowImport(false); fetchLeads() }}
+          onImported={(created) => { setShowImport(false); handleImported(created) }}
         />
       )}
       {showDiscovery && (
         <LeadDiscoveryModal
           onClose={() => setShowDiscovery(false)}
-          onImported={() => { setShowDiscovery(false); fetchLeads() }}
+          onImported={(created) => { setShowDiscovery(false); handleImported(created) }}
         />
       )}
       <RainmakerFooter />
