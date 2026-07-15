@@ -874,3 +874,42 @@ export interface RainmakerStats {
   longest_streak: number
   total_points: number
 }
+
+// --- Outreach (Akquise-Nachrichten) ---
+export type OutreachChannel = 'email' | 'linkedin' | 'phone'
+export type OutreachCategory =
+  | 'kaltakquise'
+  | 'followup'
+  | 'reaktivierung'
+  | 'empfehlung'
+  | 'angebot_nachfassen'
+  | 'security_upsell'
+  | 'security_audit'
+
+export interface OutreachTemplate {
+  id: string
+  channel: OutreachChannel
+  category: OutreachCategory
+  title: string
+  subject: string | null
+  body: string
+  notes: string | null
+  sort_order: number
+  is_favorite: boolean
+  usage_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface OutreachTemplateCreate {
+  channel: OutreachChannel
+  category: OutreachCategory
+  title: string
+  subject?: string | null
+  body: string
+  notes?: string | null
+  sort_order?: number
+  is_favorite?: boolean
+}
+
+export type OutreachTemplateUpdate = Partial<OutreachTemplateCreate>

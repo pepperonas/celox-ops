@@ -151,6 +151,16 @@ const navItems = [
     ),
   },
   {
+    to: '/akquise',
+    label: 'Akquise-Nachrichten',
+    adminOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 01-9 9c-1.6 0-3.1-.4-4.4-1.1L3 21l1.1-4.6C3.4 15.1 3 13.6 3 12a9 9 0 019-9 9 9 0 019 9z" />
+      </svg>
+    ),
+  },
+  {
     to: '/benutzer',
     label: 'Benutzer',
     adminOnly: true,
