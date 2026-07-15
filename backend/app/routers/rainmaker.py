@@ -752,11 +752,19 @@ async def ai_discover_preview(
             f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
             "Budget in den Einstellungen erhöhen, um weitere Läufe zu starten."))
 
+    # Bestehende Leads schon beim Sammeln überspringen → Wiederholungen liefern
+    # frische statt duplizierter Kandidaten. Der Index wird unten für die
+    # Duplikat-Markierung wiederverwendet.
+    idx, _ = await _build_dedup_index(db)
+
+    def _known(email, website, name) -> bool:
+        return idx.match(email=email, website=website, name=name)[0] is not None
+
     try:
         async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
             result = await run_ai_discovery(
                 brief=data.brief, model=model, use_web_search=data.use_web_search,
-                api_key=settings.ANTHROPIC_API_KEY, http_client=client)
+                api_key=settings.ANTHROPIC_API_KEY, http_client=client, known=_known)
     except Exception as exc:  # noqa: BLE001
         db.add(AiLeadRun(brief=data.brief[:2000], model=model,
                          used_web_search=data.use_web_search, status="failed",
@@ -776,8 +784,8 @@ async def ai_discover_preview(
         candidates_found=len(result.candidates), status="ok", **usage.as_dict()))
     await db.flush()
 
-    # Duplikat-Markierung gegen den Bestand (wie bei der normalen Discovery).
-    idx, _ = await _build_dedup_index(db)
+    # Duplikat-Markierung gegen den Bestand (fast alle bekannten sind schon beim
+    # Sammeln gefiltert; das fängt E-Mail-/Batch-interne Restfälle ab). Index wiederverwendet.
     out: list[DiscoveredCandidate] = []
     for c in result.candidates:
         lead, reason = idx.match(email=c.get("email"), website=c.get("website"))

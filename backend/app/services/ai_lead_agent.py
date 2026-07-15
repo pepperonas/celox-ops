@@ -25,9 +25,9 @@ from app.services.lead_discovery import SEGMENT_LABELS, discover_osm
 class DiscoveryCaps:
     max_segments: int = 4
     max_cities: int = 4
-    per_combo_limit: int = 150     # Overpass-Objekte je Kombi (nur ~15 % haben Website+E-Mail)
-    max_candidates: int = 80       # Obergrenze für MX-/Rank-Aufwand
-    max_web_uses: int = 5          # max Web-Suchen pro Lauf
+    per_combo_limit: int = 300     # Overpass-Objekte je Kombi (nur ~15 % haben Website+E-Mail)
+    max_candidates: int = 150      # Obergrenze für MX-/Rank-Aufwand
+    max_web_uses: int = 4          # max Web-Suchen pro Lauf (Zeitbudget)
 
 
 @dataclass
@@ -39,9 +39,15 @@ class AiDiscoveryResult:
 
 
 def get_client(api_key: str):
-    """Lazy: erzeugt den AsyncAnthropic-Client (SDK erst hier importiert)."""
+    """Lazy: erzeugt den AsyncAnthropic-Client (SDK erst hier importiert).
+    Explizites Timeout, damit ein hängender Call (v. a. Websuche) fehlschlägt,
+    statt endlos zu blockieren und die nginx-Frist (300s) zu reißen."""
     import anthropic
-    return anthropic.AsyncAnthropic(api_key=api_key)
+    return anthropic.AsyncAnthropic(api_key=api_key, timeout=150.0)
+
+
+# Prädikat: ist ein Kandidat bereits als Lead bekannt? (aus dem Dedup-Index gebaut)
+KnownFn = "Callable[[str | None, str | None, str | None], bool]"
 
 
 async def _structured(ai, model: str, system: str, user: str, tool_name: str,
@@ -111,11 +117,13 @@ def _cand_key(c: dict) -> str:
 
 
 async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
-                            notes: list[str]) -> list[dict]:
+                            notes: list[str], known=None) -> list[dict]:
     """Overpass-Kandidaten pro Segment×Stadt, dedupliziert, mit E-Mail-MX-Prüfung.
-    Behält nur zustellbare (email_status valid/role). Website-Live-Check macht
-    discover_osm bereits."""
+    Behält nur zustellbare (email_status valid/role). `known(email,website,name)`
+    (optional) filtert bereits vorhandene Leads schon hier raus, damit bei einer
+    Wiederholung FRISCHE Treffer nachrücken statt Duplikate."""
     seen: dict[str, dict] = {}
+    known_skipped = 0
     for seg in (params.get("segments") or [])[:caps.max_segments]:
         for city in (params.get("cities") or [])[:caps.max_cities]:
             try:
@@ -130,6 +138,9 @@ async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
                 continue
             seg_label = SEGMENT_LABELS.get(seg, seg)
             for r in rows:
+                if known and known(r.get("email"), r.get("website"), r.get("name")):
+                    known_skipped += 1
+                    continue                        # bereits als Lead → nicht erneut zeigen
                 k = _cand_key(r)
                 if k and k not in seen:
                     r.setdefault("segment", seg_label)  # Branche zur Identifikation
@@ -146,6 +157,12 @@ async def gather_candidates(params: dict, http_client, caps: DiscoveryCaps,
         if ev.status.value in ("valid", "role"):
             c["email_status"] = ev.status.value
             verified.append(c)
+    # Erschöpfungs-Hinweis: nichts Frisches, aber Treffer waren bekannt.
+    if not verified and known_skipped:
+        notes.append(
+            f"{known_skipped} Treffer sind bereits als Lead gespeichert — für neue "
+            "Kontakte die Web-Suche aktivieren oder Stadt/Branche ändern."
+        )
     return verified
 
 
@@ -181,7 +198,7 @@ _WEB_SYSTEM = (
 
 
 async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryCaps,
-                     usage: Usage, notes: list[str]) -> list[dict]:
+                     usage: Usage, notes: list[str], known=None) -> list[dict]:
     """Web-Recherche via Claude (server-seitige Websuche) → strukturierte Firmen,
     dann deterministisch verifiziert (Website live + E-Mail-MX). Defensiv: fällt
     die Websuche aus, gibt es eine Notiz statt eines Fehlers."""
@@ -230,6 +247,8 @@ async def gather_web(ai, model: str, params: dict, http_client, caps: DiscoveryC
         email = (co.get("email") or "").strip()
         if not (name and website and email):
             continue
+        if known and known(email, website, name):
+            continue                                # bereits als Lead → überspringen
         # KEIN HTTP-Live-Check (wirft aus dem Rechenzentrum zu viele echte Firmen
         # raus: 403/Timeout bei Bot-Schutz/langsamen Seiten). E-Mail-MX ist das Gate.
         ev = await verify_email(email, mx_cache=mx_cache)
@@ -302,9 +321,11 @@ async def rank_candidates(ai, model: str, brief: str, params: dict,
 # --------------------------------------------------------------------------- #
 async def run_ai_discovery(*, brief: str, model: str, api_key: str, http_client,
                            use_web_search: bool = False, caps: DiscoveryCaps | None = None,
-                           ai=None) -> AiDiscoveryResult:
+                           ai=None, known=None) -> AiDiscoveryResult:
     """Vollständiger Lauf. `ai` (Anthropic-Client) ist für Tests injizierbar.
-    OSM ist immer die Basis; `use_web_search` ergänzt Web-Treffer (opt-in, kostet)."""
+    OSM ist immer die Basis; `use_web_search` ergänzt Web-Treffer (opt-in, kostet).
+    `known(email,website,name)` überspringt bereits vorhandene Leads schon beim
+    Sammeln → Wiederholungen liefern frische statt duplizierter Kandidaten."""
     caps = caps or DiscoveryCaps()
     usage = Usage()
     notes: list[str] = []
@@ -312,10 +333,10 @@ async def run_ai_discovery(*, brief: str, model: str, api_key: str, http_client,
     model = model or DEFAULT_MODEL
 
     params = await parse_brief(ai, model, brief, usage)
-    cands = await gather_candidates(params, http_client, caps, notes)
+    cands = await gather_candidates(params, http_client, caps, notes, known=known)
 
     if use_web_search:
-        web = await gather_web(ai, model, params, http_client, caps, usage, notes)
+        web = await gather_web(ai, model, params, http_client, caps, usage, notes, known=known)
         seen = {_cand_key(c) for c in cands}
         for w in web:
             k = _cand_key(w)

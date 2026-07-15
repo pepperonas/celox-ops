@@ -102,3 +102,31 @@ def test_gather_handles_overpass_error(monkeypatch):
     res = _run(gather_candidates({"segments": ["hausverwaltung"], "cities": ["Berlin"]},
                                  None, DiscoveryCaps(), notes))
     assert res == [] and notes and "Overpass" in notes[0]
+
+
+def test_gather_skips_known_leads_and_notes_exhaustion(monkeypatch):
+    async def fake_discover(seg, city, limit, client, **kw):
+        return [
+            {"name": "Alt", "website": "https://alt.de", "email": "a@alt.de"},   # bereits Lead
+            {"name": "Neu", "website": "https://neu.de", "email": "b@neu.de"},   # frisch
+        ]
+
+    async def fake_verify(email, mx_cache=None):
+        return EmailCheck(status=EmailStatus.VALID)
+
+    monkeypatch.setattr(agent, "discover_osm", fake_discover)
+    monkeypatch.setattr(agent, "verify_email", fake_verify)
+
+    # nur die frische Firma bleibt übrig
+    def known(email, website, name):
+        return (website or "").rstrip("/").endswith("alt.de")
+
+    res = _run(gather_candidates({"segments": ["hausverwaltung"], "cities": ["Berlin"]},
+                                 None, DiscoveryCaps(), [], known=known))
+    assert [c["name"] for c in res] == ["Neu"]
+
+    # Alles bekannt → leer + Erschöpfungs-Hinweis
+    notes: list[str] = []
+    res2 = _run(gather_candidates({"segments": ["hausverwaltung"], "cities": ["Berlin"]},
+                                  None, DiscoveryCaps(), notes, known=lambda e, w, n: True))
+    assert res2 == [] and notes and "bereits als Lead" in notes[0]
