@@ -182,19 +182,55 @@ const navItems = [
   },
 ]
 
+// Thematische, einklappbare Gruppen (Dashboard bleibt einzeln oben). Reihenfolge
+// nach Business-Flow: gewinnen → liefern → abrechnen → planen → Ablage → System.
+const NAV_GROUPS_META: { title: string; paths: string[] }[] = [
+  { title: 'Akquise', paths: ['/rainmaker', '/pipeline', '/akquise'] },
+  { title: 'Kunden & Aufträge', paths: ['/kunden', '/auftraege', '/kanban', '/vertraege'] },
+  { title: 'Finanzen', paths: ['/rechnungen', '/ausgaben', '/euer', '/analyse'] },
+  { title: 'Organisation', paths: ['/aufgaben', '/kalender', '/zeiterfassung'] },
+  { title: 'Dokumente', paths: ['/dokumente', '/rechtsdokumente'] },
+  { title: 'System', paths: ['/benutzer', '/einstellungen'] },
+]
+
+const RAIL_KEY = 'ops-nav-rail-collapsed'
+const GROUPS_KEY = 'ops-nav-collapsed-groups'
+
 function isItemActive(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/'
   return pathname === to || pathname.startsWith(to + '/')
 }
 
 export default function Layout() {
-  const [collapsed, setCollapsed] = useState(false)
+  // Rail-Collapse + eingeklappte Gruppen überleben einen Reload (localStorage).
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(RAIL_KEY) === '1')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]') } catch { return [] }
+  })
   const logout = useAuthStore((s) => s.logout)
   const role = useAuthStore((s) => s.role)
-  const visibleNavItems = navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || role === 'admin')
   const appNavigate = useAppNavigate()
   const location = useLocation()
+
+  const toggleRail = () => setCollapsed((c) => { localStorage.setItem(RAIL_KEY, c ? '0' : '1'); return !c })
+  const toggleGroup = (title: string) => setCollapsedGroups((prev) => {
+    const next = prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    localStorage.setItem(GROUPS_KEY, JSON.stringify(next))
+    return next
+  })
+
+  // Sichtbare Items (Admin-Filter), nach Gruppen aufgebaut; Dashboard bleibt einzeln.
+  const canSee = (item: { adminOnly?: boolean }) => !item.adminOnly || role === 'admin'
+  const byPath = Object.fromEntries(navItems.map((i) => [i.to, i]))
+  const dashboard = byPath['/']
+  const groups = NAV_GROUPS_META
+    .map((g) => ({ title: g.title, items: g.paths.map((p) => byPath[p]).filter((i) => i && canSee(i)) }))
+    .filter((g) => g.items.length > 0)
+  // Eine Gruppe ist offen, wenn: Rail als Icon-Leiste (dann alle flach), NICHT
+  // manuell zugeklappt, ODER sie die aktive Seite enthält (immer sichtbar).
+  const groupOpen = (g: { title: string; items: { to: string }[] }) =>
+    collapsed || !collapsedGroups.includes(g.title) || g.items.some((i) => isItemActive(location.pathname, i.to))
   const mainRef = useRef<HTMLElement>(null)
   useScrollRestoration(mainRef)
 
@@ -213,6 +249,29 @@ export default function Layout() {
     e.preventDefault()
     setMobileOpen(false)
     if (to !== location.pathname) appNavigate(to)
+  }
+
+  const renderItem = (item: { to: string; label: string; icon: React.ReactNode }) => {
+    const active = isItemActive(location.pathname, item.to)
+    return (
+      <a
+        key={item.to}
+        href={item.to}
+        onClick={(e) => handleNavClick(e, item.to)}
+        title={collapsed ? item.label : undefined}
+        aria-current={active ? 'page' : undefined}
+        className={`md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
+          active
+            ? 'bg-md-primary-container text-on-primary-container'
+            : 'text-text-muted hover:text-text'
+        } ${collapsed ? 'md:justify-center md:px-0' : ''}`}
+      >
+        <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
+          {item.icon}
+        </span>
+        <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
+      </a>
+    )
   }
 
   return (
@@ -244,7 +303,7 @@ export default function Layout() {
           )}
           {/* Desktop: collapse rail */}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleRail}
             className="md-state hidden md:grid place-items-center w-11 h-11 rounded-full text-text-muted hover:text-text transition-colors duration-short"
             title={collapsed ? 'Menü ausklappen' : 'Menü einklappen'}
           >
@@ -268,28 +327,25 @@ export default function Layout() {
           </button>
         </div>
 
-        {/* Nav — MD3 pill indicators + state layers */}
+        {/* Nav — MD3 pill indicators + state layers; thematische, einklappbare Gruppen */}
         <nav className="flex-1 py-3 space-y-1 px-3 overflow-y-auto">
-          {visibleNavItems.map((item) => {
-            const active = isItemActive(location.pathname, item.to)
+          {dashboard && renderItem(dashboard)}
+          {groups.map((g) => {
+            const open = groupOpen(g)
             return (
-              <a
-                key={item.to}
-                href={item.to}
-                onClick={(e) => handleNavClick(e, item.to)}
-                title={collapsed ? item.label : undefined}
-                aria-current={active ? 'page' : undefined}
-                className={`md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
-                  active
-                    ? 'bg-md-primary-container text-on-primary-container'
-                    : 'text-text-muted hover:text-text'
-                } ${collapsed ? 'md:justify-center md:px-0' : ''}`}
-              >
-                <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
-                  {item.icon}
-                </span>
-                <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
-              </a>
+              <div key={g.title} className="pt-2">
+                <button
+                  onClick={() => toggleGroup(g.title)}
+                  aria-expanded={open}
+                  className={`w-full flex items-center justify-between px-4 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide text-text-muted/70 hover:text-text transition-colors duration-short ${collapsed ? 'md:hidden' : ''}`}
+                >
+                  <span className="truncate">{g.title}</span>
+                  <svg className={`w-3.5 h-3.5 shrink-0 transition-transform duration-short ${open ? '' : '-rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {open && <div className="space-y-1">{g.items.map(renderItem)}</div>}
+              </div>
             )
           })}
         </nav>
