@@ -15,6 +15,7 @@ export const CHANNEL_LABEL: Record<OutreachChannel, string> = {
 // Reihenfolge = Anzeige-Reihenfolge der Rubriken.
 export const CATEGORIES: { value: OutreachCategory; label: string }[] = [
   { value: 'kaltakquise', label: 'Kaltakquise' },
+  { value: 'ki_automatisierung', label: 'KI-Automatisierung' },
   { value: 'security_audit', label: 'Security-Check / Audit' },
   { value: 'followup', label: 'Follow-up' },
   { value: 'reaktivierung', label: 'Reaktivierung' },
@@ -43,6 +44,9 @@ export const PLACEHOLDERS: PlaceholderMeta[] = [
   { key: 'branche', label: 'Branche', example: 'Hausverwaltung', fromLead: true },
   { key: 'risiko_branche', label: 'Branchen-Risiko', example: 'ein Ausfall der Auftragsverwaltung', fromLead: false },
   { key: 'aufhaenger', label: 'Aufhänger', example: 'die offene Backup-Lücke', fromLead: false },
+  { key: 'zielsystem', label: 'Zielsystem', example: 'DATEV / ERP', fromLead: false },
+  { key: 'audit_preis', label: 'Audit-Preis', example: '1.490 €', fromLead: false },
+  { key: 'audit_dauer', label: 'Audit-Dauer', example: '5 Werktage', fromLead: false },
 ]
 
 export const PLACEHOLDER_LABEL: Record<string, string> = Object.fromEntries(

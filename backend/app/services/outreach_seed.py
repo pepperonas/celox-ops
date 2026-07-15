@@ -203,6 +203,45 @@ NIS2 zieht Anforderungen über die Lieferkette — auch zu Dienstleistern wie {{
 
 Ich prüfe und setze um, aus einer Hand. Einstieg: kostenloser 15-Minuten-Quick-Check. Wann passt es?""",
        subject="NIS2-Nachweis für {{firma}} – prüfbar gemacht"),
+
+    # ---- KI-Automatisierung (Prozessautomatisierung, DSB als Differenzierer) ----
+    _t("email", "ki_automatisierung", "Rechnungseingang automatisieren",
+       """{{anrede}} {{name}},
+
+Betriebe wie {{firma}} verlieren oft 10–20 Stunden pro Woche durch das manuelle Abtippen von Rechnungen, Lieferscheinen und Auftragsbestätigungen — plus die Fehlerkosten, wenn dabei etwas schiefgeht.
+
+Ich automatisiere genau das mit KI: Dokument rein, geprüfte strukturierte Daten raus, direkt in {{zielsystem}}. Ohne Cloud-Zwang, ohne dass Ihre Daten unkontrolliert an US-Anbieter fließen.
+
+Was mich von anderen KI-Dienstleistern unterscheidet: Ich bin IHK-zertifizierter Datenschutzbeauftragter (ISO 27001, BSI IT-Grundschutz) und Senior-Entwickler. Die DSGVO-Frage, an der KI-Projekte im Mittelstand meist scheitern, löse ich gleich mit.
+
+Mein Vorschlag: ein Prozess-Audit mit DSGVO-Check — Festpreis {{audit_preis}}, Ergebnis nach {{audit_dauer}}, inkl. konkreter Automatisierungsliste mit ROI in Euro.
+
+15 Minuten diese Woche? Ich zeige live, wie eine Ihrer Beispielrechnungen in Sekunden zu strukturierten Daten wird.""",
+       subject="Wie viele Stunden pro Woche kostet Sie Ihr Rechnungseingang?",
+       notes="Hero-Use-Case Rechnungseingang. {{zielsystem}}=DATEV/ERP, {{audit_preis}}/{{audit_dauer}} pro Kunde setzen."),
+    _t("email", "ki_automatisierung", "E-Mail-Triage automatisieren",
+       """{{anrede}} {{name}},
+
+wenn bei {{firma}} täglich Anfragen, Bestellungen und Rechnungen im selben Postfach landen, kostet allein das Sortieren und Weiterleiten Stunden — und Wichtiges bleibt liegen.
+
+Ich automatisiere die E-Mail-Triage mit KI: eingehende Mails werden erkannt, kategorisiert und an die richtige Stelle bzw. in {{zielsystem}} geroutet; Sonderfälle landen zur Prüfung bei einem Menschen (Human-in-the-Loop).
+
+Der Unterschied zu anderen KI-Anbietern: Als IHK-zertifizierter DSB (ISO 27001) baue ich das von Anfang an DSGVO-konform, inkl. Dokumentation für Ihre Nachweispflichten.
+
+Einstieg ist ein Prozess-Audit mit DSGVO-Check zum Festpreis {{audit_preis}} (Ergebnis nach {{audit_dauer}}). 15 Minuten diese Woche für eine Live-Demo?""",
+       subject="{{firma}}: Wer sortiert bei Ihnen den Posteingang?",
+       notes="Modularer Use-Case E-Mail-Triage. Alternativen: Support-Bot, Reporting."),
+    _t("email", "ki_automatisierung", "Manuelle Dateneingabe (ROI-Winkel)",
+       """{{anrede}} {{name}},
+
+jede manuell abgetippte Rechnung, jeder Lieferschein, jede Auftragsbestätigung kostet Zeit und produziert Tippfehler. Bei {{firma}} summiert sich das schnell auf einen Mitarbeitertag pro Woche.
+
+Ich setze KI genau dort an: Dokument rein, geprüfte strukturierte Daten in {{zielsystem}} raus. Individuell und wartbar (Python/FastAPI), keine fragile Low-Code-Blackbox.
+
+Weil KI-Projekte im Mittelstand meist an der DSGVO scheitern: Ich bin zertifizierter DSB und liefere die Compliance-Dokumentation mit.
+
+Starten wir mit einem Prozess-Audit (Festpreis {{audit_preis}}, {{audit_dauer}}) — Sie bekommen eine priorisierte Liste mit ROI in Euro. 15 Minuten für den Überblick?""",
+       subject="Manuelle Dateneingabe bei {{firma}} — was kostet sie wirklich?"),
 ]
 
 
@@ -261,6 +300,14 @@ _LINKEDIN = [
        "{{anrede}} {{name}}, wenn Kunden/Versicherer Nachweise wollen, hilft kein Bauchgefühl. Mein Audit prüft {{firma}} strukturiert — und ich behebe die Findings auf Wunsch gleich mit. Start: 15-Min-Quick-Check."),
     _t("linkedin", "security_audit", "NIS2-Nachweisfähigkeit",
        "{{anrede}} {{name}}, NIS2 zieht Anforderungen über die Lieferkette — auch zu {{firma}}. Ein dokumentiertes Audit macht Sie nachweisfähig. Einstieg: kostenloser 15-Min-Quick-Check."),
+
+    # ---- KI-Automatisierung ----
+    _t("linkedin", "ki_automatisierung", "Rechnungseingang",
+       "{{anrede}} {{name}}, Betriebe wie {{firma}} verlieren oft 10–20 Std./Woche mit dem Abtippen von Rechnungen. Ich automatisiere das mit KI (Dokument rein → strukturierte Daten in {{zielsystem}}) — DSGVO-konform, weil ich zertifizierter DSB und Entwickler bin. Einstieg: Prozess-Audit zum Festpreis. 15 Minuten für eine Live-Demo?"),
+    _t("linkedin", "ki_automatisierung", "E-Mail-Triage",
+       "{{anrede}} {{name}}, wer sortiert bei {{firma}} den Posteingang? KI kann Mails erkennen, kategorisieren und in {{zielsystem}} routen — Sonderfälle bleiben beim Menschen. Als IHK-DSB baue ich das DSGVO-konform. Einstieg: Festpreis-Audit mit DSGVO-Check. Kurzer Call?"),
+    _t("linkedin", "ki_automatisierung", "ROI-Winkel",
+       "{{anrede}} {{name}}, manuelle Dateneingabe bei {{firma}} kostet real oft einen Mitarbeitertag pro Woche. Ich automatisiere sie mit KI — individuell, wartbar, DSGVO-konform (ich bin zertifizierter DSB + Dev). Prozess-Audit zum Festpreis als risikoarmer Start. 15 Minuten?"),
 ]
 
 
@@ -540,6 +587,52 @@ Ein dokumentiertes Security-Audit macht Sie gegenüber Ihren Kunden nachweisfäh
 
 ## Abschluss
 Einstieg ist der kostenlose 15-Minuten-Quick-Check — wann passt es Ihnen? Datenschutz-Nachweise kann ich als DSB mitliefern."""),
+
+    # ---- KI-Automatisierung (Einwände aus dem Pitch-Spickzettel) ----
+    _t("phone", "ki_automatisierung", "Leitfaden Rechnungseingang",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Ich automatisiere Dokumentenprozesse mit KI und rufe an, weil das Abtippen von Rechnungen bei Betrieben wie {{firma}} oft 10–20 Stunden pro Woche frisst. Zwei Minuten?
+
+## Nutzenargument
+Das Prinzip: Dokument rein, geprüfte strukturierte Daten in {{zielsystem}} raus — Sonderfälle landen zur Kontrolle bei einem Menschen. Individuell und wartbar, ohne Cloud-Zwang. Und weil ich zertifizierter DSB bin, ist die DSGVO-Frage von Anfang an gelöst.
+
+## Einwandbehandlung
+- „KI und Datenschutz — geht das überhaupt?“ → Genau deshalb bin ich der Richtige: zertifizierter DSB, ich baue DSGVO-konform und liefere die Dokumentation mit.
+- „Wir haben schon einen IT-Dienstleister.“ → Ich ersetze niemanden — ich liefere die KI-Automatisierung als Spezialgewerk und arbeite mit ihm zusammen.
+- „Zu teuer.“ → Die Frage ist, was der manuelle Prozess Sie jeden Monat kostet. Ich rechne den ROI in Euro vor.
+- „Unsere Daten sollen nicht in die Cloud.“ → Verstehe ich — im Audit prüfen wir On-Premise- und EU-Hosting-Optionen, das ist Teil des DSGVO-Checks.
+
+## Abschluss
+Risikoarmer erster Schritt: ein Prozess-Audit mit DSGVO-Check zum Festpreis {{audit_preis}}, Ergebnis nach {{audit_dauer}}, keine Bindung. Passt Ihnen ein 15-Minuten-Call diese Woche für eine Live-Demo mit einer Ihrer Beispielrechnungen?""",
+       notes="Deckt die 4 Kern-Einwände aus dem Pitch ab. {{zielsystem}}/{{audit_preis}}/{{audit_dauer}} vorab setzen."),
+    _t("phone", "ki_automatisierung", "Leitfaden E-Mail-Triage",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer, celox.io. Ich rufe an, weil bei vielen Betrieben wie {{firma}} der gemeinsame Posteingang täglich Stunden Sortierarbeit kostet. Kurz zwei Minuten?
+
+## Nutzenargument
+KI erkennt eingehende Mails, kategorisiert sie und routet sie an die richtige Stelle oder in {{zielsystem}} — Unklares bleibt beim Menschen. DSGVO-konform gebaut, weil ich zertifizierter DSB und Entwickler bin.
+
+## Einwandbehandlung
+- „Wir müssen erst intern klären.“ → Genau dafür ist das Audit da: Festpreis, klares Ergebnis, keine Bindung — der risikofreie erste Schritt.
+- „KI und Datenschutz?“ → Ich liefere die Compliance gleich mit, das ist mein Kerngeschäft.
+- „Zu teuer.“ → Ich zeige Ihnen die ROI-Rechnung; meist ist der manuelle Prozess der teurere Posten.
+
+## Abschluss
+Sollen wir mit einem Prozess-Audit starten (Festpreis {{audit_preis}}, {{audit_dauer}})? 15 Minuten diese Woche für eine kurze Demo?"""),
+    _t("phone", "ki_automatisierung", "Leitfaden ROI/allgemein",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Kurze Frage: Wie viele Stunden pro Woche tippt Ihr Team bei {{firma}} Daten von Hand ab? Zwei Minuten?
+
+## Nutzenargument
+Genau da setze ich mit KI an — Dokumente automatisch erfassen, prüfen und in {{zielsystem}} übergeben. Individuell und wartbar, kein Low-Code-Baukasten. DSGVO-konform, da ich zertifizierter DSB bin.
+
+## Einwandbehandlung
+- „Unsere Daten sollen nicht in die Cloud.“ → Kein Problem — On-Premise und EU-Hosting prüfen wir im Audit, Teil des DSGVO-Checks.
+- „Wir haben schon jemanden für IT.“ → Ich ergänze als Spezialgewerk KI-Automatisierung, ohne jemanden zu ersetzen.
+- „Zu teuer.“ → Der manuelle Prozess kostet monatlich mehr — ich rechne es Ihnen in Euro vor.
+
+## Abschluss
+Einstieg ist ein Festpreis-Audit ({{audit_preis}}, {{audit_dauer}}) mit ROI-Liste. 15 Minuten diese Woche?"""),
 ]
 
 

@@ -24,6 +24,7 @@ class OutreachCategory(str, enum.Enum):
     angebot_nachfassen = "angebot_nachfassen"
     security_upsell = "security_upsell"
     security_audit = "security_audit"
+    ki_automatisierung = "ki_automatisierung"
 
 
 class OutreachTemplate(OwnedMixin, Base):

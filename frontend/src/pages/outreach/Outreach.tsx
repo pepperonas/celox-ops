@@ -34,8 +34,11 @@ export default function Outreach() {
     (async () => {
       try {
         let items = await getOutreachTemplates()
-        // Erstbesuch (leer) → einmalig die Standard-Vorlagen laden.
-        if (items.length === 0 && !sessionStorage.getItem(SEED_FLAG)) {
+        // Erstbesuch (leer) ODER neue Rubrik-Linie fehlt → einmalig (pro Session)
+        // additiv nachziehen. Der Seed-Endpoint fügt nur fehlende Rubriken hinzu.
+        const cats = new Set(items.map((t) => t.category))
+        const missingLine = CATEGORIES.some((c) => !cats.has(c.value))
+        if ((items.length === 0 || missingLine) && !sessionStorage.getItem(SEED_FLAG)) {
           sessionStorage.setItem(SEED_FLAG, '1')
           items = await seedOutreachTemplates()
         }

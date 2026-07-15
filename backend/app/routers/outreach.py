@@ -102,11 +102,19 @@ async def mark_copied(template_id: UUID, db: AsyncSession = Depends(get_db)) -> 
 
 @router.post("/templates/seed", response_model=list[OutreachTemplateResponse])
 async def seed_templates(db: AsyncSession = Depends(get_db)) -> list[OutreachTemplateResponse]:
-    """Legt die Standard-Templates an, wenn der Owner noch keine hat (idempotent)."""
-    existing = (await db.execute(select(OutreachTemplate.id).limit(1))).first()
-    if existing is None:
-        for t in default_templates():
+    """Legt fehlende Standard-Rubriken an — idempotent und **additiv**: fehlt eine
+    ganze Rubrik (z. B. eine neu ergänzte Linie), wird nur diese nachgezogen; das
+    fügt bestehenden Nutzern neue Vorlagen zu, ohne Duplikate."""
+    existing_cats = {
+        (c.value if hasattr(c, "value") else c)
+        for c in (await db.execute(select(OutreachTemplate.category).distinct())).scalars().all()
+    }
+    added = 0
+    for t in default_templates():
+        if t["category"] not in existing_cats:
             db.add(OutreachTemplate(**t))
+            added += 1
+    if added:
         await db.flush()
     rows = (await db.execute(
         select(OutreachTemplate).order_by(

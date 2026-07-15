@@ -17,8 +17,8 @@ def test_at_least_three_per_channel_category():
 
 def test_total_count_and_enums_valid():
     seeds = default_templates()
-    # 3 Kanäle × 7 Rubriken × 3 = 63
-    assert len(seeds) == 63
+    # 3 Kanäle × 8 Rubriken × 3 = 72
+    assert len(seeds) == 72
     for t in seeds:
         assert t["channel"] in CHANNELS
         assert t["category"] in CATEGORIES

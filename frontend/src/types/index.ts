@@ -885,6 +885,7 @@ export type OutreachCategory =
   | 'angebot_nachfassen'
   | 'security_upsell'
   | 'security_audit'
+  | 'ki_automatisierung'
 
 export interface OutreachTemplate {
   id: string
