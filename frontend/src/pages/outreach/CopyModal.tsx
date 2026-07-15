@@ -6,6 +6,8 @@ import { getRainmakerLeads } from '../../api/rainmaker'
 import { markOutreachCopied } from '../../api/outreach'
 import { copyText } from '../../utils/clipboard'
 import { extractPlaceholders, fillPlaceholders } from '../../utils/placeholders'
+import { timeGreeting, FALLBACK_NAME } from '../../utils/salutation'
+import { fuzzyRank } from '../../utils/fuzzy'
 import { PLACEHOLDERS, PLACEHOLDER_LABEL, brancheFromTags } from './constants'
 import PhoneGuide from './PhoneGuide'
 
@@ -16,9 +18,14 @@ interface Props {
 }
 
 export default function CopyModal({ template, onClose, onCopied }: Props) {
-  const [values, setValues] = useState<Record<string, string>>({})
+  // Anrede (tageszeitabhängig) + Name (Fallback) vorbefüllen — „alles besser als leer".
+  const [values, setValues] = useState<Record<string, string>>(() => ({
+    anrede: timeGreeting(),
+    name: FALLBACK_NAME,
+  }))
   const [leads, setLeads] = useState<RainmakerLead[]>([])
-  const [leadId, setLeadId] = useState('')
+  const [leadQuery, setLeadQuery] = useState('')
+  const [showLeadList, setShowLeadList] = useState(false)
   const [copiedOnce, setCopiedOnce] = useState(false)
 
   // Platzhalter aus Betreff + Body, in der Reihenfolge des Katalogs (Unbekannte hinten).
@@ -33,13 +40,19 @@ export default function CopyModal({ template, onClose, onCopied }: Props) {
     getRainmakerLeads({ page_size: 1000 }).then((r) => setLeads(r.items)).catch(() => {})
   }, [])
 
-  const applyLead = (id: string) => {
-    setLeadId(id)
-    const lead = leads.find((l) => l.id === id)
-    if (!lead) return
+  const leadLabel = (l: RainmakerLead) => `${l.company}${l.contact_name ? ` · ${l.contact_name}` : ''}`
+  const leadMatches = useMemo(
+    () => fuzzyRank(leads, leadQuery, (l) => [l.company || '', l.contact_name || '']),
+    [leads, leadQuery],
+  )
+
+  const applyLead = (lead: RainmakerLead) => {
+    setLeadQuery(leadLabel(lead))
+    setShowLeadList(false)
     setValues((v) => ({
       ...v,
-      name: lead.contact_name || v.name || '',
+      // Ansprechpartner übernehmen; ohne Namen bleibt der Fallback stehen (nie leer).
+      name: lead.contact_name?.trim() || v.name || FALLBACK_NAME,
       firma: lead.company || v.firma || '',
       branche: brancheFromTags(lead.tags) || v.branche || '',
     }))
@@ -81,16 +94,35 @@ export default function CopyModal({ template, onClose, onCopied }: Props) {
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
-          {/* Optional: aus Rainmaker-Lead befüllen */}
+          {/* Optional: aus Rainmaker-Lead befüllen (Fuzzy-Autocomplete) */}
           {keys.some((k) => ['name', 'firma', 'branche'].includes(k)) && (
-            <div>
+            <div className="relative">
               <label className="block text-xs text-text-muted mb-1.5">Aus Pipeline-Lead befüllen (optional)</label>
-              <select value={leadId} onChange={(e) => applyLead(e.target.value)} className="w-full">
-                <option value="">— Lead wählen —</option>
-                {leads.map((l) => (
-                  <option key={l.id} value={l.id}>{l.company}{l.contact_name ? ` · ${l.contact_name}` : ''}</option>
-                ))}
-              </select>
+              <input
+                value={leadQuery}
+                onChange={(e) => { setLeadQuery(e.target.value); setShowLeadList(true) }}
+                onFocus={() => setShowLeadList(true)}
+                onBlur={() => setTimeout(() => setShowLeadList(false), 150)}
+                placeholder="Firma oder Ansprechpartner tippen…"
+                className="w-full"
+              />
+              {showLeadList && leadMatches.length > 0 && (
+                <ul className="absolute z-10 left-0 right-0 mt-1 bg-surface-high border border-border rounded-lg shadow-elev-3 max-h-60 overflow-y-auto">
+                  {leadMatches.map((l) => (
+                    <li key={l.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyLead(l)}
+                        className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface-container transition-colors duration-short"
+                      >
+                        <span className="font-medium">{l.company}</span>
+                        {l.contact_name && <span className="text-text-muted"> · {l.contact_name}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
