@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { shouldReloadOnChunkError } from './utils/chunkReload'
 import './index.css'
 // NB: Chart.js registration lives in the chart-using pages (src/utils/charts),
 // so the heavy chart bundle code-splits out of the initial load.
@@ -13,7 +14,7 @@ import './index.css'
 window.addEventListener('vite:preloadError', (event) => {
   const KEY = 'chunk-reload-at'
   const last = Number(sessionStorage.getItem(KEY) || 0)
-  if (Date.now() - last > 30_000) {
+  if (shouldReloadOnChunkError(Date.now(), last)) {
     event.preventDefault()
     sessionStorage.setItem(KEY, String(Date.now()))
     window.location.reload()

@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useAppNavigate, useScrollRestoration } from '../utils/transitions'
 import QuickSearch from './QuickSearch'
 import AiLeadHost from './AiLeadHost'
+import { buildNavGroups, isGroupOpen, isItemActive, toggleCollapsed, type NavGroupMeta } from './navGroups'
 
 const navItems = [
   {
@@ -184,7 +185,7 @@ const navItems = [
 
 // Thematische, einklappbare Gruppen (Dashboard bleibt einzeln oben). Reihenfolge
 // nach Business-Flow: gewinnen → liefern → abrechnen → planen → Ablage → System.
-const NAV_GROUPS_META: { title: string; paths: string[] }[] = [
+const NAV_GROUPS_META: NavGroupMeta[] = [
   { title: 'Akquise', paths: ['/rainmaker', '/pipeline', '/akquise'] },
   { title: 'Kunden & Aufträge', paths: ['/kunden', '/auftraege', '/kanban', '/vertraege'] },
   { title: 'Finanzen', paths: ['/rechnungen', '/ausgaben', '/euer', '/analyse'] },
@@ -195,11 +196,6 @@ const NAV_GROUPS_META: { title: string; paths: string[] }[] = [
 
 const RAIL_KEY = 'ops-nav-rail-collapsed'
 const GROUPS_KEY = 'ops-nav-collapsed-groups'
-
-function isItemActive(pathname: string, to: string): boolean {
-  if (to === '/') return pathname === '/'
-  return pathname === to || pathname.startsWith(to + '/')
-}
 
 export default function Layout() {
   // Rail-Collapse + eingeklappte Gruppen überleben einen Reload (localStorage).
@@ -215,22 +211,13 @@ export default function Layout() {
 
   const toggleRail = () => setCollapsed((c) => { localStorage.setItem(RAIL_KEY, c ? '0' : '1'); return !c })
   const toggleGroup = (title: string) => setCollapsedGroups((prev) => {
-    const next = prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    const next = toggleCollapsed(prev, title)
     localStorage.setItem(GROUPS_KEY, JSON.stringify(next))
     return next
   })
 
-  // Sichtbare Items (Admin-Filter), nach Gruppen aufgebaut; Dashboard bleibt einzeln.
-  const canSee = (item: { adminOnly?: boolean }) => !item.adminOnly || role === 'admin'
-  const byPath = Object.fromEntries(navItems.map((i) => [i.to, i]))
-  const dashboard = byPath['/']
-  const groups = NAV_GROUPS_META
-    .map((g) => ({ title: g.title, items: g.paths.map((p) => byPath[p]).filter((i) => i && canSee(i)) }))
-    .filter((g) => g.items.length > 0)
-  // Eine Gruppe ist offen, wenn: Rail als Icon-Leiste (dann alle flach), NICHT
-  // manuell zugeklappt, ODER sie die aktive Seite enthält (immer sichtbar).
-  const groupOpen = (g: { title: string; items: { to: string }[] }) =>
-    collapsed || !collapsedGroups.includes(g.title) || g.items.some((i) => isItemActive(location.pathname, i.to))
+  // Sichtbare Items (Admin-Filter), nach Gruppen aufgebaut (pure Helfer in navGroups.ts).
+  const { dashboard, groups } = buildNavGroups(navItems, NAV_GROUPS_META, role === 'admin')
   const mainRef = useRef<HTMLElement>(null)
   useScrollRestoration(mainRef)
 
@@ -331,7 +318,7 @@ export default function Layout() {
         <nav className="flex-1 py-3 space-y-1 px-3 overflow-y-auto">
           {dashboard && renderItem(dashboard)}
           {groups.map((g) => {
-            const open = groupOpen(g)
+            const open = isGroupOpen(g, { railCollapsed: collapsed, collapsedTitles: collapsedGroups, activePath: location.pathname })
             return (
               <div key={g.title} className="pt-2">
                 <button
