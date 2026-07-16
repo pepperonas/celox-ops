@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+
 interface FabProps {
   onClick: () => void
   /** When set, renders an extended FAB with this label next to the icon. */
@@ -15,9 +17,14 @@ const plusIcon = (
 /**
  * MD3 Expressive floating action button — fixed bottom-right, primary-container
  * fill, elevation, state layer + shape-morph on press. Extended when `label` set.
+ *
+ * Portalt an `document.body`: der Seiten-Wrapper `.page-enter` animiert `transform`
+ * und wird dadurch zum Containing Block für `position: fixed` — ohne Portal ankert
+ * der FAB an der Inhalts-Unterkante (bei kurzen Seiten mitten im Content) statt am
+ * Viewport. Gleicher Gotcha wie bei den Modals.
  */
 export default function Fab({ onClick, label, title, icon }: FabProps) {
-  return (
+  return createPortal(
     <button
       onClick={onClick}
       title={title || label}
@@ -29,6 +36,7 @@ export default function Fab({ onClick, label, title, icon }: FabProps) {
     >
       {icon || plusIcon}
       {label && <span>{label}</span>}
-    </button>
+    </button>,
+    document.body,
   )
 }
