@@ -213,6 +213,7 @@ export default function Analytics() {
             Keine Kundendaten vorhanden.
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-text-muted text-left">
@@ -305,6 +306,7 @@ export default function Analytics() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

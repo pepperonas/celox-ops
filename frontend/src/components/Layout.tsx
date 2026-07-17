@@ -386,9 +386,12 @@ export default function Layout() {
         {/* Page content — directional GPU-only reveal, re-keyed per route.
             Chrome persists; scroll restored on back/forward; no entrance replay
             on POP (data-pop). */}
+        {/* overflow-x-hidden: overflow-y-auto macht overflow-x implizit 'auto' —
+            ein einziges zu breites Kind machte sonst die GANZE Seite horizontal
+            scrollbar (Mobile). Breite Inhalte scrollen in eigenen Containern. */}
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto p-4 sm:p-6"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <div key={location.pathname} className="page-enter">

@@ -246,6 +246,7 @@ export default function Euer() {
         <div className="px-5 py-3 border-b border-border">
           <h3 className="text-sm font-medium text-text">Monatliche Aufstellung</h3>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-text-muted text-left">
@@ -295,6 +296,7 @@ export default function Euer() {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Expenses by Category */}

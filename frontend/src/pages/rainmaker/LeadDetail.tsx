@@ -355,9 +355,10 @@ export default function RainmakerLeadDetail() {
       <div className="bg-surface-container border border-border rounded-card p-6 mb-6">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
           {rows.map(([label, value]) => (
-            <div key={label}>
+            <div key={label} className="min-w-0">
               <dt className="text-xs text-text-muted mb-0.5">{label}</dt>
-              <dd className="text-sm text-text">{value}</dd>
+              {/* break-words: lange URLs/E-Mails dürfen das Grid nicht sprengen (Mobile) */}
+              <dd className="text-sm text-text break-words">{value}</dd>
             </div>
           ))}
         </dl>
