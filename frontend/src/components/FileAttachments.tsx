@@ -147,56 +147,6 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
 
   return (
     <div>
-      {/* Drop zone */}
-      <div
-        ref={dropRef}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-card p-8 mb-4 text-center transition-colors ${
-          dragOver
-            ? 'border-accent bg-accent/10'
-            : 'border-border hover:border-text-muted'
-        } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
-      >
-        <svg className="w-8 h-8 mx-auto mb-3 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-        <p className="text-sm text-text-muted mb-2">
-          {uploading ? 'Hochladen...' : 'Dateien hierher ziehen oder'}
-        </p>
-        <label className="btn-primary cursor-pointer text-sm">
-          Dateien auswählen
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileInput}
-            disabled={uploading}
-          />
-        </label>
-        {showCamera && (
-          <label className="btn-secondary cursor-pointer text-sm ml-2 inline-flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Foto
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleFileInput}
-              disabled={uploading}
-            />
-          </label>
-        )}
-        <p className="text-xs text-text-muted mt-2">Max. 20 MB pro Datei</p>
-      </div>
-
       {/* File list */}
       <div className="overflow-x-auto bg-surface border border-border rounded-card">
         <table className="w-full">
@@ -318,6 +268,56 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Drop zone */}
+      <div
+        ref={dropRef}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-card p-8 mt-4 text-center transition-colors ${
+          dragOver
+            ? 'border-accent bg-accent/10'
+            : 'border-border hover:border-text-muted'
+        } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+      >
+        <svg className="w-8 h-8 mx-auto mb-3 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p className="text-sm text-text-muted mb-2">
+          {uploading ? 'Hochladen...' : 'Dateien hierher ziehen oder'}
+        </p>
+        <label className="btn-primary cursor-pointer text-sm">
+          Dateien auswählen
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileInput}
+            disabled={uploading}
+          />
+        </label>
+        {showCamera && (
+          <label className="btn-secondary cursor-pointer text-sm ml-2 inline-flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Foto
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileInput}
+              disabled={uploading}
+            />
+          </label>
+        )}
+        <p className="text-xs text-text-muted mt-2">Max. 20 MB pro Datei</p>
       </div>
     </div>
   )
