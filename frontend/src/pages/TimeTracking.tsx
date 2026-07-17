@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { toastWithUndo } from '../utils/undoToast'
+import AutocompleteInput from '../components/AutocompleteInput'
 import { getCustomers } from '../api/customers'
 import {
   getTimeEntries,
@@ -290,13 +291,13 @@ export default function TimeTracking() {
             <label className="block text-xs text-text-muted mb-1">
               Beschreibung
             </label>
-            <input
-              type="text"
+            <AutocompleteInput
+              name="timerDescription"
+              field="taetigkeit"
               value={timerDescription}
               onChange={(e) => setTimerDescription(e.target.value)}
               disabled={timerRunning}
               placeholder="Was wird gemacht?"
-              className="input w-full"
             />
           </div>
           <div className="flex items-center gap-4">
@@ -415,12 +416,12 @@ export default function TimeTracking() {
               <label className="block text-xs text-text-muted mb-1">
                 Beschreibung *
               </label>
-              <input
-                type="text"
+              <AutocompleteInput
+                name="manualDescription"
+                field="taetigkeit"
                 value={manualDescription}
                 onChange={(e) => setManualDescription(e.target.value)}
                 placeholder="Tätigkeit beschreiben"
-                className="input w-full"
                 required
               />
             </div>

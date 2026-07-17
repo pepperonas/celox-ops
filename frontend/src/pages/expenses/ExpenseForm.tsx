@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
+import AutocompleteInput from '../../components/AutocompleteInput'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
@@ -168,9 +169,10 @@ export default function ExpenseForm() {
             onChange={handleChange}
             required
           />
-          <FormField
+          <AutocompleteInput
             label="Anbieter"
             name="vendor"
+            field="vendor"
             value={form.vendor || ''}
             onChange={handleChange}
             placeholder="z.B. Hetzner, AWS, Google"

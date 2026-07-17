@@ -1,4 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
+import { getSuggestions } from '../api/suggestions'
+import { rankSuggestions } from '../utils/taxonomy'
+import { comboboxKeydown, optionsChanged, initialCombobox, type ComboboxState } from '../utils/comboboxReducer'
 
 // Default-Pool (Rechnungs-/Auftrags-TITEL — projektbezogen formuliert).
 // Dedup via Set: neue Blöcke können gefahrlos ergänzt werden.
@@ -1606,29 +1609,57 @@ interface Props {
   required?: boolean
   placeholder?: string
   suggestions?: string[]
+  /** Taxonomie-Feld-Key (role/source/branche/…): lädt Vorschläge hybrid vom
+   *  Server (kuratiert ∪ eigene Bestandswerte) und zeigt sie schon bei Fokus. */
+  field?: string
   className?: string
   compact?: boolean
+  disabled?: boolean
 }
 
-export default function AutocompleteInput({ label, name, value, onChange, required, placeholder, suggestions, className, compact }: Props) {
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(-1)
+/** Match-Hervorhebung: case-insensitiver Substring; kein Treffer → Rohtext. */
+function Highlight({ text, query }: { text: string; query: string }) {
+  const q = query.trim()
+  if (!q) return <>{text}</>
+  const idx = text.toLowerCase().indexOf(q.toLowerCase())
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-transparent text-accent font-semibold">{text.slice(idx, idx + q.length)}</mark>
+      {text.slice(idx + q.length)}
+    </>
+  )
+}
+
+export default function AutocompleteInput({ label, name, value, onChange, required, placeholder, suggestions, field, className, compact, disabled }: Props) {
+  const [box, setBox] = useState<ComboboxState>(initialCombobox)
+  const [remote, setRemote] = useState<string[] | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listId = useId()
 
-  const pool = suggestions || TITLE_SUGGESTIONS
-  const filtered = value.length >= 1
-    ? pool.filter(s => s.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
-    : []
-
+  // Hybrid-Pool: Server-Taxonomie (field) vor statischem Prop vor Titel-Default.
   useEffect(() => {
-    setSelectedIndex(-1)
-  }, [value])
+    if (!field) return
+    getSuggestions(field).then((s) => setRemote(s.values)).catch(() => {})
+  }, [field])
+  const pool = (field && remote) || suggestions || TITLE_SUGGESTIONS
+
+  // field-Modus zeigt Top-Vorschläge schon bei leerem Feld (kleine kuratierte Listen).
+  const filtered = (field || value.length >= 1) ? rankSuggestions(pool, value, 8) : []
+
+  const openWith = (count: number, open = true) => setBox((s) => optionsChanged(s, count, open))
+  useEffect(() => {
+    // Optionen ändern sich mit der Eingabe → Reducer synchron halten (offen lassen).
+    setBox((s) => (s.open ? optionsChanged(s, filtered.length) : { ...s, count: filtered.length }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, pool.length])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
+        setBox((s) => ({ ...s, open: false, activeIndex: -1 }))
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -1640,25 +1671,24 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
       target: { name, value: suggestion },
     } as React.ChangeEvent<HTMLInputElement>
     onChange(syntheticEvent)
-    setShowSuggestions(false)
+    setBox((s) => ({ ...s, open: false, activeIndex: -1 }))
     inputRef.current?.focus()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || filtered.length === 0) return
-    if (e.key === 'ArrowDown') {
+    const { state, action } = comboboxKeydown(box, e.key)
+    if (action === 'select' && box.activeIndex >= 0) {
       e.preventDefault()
-      setSelectedIndex(i => Math.min(i + 1, filtered.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setSelectedIndex(i => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      e.preventDefault()
-      handleSelect(filtered[selectedIndex])
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false)
+      handleSelect(filtered[box.activeIndex])
+      return
+    }
+    if (state !== box) {
+      if (e.key !== 'Tab') e.preventDefault()   // Tab darf den Fokus weiterreichen
+      setBox(state)
     }
   }
+
+  const open = box.open && filtered.length > 0
 
   return (
     <div ref={wrapperRef} className={`relative ${className || ''}`}>
@@ -1675,29 +1705,47 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
         value={value}
         onChange={(e) => {
           onChange(e)
-          setShowSuggestions(true)
+          openWith(filtered.length || 1)
         }}
-        onFocus={() => { if (value.length >= 1) setShowSuggestions(true) }}
+        onFocus={() => { if (field || value.length >= 1) openWith(filtered.length) }}
         onKeyDown={handleKeyDown}
         required={required}
+        disabled={disabled}
         placeholder={placeholder}
         className={compact ? 'w-full text-sm' : 'w-full'}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-controls={listId}
+        aria-activedescendant={box.activeIndex >= 0 ? `${listId}-opt-${box.activeIndex}` : undefined}
       />
-      {showSuggestions && filtered.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-lg overflow-hidden">
+      {/* Screenreader-Ansage der Trefferanzahl */}
+      <span className="sr-only" aria-live="polite">
+        {open ? `${filtered.length} Vorschläge verfügbar` : ''}
+      </span>
+      {open && (
+        <div
+          id={listId}
+          role="listbox"
+          className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto"
+        >
           {filtered.map((s, i) => (
             <button
               key={s}
+              id={`${listId}-opt-${i}`}
+              role="option"
+              aria-selected={i === box.activeIndex}
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(s)}
               className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                i === selectedIndex
+                i === box.activeIndex
                   ? 'bg-accent/20 text-accent'
                   : 'text-text hover:bg-surface-2'
               }`}
             >
-              {s}
+              <Highlight text={s} query={value} />
             </button>
           ))}
         </div>

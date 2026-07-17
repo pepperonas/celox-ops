@@ -9,6 +9,7 @@ import { extractPlaceholders, fillPlaceholders } from '../../utils/placeholders'
 import { timeGreeting, FALLBACK_NAME } from '../../utils/salutation'
 import { fuzzyRank } from '../../utils/fuzzy'
 import { PLACEHOLDERS, PLACEHOLDER_LABEL, brancheFromTags } from './constants'
+import AutocompleteInput from '../../components/AutocompleteInput'
 import PhoneGuide from './PhoneGuide'
 
 interface Props {
@@ -132,18 +133,32 @@ export default function CopyModal({ template, onClose, onCopied }: Props) {
               {keys.map((k) => {
                 const meta = PLACEHOLDERS.find((p) => p.key === k)
                 const open = !(values[k] ?? '').trim()
+                // Platzhalter mit Taxonomie bekommen hybride Vorschläge.
+                const taxField = k === 'branche' ? 'branche' : k === 'zielsystem' ? 'zielsystem' : null
                 return (
                   <div key={k}>
                     <label className="block text-xs mb-1 flex items-center gap-1.5">
                       <span className="text-text-muted">{PLACEHOLDER_LABEL[k] || k}</span>
                       {open && <span className="text-warning text-[10px]">offen</span>}
                     </label>
-                    <input
-                      value={values[k] ?? ''}
-                      onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                      placeholder={meta?.example || `{{${k}}}`}
-                      className={`w-full ${open ? 'border-warning/50' : ''}`}
-                    />
+                    {taxField ? (
+                      <AutocompleteInput
+                        name={k}
+                        field={taxField}
+                        value={values[k] ?? ''}
+                        onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
+                        placeholder={meta?.example || `{{${k}}}`}
+                        className={open ? '[&_input]:border-warning/50' : ''}
+                        compact
+                      />
+                    ) : (
+                      <input
+                        value={values[k] ?? ''}
+                        onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
+                        placeholder={meta?.example || `{{${k}}}`}
+                        className={`w-full ${open ? 'border-warning/50' : ''}`}
+                      />
+                    )}
                   </div>
                 )
               })}

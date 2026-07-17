@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
+import AutocompleteInput from '../../components/AutocompleteInput'
+import TagInput from '../../components/TagInput'
 import PageHeader from '../../components/PageHeader'
 import { getRainmakerLead, createRainmakerLead, updateRainmakerLead } from '../../api/rainmaker'
+import { getSuggestions } from '../../api/suggestions'
+import { canonicalize } from '../../utils/taxonomy'
 import type { RainmakerLeadCreate, RainmakerLeadStatus, RainmakerPriority } from '../../types'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import { STATUS_LABELS, PRIORITY_LABELS } from './constants'
@@ -38,7 +42,7 @@ export default function RainmakerLeadForm() {
   const navigate = useNavigate()
   const isEdit = Boolean(id)
   const [form, setForm] = useState<RainmakerLeadCreate>(emptyForm)
-  const [tagsInput, setTagsInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [valueInput, setValueInput] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -60,7 +64,7 @@ export default function RainmakerLeadForm() {
         tags: l.tags ?? [],
         notes: l.notes ?? '',
       })
-      setTagsInput((l.tags ?? []).join(', '))
+      setTags(l.tags ?? [])
       setValueInput(l.value_estimate != null ? String(l.value_estimate) : '')
     }).catch(() => toast.error('Lead konnte nicht geladen werden.'))
   }, [id])
@@ -83,10 +87,18 @@ export default function RainmakerLeadForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    // Freie Eingaben beim Speichern kanonisieren (Synonyme wie "GF" → "Geschäftsführung").
+    // getSuggestions ist modul-gecacht → nach dem Tippen längst geladen.
+    const [roleTax, sourceTax] = await Promise.all([
+      getSuggestions('role').catch(() => null),
+      getSuggestions('source').catch(() => null),
+    ])
     const payload: RainmakerLeadCreate = {
       ...form,
+      role: roleTax && form.role ? canonicalize(form.role, roleTax.values, roleTax.synonyms) : form.role,
+      source: sourceTax && form.source ? canonicalize(form.source, sourceTax.values, sourceTax.synonyms) : form.source,
       value_estimate: valueInput.trim() ? Number(valueInput.replace(',', '.')) : null,
-      tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+      tags,
     }
     try {
       if (isEdit) {
@@ -126,7 +138,7 @@ export default function RainmakerLeadForm() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Ansprechpartner" name="contact_name" value={form.contact_name ?? ''} onChange={handleChange} placeholder="Name" />
-          <FormField label="Funktion" name="role" value={form.role ?? ''} onChange={handleChange} placeholder="z. B. Geschäftsführer" />
+          <AutocompleteInput label="Funktion" name="role" field="role" value={form.role ?? ''} onChange={handleChange} placeholder="z. B. Geschäftsführung" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -136,7 +148,7 @@ export default function RainmakerLeadForm() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Website" name="website" value={form.website ?? ''} onChange={handleChange} placeholder="https://example.de" />
-          <FormField label="Quelle" name="source" value={form.source ?? ''} onChange={handleChange} placeholder="Empfehlung, Messe, Recherche…" />
+          <AutocompleteInput label="Quelle" name="source" field="source" value={form.source ?? ''} onChange={handleChange} placeholder="Empfehlung, Messe, Recherche…" />
         </div>
 
         <FormField label="Adresse" name="address" type="textarea" value={form.address ?? ''} onChange={handleChange} placeholder="Straße, PLZ Ort" />
@@ -150,10 +162,7 @@ export default function RainmakerLeadForm() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs text-text-muted mb-2">Tags (kommagetrennt)</label>
-          <input type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="w-full" placeholder="Webshop, lokal, Bestandskunde" />
-        </div>
+        <TagInput label="Tags" value={tags} onChange={setTags} placeholder="Webshop, lokal, Bestandskunde…" />
 
         <FormField label="Notizen" name="notes" type="textarea" value={form.notes ?? ''} onChange={handleChange} placeholder="Kontext, Gesprächsnotizen…" />
 
