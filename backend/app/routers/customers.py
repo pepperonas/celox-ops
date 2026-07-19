@@ -24,6 +24,7 @@ from app.schemas.customer import (
     CustomerResponse,
     CustomerUpdate,
 )
+from app.services.filenames import customer_label, download_name
 
 router = APIRouter(
     prefix="/api/customers",
@@ -264,13 +265,13 @@ async def dsgvo_export(
         "anhaenge": attachments,
     }
 
-    customer_name = customer.name.replace(" ", "_")
     json_str = json.dumps(export, default=_dsgvo_serialize, ensure_ascii=False, indent=2)
 
+    filename = download_name(
+        "DSGVO-Export", customer_label(customer), date.today().isoformat(), ext="json"
+    )
     return Response(
         content=json_str,
         media_type="application/json",
-        headers={
-            "Content-Disposition": f'attachment; filename="dsgvo-export-{customer_name}.json"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

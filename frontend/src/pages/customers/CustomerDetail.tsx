@@ -20,6 +20,7 @@ import TokenUsage from '../../components/TokenUsage'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/AutocompleteInput'
 import { formatDate, formatCurrency, formatRelativeTime } from '../../utils/formatters'
+import { filenameFromDisposition } from '../../utils/downloadName'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 
 export default function CustomerDetail() {
@@ -634,12 +635,10 @@ export default function CustomerDetail() {
                               onClick={async () => {
                                 try {
                                   const resp = await api.get(`/pagespeed/results/${r.id}/pdf`, { responseType: 'blob' })
-                                  const cd = resp.headers['content-disposition'] || ''
-                                  const match = cd.match(/filename="?([^"]+)"?/)
-                                  const domain = r.url.replace(/^https?:\/\//, '').replace(/\//g, '_').replace(/_$/, '')
+                                  const domain = r.url.replace(/^https?:\/\//, '').split('/')[0]
                                   const mode = r.strategy === 'mobile' ? 'Mobile' : 'Desktop'
                                   const datum = new Date(r.created_at).toISOString().slice(0, 10)
-                                  const filename = match?.[1] || `PageSpeed_${domain}_${mode}_${datum}.pdf`
+                                  const filename = filenameFromDisposition(resp.headers['content-disposition'], `PageSpeed_${domain}_${mode}_${datum}.pdf`)
                                   const blobUrl = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
                                   const link = document.createElement('a')
                                   link.href = blobUrl

@@ -1,4 +1,5 @@
 import { api } from './client'
+import { filenameFromDisposition } from '../utils/downloadName'
 
 export interface DocumentTemplate {
   id: string
@@ -25,9 +26,7 @@ export async function generateDocument(templateId: string, customerId: string): 
   const url = URL.createObjectURL(response.data)
   const a = document.createElement('a')
   a.href = url
-  const disposition = response.headers['content-disposition'] || ''
-  const match = disposition.match(/filename="(.+)"/)
-  a.download = match ? decodeURIComponent(match[1]) : 'dokument.pdf'
+  a.download = filenameFromDisposition(response.headers['content-disposition'], 'dokument.pdf')
   a.click()
   URL.revokeObjectURL(url)
 }

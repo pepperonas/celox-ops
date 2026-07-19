@@ -18,6 +18,7 @@ from app.database import get_db
 from app.models.customer import Customer
 from app.models.document_template import DocumentTemplate
 from app.schemas.document_template import DocumentTemplateResponse, GenerateRequest
+from app.services.filenames import customer_label, download_name
 
 router = APIRouter(
     prefix="/api/documents",
@@ -151,15 +152,15 @@ async def generate_all_documents(
             full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
             # WeasyPrint is sync (2-5s/render) — offload so the event loop stays free.
             pdf = await asyncio.to_thread(lambda h=full_html: HTML(string=h).write_pdf())
-            filename = f"{tmpl.name.replace(' ', '-')}.pdf"
-            zf.writestr(filename, pdf)
+            zf.writestr(download_name(tmpl.name), pdf)
 
     buf.seek(0)
-    customer_label = (customer.company or customer.name).replace(" ", "-")
     return Response(
         content=buf.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="Vertragsdokumente_{customer_label}.zip"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name("Vertragsdokumente", customer_label(customer), ext="zip")}"'
+        },
     )
 
 
@@ -176,7 +177,7 @@ async def generate_document(data: GenerateRequest, db: AsyncSession = Depends(ge
     full_html = _replace_placeholders(PAGE_WRAPPER.replace("{content}", content), customer)
     pdf = await asyncio.to_thread(lambda: HTML(string=full_html).write_pdf())
 
-    filename = f"{tmpl.name.replace(' ', '-')}_{customer.company or customer.name}.pdf"
+    filename = download_name(tmpl.name, customer_label(customer))
     return Response(
         content=pdf,
         media_type="application/pdf",

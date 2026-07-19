@@ -15,6 +15,7 @@ def _send_email_sync(
     pdf_path: str | None,
     cc: list[str] | None,
     bcc: list[str] | None,
+    attachment_name: str | None = None,
 ) -> bool:
     """Blocking SMTP send — always call via asyncio.to_thread (an SMTP handshake
     can take seconds and would stall the single-worker event loop)."""
@@ -43,7 +44,9 @@ def _send_email_sync(
             attachment.add_header(
                 "Content-Disposition",
                 "attachment",
-                filename=path.name,
+                # Kundenwirksamer Anzeigename (services/filenames.py) statt des
+                # internen Speichernamens, wenn der Aufrufer einen mitgibt.
+                filename=attachment_name or path.name,
             )
             msg.attach(attachment)
 
@@ -74,6 +77,7 @@ async def send_email(
     pdf_path: str | None = None,
     cc: list[str] | None = None,
     bcc: list[str] | None = None,
+    attachment_name: str | None = None,
 ) -> bool:
     """Send an email with optional PDF attachment via SMTP.
 
@@ -85,5 +89,5 @@ async def send_email(
         raise RuntimeError("SMTP ist nicht konfiguriert. Bitte SMTP_HOST in .env setzen.")
 
     return await asyncio.to_thread(
-        _send_email_sync, to_email, subject, body_html, pdf_path, cc, bcc
+        _send_email_sync, to_email, subject, body_html, pdf_path, cc, bcc, attachment_name
     )

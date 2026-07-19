@@ -29,6 +29,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from app.models.activity import Activity
 from app.services.email_service import send_email
+from app.services.filenames import customer_label, download_name
 from app.services.exchange_service import get_usd_eur_rate
 from app.services.invoice_service import calculate_invoice_totals, flush_new_invoice, generate_invoice_number
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
@@ -388,7 +389,9 @@ async def download_pdf(
     invoice_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    result = await db.execute(
+        select(Invoice).options(joinedload(Invoice.customer)).where(Invoice.id == invoice_id)
+    )
     invoice = result.scalar_one_or_none()
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -398,7 +401,7 @@ async def download_pdf(
     return FileResponse(
         path=invoice.pdf_path,
         media_type="application/pdf",
-        filename=f"{invoice.invoice_number}.pdf",
+        filename=download_name("Rechnung", customer_label(invoice.customer), invoice.invoice_number),
     )
 
 
@@ -496,7 +499,9 @@ async def download_reminder_pdf(
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     """Mahnungs-PDF herunterladen."""
-    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    result = await db.execute(
+        select(Invoice).options(joinedload(Invoice.customer)).where(Invoice.id == invoice_id)
+    )
     invoice = result.scalar_one_or_none()
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -509,7 +514,7 @@ async def download_reminder_pdf(
     return FileResponse(
         path=invoice.reminder_pdf_path,
         media_type="application/pdf",
-        filename=f"{level_name}_{invoice.invoice_number}.pdf",
+        filename=download_name(level_name, customer_label(invoice.customer), invoice.invoice_number),
     )
 
 
@@ -559,6 +564,9 @@ async def send_invoice_email(
             pdf_path=invoice.pdf_path,
             cc=data.cc,
             bcc=data.bcc,
+            attachment_name=download_name(
+                "Rechnung", customer_label(invoice.customer), invoice.invoice_number
+            ),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
@@ -627,6 +635,9 @@ async def send_reminder_email(
             pdf_path=invoice.reminder_pdf_path,
             cc=data.cc,
             bcc=data.bcc,
+            attachment_name=download_name(
+                level_name, customer_label(invoice.customer), invoice.invoice_number
+            ),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")

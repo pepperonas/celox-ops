@@ -27,6 +27,7 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.lead import Lead, LeadStatus
 from app.models.order import Order, OrderStatus
 from app.models.time_entry import TimeEntry
+from app.services.filenames import download_name
 
 router = APIRouter(
     prefix="/api/dashboard",
@@ -722,7 +723,7 @@ async def generate_monthly_report(
 
     pdf_bytes = await asyncio.to_thread(lambda: HTML(string=html_content).write_pdf())
 
-    filename = f"Monatsbericht_{year}_{month:02d}.pdf"
+    filename = download_name("Monatsbericht", f"{year}-{month:02d}")
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

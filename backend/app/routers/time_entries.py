@@ -24,6 +24,7 @@ from app.schemas.time_entry import (
     TimeEntrySummary,
     TimeEntryUpdate,
 )
+from app.services.filenames import customer_label, download_name
 
 router = APIRouter(
     prefix="/api/time-entries",
@@ -246,8 +247,9 @@ async def timesheet_pdf(
     entries = res.scalars().all()
 
     pdf = await asyncio.to_thread(_render_timesheet, customer, entries, date_from, date_to)
-    safe = customer.name.replace("/", "_").replace(" ", "_")
-    filename = f"Stundennachweis_{safe}_{date_from.isoformat()}_{date_to.isoformat()}.pdf"
+    filename = download_name(
+        "Stundennachweis", customer_label(customer), date_from.isoformat(), date_to.isoformat()
+    )
     return Response(
         content=pdf,
         media_type="application/pdf",

@@ -11,6 +11,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.expense import Expense
+from app.services.filenames import download_name
 
 router = APIRouter(
     prefix="/api/euer",
@@ -171,7 +172,7 @@ async def euer_export(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="euer_{year}.csv"',
+            "Content-Disposition": f'attachment; filename="{download_name("EUeR", str(year), ext="csv")}"',
         },
     )
 

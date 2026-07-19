@@ -16,6 +16,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.pagespeed_result import PagespeedResult
 from app.schemas.pagespeed_result import PagespeedResultResponse
+from app.services.filenames import download_name
 
 router = APIRouter(
     prefix="/api/pagespeed",
@@ -242,8 +243,8 @@ async def analyze_pagespeed(
     )
 
     pdf = await asyncio.to_thread(lambda: HTML(string=html).write_pdf())
-    domain = url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
-    filename = f"PageSpeed_{domain}.pdf"
+    domain = url.replace("https://", "").replace("http://", "").split("/", 1)[0]
+    filename = download_name("PageSpeed", domain)
 
     # Save to DB if customer_id provided
     if customer_id:
@@ -335,9 +336,11 @@ async def download_pagespeed_pdf(
     if not os.path.exists(entry.pdf_path):
         raise HTTPException(status_code=404, detail="PDF-Datei nicht gefunden")
 
-    domain = entry.url.replace("https://", "").replace("http://", "").replace("/", "_").rstrip("_")
+    domain = entry.url.replace("https://", "").replace("http://", "").split("/", 1)[0]
     strategy_label = "Mobile" if entry.strategy == "mobile" else "Desktop"
-    filename = f"PageSpeed_{domain}_{strategy_label}_{entry.created_at.strftime('%Y-%m-%d')}.pdf"
+    filename = download_name(
+        "PageSpeed", domain, strategy_label, entry.created_at.strftime("%Y-%m-%d")
+    )
 
     return FileResponse(
         entry.pdf_path,

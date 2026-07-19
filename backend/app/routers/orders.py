@@ -19,6 +19,7 @@ from app.models.customer import Customer
 from app.models.order import Order, OrderStatus
 from app.schemas.order import OrderCreate, OrderDetail, OrderResponse, OrderUpdate
 from app.services.email_service import send_email
+from app.services.filenames import customer_label, download_name
 from app.services.pdf_service import generate_quote_pdf
 
 
@@ -246,6 +247,7 @@ async def send_quote_email(
             subject=subject,
             body_html=body_html,
             pdf_path=order.quote_pdf_path,
+            attachment_name=download_name("Angebot", customer_label(order.customer), order.title),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
@@ -258,16 +260,17 @@ async def download_quote_pdf(
     order_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    result = await db.execute(select(Order).where(Order.id == order_id))
+    result = await db.execute(
+        select(Order).options(joinedload(Order.customer)).where(Order.id == order_id)
+    )
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     if not order.quote_pdf_path or not os.path.isfile(order.quote_pdf_path):
         raise HTTPException(status_code=404, detail="Angebots-PDF nicht gefunden")
 
-    filename = os.path.basename(order.quote_pdf_path)
     return FileResponse(
         order.quote_pdf_path,
         media_type="application/pdf",
-        filename=filename,
+        filename=download_name("Angebot", customer_label(order.customer), order.title),
     )

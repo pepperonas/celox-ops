@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { api } from '../api/client'
 import { getDocumentTemplates, seedDocumentTemplates, generateDocument, previewDocument, type DocumentTemplate } from '../api/documents'
 import { getCustomers } from '../api/customers'
+import { filenameFromDisposition } from '../utils/downloadName'
 import type { Customer } from '../types'
 
 const categoryColors: Record<string, string> = {
@@ -173,9 +174,7 @@ export default function Documents() {
                           const url = URL.createObjectURL(resp.data)
                           const a = document.createElement('a')
                           a.href = url
-                          const disposition = resp.headers['content-disposition'] || ''
-                          const match = disposition.match(/filename="(.+)"/)
-                          a.download = match ? decodeURIComponent(match[1]) : 'Vertragsdokumente.zip'
+                          a.download = filenameFromDisposition(resp.headers['content-disposition'], 'Vertragsdokumente.zip')
                           a.click()
                           URL.revokeObjectURL(url)
                           toast.success('ZIP mit allen Dokumenten heruntergeladen.')

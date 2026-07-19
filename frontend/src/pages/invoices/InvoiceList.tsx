@@ -118,11 +118,11 @@ export default function InvoiceList() {
       const inv = invoices.find((i) => i.id === id)
       if (!inv?.pdf_path) continue
       try {
-        const blob = await downloadPdf(id)
+        const { blob, filename } = await downloadPdf(id)
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${inv.invoice_number}.pdf`
+        a.download = filename
         a.click()
         URL.revokeObjectURL(url)
         count++

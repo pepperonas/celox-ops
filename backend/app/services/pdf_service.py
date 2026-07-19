@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from app.config import settings
+from app.services.filenames import download_name
 from app.services.address_format import format_address_lines
 from app.models.customer import Customer
 from app.models.invoice import Invoice
@@ -370,7 +371,9 @@ def generate_quote_pdf(
 
     os.makedirs(settings.PDF_STORAGE_PATH, exist_ok=True)
 
-    filename = f"Angebot-{order.title}.pdf"
+    # Speichername slug-sicher: ein "/" im Auftragstitel würde sonst den
+    # os.path.join-Pfad brechen. Der Download-Name kommt aus routers/orders.py.
+    filename = download_name("Angebot", order.title)
     pdf_path = os.path.join(settings.PDF_STORAGE_PATH, filename)
 
     HTML(string=html_content).write_pdf(pdf_path)

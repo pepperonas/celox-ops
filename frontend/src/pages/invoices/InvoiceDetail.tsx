@@ -78,11 +78,11 @@ export default function InvoiceDetail() {
 
   const handleDownloadPdf = async () => {
     try {
-      const blob = await downloadPdf(id!)
+      const { blob, filename } = await downloadPdf(id!)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${invoice?.invoice_number || 'rechnung'}.pdf`
+      a.download = filename
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -92,7 +92,7 @@ export default function InvoiceDetail() {
 
   const handleViewPdf = async () => {
     try {
-      const blob = await downloadPdf(id!)
+      const { blob } = await downloadPdf(id!)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
     } catch {
@@ -189,11 +189,11 @@ export default function InvoiceDetail() {
 
   const handleDownloadReminderPdf = async () => {
     try {
-      const blob = await downloadReminderPdf(id!)
+      const { blob, filename } = await downloadReminderPdf(id!)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Mahnung_${invoice?.invoice_number || 'mahnung'}.pdf`
+      a.download = filename
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -203,7 +203,7 @@ export default function InvoiceDetail() {
 
   const handleViewReminderPdf = async () => {
     try {
-      const blob = await downloadReminderPdf(id!)
+      const { blob } = await downloadReminderPdf(id!)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
     } catch {

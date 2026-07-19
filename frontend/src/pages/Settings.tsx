@@ -9,6 +9,7 @@ import {
   seedEmailTemplates,
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
+import { filenameFromDisposition } from '../utils/downloadName'
 import { getAiUsage } from '../api/rainmaker'
 import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse } from '../types'
@@ -283,9 +284,7 @@ export default function Settings() {
       const url = URL.createObjectURL(response.data)
       const a = document.createElement('a')
       a.href = url
-      const disposition = response.headers['content-disposition'] || ''
-      const match = disposition.match(/filename="(.+)"/)
-      a.download = match ? match[1] : 'celox-ops-backup.json'
+      a.download = filenameFromDisposition(response.headers['content-disposition'], 'celox-ops-backup.json')
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Datenbank-Backup heruntergeladen.')

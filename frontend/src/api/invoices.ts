@@ -1,4 +1,5 @@
 import { api } from './client'
+import { filenameFromDisposition } from '../utils/downloadName'
 import type { Invoice, InvoiceCreate, InvoiceUpdate, InvoiceStatus, QuickInvoiceCreate, PaginatedResponse } from '../types'
 
 export async function getInvoices(params?: {
@@ -47,11 +48,14 @@ export async function generatePdf(id: string): Promise<{ pdf_path: string }> {
   return response.data
 }
 
-export async function downloadPdf(id: string): Promise<Blob> {
+export async function downloadPdf(id: string): Promise<{ blob: Blob; filename: string }> {
   const response = await api.get(`/invoices/${id}/pdf`, {
     responseType: 'blob',
   })
-  return response.data
+  return {
+    blob: response.data,
+    filename: filenameFromDisposition(response.headers['content-disposition'], 'Rechnung.pdf'),
+  }
 }
 
 export async function createQuickInvoice(data: QuickInvoiceCreate): Promise<Invoice> {
@@ -77,9 +81,12 @@ export async function generateReminderPdf(id: string): Promise<{ reminder_pdf_pa
   return response.data
 }
 
-export async function downloadReminderPdf(id: string): Promise<Blob> {
+export async function downloadReminderPdf(id: string): Promise<{ blob: Blob; filename: string }> {
   const response = await api.get(`/invoices/${id}/reminder-pdf`, { responseType: 'blob' })
-  return response.data
+  return {
+    blob: response.data,
+    filename: filenameFromDisposition(response.headers['content-disposition'], 'Mahnung.pdf'),
+  }
 }
 
 export async function sendInvoiceEmail(
