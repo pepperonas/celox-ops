@@ -58,7 +58,7 @@ export default function ProgressHeader({ progress }: Props) {
       {/* Streak + points (wrap to their own row on mobile) */}
       <div className="flex items-center gap-8 sm:gap-6 shrink-0">
         <div className="text-center">
-          <div className="text-2xl font-bold tabular-nums leading-none" style={{ color: current_streak > 0 ? '#e9c46a' : 'var(--text-muted)' }}>
+          <div className="text-2xl md-title-emph tabular-nums leading-none" style={{ color: current_streak > 0 ? '#e9c46a' : 'var(--text-muted)' }}>
             {current_streak > 0 ? `🔥${current_streak}` : '–'}
           </div>
           <div className="text-[10px] text-text-muted mt-1 whitespace-nowrap" title="Streak zählt Werktage (Mo–Fr); Wochenenden brechen ihn nicht">
@@ -67,7 +67,7 @@ export default function ProgressHeader({ progress }: Props) {
           <div className="text-[10px] text-text-muted mt-0.5 whitespace-nowrap" title="Freeze-Tage puffern verpasste Werktage">🧊 {freeze_remaining} Freeze{freeze_remaining !== 1 ? 's' : ''}</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold tabular-nums leading-none text-accent">{total_points}</div>
+          <div className="text-2xl md-title-emph tabular-nums leading-none text-accent">{total_points}</div>
           <div className="text-[10px] text-text-muted mt-1">Punkte</div>
         </div>
       </div>

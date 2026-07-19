@@ -55,7 +55,8 @@ export default {
         lg: '16px',
         xl: '20px',
         '2xl': '28px',
-        card: 'var(--md-shape-md)',  // 16px
+        card: 'var(--md-shape-md)',    // 16px
+        dialog: 'var(--md-shape-xl)',  // 28px — M3-Dialog-Radius für alle Modals
       },
       boxShadow: {
         'elev-1': 'var(--md-elev-1)',

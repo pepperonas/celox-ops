@@ -197,7 +197,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-text tracking-tight">Dashboard</h2>
+        <h2 className="text-2xl md-display text-text">Dashboard</h2>
       </div>
 
       {/* Overdue Alert Banner with Invoice List */}
@@ -268,11 +268,11 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className={`md-stagger grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
-          {cards.map((card) => (
+          {cards.map((card, i) => (
             <TiltCard
               key={card.label}
               onClick={card.highlight ? () => navigate('/rechnungen?status=ueberfaellig') : undefined}
-              className={`rounded-md p-5 transition-shadow duration-medium ${
+              className={`${i === 0 ? 'shape-hero' : 'rounded-md'} p-5 transition-shadow duration-medium ${
                 card.highlight
                   ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 hover:shadow-elev-2 cursor-pointer'
                   : 'bg-surface-container border border-border hover:shadow-elev-2'
@@ -293,7 +293,7 @@ export default function Dashboard() {
                   </button>
                 )}
               </div>
-              <p className={`text-[28px] font-bold tabular-nums ${card.valueColor}`}>{card.value}</p>
+              <p className={`text-[28px] md-title-emph tabular-nums ${card.valueColor}`}>{card.value}</p>
               <p className="text-xs text-text-muted mt-1">{card.sub}</p>
             </TiltCard>
           ))}
@@ -309,7 +309,7 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold text-text">Umsatz & Ausgaben</h3>
               <div className="flex gap-2 flex-wrap">
                 {/* Zeitraum */}
-                <div className="flex rounded-[6px] overflow-hidden border border-border" role="group" aria-label="Zeitraum">
+                <div className="flex rounded-sm overflow-hidden border border-border" role="group" aria-label="Zeitraum">
                   {(['30d', '12m'] as const).map((p) => (
                     <button
                       key={p}
@@ -323,7 +323,7 @@ export default function Dashboard() {
                   ))}
                 </div>
                 {/* Datenbasis: nur bezahlte Rechnungen vs. inkl. Entwürfe */}
-                <div className="flex rounded-[6px] overflow-hidden border border-border" role="group" aria-label="Datenbasis">
+                <div className="flex rounded-sm overflow-hidden border border-border" role="group" aria-label="Datenbasis">
                   {([
                     ['paid', 'Nur bezahlt', 'Nur bezahlte Rechnungen'],
                     ['drafts', 'Inkl. Entwürfe', 'Erwarteter Umsatz: bezahlte + gestellte/überfällige Rechnungen + Entwürfe'],

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useAppNavigate, useScrollRestoration } from '../utils/transitions'
 import QuickSearch from './QuickSearch'
+import AppFooter from './AppFooter'
 import AiLeadHost from './AiLeadHost'
 import { buildNavGroups, isGroupOpen, isItemActive, toggleCollapsed, type NavGroupMeta } from './navGroups'
 
@@ -397,6 +398,7 @@ export default function Layout() {
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>
+          <AppFooter />
         </main>
       </div>
       <QuickSearch />

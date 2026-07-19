@@ -299,7 +299,7 @@ export default function CustomerForm() {
       {/* Project Picker Modal */}
       {showProjectPicker && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowProjectPicker(false)}>
-          <div className="bg-surface border border-border rounded-[16px] p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface border border-border rounded-dialog p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">Projekt verknüpfen</h3>
             <p className="text-text-muted text-sm mb-4">Wähle ein Projekt aus dem Token Tracker aus.</p>
             <input
@@ -340,7 +340,7 @@ export default function CustomerForm() {
       {/* GitHub Repo Picker */}
       {showGithubPicker && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowGithubPicker(false)}>
-          <div className="bg-surface border border-border rounded-[16px] p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface border border-border rounded-dialog p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">GitHub Repository verknüpfen</h3>
             <p className="text-text-muted text-sm mb-4">{githubReposList.length} Repos gefunden.</p>
             <input

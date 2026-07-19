@@ -151,7 +151,7 @@ export default function Kanban() {
                     draggable
                     onDragStart={(e) => handleDragStart(e, order.id)}
                     onDragEnd={handleDragEnd}
-                    className={`bg-surface-2 border border-border rounded-[6px] p-3 cursor-grab active:cursor-grabbing transition-all duration-150 hover:border-text-muted ${
+                    className={`bg-surface-2 border border-border rounded-sm p-3 cursor-grab active:cursor-grabbing transition-all duration-150 hover:border-text-muted ${
                       draggingId === order.id ? 'opacity-40' : ''
                     }`}
                   >

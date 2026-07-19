@@ -182,10 +182,7 @@ export default function Outreach() {
         </>
       )}
 
-      <footer className="mt-12 pt-6 border-t border-border text-center text-xs text-text-muted">
-        © 2026 Martin Pfeffer | celox.io
-      </footer>
-
+      {/* Footer kommt app-weit aus Layout (<AppFooter/>, Jahr dynamisch) */}
       <Fab onClick={() => { setEditing(null); setFormOpen(true) }} label="Neues Template" />
 
       {copying && (

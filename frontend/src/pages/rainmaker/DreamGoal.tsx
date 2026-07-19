@@ -3,7 +3,6 @@ import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import RainmakerNav from './RainmakerNav'
-import RainmakerFooter from './RainmakerFooter'
 import { getRainmakerDream, updateRainmakerSettings } from '../../api/rainmaker'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import type { RainmakerDreamMode, RainmakerDreamResponse } from '../../types'
@@ -456,7 +455,6 @@ export default function RainmakerDreamGoal() {
       {/* ---------- Quote ---------- */}
       <p className="text-center text-sm text-text-muted italic mt-8 mb-2">„{QUOTES[quoteIdx](dream.goalName)}"</p>
 
-      <RainmakerFooter />
     </div>
   )
 }

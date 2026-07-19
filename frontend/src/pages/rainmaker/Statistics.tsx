@@ -4,7 +4,6 @@ import { Bar } from 'react-chartjs-2'
 import PageHeader from '../../components/PageHeader'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import RainmakerNav from './RainmakerNav'
-import RainmakerFooter from './RainmakerFooter'
 import { getRainmakerStats } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerStats } from '../../types'
@@ -117,7 +116,6 @@ export default function RainmakerStatistics() {
         </div>
       </div>
 
-      <RainmakerFooter />
     </div>
   )
 }

@@ -88,6 +88,8 @@ export const statusLabels: Record<string, string> = {
   reise: 'Reise',
 }
 
+import { useEffect, useRef, useState } from 'react'
+
 interface StatusBadgeProps {
   status: string
 }
@@ -96,9 +98,20 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
   const colorClass = statusColors[status] || tones.neutral
   const label = statusLabels[status] || status
 
+  // Hero-Moment „Bezahlt!": wechselt der Status ZUR Laufzeit auf bezahlt
+  // (Als-bezahlt-Aktion), feiert der Badge mit Spatial-Spring-Pop + Erfolgs-Glow.
+  // Initial-Render (Seite öffnet bereits bezahlte Rechnung) poppt bewusst nicht.
+  const prev = useRef(status)
+  const [celebrate, setCelebrate] = useState(0)
+  useEffect(() => {
+    if (prev.current !== status && status === 'bezahlt') setCelebrate((n) => n + 1)
+    prev.current = status
+  }, [status])
+
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors duration-short ${colorClass}`}
+      key={celebrate}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors duration-short ${colorClass} ${celebrate > 0 ? 'paid-pop' : ''}`}
     >
       {label}
     </span>

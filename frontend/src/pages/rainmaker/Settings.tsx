@@ -5,7 +5,6 @@ import FormField from '../../components/FormField'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import DeleteDialog from '../../components/DeleteDialog'
 import RainmakerNav from './RainmakerNav'
-import RainmakerFooter from './RainmakerFooter'
 import {
   getRainmakerSettings, updateRainmakerSettings,
   getRainmakerTemplates, createRainmakerTemplate, updateRainmakerTemplate, deleteRainmakerTemplate,
@@ -283,7 +282,6 @@ export default function RainmakerSettingsPage() {
         </div>
       </div>
 
-      <RainmakerFooter />
 
       <DeleteDialog
         isOpen={!!deleteTplId}

@@ -371,7 +371,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`px-3 py-1.5 text-xs rounded-[6px] transition-all ${
+            className={`px-3 py-1.5 text-xs rounded-sm transition-all ${
               period === p
                 ? 'bg-accent text-on-primary'
                 : 'bg-surface-2 text-text-muted border border-border hover:text-text hover:border-accent'
@@ -382,7 +382,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
         ))}
         <button
           onClick={() => setPeriod('custom')}
-          className={`px-3 py-1.5 text-xs rounded-[6px] transition-all ${
+          className={`px-3 py-1.5 text-xs rounded-sm transition-all ${
             period === 'custom'
               ? 'bg-accent text-on-primary'
               : 'bg-surface-2 text-text-muted border border-border hover:text-text hover:border-accent'

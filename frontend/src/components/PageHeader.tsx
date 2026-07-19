@@ -14,7 +14,7 @@ export default function PageHeader({ title, subtitle, actions }: PageHeaderProps
   return (
     <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
       <div>
-        <h2 className="text-2xl font-semibold text-text tracking-tight">{title}</h2>
+        <h2 className="text-2xl md-display text-text">{title}</h2>
         {subtitle && <p className="text-sm text-text-muted mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

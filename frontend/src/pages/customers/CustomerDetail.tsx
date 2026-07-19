@@ -702,7 +702,7 @@ export default function CustomerDetail() {
       {/* Schnellrechnung Modal */}
       {showQuickInvoice && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowQuickInvoice(false)}>
-          <div className="bg-surface border border-border rounded-[16px] p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface border border-border rounded-dialog p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">Schnellrechnung</h3>
             <p className="text-text-muted text-sm mb-6">Für {customer.name} — ohne Auftrag/Vertrag</p>
             <form onSubmit={handleQuickInvoice} className="space-y-4">

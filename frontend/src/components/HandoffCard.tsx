@@ -128,7 +128,7 @@ export default function HandoffCard({ customerId, customer }: Props) {
 
       {dialogTarget && createPortal(
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4" onClick={() => !submitting && setDialogTarget(null)}>
-          <div className="bg-surface border border-border rounded-[16px] p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface border border-border rounded-dialog p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">
               An {TARGET_META[dialogTarget].title} übergeben
             </h3>

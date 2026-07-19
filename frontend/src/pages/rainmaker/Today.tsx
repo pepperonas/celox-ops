@@ -6,7 +6,6 @@ import PageHeader from '../../components/PageHeader'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import RainmakerNav from './RainmakerNav'
 import ProgressHeader from './ProgressHeader'
-import RainmakerFooter from './RainmakerFooter'
 import CompleteActionModal from './CompleteActionModal'
 import { getRainmakerToday } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
@@ -176,7 +175,6 @@ export default function RainmakerToday() {
         />
       )}
 
-      {!loading && <RainmakerFooter />}
     </div>
   )
 }

@@ -79,19 +79,34 @@
   --md-shape-sm: 12px;
   --md-shape-md: 16px;
   --md-shape-lg: 24px;
-  --md-shape-xl: 28px;
+  --md-shape-xl: 28px;   /* M3-Dialog-Radius — Modals nutzen rounded-dialog */
   --md-shape-full: 999px;
 
-  /* ---- Motion: MD3 Expressive easing & duration ---- */
+  /* ---- Motion: M3 Expressive Spring-Matrix (Spatial/Effects × fast/default/slow)
+     Kanon: .claude/rules/frontend-m3e.md. Spatial = Position/Größe/Rotation/Shape
+     (darf overshooten); Effects = Farbe/Opacity (NIE bouncen). Speed nach Größe:
+     klein→fast, Fullscreen→slow, Rest→default. cubic-bezier = Spring-Approximation
+     (offizielle M3E-Konvertierungstokens). ---- */
+  --m3-spatial-fast:    cubic-bezier(0.42, 1.67, 0.21, 0.90); --m3-spatial-fast-dur:    350ms;
+  --m3-spatial-default: cubic-bezier(0.38, 1.21, 0.22, 1.00); --m3-spatial-default-dur: 500ms;
+  --m3-spatial-slow:    cubic-bezier(0.39, 1.29, 0.35, 0.98); --m3-spatial-slow-dur:    650ms;
+  --m3-effect-fast:     cubic-bezier(0.31, 0.94, 0.34, 1.00); --m3-effect-fast-dur:     150ms;
+  --m3-effect-default:  cubic-bezier(0.34, 0.80, 0.34, 1.00); --m3-effect-default-dur:  200ms;
+  --m3-effect-slow:     cubic-bezier(0.34, 0.88, 0.34, 1.00); --m3-effect-slow-dur:     300ms;
+  /* Standard-Scheme (ruhig, für utilitaristische Teile wie Tabellen-Hover) */
+  --m3-std-spatial-fast: cubic-bezier(0.27, 1.06, 0.18, 1.00); --m3-std-spatial-fast-dur: 300ms;
+
+  /* ---- Legacy-Aliase (Bestandscode) — kaskadieren auf die Matrix.
+     Neue Komponenten referenzieren direkt --m3-*. ---- */
   --md-ease-standard:      cubic-bezier(0.2, 0, 0, 1);
   --md-ease-emphasized:    cubic-bezier(0.2, 0, 0, 1);
   --md-ease-decelerate:    cubic-bezier(0.05, 0.7, 0.1, 1);
   --md-ease-accelerate:    cubic-bezier(0.3, 0, 0.8, 0.15);
-  --md-ease-spring:        cubic-bezier(0.34, 1.28, 0.5, 1); /* gentle overshoot */
+  --md-ease-spring:        var(--m3-spatial-default); /* ≈ altes gentle overshoot (1.21 vs 1.28) */
   --md-ease-soft:          cubic-bezier(0.22, 1, 0.36, 1);   /* smooth glide (ease-out quint) */
-  --md-dur-short:  0.18s;
-  --md-dur-medium: 0.34s;
-  --md-dur-long:   0.5s;
+  --md-dur-short:  var(--m3-effect-default-dur);
+  --md-dur-medium: var(--m3-spatial-fast-dur);
+  --md-dur-long:   var(--m3-spatial-default-dur);
   --md-dur-reveal: 0.46s; /* page/content reveal — soft & graceful */
 
   /* ---- Elevation (dark) ---- */
@@ -530,6 +545,40 @@ html[data-nav="back"] .page-enter { animation-name: page-in-back; }
   }
   @keyframes rm-ring-pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
   .rm-ring-pop { animation: rm-ring-pop var(--md-dur-medium) var(--md-ease-spring); }
+
+  /* Hero-Moment „Bezahlt!" — Status-Badge feiert den Zahlungseingang:
+     Spatial-Spring-Pop mit Overshoot + kurzer Erfolgs-Glow (Effects, kein Bounce). */
+  @keyframes paid-pop {
+    0%   { transform: scale(0.6) rotate(-6deg); }
+    55%  { transform: scale(1.18) rotate(2deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes paid-glow {
+    0%   { box-shadow: 0 0 0 0 rgb(var(--c-success) / 0.55); }
+    100% { box-shadow: 0 0 0 14px rgb(var(--c-success) / 0); }
+  }
+  .paid-pop {
+    animation: paid-pop var(--m3-spatial-default-dur) var(--m3-spatial-default) both,
+               paid-glow var(--m3-effect-slow-dur) var(--m3-effect-slow) both;
+  }
+
+  /* Hero-Shape: asymmetrische Ecken lenken das Auge auf die Hero-Karte. */
+  .shape-hero {
+    border-radius: var(--md-shape-xl) var(--md-shape-xs) var(--md-shape-xl) var(--md-shape-xs);
+  }
+
+  /* ---------- M3E Emphasized-Typo (Variable-Font-Achsen wght/opsz) ---------- */
+  .md-display {
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 32;
+    line-height: 1.15;
+  }
+  .md-title-emph {
+    font-weight: 680;
+    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 24;
+  }
 }
 
 /* On back/forward (POP), show content already in place — no entrance replay. */
