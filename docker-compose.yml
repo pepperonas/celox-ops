@@ -35,7 +35,9 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "8090:80"
+      # Loopback-only: 8090 ist nur für den System-nginx (ops.celox.io) gedacht,
+      # nicht fürs offene Internet (Härtung 2026-07-19, war auf dem VPS hotgefixt)
+      - "127.0.0.1:8090:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
