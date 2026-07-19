@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     PAGESPEED_API_KEY: str = ""
 
     TOKEN_TRACKER_BASE_URL: str = ""
+    # Customer-Handoff an portal.celox.io / datenschutz.celox.io
+    # (Kontrakt: _integration/customer-handoff-contract.md). Leer ⇒ Ziel
+    # deaktiviert (Button ausgeblendet, Endpoint 503) — Muster GOOGLE_CLIENT_ID.
+    PORTAL_HANDOFF_BASE_URL: str = ""
+    PORTAL_HANDOFF_KEY: str = ""
+    DATENSCHUTZ_HANDOFF_BASE_URL: str = ""
+    DATENSCHUTZ_HANDOFF_KEY: str = ""
     # Google OAuth Client-ID (Web) für "Sign in with Google" — leer = Feature aus
     GOOGLE_CLIENT_ID: str = ""
     # Optionaler Google-Places-Key für die Lead-Suche (leer = nur OpenStreetMap)

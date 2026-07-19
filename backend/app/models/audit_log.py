@@ -27,6 +27,10 @@ class AuditLog(Base):
     status_code: Mapped[int] = mapped_column(nullable=False)
     ip: Mapped[str | None] = mapped_column(String(50), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Optionales JSON-Detail für fachliche Einträge (z. B. customer.handoff:
+    # Ziel, handoff_id, Feld-KEYS, Ergebnis). Die Middleware lässt es leer.
+    # Bestehende DBs: manuelles ALTER TABLE (scripts/add_customer_handoff.sql).
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

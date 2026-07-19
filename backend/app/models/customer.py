@@ -26,6 +26,11 @@ class Customer(OwnedMixin, Base):
     token_tracker_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     github_repos: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Handoff-Status je Ziel-App als JSON (Kontrakt §6.4) — nur server-seitig
+    # geschrieben (routers/handoff.py), nie vom Client. Bestehende DBs brauchen
+    # ein manuelles ALTER TABLE (scripts/add_customer_handoff.sql).
+    portal_handoff: Mapped[str | None] = mapped_column(Text, nullable=True)
+    datenschutz_handoff: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

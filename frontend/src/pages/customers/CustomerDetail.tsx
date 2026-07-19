@@ -14,6 +14,7 @@ import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import CustomerComplianceCard from '../../components/CustomerComplianceCard'
+import HandoffCard from '../../components/HandoffCard'
 import { getCustomerCompliance, type ComplianceCustomer } from '../../api/compliance'
 import TokenUsage from '../../components/TokenUsage'
 import LoadingIndicator from '../../components/LoadingIndicator'
@@ -280,6 +281,9 @@ export default function CustomerDetail() {
           </div>
         )}
       </div>
+
+      {/* Kunde übergeben (portal/datenschutz) — nur sichtbar, wenn mind. ein Ziel konfiguriert ist */}
+      {id && <HandoffCard customerId={id} customer={customer} />}
 
       {/* Tabs — MD3 primary tabs with rounded indicator + state layer */}
       <div className="flex gap-1 mb-5 border-b border-border overflow-x-auto">
