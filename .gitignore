@@ -32,6 +32,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-.claude/
+# .claude/ bleibt lokal (settings mit Server-IPs) — AUSSER rules/ (versionierter
+# Design-Kanon ohne Secrets, z. B. frontend-m3e.md)
+.claude/*
+!.claude/rules/
 *.tsbuildinfo
 .playwright-mcp/
