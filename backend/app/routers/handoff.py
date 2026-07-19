@@ -33,7 +33,14 @@ from app.services.handoff_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/customers", tags=["handoff"])
+# Router-level Auth wie in allen anderen Routern (Belt-and-braces: die Endpoints
+# brauchen get_current_user zusätzlich als Param für Username + Owner-Scoping —
+# FastAPI cached die Dependency, sie läuft trotzdem nur einmal pro Request).
+router = APIRouter(
+    prefix="/api/customers",
+    tags=["handoff"],
+    dependencies=[Depends(get_current_user)],
+)
 
 _TARGET_CONFIG = {
     "portal": lambda: (settings.PORTAL_HANDOFF_BASE_URL, settings.PORTAL_HANDOFF_KEY),
