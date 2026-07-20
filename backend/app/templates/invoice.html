@@ -145,6 +145,8 @@
             background-color: #f5f5f5;
             border-radius: 4px;
             font-size: 9pt;
+            /* Zeilenumbrüche/Leerzeilen aus dem Notiz-Freitext erhalten */
+            white-space: pre-line;
         }
         .payment-info {
             margin-top: 30px;
@@ -297,9 +299,9 @@
     {% endif %}
 
     {% if invoice.notes %}
-    <div class="notes">
-        <strong>Hinweis:</strong> {{ invoice.notes }}
-    </div>
+    {# Markup einzeilig: white-space pre-line würde die Template-Einrückung
+       sonst als Leerzeile vor/nach dem Text rendern #}
+    <div class="notes"><strong>Hinweis:</strong> {{ invoice.notes }}</div>
     {% endif %}
 
     {% if special_terms_list %}

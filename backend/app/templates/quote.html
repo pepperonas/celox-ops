@@ -145,6 +145,8 @@
             background-color: #f5f5f5;
             border-radius: 4px;
             font-size: 9pt;
+            /* Zeilenumbrüche/Leerzeilen aus dem Beschreibungs-Freitext erhalten */
+            white-space: pre-line;
         }
         .payment-info {
             margin-top: 30px;
@@ -299,9 +301,8 @@
     {% endif %}
 
     {% if order.description %}
-    <div class="notes">
-        <strong>Beschreibung:</strong> {{ order.description }}
-    </div>
+    {# Markup einzeilig wegen white-space: pre-line (s. CSS) #}
+    <div class="notes"><strong>Beschreibung:</strong> {{ order.description }}</div>
     {% endif %}
 
     <div style="margin-top: 30px; font-size: 9pt; color: #555;">
