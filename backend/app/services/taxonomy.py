@@ -481,6 +481,16 @@ _TODO = [
     "Unterlagen zusenden",
     "Referenzen schicken",
     "Preisliste schicken",
+    # Kampagne „bcs / zeiterfassung" (Projektron-Referenzkunden)
+    "BCS / Zeiterfassung ansprechen",
+    "Projektron BCS: Erfahrungen erfragen",
+    "Zeiterfassung: Ist-Prozess aufnehmen",
+    "Zeiterfassung: Anforderungen klären",
+    "Zeiterfassungs-Pflicht ansprechen (BAG-Urteil)",
+    "Zeiterfassung: Schnittstelle/Integration anbieten",
+    "Zeiterfassung: Auswertungen & Reporting zeigen",
+    "Zeiterfassung: Demo vereinbaren",
+    "Zeiterfassung: Angebot nachfassen",
     # Angebot & Auftrag
     "Angebot erstellen",
     "Angebot überarbeiten",
