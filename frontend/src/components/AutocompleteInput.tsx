@@ -538,6 +538,23 @@ export const TITLE_SUGGESTIONS = [...new Set([
   'Kundenbewertungs-Management',
   'Local-SEO-Paket',
   'ERP-Einführungs-Begleitung',
+  // ── Software, Security & Datenschutz (Projekttitel) ──
+  'Individualsoftware',
+  'Webanwendung / SaaS',
+  'API-Integration',
+  'System-Modernisierung',
+  'Wartung & Support (Kontingent)',
+  'IT-Sicherheits-Audit',
+  'Penetrationstest',
+  'ISMS-Aufbau (ISO 27001)',
+  'ISMS-Betreuung (laufend)',
+  'IT-Grundschutz-Projekt',
+  'NIS2-Umsetzung',
+  'Security-Awareness-Programm',
+  'Externer Datenschutzbeauftragter (DSB)',
+  'DSGVO-Compliance-Projekt',
+  'Datenschutz-Managementsystem (DSMS)',
+  'KI-Compliance (KI-VO)',
 ])]
 
 export const POSITION_SUGGESTIONS = [...new Set([
@@ -1299,6 +1316,39 @@ export const POSITION_SUGGESTIONS = [...new Set([
   'Interne Wissensdatenbank aufbauen',
   'IT-Onboarding-Handbuch erstellen',
   'IT-Notfallkarte für Mitarbeiter erstellen',
+  // ── Softwareentwicklung (Detailleistungen) ──
+  'Individualsoftware-Entwicklung',
+  'Webanwendung (SaaS) entwickeln',
+  'REST-/GraphQL-API entwickeln',
+  'Schnittstelle/Integration entwickeln',
+  'Legacy-System-Modernisierung',
+  'Datenbankmodell entwerfen',
+  'Datenmigration alt → neu',
+  'Automatisierte Tests aufbauen (Testabdeckung)',
+  'CI/CD-Pipeline einrichten',
+  'Docker-Containerisierung',
+  'Code-Refactoring / technische Schuld',
+  'Performance-Optimierung (Backend)',
+  'Lasttest / Skalierbarkeitsanalyse',
+  'Fehlermonitoring einrichten (Sentry)',
+  'Quellcode-Übergabe & Einarbeitung',
+  'Technische Dokumentation erstellen',
+  'Proof of Concept / Prototyp',
+  'Wartung & Weiterentwicklung (Kontingent)',
+  // ── IT-Sicherheit (Ergänzungen) ──
+  'Schwachstellenscan (extern/intern)',
+  'Penetrationstest-Retest',
+  'Berechtigungskonzept erstellen',
+  'Notfallübung / Tabletop-Exercise',
+  'Dienstleister-Sicherheitsbewertung',
+  'Managementbewertung ISMS begleiten',
+  'Internes ISO-27001-Audit durchführen',
+  // ── Datenschutz (Ergänzungen) ──
+  'Datenschutz-Folgenabschätzung (DSFA)',
+  'Datenpannen-Meldeprozess einrichten',
+  'Löschkonzept mit Löschfristen erstellen',
+  'KI-Nutzung datenschutzkonform einführen',
+  'Drittland-Transfer-Prüfung (SCC/TIA)',
 ])]
 
 // Rabatt-Begründungen (Rechnungsformular). Dedup via Set.
