@@ -34,6 +34,7 @@ const emptyForm: RainmakerLeadCreate = {
   priority: 'medium',
   value_estimate: null,
   tags: [],
+  target: '',
   notes: '',
 }
 
@@ -62,6 +63,7 @@ export default function RainmakerLeadForm() {
         priority: l.priority,
         value_estimate: l.value_estimate,
         tags: l.tags ?? [],
+        target: l.target ?? '',
         notes: l.notes ?? '',
       })
       setTags(l.tags ?? [])
@@ -160,6 +162,17 @@ export default function RainmakerLeadForm() {
             <label className="block text-xs text-text-muted mb-2">Geschätzter Wert (€)</label>
             <input type="number" step="0.01" min="0" value={valueInput} onChange={(e) => setValueInput(e.target.value)} className="w-full" placeholder="z. B. 2500" />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-text-muted mb-2">Target (Pitch-Winkel / Pain)</label>
+          <AutocompleteInput
+            name="target"
+            field="target"
+            value={form.target ?? ''}
+            onChange={handleChange}
+            placeholder="z. B. Projektron BCS / Zeiterfassung, IT-Sicherheit / ISO 27001…"
+          />
         </div>
 
         <TagInput label="Tags" value={tags} onChange={setTags} placeholder="Webshop, lokal, Bestandskunde…" />

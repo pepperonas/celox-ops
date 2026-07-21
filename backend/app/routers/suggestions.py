@@ -57,13 +57,16 @@ async def _own_counts(field: str, db: AsyncSession) -> dict[str, int]:
     elif field == "todo":
         rows = (await db.execute(select(Todo.title))).scalars().all()
         counts.update(r.strip() for r in rows if r and r.strip())
+    elif field == "target":
+        rows = (await db.execute(select(RainmakerLead.target))).scalars().all()
+        counts.update(r.strip() for r in rows if r and r.strip())
     # zielsystem: rein kuratiert (keine DB-Quelle)
     return dict(counts)
 
 
 @router.get("")
 async def get_suggestions(
-    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit/todo"),
+    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit/todo/target"),
     q: str = Query("", max_length=100),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),

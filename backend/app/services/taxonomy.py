@@ -646,9 +646,48 @@ _TODO = [
     "Reisekosten abrechnen",
 ]
 
+_TARGET = [
+    # Software / Entwicklung
+    "Individualsoftware-Bedarf",
+    "Legacy-Modernisierung",
+    "Projektron BCS / Zeiterfassung",
+    "Zeiterfassungs-Pflicht (BAG-Urteil)",
+    "Projektmanagement-Software",
+    "Schnittstellen / Systemintegration",
+    "Ablösung Excel-Insellösung",
+    "Prozessautomatisierung / KI",
+    "Website veraltet / Relaunch",
+    "Online-Shop / E-Commerce",
+    "Barrierefreiheit (BFSG-Pflicht)",
+    "PageSpeed / SEO schwach",
+    # IT-Sicherheit
+    "IT-Sicherheit / ISO 27001",
+    "IT-Grundschutz (BSI)",
+    "NIS2-Betroffenheit",
+    "Ransomware-Vorsorge",
+    "Security-Awareness / Phishing",
+    "Kein Notfallplan (BCM)",
+    "Veraltete Infrastruktur / Patch-Rückstand",
+    "Cyber-Versicherung: Auflagen",
+    # Datenschutz
+    "Datenschutz / externer DSB",
+    "DSGVO-Abmahnrisiko Website",
+    "Fehlende Verarbeitungsübersicht (VVT)",
+    "Auftragsverarbeitung ungeregelt (AVV)",
+    "Datenpanne / Meldepflicht",
+    "KI-Verordnung (KI-VO) Betroffenheit",
+    # Vertrieb / Beziehung
+    "Bestandskunde: Cross-Selling",
+    "Bestandskunde: Wartungsvertrag",
+    "Empfehlung / Warmkontakt",
+    "Ausschreibung / RFP",
+    "Wettbewerber-Wechsel",
+]
+
 TAXONOMIES: dict[str, list[str]] = {
     "role": list(dict.fromkeys(_ROLE)),
     "todo": list(dict.fromkeys(_TODO)),
+    "target": list(dict.fromkeys(_TARGET)),
     "source": list(dict.fromkeys(_SOURCE)),
     "tag": _TAG,
     "branche": list(dict.fromkeys(_BRANCHE)),

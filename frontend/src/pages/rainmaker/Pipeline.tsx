@@ -26,6 +26,7 @@ const brancheTag = (tags: string[] | null): string | null =>
 
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
 const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
+const TARGET_FILTER_KEY = 'rm-pipeline-targetfilter'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 function loadTimeFilter(): TimeFilterValue {
   try {
@@ -53,6 +54,7 @@ export default function RainmakerPipeline() {
   // Filter überstehen die Zurück-Navigation (Pipeline remountet) via localStorage.
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
+  const [targetFilter, setTargetFilter] = useState<string | null>(() => localStorage.getItem(TARGET_FILTER_KEY) || null)
   const [timeFilter, setTimeFilter] = useState<TimeFilterValue>(loadTimeFilter)
 
   useEffect(() => {
@@ -63,6 +65,10 @@ export default function RainmakerPipeline() {
     if (emailFilter) localStorage.setItem(EMAIL_FILTER_KEY, emailFilter)
     else localStorage.removeItem(EMAIL_FILTER_KEY)
   }, [emailFilter])
+  useEffect(() => {
+    if (targetFilter) localStorage.setItem(TARGET_FILTER_KEY, targetFilter)
+    else localStorage.removeItem(TARGET_FILTER_KEY)
+  }, [targetFilter])
 
   const patchTimeFilter = useCallback((patch: Partial<TimeFilterValue>) => {
     setTimeFilter((prev) => {
@@ -165,6 +171,16 @@ export default function RainmakerPipeline() {
     return [...map.values()].sort((a, b) => b.count - a.count)
   }, [leads])
 
+  // Target-Chips (nach Häufigkeit) — nur Leads mit gesetztem Target.
+  const targetChips = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const l of leads) {
+      const t = (l.target || '').trim()
+      if (t) map.set(t, (map.get(t) ?? 0) + 1)
+    }
+    return [...map.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count)
+  }, [leads])
+
   const timeWindow = useMemo(() => {
     if (timeFilter.preset === 'lastImport') {
       return detectLastImportWindow(leads.map(leadTs), Date.now())
@@ -176,9 +192,10 @@ export default function RainmakerPipeline() {
     let ls = sourceFilter === null ? leads : leads.filter((l) => sourceKey(l.source) === sourceFilter)
     if (emailFilter === 'deliverable') ls = ls.filter((l) => l.email_status && EMAIL_DELIVERABLE.has(l.email_status))
     else if (emailFilter === 'problem') ls = ls.filter((l) => l.email_status && EMAIL_PROBLEM.has(l.email_status))
+    if (targetFilter !== null) ls = ls.filter((l) => (l.target || '').trim() === targetFilter)
     if (timeFilter.preset !== 'all') ls = ls.filter((l) => inWindow(leadTs(l), timeWindow))
     return ls
-  }, [leads, sourceFilter, emailFilter, timeFilter.preset, timeWindow, leadTs])
+  }, [leads, sourceFilter, emailFilter, targetFilter, timeFilter.preset, timeWindow, leadTs])
 
   const emailCounts = useMemo(() => {
     let deliverable = 0, problem = 0
@@ -201,6 +218,11 @@ export default function RainmakerPipeline() {
       setEmailFilter(null)
     }
   }, [leads.length, emailFilter, emailCounts])
+  useEffect(() => {
+    if (leads.length && targetFilter && !targetChips.some((c) => c.key === targetFilter)) {
+      setTargetFilter(null)
+    }
+  }, [leads.length, targetFilter, targetChips])
 
   if (loading) return <LoadingIndicator />
 
@@ -247,6 +269,33 @@ export default function RainmakerPipeline() {
               style={sourceFilter === key
                 ? { borderColor: color, backgroundColor: color + '26' }
                 : { borderColor: 'var(--c-border,#333)' }}
+            >
+              {key} ({count})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Target-Filter: eine Chip pro vorkommendem Target + „Alle" (nur wenn Targets gesetzt sind). */}
+      {targetChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-text-muted mr-1">🎯 Target:</span>
+          <button
+            onClick={() => setTargetFilter(null)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short ${
+              targetFilter === null ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+            }`}
+          >
+            Alle ({leads.length})
+          </button>
+          {targetChips.map(({ key, count }) => (
+            <button
+              key={key}
+              onClick={() => setTargetFilter(key)}
+              title={key}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short max-w-[240px] truncate ${
+                targetFilter === key ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:text-text'
+              }`}
             >
               {key} ({count})
             </button>
@@ -356,6 +405,12 @@ export default function RainmakerPipeline() {
                     </div>
                     {lead.contact_name && (
                       <div className="text-xs text-text-muted mb-1.5 truncate">{lead.contact_name}</div>
+                    )}
+                    {lead.target && (
+                      <div className="mb-1.5">
+                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium truncate max-w-full"
+                              title={`Target: ${lead.target}`}>🎯 {lead.target}</span>
+                      </div>
                     )}
                     {branche && (
                       <div className="mb-1.5">

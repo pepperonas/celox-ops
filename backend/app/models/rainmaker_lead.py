@@ -86,6 +86,11 @@ class RainmakerLead(OwnedMixin, Base):
     )
     # Stored as a JSON array of strings.
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # „Target": der konkrete Pitch-Winkel / Pain dieses Leads (EIN Wert, z. B.
+    # „Projektron BCS / Zeiterfassung"). Wie ein Tag gepflegt (Autocomplete-Feld
+    # `target`), aber eine eigene, prominente Achse — nicht im freien tags-Array.
+    # Bestehende DBs: manuelles ALTER (scripts/add_lead_target.sql).
+    target: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     # Bookmark: gepinnte Leads sortieren in ihrer Pipeline-Spalte nach oben.
     pinned: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")

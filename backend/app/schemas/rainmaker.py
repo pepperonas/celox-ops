@@ -2,7 +2,7 @@ import uuid
 from datetime import date as DateType, datetime, time as TimeType
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.rainmaker_activity import (
     RainmakerActivityStatus,
@@ -30,6 +30,7 @@ class RainmakerLeadBase(BaseModel):
     priority: RainmakerPriority = RainmakerPriority.medium
     value_estimate: Decimal | None = None
     tags: list[str] | None = None
+    target: str | None = Field(default=None, max_length=120)
     notes: str | None = None
 
 
@@ -242,6 +243,7 @@ class RainmakerLeadUpdate(BaseModel):
     priority: RainmakerPriority | None = None
     value_estimate: Decimal | None = None
     tags: list[str] | None = None
+    target: str | None = Field(default=None, max_length=120)
     pinned: bool | None = None
     notes: str | None = None
 

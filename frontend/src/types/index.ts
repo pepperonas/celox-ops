@@ -505,6 +505,8 @@ export interface RainmakerLead {
   priority: RainmakerPriority
   value_estimate: number | null
   tags: string[] | null
+  // „Target": Pitch-Winkel/Pain dieses Leads (wie ein Tag gepflegt, eigene Achse)
+  target: string | null
   pinned: boolean
   notes: string | null
   created_at: string
@@ -533,6 +535,7 @@ export interface RainmakerLeadCreate {
   priority?: RainmakerPriority
   value_estimate?: number | null
   tags?: string[] | null
+  target?: string | null
   pinned?: boolean
   notes?: string | null
 }

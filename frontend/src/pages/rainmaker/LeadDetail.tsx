@@ -363,9 +363,17 @@ export default function RainmakerLeadDetail() {
             </div>
           ))}
         </dl>
-        {lead.tags && lead.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-border">
-            {lead.tags.map((t) => <span key={t} className="text-xs px-3 py-1 rounded-full bg-surface-high text-text-muted">{t}</span>)}
+        {(lead.target || (lead.tags && lead.tags.length > 0)) && (
+          <div className="flex flex-wrap items-center gap-2 mt-5 pt-5 border-t border-border">
+            {lead.target && (
+              <span
+                title="Target — Pitch-Winkel / Pain"
+                className="text-xs px-3 py-1 rounded-full bg-accent/15 text-accent font-medium"
+              >
+                🎯 {lead.target}
+              </span>
+            )}
+            {lead.tags?.map((t) => <span key={t} className="text-xs px-3 py-1 rounded-full bg-surface-high text-text-muted">{t}</span>)}
           </div>
         )}
         {lead.notes && (
