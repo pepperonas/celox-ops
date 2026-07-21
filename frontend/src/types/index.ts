@@ -919,3 +919,39 @@ export interface OutreachTemplateCreate {
 }
 
 export type OutreachTemplateUpdate = Partial<OutreachTemplateCreate>
+
+// ---------------------------------------------------------------- To-dos
+export type TodoStatus = 'offen' | 'erledigt'
+export type TodoPriority = 'niedrig' | 'normal' | 'hoch'
+
+export interface Todo {
+  id: string
+  title: string
+  notes: string | null
+  customer_id: string | null
+  lead_id: string | null
+  due_date: string | null
+  priority: TodoPriority
+  status: TodoStatus
+  done_at: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+  /** Vom Backend angereichert (Firma bzw. Name des Bezugs). */
+  customer_name: string | null
+  lead_name: string | null
+}
+
+export interface TodoCreate {
+  title: string
+  notes?: string | null
+  customer_id?: string | null
+  lead_id?: string | null
+  due_date?: string | null
+  priority?: TodoPriority
+}
+
+export interface TodoUpdate extends Partial<TodoCreate> {
+  status?: TodoStatus
+  sort_order?: number
+}

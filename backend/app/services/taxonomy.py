@@ -348,8 +348,62 @@ _TAETIGKEIT = [
     "Recherche",
 ]
 
+_TODO = [
+    # Akquise & Kontakt
+    "Angebot nachfassen",
+    "Rückruf vereinbaren",
+    "Termin bestätigen",
+    "Termin vorbereiten",
+    "Gesprächsnotiz nachtragen",
+    "Kontaktdaten prüfen",
+    "Ansprechpartner ermitteln",
+    "Unterlagen zusenden",
+    "Referenzen schicken",
+    "Preisliste schicken",
+    # Angebot & Auftrag
+    "Angebot erstellen",
+    "Angebot überarbeiten",
+    "Aufwand schätzen",
+    "Leistungsumfang klären",
+    "Auftragsbestätigung einholen",
+    "Projektstart planen",
+    "Zwischenstand abstimmen",
+    "Abnahme vereinbaren",
+    "Projekt abschließen",
+    # Rechnung & Zahlung
+    "Rechnung stellen",
+    "Rechnung prüfen",
+    "Zahlungseingang prüfen",
+    "Zahlung anmahnen",
+    "Stundennachweis erstellen",
+    "Beleg ablegen",
+    # Verträge & Recht
+    "Vertrag prüfen",
+    "Vertrag verlängern",
+    "Kündigungsfrist prüfen",
+    "AVV einholen",
+    "AGB aktualisieren",
+    "Datenschutz-Unterlagen prüfen",
+    # Technik & Betrieb
+    "Website-Analyse durchführen",
+    "Backup prüfen",
+    "Update einspielen",
+    "Zugangsdaten übergeben",
+    "Domain verlängern",
+    "SSL-Zertifikat prüfen",
+    "Monitoring einrichten",
+    "Fehler analysieren",
+    # Organisation
+    "Rückmeldung geben",
+    "Wiedervorlage",
+    "Recherche durchführen",
+    "Dokumentation aktualisieren",
+    "Nachbereitung",
+]
+
 TAXONOMIES: dict[str, list[str]] = {
     "role": list(dict.fromkeys(_ROLE)),
+    "todo": list(dict.fromkeys(_TODO)),
     "source": list(dict.fromkeys(_SOURCE)),
     "tag": _TAG,
     "branche": list(dict.fromkeys(_BRANCHE)),

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import toast from 'react-hot-toast'
 import type { Task } from '../types'
+import TodoList from '../components/TodoList'
+import PageHeader from '../components/PageHeader'
 
 const categoryLabels: Record<string, string> = {
   overdue_invoice: 'Überfällige Rechnung',
@@ -30,7 +32,20 @@ export default function Tasks() {
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [openTodos, setOpenTodos] = useState(0)
+  // Automatische Hinweise sind Kontext, keine Handlungsliste — daher
+  // eingeklappt, Zustand überlebt den Reload.
+  const [hintsOpen, setHintsOpen] = useState(
+    () => localStorage.getItem('ops-tasks-hints-open') === '1'
+  )
   const navigate = useNavigate()
+
+  const toggleHints = () => {
+    setHintsOpen((v) => {
+      localStorage.setItem('ops-tasks-hints-open', v ? '0' : '1')
+      return !v
+    })
+  }
 
   const loadTasks = useCallback(() => {
     api
@@ -71,30 +86,54 @@ export default function Tasks() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-text tracking-tight">Aufgaben</h2>
+      <PageHeader
+        title="Aufgaben"
+        subtitle={openTodos > 0 ? `${openTodos} offene To-dos` : 'Deine To-dos und automatische Hinweise'}
+        actions={
+          <button
+            onClick={handleGenerateRecurring}
+            disabled={generating}
+            className="btn-secondary text-sm"
+          >
+            {generating ? 'Generiere…' : 'Vertragsrechnungen generieren'}
+          </button>
+        }
+      />
+
+      {/* Manuelle To-dos — die eigentliche Arbeitsliste */}
+      <TodoList hideHeading onCountChange={setOpenTodos} />
+
+      {/* Automatisch abgeleitete Hinweise aus Rechnungen/Verträgen/Aufträgen.
+          Kein CRUD — daher unterhalb der To-dos und standardmäßig eingeklappt. */}
+      <div className="mt-8 border-t border-border pt-5">
+        <button
+          onClick={toggleHints}
+          aria-expanded={hintsOpen}
+          className="md-state flex items-center gap-2 text-sm font-semibold text-text rounded-md px-2 py-1 -ml-2"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform duration-short ${hintsOpen ? 'rotate-90' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          Automatische Hinweise
           {count > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-accent text-on-primary text-xs font-semibold">
+            <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-2 rounded-full bg-surface-2 text-text-muted text-xs font-semibold">
               {count}
             </span>
           )}
-        </div>
-        <button
-          onClick={handleGenerateRecurring}
-          disabled={generating}
-          className="px-4 py-2 rounded-lg bg-accent text-on-primary text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
-        >
-          {generating ? 'Generiere...' : 'Vertragsrechnungen generieren'}
         </button>
-      </div>
+        <p className="text-xs text-text-muted mt-1 ml-6">
+          Aus Rechnungen, Verträgen und Aufträgen abgeleitet — nichts zum Abhaken.
+        </p>
 
-      {tasks.length === 0 ? (
-        <div className="bg-surface border border-border rounded-card p-12 text-center">
-          <p className="text-text-muted">Keine anstehenden Aufgaben</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
+        {hintsOpen && (tasks.length === 0 ? (
+          <div className="bg-surface border border-border rounded-card p-8 text-center mt-4">
+            <p className="text-text-muted text-sm">Keine offenen Hinweise</p>
+          </div>
+        ) : (
+          <div className="space-y-3 mt-4">
           {tasks.map((task, idx) => (
             <div
               key={idx}
@@ -118,8 +157,9 @@ export default function Tasks() {
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

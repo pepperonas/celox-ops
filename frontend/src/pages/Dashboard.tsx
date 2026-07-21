@@ -6,6 +6,7 @@ import '../utils/charts'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { api } from '../api/client'
 import TiltCard from '../components/TiltCard'
+import { getTodoStats } from '../api/todos'
 import type { DashboardStats, Invoice } from '../types'
 import { revenueTooltipLabel } from '../utils/chartTooltip'
 import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters'
@@ -108,6 +109,7 @@ export default function Dashboard() {
     () => localStorage.getItem('dash-chart-drafts') === '1',
   )
   const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([])
+  const [todoStats, setTodoStats] = useState<{ open: number; overdue: number; due_today: number } | null>(null)
 
   const loadData = useCallback(() => {
     Promise.all([
@@ -125,6 +127,8 @@ export default function Dashboard() {
         toast.error('Dashboard konnte nicht geladen werden.')
       })
       .finally(() => setLoading(false))
+    // To-dos separat: ein Fehler hier darf das Dashboard nicht kippen.
+    getTodoStats().then(setTodoStats).catch(() => {})
   }, [chartPeriod, includeDrafts])
 
   // Persist the chart toggles so they survive reloads / status refreshes.
@@ -181,6 +185,15 @@ export default function Dashboard() {
           sub: formatCurrency(stats.open_invoices_sum),
           valueColor: stats.overdue_invoices_count > 0 ? 'text-danger' : 'text-warning',
         },
+        ...(todoStats && todoStats.open > 0 ? [{
+          label: 'To-dos',
+          value: String(todoStats.open),
+          sub: todoStats.overdue > 0
+            ? `${todoStats.overdue} überfällig`
+            : todoStats.due_today > 0 ? `${todoStats.due_today} heute fällig` : 'offen',
+          valueColor: todoStats.overdue > 0 ? 'text-danger' : 'text-cyan',
+          link: '/aufgaben',
+        }] : []),
         {
           label: 'Aktive Verträge',
           value: String(stats.active_contracts_count),
@@ -267,15 +280,23 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className={`md-stagger grid grid-cols-2 ${cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
+        <div className={`md-stagger grid grid-cols-2 ${cards.length >= 7 ? 'xl:grid-cols-7' : cards.length === 6 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-4 mb-6`}>
           {cards.map((card, i) => (
             <TiltCard
               key={card.label}
-              onClick={card.highlight ? () => navigate('/rechnungen?status=ueberfaellig') : undefined}
+              onClick={
+                (card as { link?: string }).link
+                  ? () => navigate((card as { link?: string }).link!)
+                  : card.highlight
+                    ? () => navigate('/rechnungen?status=ueberfaellig')
+                    : undefined
+              }
               className={`${i === 0 ? 'shape-hero' : 'rounded-md'} p-5 transition-shadow duration-medium ${
                 card.highlight
                   ? 'bg-danger/10 border border-danger/40 hover:border-danger/60 hover:shadow-elev-2 cursor-pointer'
-                  : 'bg-surface-container border border-border hover:shadow-elev-2'
+                  : `bg-surface-container border border-border hover:shadow-elev-2${
+                      (card as { link?: string }).link ? ' cursor-pointer hover:border-text-muted' : ''
+                    }`
               }`}
             >
               <div className="flex items-center justify-between mb-2">

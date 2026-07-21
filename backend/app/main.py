@@ -32,6 +32,7 @@ from app.models.rainmaker_streak import RainmakerStreak
 from app.models.app_settings import AppSettings
 from app.models.ai_lead_run import AiLeadRun
 from app.models.outreach_template import OutreachTemplate
+from app.models.todo import Todo
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -44,7 +45,7 @@ set_owned_models([
     Customer, Order, Contract, Invoice, Lead, TimeEntry, Expense, Activity, Attachment,
     EmailTemplate, PagespeedResult, ComplianceRecord, RainmakerLead, RainmakerActivity,
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
-    AiLeadRun, OutreachTemplate,
+    AiLeadRun, OutreachTemplate, Todo,
 ])
 install_tenancy_events()
 
@@ -248,6 +249,7 @@ from app.routers.outreach import router as outreach_router  # noqa: E402
 from app.routers.suggestions import router as suggestions_router  # noqa: E402
 from app.routers.users import router as users_router  # noqa: E402
 from app.routers.handoff import router as handoff_router  # noqa: E402
+from app.routers.todos import router as todos_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -277,6 +279,7 @@ app.include_router(outreach_router)
 app.include_router(suggestions_router)
 app.include_router(users_router)
 app.include_router(handoff_router)
+app.include_router(todos_router)
 
 
 @app.get("/api/health")

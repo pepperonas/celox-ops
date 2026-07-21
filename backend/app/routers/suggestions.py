@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models.expense import Expense
 from app.models.rainmaker_lead import RainmakerLead
 from app.models.time_entry import TimeEntry
+from app.models.todo import Todo
 from app.services.taxonomy import SYNONYMS, TAXONOMIES, merge_suggestions
 
 router = APIRouter(
@@ -53,13 +54,16 @@ async def _own_counts(field: str, db: AsyncSession) -> dict[str, int]:
     elif field == "taetigkeit":
         rows = (await db.execute(select(TimeEntry.description))).scalars().all()
         counts.update(r.strip() for r in rows if r and r.strip())
+    elif field == "todo":
+        rows = (await db.execute(select(Todo.title))).scalars().all()
+        counts.update(r.strip() for r in rows if r and r.strip())
     # zielsystem: rein kuratiert (keine DB-Quelle)
     return dict(counts)
 
 
 @router.get("")
 async def get_suggestions(
-    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit"),
+    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit/todo"),
     q: str = Query("", max_length=100),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),

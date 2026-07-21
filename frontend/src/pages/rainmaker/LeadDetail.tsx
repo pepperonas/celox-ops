@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import LoadingIndicator from '../../components/LoadingIndicator'
+import TodoList from '../../components/TodoList'
 import DeleteDialog from '../../components/DeleteDialog'
 import {
   getRainmakerLead,
@@ -374,6 +375,15 @@ export default function RainmakerLeadDetail() {
           </div>
         )}
       </div>
+
+      {/* To-dos zum Lead — bewusst getrennt von den Akquise-Aktivitäten:
+          keine Punkte, nicht in der Heute-Queue, einfach was zu tun ist. */}
+      {id && (
+        <div className="bg-surface-container border border-border rounded-card p-6 mb-6">
+          <h3 className="text-sm font-semibold text-text mb-4">To-dos</h3>
+          <TodoList leadId={id} hideHeading />
+        </div>
+      )}
 
       {/* Activity timeline */}
       <div className="bg-surface-container border border-border rounded-card p-6">

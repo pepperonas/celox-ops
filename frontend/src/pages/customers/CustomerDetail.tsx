@@ -10,11 +10,13 @@ import { getInvoices, createQuickInvoice } from '../../api/invoices'
 import { getActivities, createActivity, deleteActivity } from '../../api/activities'
 import { toastWithUndo } from '../../utils/undoToast'
 import { listAttachments } from '../../api/attachments'
+import { getTodos } from '../../api/todos'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import CustomerComplianceCard from '../../components/CustomerComplianceCard'
 import HandoffCard from '../../components/HandoffCard'
+import TodoList from '../../components/TodoList'
 import { getCustomerCompliance, type ComplianceCustomer } from '../../api/compliance'
 import TokenUsage from '../../components/TokenUsage'
 import LoadingIndicator from '../../components/LoadingIndicator'
@@ -40,12 +42,13 @@ export default function CustomerDetail() {
   const [pagespeedLoading, setPagespeedLoading] = useState(false)
 
   const [attachmentsCount, setAttachmentsCount] = useState(0)
+  const [openTodos, setOpenTodos] = useState(0)
   const [compliance, setCompliance] = useState<ComplianceCustomer | null>(null)
   const loadCompliance = useCallback(() => {
     if (id) getCustomerCompliance(id).then(setCompliance).catch(() => {})
   }, [id])
 
-  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'dokumente', 'aktivitaeten', 'pagespeed', 'tokens'] as const
+  const validTabs = ['auftraege', 'vertraege', 'rechnungen', 'todos', 'dokumente', 'aktivitaeten', 'pagespeed', 'tokens'] as const
   type TabKey = typeof validTabs[number]
   const hashTab = location.hash.replace('#', '') as TabKey
   const initialTab = validTabs.includes(hashTab) ? hashTab : 'auftraege'
@@ -68,6 +71,7 @@ export default function CustomerDetail() {
     getInvoices({ customer_id: id }).then((r) => setInvoices(r.items))
     getActivities(id).then((r) => { setActivities(r.items); setActivitiesTotal(r.total) })
     listAttachments({ customer_id: id }).then((a) => setAttachmentsCount(a.length)).catch((err) => console.warn('Anhang-Anzahl konnte nicht geladen werden:', err))
+    getTodos({ customer_id: id, status: 'offen', page_size: 1 }).then((r) => setOpenTodos(r.total)).catch(() => {})
     api.get('/pagespeed/results', { params: { customer_id: id } }).then((r) => setPagespeedResults(r.data))
     loadCompliance()
   }, [id, loadCompliance])
@@ -174,6 +178,7 @@ export default function CustomerDetail() {
     { key: 'auftraege' as const, label: `Aufträge (${orders.length})` },
     { key: 'vertraege' as const, label: `Verträge (${contracts.length})` },
     { key: 'rechnungen' as const, label: `Rechnungen (${invoices.length})` },
+    { key: 'todos' as const, label: `To-dos${openTodos > 0 ? ` (${openTodos})` : ''}` },
     { key: 'dokumente' as const, label: `Dokumente (${attachmentsCount})` },
     { key: 'aktivitaeten' as const, label: `Aktivitäten (${activitiesTotal})` },
     ...(customer.website ? [{ key: 'pagespeed' as const, label: `PageSpeed (${pagespeedResults.length})` }] : []),
@@ -404,6 +409,10 @@ export default function CustomerDetail() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeTab === 'todos' && id && (
+        <TodoList customerId={id} hideHeading onCountChange={setOpenTodos} />
       )}
 
       {activeTab === 'dokumente' && (
