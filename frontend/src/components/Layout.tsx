@@ -423,12 +423,16 @@ export default function Layout() {
         {/* overflow-x-hidden: overflow-y-auto macht overflow-x implizit 'auto' —
             ein einziges zu breites Kind machte sonst die GANZE Seite horizontal
             scrollbar (Mobile). Breite Inhalte scrollen in eigenen Containern. */}
+        {/* Flex-Spalte, damit der Footer bei kurzen Seiten unten klebt: der
+            Inhalt (`grow`) füllt den freien Platz, Flexbox rechnet die
+            Footer-Höhe + sein mt-12 in die freie Fläche ein (kein Überlauf).
+            Bei langen Seiten wächst der Inhalt natürlich und scrollt. */}
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6"
+          className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-4 sm:p-6"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
-          <div key={location.pathname} className="page-enter">
+          <div key={location.pathname} className="page-enter grow">
             <Outlet />
           </div>
           <AppFooter />
