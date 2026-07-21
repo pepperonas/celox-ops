@@ -633,6 +633,15 @@ _TODO = [
     "KI-Verordnung: Betroffenheit prüfen",
     "Meldung an die Aufsichtsbehörde vorbereiten",
     "DSB-Bestellung dokumentieren",
+    # DSMS-Einführung (datenschutz.celox.io)
+    "DSMS einführen (datenschutz.celox.io)",
+    "Mandant im DSMS anlegen",
+    "Kunde ins DSMS onboarden",
+    "DSMS-Zugang für Kunde einrichten",
+    "Kunde an datenschutz.celox.io übergeben",
+    "DSMS-Ersteinrichtung mit Kunde durchgehen",
+    "VVT im DSMS aufbauen",
+    "DSMS-Schulung für Mandant",
     # Organisation
     "Rückmeldung geben",
     "Wiedervorlage",
@@ -671,6 +680,7 @@ _TARGET = [
     "Cyber-Versicherung: Auflagen",
     # Datenschutz
     "Datenschutz / externer DSB",
+    "DSMS-Einführung (datenschutz.celox.io)",
     "DSGVO-Abmahnrisiko Website",
     "Fehlende Verarbeitungsübersicht (VVT)",
     "Auftragsverarbeitung ungeregelt (AVV)",

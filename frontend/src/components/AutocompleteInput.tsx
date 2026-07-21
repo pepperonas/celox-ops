@@ -385,6 +385,10 @@ export const TITLE_SUGGESTIONS = [...new Set([
   'DSGVO-Check Website',
   'Betroffenenanfragen-Bearbeitung',
   'Datenpannen-Unterstützung',
+  // ── DSMS (datenschutz.celox.io) ──
+  'DSMS-Einführung (datenschutz.celox.io)',
+  'Datenschutz-Managementsystem – Einrichtung & Onboarding',
+  'DSMS – Monatliche Nutzung & Betreuung',
   // ── Marketing & Sichtbarkeit ──
   'SEO-Paket (3 Monate)',
   'SEO-Betreuung (monatlich)',
@@ -1349,6 +1353,13 @@ export const POSITION_SUGGESTIONS = [...new Set([
   'Löschkonzept mit Löschfristen erstellen',
   'KI-Nutzung datenschutzkonform einführen',
   'Drittland-Transfer-Prüfung (SCC/TIA)',
+  // ── DSMS (datenschutz.celox.io) ──
+  'DSMS-Einführung (datenschutz.celox.io)',
+  'Datenschutz-Managementsystem – Einrichtung & Onboarding',
+  'DSMS-Mandant anlegen & konfigurieren',
+  'VVT-Ersterfassung im DSMS',
+  'DSMS-Schulung für den Mandanten',
+  'DSMS – Monatliche Betreuung & Pflege',
 ])]
 
 // Rabatt-Begründungen (Rechnungsformular). Dedup via Set.
