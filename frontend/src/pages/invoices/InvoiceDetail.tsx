@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
@@ -41,6 +42,7 @@ export default function InvoiceDetail() {
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [creditNoteLoading, setCreditNoteLoading] = useState(false)
+  const [showCreditNoteDialog, setShowCreditNoteDialog] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -166,10 +168,12 @@ export default function InvoiceDetail() {
     setCreditNoteLoading(true)
     try {
       const creditNote = await createCreditNote(id!)
+      setShowCreditNoteDialog(false)
       toast.success(`Gutschrift ${creditNote.invoice_number} wurde erstellt.`)
       navigate(`/rechnungen/${creditNote.id}`)
-    } catch {
-      toast.error('Fehler beim Erstellen der Gutschrift.')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } }
+      toast.error(err.response?.data?.detail || 'Fehler beim Erstellen der Gutschrift.')
     }
     setCreditNoteLoading(false)
   }
@@ -305,11 +309,11 @@ export default function InvoiceDetail() {
           )}
           {!invoice.is_credit_note && (invoice.status === 'gestellt' || invoice.status === 'bezahlt' || invoice.status === 'ueberfaellig') && (
             <button
-              onClick={handleCreateCreditNote}
+              onClick={() => setShowCreditNoteDialog(true)}
               disabled={creditNoteLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+              className="btn-secondary text-sm"
             >
-              {creditNoteLoading ? 'Wird erstellt...' : 'Gutschrift erstellen'}
+              Stornieren (Gutschrift)
             </button>
           )}
           {canRemind && (
@@ -451,17 +455,34 @@ export default function InvoiceDetail() {
         </div>
       )}
 
-      {/* Credit Note Reference */}
+      {/* Gutschrift → Original */}
       {invoice.credit_note_for && (
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-card p-5 mb-6">
-          <p className="text-sm text-purple-800 dark:text-purple-300">
-            Diese Gutschrift bezieht sich auf Rechnung{' '}
+        <div className="bg-purple/10 border border-purple/40 rounded-card p-5 mb-6">
+          <p className="text-sm text-text">
+            Diese Gutschrift storniert die Rechnung{' '}
             <button
               onClick={() => navigate(`/rechnungen/${invoice.credit_note_for}`)}
-              className="underline font-medium hover:text-purple-900 dark:hover:text-purple-200"
+              className="text-purple underline font-medium hover:opacity-80 transition-opacity"
             >
-              anzeigen
+              {invoice.credit_note_for_number || 'anzeigen'}
             </button>
+            .
+          </p>
+        </div>
+      )}
+
+      {/* Original → Gutschrift */}
+      {!invoice.is_credit_note && invoice.credit_note_id && (
+        <div className="bg-purple/10 border border-purple/40 rounded-card p-5 mb-6">
+          <p className="text-sm text-text">
+            Diese Rechnung wurde storniert durch die Gutschrift{' '}
+            <button
+              onClick={() => navigate(`/rechnungen/${invoice.credit_note_id}`)}
+              className="text-purple underline font-medium hover:opacity-80 transition-opacity"
+            >
+              {invoice.credit_note_number || 'anzeigen'}
+            </button>
+            .
           </p>
         </div>
       )}
@@ -587,6 +608,64 @@ export default function InvoiceDetail() {
         title="Rechnung löschen"
         message={`Möchten Sie die Rechnung "${invoice.invoice_number}" wirklich löschen? Dies ist nur für Entwürfe möglich.`}
       />
+
+      {/* Storno-Bestätigung — vergibt eine Gutschriftnummer und ist nicht
+          rückgängig zu machen; der Dialog ist die einzige Sicherung.
+          createPortal: .page-enter transformiert den Vorfahren (Repo-Regel). */}
+      {showCreditNoteDialog && createPortal(
+        <div
+          className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+          onClick={() => !creditNoteLoading && setShowCreditNoteDialog(false)}
+        >
+          <div
+            className="bg-surface border border-border rounded-dialog p-6 sm:p-8 w-full max-w-md animate-modal-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-text mb-1">Rechnung stornieren</h3>
+            <p className="text-text-muted text-sm mb-5">
+              Erstellt eine Gutschrift zu {invoice.invoice_number} über{' '}
+              {formatCurrency(Number(invoice.total) * -1)} mit eigener Nummer (GS-…) und PDF.
+            </p>
+            <ul className="text-sm text-text space-y-2 mb-5 list-disc pl-5">
+              <li>Die Rechnungsnummer {invoice.invoice_number} bleibt bestehen und wird nicht neu vergeben.</li>
+              {invoice.status === 'bezahlt' ? (
+                <li>
+                  Die Rechnung bleibt auf <strong>bezahlt</strong>; die Gutschrift bucht den Betrag
+                  gegen — in Summe null Umsatz, sobald du das Geld erstattet hast.
+                </li>
+              ) : (
+                <li>
+                  Rechnung und Gutschrift werden auf <strong>storniert</strong> gesetzt — die offene
+                  Forderung entfällt und beide zählen nicht mehr in EÜR und Dashboard.
+                </li>
+              )}
+              <li>Für eine korrigierte Fassung danach „Duplizieren" nutzen und den Entwurf anpassen.</li>
+            </ul>
+            <p className="text-xs text-text-muted mb-5">
+              Nicht rückgängig zu machen — die Gutschrift bleibt als Dokument bestehen.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCreditNoteDialog(false)}
+                disabled={creditNoteLoading}
+                className="btn-secondary"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCreditNote}
+                disabled={creditNoteLoading}
+                className="btn-primary"
+              >
+                {creditNoteLoading ? 'Wird erstellt…' : 'Gutschrift erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <EmailDialog
         isOpen={showEmailDialog}

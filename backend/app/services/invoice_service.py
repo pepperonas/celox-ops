@@ -55,6 +55,82 @@ async def generate_invoice_number(db: AsyncSession) -> str:
     return f"{prefix}{next_seq:04d}"
 
 
+CREDIT_NOTE_PREFIX = "GS"
+
+
+def build_credit_note_positions(positions: list[dict]) -> list[dict]:
+    """Positionen der Gutschrift = Spiegelbild des Originals (negative Preise).
+
+    `menge`/`einheit`/`beschreibung` bleiben unverändert — nur Einzelpreis und
+    Gesamt kippen ins Negative (`-abs`, damit ein zweifaches Gutschreiben nie
+    versehentlich wieder positiv wird). Decimal-sicher über Strings, weil die
+    Positionen als JSON liegen und float-Rundung sonst Cent-Fehler erzeugt.
+    """
+    out: list[dict] = []
+    for pos in positions:
+        neg = dict(pos)
+        for key in ("einzelpreis", "gesamt"):
+            if pos.get(key) is None:
+                continue
+            neg[key] = str(-abs(Decimal(str(pos[key]))))
+        out.append(neg)
+    return out
+
+
+def next_credit_note_number(existing: set[int] | list[int], year: int) -> str:
+    """Nächste freie Gutschriftnummer `GS-YYYY-NNNN` (eigener Nummernkreis,
+    getrennt von den Rechnungsnummern — bei Gutschriften zulässig und üblich).
+    Füllt Lücken auf, damit ein gelöschter Entwurf keine Nummer verbrennt."""
+    taken = set(existing)
+    seq = 1
+    while seq in taken:
+        seq += 1
+    return f"{CREDIT_NOTE_PREFIX}-{year}-{seq:04d}"
+
+
+def credit_note_statuses(original_status):
+    """Statuspaar (Gutschrift, Original) nach dem Storno — so, dass die Zahlen
+    in EÜR und Dashboard stimmen.
+
+    - Original **bezahlt**: Geld ist geflossen und fließt zurück → Netting.
+      Original bleibt `bezahlt` (+X), Gutschrift wird `bezahlt` (−X). Summe 0,
+      der Rückfluss landet im Monat der Gutschrift (Zufluss-/Abflussprinzip).
+    - Original **gestellt/überfällig**: es floss nie Geld → Neutralisierung.
+      Beide werden `storniert`; `storniert` zählt weder in der EÜR (nur
+      `bezahlt`) noch in den offenen Forderungen. Ohne das bliebe die Forderung
+      stehen UND die Gutschrift erzeugte einen negativen Umsatz aus dem Nichts.
+    """
+    from app.models.invoice import InvoiceStatus
+
+    if original_status == InvoiceStatus.bezahlt:
+        return InvoiceStatus.bezahlt, InvoiceStatus.bezahlt
+    return InvoiceStatus.storniert, InvoiceStatus.storniert
+
+
+async def generate_credit_note_number(db: AsyncSession) -> str:
+    """Owner-scoped Gutschriftnummer, gegen Doppelklick per Advisory Lock
+    serialisiert (gleiches Muster wie generate_invoice_number)."""
+    owner = current_owner_id.get()
+    if owner is not None:
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(:ns, hashtext(:owner))").bindparams(
+                ns=_INVOICE_LOCK_NS, owner=f"gs:{owner}"
+            )
+        )
+    year = datetime.now().year
+    prefix = f"{CREDIT_NOTE_PREFIX}-{year}-"
+    result = await db.execute(
+        select(Invoice.invoice_number).where(Invoice.invoice_number.like(f"{prefix}%"))
+    )
+    existing = set()
+    for number in result.scalars().all():
+        try:
+            existing.add(int(number.split("-")[-1]))
+        except ValueError:  # pragma: no cover — fremdformatige Altnummer
+            continue
+    return next_credit_note_number(existing, year)
+
+
 async def flush_new_invoice(db: AsyncSession, invoice, attempts: int = 3) -> None:
     """Add + flush a new invoice, retrying with a fresh number when a concurrent
     request grabbed the same one (uq_invoice_owner_number). The SAVEPOINT keeps

@@ -108,6 +108,10 @@ class InvoiceResponse(BaseModel):
     amount_paid: Decimal = Decimal("0")
     is_credit_note: bool = False
     credit_note_for: uuid.UUID | None = None
+    credit_note_for_number: str | None = None
+    # Rückrichtung (Original → Gutschrift): nur im Detail-Endpoint gefüllt.
+    credit_note_id: uuid.UUID | None = None
+    credit_note_number: str | None = None
     customer_name: str = ""
     created_at: datetime
     updated_at: datetime

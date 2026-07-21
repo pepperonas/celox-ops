@@ -211,17 +211,27 @@
 
     <table class="meta-table">
         <tr>
-            <td class="label">Rechnungsnummer:</td>
+            <td class="label">{% if invoice.is_credit_note %}Gutschriftnummer:{% else %}Rechnungsnummer:{% endif %}</td>
             <td>{{ invoice.invoice_number }}</td>
         </tr>
         <tr>
-            <td class="label">Rechnungsdatum:</td>
+            <td class="label">{% if invoice.is_credit_note %}Gutschriftdatum:{% else %}Rechnungsdatum:{% endif %}</td>
             <td>{{ invoice.invoice_date.strftime('%d.%m.%Y') }}</td>
         </tr>
+        {% if invoice.is_credit_note %}
+        {# §14 Abs. 4 UStG: Storno/Gutschrift muss die Originalrechnung benennen #}
+        {% if invoice.credit_note_for_number %}
+        <tr>
+            <td class="label">Storniert Rechnung:</td>
+            <td>{{ invoice.credit_note_for_number }}</td>
+        </tr>
+        {% endif %}
+        {% else %}
         <tr>
             <td class="label">Fällig bis:</td>
             <td>{{ invoice.due_date.strftime('%d.%m.%Y') }}</td>
         </tr>
+        {% endif %}
         {% if settings.BUSINESS_TAX_ID %}
         <tr>
             <td class="label">USt-IdNr.:</td>
@@ -327,6 +337,14 @@
     </div>
     {% endif %}
 
+    {% if invoice.is_credit_note %}
+    {# Gutschrift: keine Zahlungsaufforderung/IBAN — der Betrag fließt zurück
+       bzw. die Forderung entfällt. #}
+    <div class="payment-info">
+        <h3>Hinweis zur Gutschrift</h3>
+        <p style="font-size: 9pt; color: #333;">Der ausgewiesene Betrag wird Ihnen gutgeschrieben. Sofern die stornierte Rechnung bereits bezahlt wurde, erstatten wir den Betrag; andernfalls entfällt die Forderung ersatzlos.</p>
+    </div>
+    {% else %}
     <div class="payment-info">
         <h3>Zahlungsinformationen</h3>
         {% if settings.BUSINESS_BANK_IBAN %}
@@ -374,6 +392,7 @@
         </div>
         {% endif %}
     </div>
+    {% endif %}
 
     <div class="footer">
         {{ settings.BUSINESS_NAME }} | {{ settings.BUSINESS_OWNER }} | {{ settings.BUSINESS_ADDRESS }}

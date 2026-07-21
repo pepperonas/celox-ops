@@ -223,6 +223,11 @@ export interface Invoice {
   amount_paid: number
   is_credit_note: boolean
   credit_note_for: string | null
+  /** Nummer der stornierten Originalrechnung (an der Gutschrift). */
+  credit_note_for_number: string | null
+  /** Gegenrichtung: Gutschrift zu dieser Rechnung — nur im Detail-Endpoint. */
+  credit_note_id: string | null
+  credit_note_number: string | null
   created_at: string
   updated_at: string
 }

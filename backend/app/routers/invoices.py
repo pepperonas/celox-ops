@@ -31,7 +31,14 @@ from app.models.activity import Activity
 from app.services.email_service import send_email
 from app.services.filenames import customer_label, download_name
 from app.services.exchange_service import get_usd_eur_rate
-from app.services.invoice_service import calculate_invoice_totals, flush_new_invoice, generate_invoice_number
+from app.services.invoice_service import (
+    build_credit_note_positions,
+    calculate_invoice_totals,
+    credit_note_statuses,
+    flush_new_invoice,
+    generate_credit_note_number,
+    generate_invoice_number,
+)
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
 
 
@@ -139,6 +146,21 @@ async def get_invoice(
 
     detail = InvoiceDetail.model_validate(invoice)
     detail.customer_name = invoice.customer.name if invoice.customer else ""
+
+    # Rückrichtung: existiert zu dieser Rechnung eine Gutschrift, damit das
+    # Original darauf verlinken kann (indexierter Lookup, nur im Detail).
+    if not invoice.is_credit_note:
+        gs = (
+            await db.execute(
+                select(Invoice.id, Invoice.invoice_number)
+                .where(Invoice.credit_note_for == invoice.id)
+                .order_by(Invoice.created_at.desc())
+                .limit(1)
+            )
+        ).first()
+        if gs:
+            detail.credit_note_id, detail.credit_note_number = gs
+
     return detail
 
 
@@ -1076,30 +1098,9 @@ async def create_credit_note(
             detail="Gutschriften können nur für gestellte, bezahlte oder überfällige Rechnungen erstellt werden",
         )
 
-    # Generate credit note number GS-YYYY-NNNN
-    from datetime import datetime
-    year = datetime.now().year
-    gs_prefix = f"GS-{year}-"
-    gs_result = await db.execute(
-        select(Invoice.invoice_number)
-        .where(Invoice.invoice_number.like(f"{gs_prefix}%"))
-        .order_by(Invoice.invoice_number.desc())
-        .limit(1)
-    )
-    last_gs = gs_result.scalar_one_or_none()
-    if last_gs:
-        next_seq = int(last_gs.split("-")[-1]) + 1
-    else:
-        next_seq = 1
-    gs_number = f"{gs_prefix}{next_seq:04d}"
-
-    # Negate all amounts
-    neg_positions = []
-    for pos in invoice.positions:
-        neg_pos = dict(pos)
-        neg_pos["gesamt"] = str(-abs(float(pos.get("gesamt", 0))))
-        neg_pos["einzelpreis"] = str(-abs(float(pos.get("einzelpreis", 0))))
-        neg_positions.append(neg_pos)
+    gs_number = await generate_credit_note_number(db)
+    neg_positions = build_credit_note_positions(invoice.positions)
+    gs_status, original_status = credit_note_statuses(invoice.status)
 
     today = date_type.today()
     credit_note = Invoice(
@@ -1109,16 +1110,28 @@ async def create_credit_note(
         positions=neg_positions,
         subtotal=-abs(invoice.subtotal),
         tax_rate=invoice.tax_rate,
+        # tax_exempt MUSS mit — sonst weist die Gutschrift eines
+        # Kleinunternehmers (§19 UStG) plötzlich Umsatzsteuer aus.
+        tax_exempt=invoice.tax_exempt,
         tax_amount=-abs(invoice.tax_amount),
         total=-abs(invoice.total),
         invoice_date=today,
         due_date=today,
-        status=InvoiceStatus.bezahlt,
+        status=gs_status,
         is_credit_note=True,
         credit_note_for=invoice.id,
-        notes=f"Gutschrift zu Rechnung {invoice.invoice_number}",
+        # Nummer denormalisiert: PDF + Liste brauchen sie ohne Join, und sie
+        # bleibt korrekt, falls das Original später gelöscht wird.
+        credit_note_for_number=invoice.invoice_number,
+        notes=(
+            f"Diese Gutschrift storniert die Rechnung {invoice.invoice_number} "
+            f"vom {invoice.invoice_date.strftime('%d.%m.%Y')}."
+        ),
     )
     db.add(credit_note)
+    # Das Original wird neutralisiert bzw. bleibt bezahlt (Netting) —
+    # Begründung siehe credit_note_statuses().
+    invoice.status = original_status
     await db.flush()
     await db.refresh(credit_note)
 
@@ -1129,6 +1142,18 @@ async def create_credit_note(
         description=f"Gutschrift zu {invoice.invoice_number} — {float(credit_note.total):.2f} €",
     )
     db.add(activity)
+
+    # PDF sofort erzeugen — die Gutschrift ist ein Ausgangsdokument, das direkt
+    # an den Kunden geht; ohne PDF wäre der nächste Schritt ein Blindklick.
+    try:
+        pdf_path = await asyncio.to_thread(generate_invoice_pdf, credit_note, invoice.customer)
+        credit_note.pdf_path = pdf_path
+        await db.flush()
+    except Exception as e:  # PDF-Fehler darf die Gutschrift nicht verhindern
+        import logging
+        logging.getLogger(__name__).warning(
+            f"PDF für Gutschrift {gs_number} fehlgeschlagen: {e}", exc_info=True
+        )
 
     # Load customer for response
     result2 = await db.execute(
