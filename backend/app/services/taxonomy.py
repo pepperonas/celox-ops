@@ -638,7 +638,12 @@ _TODO = [
     "Mandant im DSMS anlegen",
     "Kunde ins DSMS onboarden",
     "DSMS-Zugang für Kunde einrichten",
-    "Kunde an datenschutz.celox.io übergeben",
+    # Vertrieb: die Plattform als Leistung anbieten (die technische Übergabe
+    # selbst ist ein Button im Kundendetail, keine Planungsaufgabe).
+    "Datenschutz-Plattform beim Kunden ansprechen",
+    "DSMS-Demo vereinbaren",
+    "Datenschutz-Plattform als Zusatzleistung anbieten",
+    "DSMS-Angebot nachfassen",
     "DSMS-Ersteinrichtung mit Kunde durchgehen",
     "VVT im DSMS aufbauen",
     "DSMS-Schulung für Mandant",

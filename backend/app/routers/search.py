@@ -1,4 +1,4 @@
-"""Global search across customers, invoices, orders, contracts, leads."""
+"""Globale Suche über Kunden, Rechnungen, Aufträge, Verträge und Pipeline-Leads."""
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import or_, select
@@ -9,8 +9,8 @@ from app.database import get_db
 from app.models.contract import Contract
 from app.models.customer import Customer
 from app.models.invoice import Invoice
-from app.models.lead import Lead
 from app.models.order import Order
+from app.models.rainmaker_lead import RainmakerLead
 
 router = APIRouter(
     prefix="/api/search",
@@ -31,6 +31,30 @@ class SearchResponse(BaseModel):
     query: str
     hits: list[SearchHit]
     total: int
+
+
+# Status-Kurzlabels für den Untertitel (die Enum-Werte sind englisch/technisch).
+_LEAD_STATUS_LABELS = {
+    "new": "Neu", "contacted": "Kontaktiert", "connected": "Vernetzt",
+    "in_conversation": "Im Gespräch", "proposal": "Angebot",
+    "won": "Gewonnen", "lost": "Verloren", "dormant": "Ruhend",
+}
+
+
+def lead_hit(lead) -> SearchHit:
+    """Pipeline-Lead → Suchtreffer (rein, damit Titel/Untertitel/URL testbar sind).
+    Untertitel nennt das Wichtigste zur Unterscheidung gleichnamiger Firmen:
+    Ansprechpartner bzw. Target, dazu der Pipeline-Status."""
+    status = getattr(lead.status, "value", str(lead.status))
+    parts = [p for p in (lead.contact_name, lead.target) if p]
+    parts.append(_LEAD_STATUS_LABELS.get(status, status))
+    return SearchHit(
+        id=str(lead.id),
+        type="lead",
+        title=lead.company,
+        subtitle=" · ".join(parts),
+        url=f"/pipeline/leads/{lead.id}",
+    )
 
 
 @router.get("", response_model=SearchResponse)
@@ -116,25 +140,26 @@ async def global_search(
             url=f"/vertraege/{con.id}",
         ))
 
-    # Leads — name, url, company (all may be NULL — ilike on NULL safely returns NULL)
+    # Pipeline-Leads (rainmaker_leads). NICHT das alte `Lead`-Modell der
+    # entfernten „Vorgemerkt"-Merkliste — das ist leer und verlinkte auf eine
+    # tote Route. Felder inkl. Entscheider + Target, damit man auch eine
+    # Kampagne („bcs") oder die Geschäftsführung findet.
     res = await db.execute(
-        select(Lead)
+        select(RainmakerLead)
         .where(
             or_(
-                Lead.name.ilike(pattern),
-                Lead.company.ilike(pattern),
-                Lead.url.ilike(pattern),
+                RainmakerLead.company.ilike(pattern),
+                RainmakerLead.contact_name.ilike(pattern),
+                RainmakerLead.email.ilike(pattern),
+                RainmakerLead.website.ilike(pattern),
+                RainmakerLead.decision_maker.ilike(pattern),
+                RainmakerLead.target.ilike(pattern),
             )
         )
+        .order_by(RainmakerLead.updated_at.desc())
         .limit(limit_per_type)
     )
     for lead in res.scalars().all():
-        hits.append(SearchHit(
-            id=str(lead.id),
-            type="lead",
-            title=lead.name or lead.url,
-            subtitle=lead.company or "Lead",
-            url="/vorgemerkt",
-        ))
+        hits.append(lead_hit(lead))
 
     return SearchResponse(query=q, hits=hits, total=len(hits))
