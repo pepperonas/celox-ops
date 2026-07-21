@@ -1,3 +1,5 @@
+import Select, { type SelectChangeEvent } from './Select'
+
 interface SelectOption {
   value: string | number
   label: string
@@ -64,21 +66,19 @@ export default function FormField({
       </label>
 
       {type === 'select' ? (
-        <select
+        // App-eigenes Dropdown statt nativem <select>. Der Cast ist bewusst und
+        // hier gekapselt: Select liefert ein {target:{name,value}}-Event, damit
+        // die bestehenden ChangeEvent-Handler unverändert weiterlaufen.
+        <Select
           id={id}
           name={name}
           value={value as string | number}
-          onChange={onChange}
+          onChange={onChange as unknown as (e: SelectChangeEvent) => void}
+          options={options ?? []}
+          placeholder={placeholder || 'Bitte wählen...'}
           disabled={disabled}
-          className="w-full"
-        >
-          <option value="">{placeholder || 'Bitte wählen...'}</option>
-          {options?.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          required={required}
+        />
       ) : type === 'textarea' ? (
         <textarea
           id={id}

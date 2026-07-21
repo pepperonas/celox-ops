@@ -5,6 +5,7 @@ import { Bar } from 'react-chartjs-2'
 import { getEuerOverview, exportEuerCsv, downloadMonthlyReport, type EuerOverview } from '../api/euer'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
+import Select from '../components/Select'
 
 const CHART_COLORS = {
   green: '#74d98a',
@@ -145,17 +146,13 @@ export default function Euer() {
           Einnahmen-Überschuss-Rechnung
         </h2>
         <div className="flex items-center gap-3">
-          <select
+          <Select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="input-field w-auto"
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+            className="w-auto"
+            aria-label="Jahr"
+            options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
+          />
           <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -332,31 +329,23 @@ export default function Euer() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-text-muted mb-1">Monat</label>
-            <select
+            <Select
               value={reportMonth}
               onChange={(e) => setReportMonth(Number(e.target.value))}
-              className="input-field w-auto"
-            >
-              {MONTH_NAMES.map((name, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              className="w-auto"
+              aria-label="Monat"
+              options={MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name }))}
+            />
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Jahr</label>
-            <select
+            <Select
               value={reportYear}
               onChange={(e) => setReportYear(Number(e.target.value))}
-              className="input-field w-auto"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              className="w-auto"
+              aria-label="Jahr"
+              options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
+            />
           </div>
           <button
             onClick={handleMonthlyReport}

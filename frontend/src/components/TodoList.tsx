@@ -5,7 +5,9 @@ import { toastWithUndo } from '../utils/undoToast'
 import { dueLabel, groupTodos } from '../utils/todoGroups'
 import AutocompleteInput from './AutocompleteInput'
 import TodoRefPicker, { type TodoRef } from './TodoRefPicker'
+import TodoEditModal from './TodoEditModal'
 import type { Todo, TodoPriority } from '../types'
+import Select from '../components/Select'
 
 const PRIORITY_DOT: Record<TodoPriority, string> = {
   hoch: 'bg-danger',
@@ -35,6 +37,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
   const [due, setDue] = useState('')
   const [priority, setPriority] = useState<TodoPriority>('normal')
   const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState<Todo | null>(null)
   const scoped = Boolean(customerId || leadId)
 
   const load = useCallback(async () => {
@@ -146,11 +149,15 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
         </div>
       )}
 
-      {/* Schnellerfassung — Enter legt an */}
+      {/* Schnellerfassung — Enter legt an. Jedes Feld beschriftet (ein nacktes
+          Datumsfeld war nicht erklärbar); `items-end` bringt Felder + Button
+          trotz der Labels auf eine gemeinsame Grundlinie. */}
       <form onSubmit={handleAdd} className="bg-surface border border-border rounded-card p-3 mb-4">
-        <div className="flex flex-wrap gap-2 items-start">
+        <div className="flex flex-wrap gap-2 items-end">
           <div className="flex-1 min-w-[200px]">
+            <label htmlFor="todo-quick-title" className="block text-xs text-text-muted mb-1.5">Aufgabe</label>
             <AutocompleteInput
+              id="todo-quick-title"
               name="todo-title"
               field="todo"
               value={title}
@@ -161,26 +168,30 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
           </div>
           {!scoped && (
             <div className="w-full sm:w-56">
+              <label className="block text-xs text-text-muted mb-1.5">Bezug</label>
               <TodoRefPicker value={ref} onChange={setRef} compact />
             </div>
           )}
-          <input
-            type="date"
-            value={due}
-            onChange={(e) => setDue(e.target.value)}
-            aria-label="Fällig am"
-            className="w-full sm:w-40 text-sm"
-          />
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as TodoPriority)}
-            aria-label="Priorität"
-            className="w-full sm:w-28 text-sm"
-          >
-            <option value="niedrig">Niedrig</option>
-            <option value="normal">Normal</option>
-            <option value="hoch">Hoch</option>
-          </select>
+          <div className="w-full sm:w-40">
+            <label htmlFor="todo-quick-due" className="block text-xs text-text-muted mb-1.5">Fällig am</label>
+            <input
+              id="todo-quick-due"
+              type="date"
+              value={due}
+              onChange={(e) => setDue(e.target.value)}
+              className="w-full text-sm"
+            />
+          </div>
+          <div className="w-full sm:w-32">
+            <label className="block text-xs text-text-muted mb-1.5">Priorität</label>
+            <Select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TodoPriority)}
+              aria-label="Priorität"
+              className="text-sm"
+              options={[{ value: 'niedrig', label: 'Niedrig' }, { value: 'normal', label: 'Normal' }, { value: 'hoch', label: 'Hoch' }]}
+            />
+          </div>
           <button type="submit" disabled={saving || !title.trim()} className="btn-primary text-sm">
             {saving ? '…' : 'Hinzufügen'}
           </button>
@@ -233,7 +244,14 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                       </button>
 
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm text-text break-words ${done ? 'line-through' : ''}`}>{todo.title}</p>
+                        {/* Titel öffnet den Editor — das erwartet man von einer Liste */}
+                        <button
+                          type="button"
+                          onClick={() => setEditing(todo)}
+                          className={`text-left text-sm text-text break-words hover:text-accent transition-colors duration-short ${done ? 'line-through' : ''}`}
+                        >
+                          {todo.title}
+                        </button>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           {todo.due_date && (
                             <span className={`text-xs ${group.key === 'overdue' ? 'text-danger' : 'text-text-muted'}`}>
@@ -249,24 +267,39 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => cyclePriority(todo)}
-                        title={`Priorität: ${PRIORITY_LABEL[todo.priority]} — klicken zum Wechseln`}
-                        aria-label={`Priorität ${PRIORITY_LABEL[todo.priority]} ändern`}
-                        className="mt-1.5 shrink-0"
-                      >
-                        <span className={`block w-2.5 h-2.5 rounded-full ${PRIORITY_DOT[todo.priority]}`} />
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(todo)}
-                        aria-label="To-do löschen"
-                        className="text-text-muted hover:text-danger transition-colors shrink-0"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {/* Aktionen: gleich große Flächen in einer Reihe — vorher
+                          hingen Prioritäts-Punkt und Papierkorb auf verschiedenen
+                          Höhen. 44 px auf Touch, 32 px am Desktop. */}
+                      <div className="flex items-center gap-0.5 shrink-0 -mr-1">
+                        <button
+                          onClick={() => cyclePriority(todo)}
+                          title={`Priorität: ${PRIORITY_LABEL[todo.priority]} — klicken zum Wechseln`}
+                          aria-label={`Priorität ${PRIORITY_LABEL[todo.priority]} ändern`}
+                          className="md-state grid place-items-center w-11 h-11 sm:w-8 sm:h-8 rounded-full text-text-muted"
+                        >
+                          <span className={`block w-2.5 h-2.5 rounded-full ${PRIORITY_DOT[todo.priority]}`} />
+                        </button>
+                        <button
+                          onClick={() => setEditing(todo)}
+                          aria-label="To-do bearbeiten"
+                          title="Bearbeiten"
+                          className="md-state grid place-items-center w-11 h-11 sm:w-8 sm:h-8 rounded-full text-text-muted hover:text-accent transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(todo)}
+                          aria-label="To-do löschen"
+                          title="Löschen"
+                          className="md-state grid place-items-center w-11 h-11 sm:w-8 sm:h-8 rounded-full text-text-muted hover:text-danger transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -274,6 +307,15 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
             </div>
           ))}
         </div>
+      )}
+
+      {editing && (
+        <TodoEditModal
+          todo={editing}
+          scoped={scoped}
+          onClose={() => setEditing(null)}
+          onSaved={load}
+        />
       )}
 
       {hideHeading && doneCount > 0 && (

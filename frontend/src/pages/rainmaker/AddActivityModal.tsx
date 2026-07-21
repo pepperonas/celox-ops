@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { createLeadActivity, getRainmakerGoals } from '../../api/rainmaker'
 import type { RainmakerActivityType, RainmakerGoal } from '../../types'
 import { ACTIVITY_TYPE_LABELS } from './constants'
+import Select from '../../components/Select'
 
 interface Props {
   leadId: string
@@ -62,18 +63,22 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
         {goals.length > 0 && (
           <div className="mb-4">
             <label className="block text-xs text-text-muted mb-2">Akquise-Ziel (optional)</label>
-            <select value={goalId} onChange={(e) => pickGoal(e.target.value)} className="w-full">
-              <option value="">— kein Ziel —</option>
-              {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+            <Select
+              value={goalId}
+              onChange={(e) => pickGoal(e.target.value)}
+              placeholder="— kein Ziel —"
+              options={goals.map((g) => ({ value: g.id, label: g.name }))}
+            />
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-text-muted mb-2">Aktion</label>
-            <select value={type} onChange={(e) => setType(e.target.value as RainmakerActivityType)} className="w-full">
-              {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{ACTIVITY_TYPE_LABELS[t]}</option>)}
-            </select>
+            <Select
+              value={type}
+              onChange={(e) => setType(e.target.value as RainmakerActivityType)}
+              options={TYPE_OPTIONS.map((t) => ({ value: t, label: ACTIVITY_TYPE_LABELS[t] }))}
+            />
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-2">Fällig am</label>

@@ -10,6 +10,7 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import { getContracts } from '../../api/contracts'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Contract } from '../../types'
+import Select from '../../components/Select'
 
 const statusOptions = [
   { value: '', label: 'Alle Status' },
@@ -96,20 +97,15 @@ export default function ContractList() {
             setPage(1)
           }}
         />
-        <select
+        <Select
           value={typeFilter}
           onChange={(e) => {
             setTypeFilter(e.target.value)
             setPage(1)
           }}
-          className="input-field w-48"
-        >
-          {typeOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          className="w-48"
+          options={typeOptions}
+        />
       </div>
 
       {loading ? (

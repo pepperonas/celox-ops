@@ -12,6 +12,7 @@ import { toastWithUndo } from '../../utils/undoToast'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
+import Select from '../../components/Select'
 
 const categoryOptions: { value: string; label: string }[] = [
   { value: '', label: 'Alle Kategorien' },
@@ -213,20 +214,15 @@ export default function ExpenseList() {
           }}
           className="input-field max-w-xs"
         />
-        <select
+        <Select
           value={categoryFilter}
           onChange={(e) => {
             setCategoryFilter(e.target.value)
             setPage(1)
           }}
-          className="input-field w-auto"
-        >
-          {categoryOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          className="w-auto"
+          options={categoryOptions}
+        />
         <input
           type="date"
           value={dateFrom}

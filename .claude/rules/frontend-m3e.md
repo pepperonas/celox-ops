@@ -46,6 +46,30 @@ Hero-Spannung: `.shape-hero` (asymmetrisch 28/8/28/8) — sparsam, lenkt aufs He
 `.md-title-emph` (680, opsz 24 — KPI-/Hero-Zahlen). Sentence case überall,
 keine Uppercase-Micro-Labels.
 
+## Pflicht-Komponenten (kein natives Äquivalent verwenden)
+
+- **Dropdown = `components/Select.tsx`, NIEMALS `<select>`.** Ein natives Select
+  öffnet das OS-Popup und ignoriert Theme/Radien/Motion — im dunklen Theme wirkt
+  es wie ein Fremdkörper. `Select` rendert die Liste per `createPortal` an
+  `document.body` mit `position: fixed` (sonst Clipping in Modals/Sticky-Leisten,
+  s. Transform-Ancestor-Regel), klappt bei wenig Platz nach oben, nutzt den
+  getesteten `comboboxReducer` für die Tastatur und ist ARIA-Combobox.
+  Sein `onChange` liefert bewusst ein natives-kompatibles `{target:{name,value}}`,
+  damit gemeinsame `handleChange`-Handler unverändert funktionieren.
+  `FormField type="select"` nutzt es intern — dort ist nichts zu tun.
+  **Stand: 0 native `<select>` in `src/`; bei neuen Feldern so halten.**
+- Eingabefeld mit Vorschlägen → `AutocompleteInput` (Feld-Modus `field="…"`
+  zieht die Taxonomie), Mehrfachwerte → `TagInput`.
+- Jedes Formularfeld braucht ein sichtbares Label (`<label htmlFor>`), auch in
+  Inline-/Schnellerfassungszeilen — ein nacktes Datumsfeld ist nicht erklärbar.
+  Zeilen mit Labels über `items-end` ausrichten, damit Felder und Buttons auf
+  einer Grundlinie sitzen.
+- Icon-Buttons in Listenzeilen: gleiche Trefferfläche für alle
+  (`w-11 h-11 sm:w-8 sm:h-8`, `grid place-items-center`, `md-state`) und in
+  EINEN Flex-Container gruppieren — sonst hängen sie auf verschiedenen Höhen.
+- `:root { color-scheme: dark }` ist gesetzt: native Widgets (Datums-Picker,
+  Kalender-Icon, Autofill) rendern dunkel. Nicht entfernen.
+
 ## Benannte Hero-Momente (max. 3, bewusst gestaltet)
 
 1. **„Erledigt“** (Rainmaker Heute-Queue): `.rm-complete-exit` (Anticipation-Dip →

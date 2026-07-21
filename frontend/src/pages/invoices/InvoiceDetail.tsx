@@ -26,6 +26,7 @@ import EmailDialog from '../../components/EmailDialog'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice, InvoiceStatus } from '../../types'
+import Select from '../../components/Select'
 
 export default function InvoiceDetail() {
   const { id } = useParams()
@@ -288,17 +289,15 @@ export default function InvoiceDetail() {
             </button>
           )}
           {/* Status-Korrektur: freie Statuswahl, falls man sich verklickt hat */}
-          <select
+          <Select
             value={invoice.status}
             onChange={(e) => handleStatusChange(e.target.value as InvoiceStatus)}
-            className="text-sm !w-auto"
+            className="!w-auto"
+            compact
             title="Status ändern"
             aria-label="Status ändern"
-          >
-            {(['entwurf', 'gestellt', 'bezahlt', 'ueberfaellig', 'storniert'] as InvoiceStatus[]).map((s) => (
-              <option key={s} value={s}>{statusLabels[s]}</option>
-            ))}
-          </select>
+            options={(['entwurf', 'gestellt', 'bezahlt', 'ueberfaellig', 'storniert'] as InvoiceStatus[]).map((s) => ({ value: s, label: statusLabels[s] }))}
+          />
           {!invoice.is_credit_note && (invoice.status === 'gestellt' || invoice.status === 'ueberfaellig' || invoice.status === 'bezahlt') && (
             <button
               onClick={() => setShowPaymentForm(!showPaymentForm)}

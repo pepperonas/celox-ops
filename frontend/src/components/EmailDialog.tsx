@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getEmailTemplates } from '../api/emailTemplates'
 import type { EmailTemplate } from '../types'
+import Select from '../components/Select'
 
 interface EmailDialogProps {
   isOpen: boolean
@@ -107,18 +108,12 @@ export default function EmailDialog({
           {templates.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Vorlage</label>
-              <select
+              <Select
                 value={selectedTemplate}
                 onChange={(e) => handleTemplateSelect(e.target.value)}
-                className="input w-full"
-              >
-                <option value="">Keine Vorlage</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.category})
-                  </option>
-                ))}
-              </select>
+                placeholder="Keine Vorlage"
+                options={templates.map((t) => ({ value: t.id, label: `${t.name} (${t.category})` }))}
+              />
             </div>
           )}
 

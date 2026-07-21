@@ -115,6 +115,13 @@
   --md-elev-3: 0 4px 8px 3px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.4);
 }
 
+:root {
+  /* Sagt dem Browser, dass die UI dunkel ist: native Widgets (Datums-/Zeit-
+     Picker, Kalender-Icon, Autofill, Scrollbars) rendern dann passend statt
+     hell-auf-dunkel. */
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -387,6 +394,38 @@ input:-webkit-autofill:focus {
     background: var(--md-primary);
     animation: md-linear-slide 1.3s var(--md-ease-emphasized) infinite;
   }
+
+  /* ---------- Custom Select (components/Select.tsx) ----------
+     Sieht exakt aus wie ein Textfeld, damit Dropdowns in Formularzeilen auf
+     einer Höhe mit inputs/Buttons sitzen. Ersetzt native <select> app-weit. */
+  .md-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    background: var(--md-surface-container-low);
+    border: 1px solid var(--md-outline-variant);
+    color: var(--text);
+    border-radius: var(--md-shape-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--md-dur-short) var(--md-ease-standard),
+                box-shadow var(--md-dur-short) var(--md-ease-standard);
+  }
+  .md-select-trigger:hover:not(:disabled) { border-color: var(--md-outline); }
+  .md-select-trigger:focus-visible,
+  .md-select-trigger[aria-expanded='true'] {
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 1px var(--md-primary);
+    outline: none;
+  }
+  .md-select-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* kompakt = dieselbe Box wie ein kompaktes Eingabefeld */
+  .md-select-compact { padding: 6px 10px; font-size: 12px; }
 
   /* ---------- State-layer helper (interactive rows / nav / icon btns) ---------- */
   .md-state {

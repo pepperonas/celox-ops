@@ -1,3 +1,4 @@
+import Select from '../../components/Select'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { completeActivity, getRainmakerGoals } from '../../api/rainmaker'
@@ -129,18 +130,22 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
             {goals.length > 0 && (
               <div className="mb-3">
                 <label className="block text-xs text-text-muted mb-2">Akquise-Ziel (optional)</label>
-                <select value={nextGoalId} onChange={(e) => pickGoal(e.target.value)} className="w-full">
-                  <option value="">— kein Ziel —</option>
-                  {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <Select
+                  value={nextGoalId}
+                  onChange={(e) => pickGoal(e.target.value)}
+                  placeholder="— kein Ziel —"
+                  options={goals.map((g) => ({ value: g.id, label: g.name }))}
+                />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-text-muted mb-2">Aktion</label>
-                <select value={nextType} onChange={(e) => setNextType(e.target.value as RainmakerActivityType)} className="w-full">
-                  {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{ACTIVITY_TYPE_LABELS[t]}</option>)}
-                </select>
+                <Select
+                  value={nextType}
+                  onChange={(e) => setNextType(e.target.value as RainmakerActivityType)}
+                  options={TYPE_OPTIONS.map((t) => ({ value: t, label: ACTIVITY_TYPE_LABELS[t] }))}
+                />
               </div>
               <div>
                 <label className="block text-xs text-text-muted mb-2">Wiedervorlage</label>
@@ -151,9 +156,11 @@ export default function CompleteActionModal({ activity, leadCompany, onClose, on
         ) : (
           <div className="mb-2">
             <label className="block text-xs text-text-muted mb-2">Abschluss-Status</label>
-            <select value={closeStatus} onChange={(e) => setCloseStatus(e.target.value as RainmakerLeadStatus)} className="w-full">
-              {CLOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <Select
+              value={closeStatus}
+              onChange={(e) => setCloseStatus(e.target.value as RainmakerLeadStatus)}
+              options={CLOSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
             <p className="text-xs text-text-muted mt-2">Abgeschlossene Leads brauchen keinen nächsten Schritt.</p>
           </div>
         )}

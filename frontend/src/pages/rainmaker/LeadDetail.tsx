@@ -1,3 +1,4 @@
+import Select from '../../components/Select'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
@@ -265,30 +266,26 @@ export default function RainmakerLeadDetail() {
           </a>
         )}
         {linkedInUrl && templates.filter((t) => t.channel === 'message').length > 0 && (
-          <select
-            defaultValue=""
-            onChange={(e) => { useLinkedInTemplate(e.target.value); e.target.value = '' }}
-            className="!w-auto !py-2 text-xs"
+          <Select
+            value=""
+            onChange={(e) => { if (e.target.value) useLinkedInTemplate(e.target.value) }}
+            className="!w-auto"
+            compact
+            placeholder="LinkedIn-Vorlage…"
             title="LinkedIn-Nachricht aus Vorlage: Text wird kopiert, Profil öffnet sich — dort einfügen"
-          >
-            <option value="" disabled>LinkedIn-Vorlage…</option>
-            {templates.filter((t) => t.channel === 'message').map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+            options={templates.filter((t) => t.channel === 'message').map((t) => ({ value: t.id, label: t.name }))}
+          />
         )}
         {lead.email && templates.filter((t) => t.channel === 'email').length > 0 && (
-          <select
-            defaultValue=""
-            onChange={(e) => { useEmailTemplate(e.target.value); e.target.value = '' }}
-            className="!w-auto !py-2 text-xs"
+          <Select
+            value=""
+            onChange={(e) => { if (e.target.value) useEmailTemplate(e.target.value) }}
+            className="!w-auto"
+            compact
+            placeholder="Vorlage…"
             title="Mail aus Vorlage (Platzhalter ersetzt)"
-          >
-            <option value="" disabled>Vorlage…</option>
-            {templates.filter((t) => t.channel === 'email').map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+            options={templates.filter((t) => t.channel === 'email').map((t) => ({ value: t.id, label: t.name }))}
+          />
         )}
       </div>
 

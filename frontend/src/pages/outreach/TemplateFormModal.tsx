@@ -1,3 +1,4 @@
+import Select from '../../components/Select'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
@@ -63,15 +64,19 @@ export default function TemplateFormModal({ template, initialChannel, onClose, o
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-text-muted mb-1.5">Kanal</label>
-              <select value={channel} onChange={(e) => setChannel(e.target.value as OutreachChannel)} className="w-full">
-                {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
-              </select>
+              <Select
+                value={channel}
+                onChange={(e) => setChannel(e.target.value as OutreachChannel)}
+                options={CHANNELS.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-text-muted mb-1.5">Rubrik</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value as OutreachCategory)} className="w-full">
-                {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as OutreachCategory)}
+                options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+              />
             </div>
           </div>
 

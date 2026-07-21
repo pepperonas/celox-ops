@@ -1663,6 +1663,8 @@ export const DISCOUNT_REASON_SUGGESTIONS = [...new Set([
 ])]
 
 interface Props {
+  /** Für <label htmlFor> — sonst generiert die Komponente keine ID. */
+  id?: string
   label?: string
   name: string
   value: string
@@ -1693,7 +1695,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   )
 }
 
-export default function AutocompleteInput({ label, name, value, onChange, required, placeholder, suggestions, field, className, compact, disabled }: Props) {
+export default function AutocompleteInput({ id, label, name, value, onChange, required, placeholder, suggestions, field, className, compact, disabled }: Props) {
   const [box, setBox] = useState<ComboboxState>(initialCombobox)
   const [remote, setRemote] = useState<string[] | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -1773,6 +1775,7 @@ export default function AutocompleteInput({ label, name, value, onChange, requir
         required={required}
         disabled={disabled}
         placeholder={placeholder}
+        id={id}
         className={compact ? 'w-full text-sm' : 'w-full'}
         autoComplete="off"
         role="combobox"

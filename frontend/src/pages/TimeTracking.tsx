@@ -1,3 +1,4 @@
+import Select from '../components/Select'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { toastWithUndo } from '../utils/undoToast'
@@ -272,20 +273,13 @@ export default function TimeTracking() {
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1 min-w-0">
             <label className="block text-xs text-text-muted mb-1">Kunde</label>
-            <select
+            <Select
               value={timerCustomerId}
               onChange={(e) => setTimerCustomerId(e.target.value)}
               disabled={timerRunning}
-              className="input w-full"
-            >
-              <option value="">-- Kunde wählen --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.company ? ` (${c.company})` : ''}
-                </option>
-              ))}
-            </select>
+              placeholder="— Kunde wählen —"
+              options={customers.map((c) => ({ value: c.id, label: c.company ? `${c.name} (${c.company})` : c.name }))}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <label className="block text-xs text-text-muted mb-1">
@@ -370,20 +364,13 @@ export default function TimeTracking() {
               <label className="block text-xs text-text-muted mb-1">
                 Kunde *
               </label>
-              <select
+              <Select
                 value={manualCustomerId}
                 onChange={(e) => setManualCustomerId(e.target.value)}
-                className="input w-full"
                 required
-              >
-                <option value="">-- Kunde wählen --</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.company ? ` (${c.company})` : ''}
-                  </option>
-                ))}
-              </select>
+                placeholder="— Kunde wählen —"
+                options={customers.map((c) => ({ value: c.id, label: c.company ? `${c.name} (${c.company})` : c.name }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-text-muted mb-1">
@@ -465,18 +452,12 @@ export default function TimeTracking() {
         <div className="flex flex-wrap gap-4 items-end">
           <div>
             <label className="block text-xs text-text-muted mb-1">Kunde</label>
-            <select
+            <Select
               value={filterCustomer}
               onChange={(e) => setFilterCustomer(e.target.value)}
-              className="input"
-            >
-              <option value="">Alle</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Alle"
+              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+            />
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Von</label>

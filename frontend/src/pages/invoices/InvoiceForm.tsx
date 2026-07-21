@@ -17,6 +17,7 @@ import { getCommitSummary, SUMMARY_MARKER } from '../../api/github'
 import { getUsdEurRate } from '../../utils/exchangeRate'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import type { InvoiceCreate, InvoicePosition, Customer, Order, Contract, TokenTrackerData } from '../../types'
+import Select from '../../components/Select'
 
 const emptyPosition: InvoicePosition = {
   position: 1,
@@ -755,10 +756,9 @@ export default function InvoiceForm() {
               <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-surface-2 rounded-lg">
                 <div>
                   <label className="block text-xs text-text-muted mb-1">Typ</label>
-                  <select value={discountPercent ? 'percent' : 'fixed'} onChange={(e) => setDiscountPercent(e.target.value === 'percent')} className="w-auto !py-1.5 !text-sm">
-                    <option value="percent">Prozent (%)</option>
-                    <option value="fixed">Festbetrag (€)</option>
-                  </select>
+                  <Select value={discountPercent ? 'percent' : 'fixed'} onChange={(e) => setDiscountPercent(e.target.value === 'percent')} className="w-auto !py-1.5 !text-sm"
+                    options={[{ value: 'percent', label: 'Prozent (%)' }, { value: 'fixed', label: 'Festbetrag (€)' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-text-muted mb-1">{discountPercent ? 'Rabatt (%)' : 'Rabatt (€)'}</label>

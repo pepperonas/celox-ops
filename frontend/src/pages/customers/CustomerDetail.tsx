@@ -24,6 +24,7 @@ import AutocompleteInput, { POSITION_SUGGESTIONS } from '../../components/Autoco
 import { formatDate, formatCurrency, formatRelativeTime } from '../../utils/formatters'
 import { filenameFromDisposition } from '../../utils/downloadName'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
+import Select from '../../components/Select'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -441,16 +442,12 @@ export default function CustomerDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs text-text-muted mb-2">Typ</label>
-                    <select
+                    <Select
                       value={activityForm.type}
                       onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value })}
                       className="w-full"
-                    >
-                      <option value="note">Notiz</option>
-                      <option value="call">Anruf</option>
-                      <option value="email">E-Mail</option>
-                      <option value="meeting">Meeting</option>
-                    </select>
+                      options={[{ value: 'note', label: 'Notiz' }, { value: 'call', label: 'Anruf' }, { value: 'email', label: 'E-Mail' }, { value: 'meeting', label: 'Meeting' }]}
+                    />
                   </div>
                   <div className="md:col-span-3">
                     <label className="block text-xs text-text-muted mb-2">Titel *</label>
@@ -738,16 +735,12 @@ export default function CustomerDetail() {
                 </div>
                 <div>
                   <label className="block text-xs text-text-muted mb-2">Einheit</label>
-                  <select
+                  <Select
                     value={quickForm.einheit}
                     onChange={(e) => setQuickForm({ ...quickForm, einheit: e.target.value })}
                     className="w-full"
-                  >
-                    <option value="pauschal">pauschal</option>
-                    <option value="Stunden">Stunden</option>
-                    <option value="Stück">Stück</option>
-                    <option value="Monat">Monat</option>
-                  </select>
+                    options={[{ value: 'pauschal', label: 'pauschal' }, { value: 'Stunden', label: 'Stunden' }, { value: 'Stück', label: 'Stück' }, { value: 'Monat', label: 'Monat' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-text-muted mb-2">Einzelpreis (€) *</label>

@@ -13,6 +13,7 @@ import { filenameFromDisposition } from '../utils/downloadName'
 import { getAiUsage } from '../api/rainmaker'
 import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse } from '../types'
+import Select from '../components/Select'
 
 interface TrackerConfig {
   base_url: string
@@ -526,12 +527,10 @@ export default function Settings() {
         <div className="flex items-end gap-3 flex-wrap mb-4">
           <div>
             <label htmlFor="ai-model" className="block text-xs text-text-muted mb-2">Modell</label>
-            <select id="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}
-                    className="bg-surface-container border border-border rounded-lg px-3 py-2 text-sm">
-              <option value="claude-sonnet-5">Sonnet (empfohlen)</option>
-              <option value="claude-haiku-4-5">Haiku (günstiger)</option>
-              <option value="claude-opus-4-8">Opus (teurer)</option>
-            </select>
+            <Select id="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                    className="bg-surface-container border border-border rounded-lg px-3 py-2 text-sm"
+              options={[{ value: 'claude-sonnet-5', label: 'Sonnet (empfohlen)' }, { value: 'claude-haiku-4-5', label: 'Haiku (günstiger)' }, { value: 'claude-opus-4-8', label: 'Opus (teurer)' }]}
+            />
           </div>
           <div>
             <label htmlFor="ai-budget" className="block text-xs text-text-muted mb-2">Monatsbudget (€)</label>
@@ -729,15 +728,12 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-muted mb-1">Kategorie</label>
-                <select
+                <Select
                   value={templateForm.category}
                   onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
                   className="input w-full"
-                >
-                  {TEMPLATE_CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                  options={TEMPLATE_CATEGORIES}
+                />
               </div>
             </div>
             <div>

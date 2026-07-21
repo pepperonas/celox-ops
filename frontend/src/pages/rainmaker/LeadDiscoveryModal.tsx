@@ -1,3 +1,4 @@
+import Select from '../../components/Select'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
@@ -187,16 +188,25 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
             </div>
             <div>
               <label className="block text-xs text-text-muted mb-1.5">Max. je Suche</label>
-              <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} disabled={running} className="text-sm">
-                {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+              <Select
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
+                disabled={running}
+                compact
+                aria-label="Anzahl"
+                options={[25, 50, 100, 200].map((n) => ({ value: n, label: String(n) }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-text-muted mb-1.5">Quelle</label>
-              <select value={source} onChange={(e) => setSource(e.target.value as 'osm' | 'google')} disabled={running} className="text-sm">
-                <option value="osm">OpenStreetMap</option>
-                <option value="google">Google Places</option>
-              </select>
+              <Select
+                value={source}
+                onChange={(e) => setSource(e.target.value as 'osm' | 'google')}
+                disabled={running}
+                compact
+                aria-label="Quelle"
+                options={[{ value: 'osm', label: 'OpenStreetMap' }, { value: 'google', label: 'Google Places' }]}
+              />
             </div>
             {running
               ? <button onClick={() => { cancelRef.current = true }} className="btn-secondary text-sm">Stoppen</button>

@@ -5,6 +5,7 @@ import {
 } from '../api/users'
 import { useAuthStore } from '../store/authStore'
 import DeleteDialog from '../components/DeleteDialog'
+import Select from '../components/Select'
 
 export default function Users() {
   const me = useAuthStore((s) => s.username)
@@ -116,10 +117,9 @@ export default function Users() {
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Rolle</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full">
-              <option value="user">Benutzer</option>
-              <option value="admin">Admin</option>
-            </select>
+            <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full"
+              options={[{ value: 'user', label: 'Benutzer' }, { value: 'admin', label: 'Admin' }]}
+            />
           </div>
           <div className="sm:col-span-2">
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Speichere…' : 'Anlegen'}</button>
@@ -138,16 +138,14 @@ export default function Users() {
               </div>
               {u.email && <span className="text-xs text-text-muted">{u.email}</span>}
             </div>
-            <select
+            <Select
               value={u.role}
               onChange={(e) => changeRole(u, e.target.value)}
               disabled={u.username === me}
               className="!w-auto !py-1.5 !text-sm"
               title={u.username === me ? 'Eigene Rolle nicht änderbar' : 'Rolle'}
-            >
-              <option value="user">Benutzer</option>
-              <option value="admin">Admin</option>
-            </select>
+              options={[{ value: 'user', label: 'Benutzer' }, { value: 'admin', label: 'Admin' }]}
+            />
             <button onClick={() => resetPw(u)} className="text-xs px-2.5 py-1 rounded-lg bg-surface-2 text-text hover:bg-border">Passwort</button>
             {u.username !== me && (
               <>

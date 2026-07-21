@@ -6,6 +6,7 @@ import { getDocumentTemplates, seedDocumentTemplates, generateDocument, previewD
 import { getCustomers } from '../api/customers'
 import { filenameFromDisposition } from '../utils/downloadName'
 import type { Customer } from '../types'
+import Select from '../components/Select'
 
 const categoryColors: Record<string, string> = {
   datenschutz: 'bg-accent/10 text-accent border border-accent/30',
@@ -145,18 +146,12 @@ export default function Documents() {
                   <div className="flex gap-3 items-end">
                     <div className="flex-1">
                       <label className="block text-xs text-text-muted mb-2">Kunde auswählen</label>
-                      <select
+                      <Select
                         value={selectedCustomerId}
                         onChange={(e) => setSelectedCustomerId(e.target.value)}
-                        className="w-full"
-                      >
-                        <option value="">Kunde wählen...</option>
-                        {customers.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.company ? `${c.name} (${c.company})` : c.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Kunde wählen…"
+                        options={customers.map((c) => ({ value: c.id, label: c.company ? `${c.name} (${c.company})` : c.name }))}
+                      />
                     </div>
                     <button
                       onClick={handleGenerate}
