@@ -117,7 +117,7 @@ export default function Outreach() {
 
   return (
     <div className="pb-24">
-      <PageHeader title="Akquise-Nachrichten" subtitle={`${all.length} Vorlagen · IT-Security first`} />
+      <PageHeader title="Nachrichten-Vorlagen" subtitle={`${all.length} Akquise-Vorlagen · IT-Security first`} />
 
       {/* Suche (kanalübergreifend) */}
       <div className="mb-4">

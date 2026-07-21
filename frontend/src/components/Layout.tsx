@@ -6,6 +6,7 @@ import QuickSearch from './QuickSearch'
 import AppFooter from './AppFooter'
 import AiLeadHost from './AiLeadHost'
 import { buildNavGroups, isGroupOpen, isItemActive, toggleCollapsed, type NavGroupMeta } from './navGroups'
+import { getRainmakerLeads } from '../api/rainmaker'
 
 const navItems = [
   {
@@ -154,7 +155,7 @@ const navItems = [
   },
   {
     to: '/akquise',
-    label: 'Akquise-Nachrichten',
+    label: 'Nachrichten-Vorlagen',
     adminOnly: true,
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +188,7 @@ const navItems = [
 // Thematische, einklappbare Gruppen (Dashboard bleibt einzeln oben). Reihenfolge
 // nach Business-Flow: gewinnen → liefern → abrechnen → planen → Ablage → System.
 const NAV_GROUPS_META: NavGroupMeta[] = [
-  { title: 'Akquise', paths: ['/rainmaker', '/pipeline', '/akquise'] },
+  { title: 'Leads & Akquise', paths: ['/rainmaker', '/pipeline', '/akquise'] },
   { title: 'Kunden & Aufträge', paths: ['/kunden', '/auftraege', '/kanban', '/vertraege'] },
   { title: 'Finanzen', paths: ['/rechnungen', '/ausgaben', '/euer', '/analyse'] },
   { title: 'Organisation', paths: ['/aufgaben', '/kalender', '/zeiterfassung'] },
@@ -225,6 +226,23 @@ export default function Layout() {
   // Close the mobile drawer whenever the route changes.
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
+  // Badge am Pipeline-Eintrag: Anzahl NEUER (noch nicht kontaktierter) Leads —
+  // billiger COUNT (page_size=1 → nur total), gepollt statt bei jeder Navigation.
+  const [newLeads, setNewLeads] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    const load = () => {
+      getRainmakerLeads({ status: 'new', page_size: 1 })
+        .then((r) => { if (!cancelled) setNewLeads(r.total) })
+        .catch(() => {})
+    }
+    load()
+    // Nach dem Verlassen der Pipeline (dort arbeitet man Leads ab) sofort frisch,
+    // sonst alle 2 Minuten — ein Nav-Hinweis muss nicht sekundengenau sein.
+    const timer = setInterval(load, 120_000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [location.pathname === '/pipeline'])
+
   const handleLogout = () => {
     logout()
     appNavigate('/login')
@@ -241,12 +259,13 @@ export default function Layout() {
 
   const renderItem = (item: { to: string; label: string; icon: React.ReactNode }) => {
     const active = isItemActive(location.pathname, item.to)
+    const badge = item.to === '/pipeline' && newLeads > 0 ? newLeads : 0
     return (
       <a
         key={item.to}
         href={item.to}
         onClick={(e) => handleNavClick(e, item.to)}
-        title={collapsed ? item.label : undefined}
+        title={collapsed ? `${item.label}${badge ? ` — ${badge} neue Leads` : ''}` : undefined}
         aria-current={active ? 'page' : undefined}
         className={`md-state group flex items-center gap-3 h-12 px-4 rounded-full text-sm font-medium transition-colors duration-short ease-standard ${
           active
@@ -254,10 +273,24 @@ export default function Layout() {
             : 'text-text-muted hover:text-text'
         } ${collapsed ? 'md:justify-center md:px-0' : ''}`}
       >
-        <span className="shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
+        <span className="relative shrink-0 transition-transform duration-medium ease-spring group-hover:scale-110">
           {item.icon}
+          {/* Im Icon-Rail (Label ausgeblendet) sitzt der Zähler als Punkt am Icon */}
+          {badge > 0 && collapsed && (
+            <span className="md:absolute md:-top-1.5 md:-right-1.5 hidden md:grid place-items-center min-w-[16px] h-4 px-1 rounded-full bg-accent text-on-primary text-[10px] font-semibold leading-none">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
         </span>
         <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
+        {badge > 0 && (
+          <span
+            aria-label={`${badge} neue Leads`}
+            className={`ml-auto grid place-items-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-on-primary text-xs font-semibold ${collapsed ? 'md:hidden' : ''}`}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </a>
     )
   }
