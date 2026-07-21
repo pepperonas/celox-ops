@@ -33,6 +33,8 @@ const emptyForm: RainmakerLeadCreate = {
   status: 'new',
   priority: 'medium',
   value_estimate: null,
+  employee_count: null,
+  decision_maker: '',
   tags: [],
   target: '',
   notes: '',
@@ -45,6 +47,7 @@ export default function RainmakerLeadForm() {
   const [form, setForm] = useState<RainmakerLeadCreate>(emptyForm)
   const [tags, setTags] = useState<string[]>([])
   const [valueInput, setValueInput] = useState('')
+  const [employeeInput, setEmployeeInput] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -54,6 +57,8 @@ export default function RainmakerLeadForm() {
         company: l.company,
         contact_name: l.contact_name ?? '',
         role: l.role ?? '',
+        employee_count: l.employee_count,
+        decision_maker: l.decision_maker ?? '',
         phone: l.phone ?? '',
         email: l.email ?? '',
         website: l.website ?? '',
@@ -68,6 +73,7 @@ export default function RainmakerLeadForm() {
       })
       setTags(l.tags ?? [])
       setValueInput(l.value_estimate != null ? String(l.value_estimate) : '')
+      setEmployeeInput(l.employee_count != null ? String(l.employee_count) : '')
     }).catch(() => toast.error('Lead konnte nicht geladen werden.'))
   }, [id])
 
@@ -100,6 +106,7 @@ export default function RainmakerLeadForm() {
       role: roleTax && form.role ? canonicalize(form.role, roleTax.values, roleTax.synonyms) : form.role,
       source: sourceTax && form.source ? canonicalize(form.source, sourceTax.values, sourceTax.synonyms) : form.source,
       value_estimate: valueInput.trim() ? Number(valueInput.replace(',', '.')) : null,
+      employee_count: employeeInput.trim() ? Math.max(0, Math.round(Number(employeeInput))) : null,
       tags,
     }
     try {
@@ -138,9 +145,10 @@ export default function RainmakerLeadForm() {
       <form onSubmit={handleSubmit} className="bg-surface-container border border-border rounded-card p-6 space-y-5">
         <FormField label="Firma" name="company" value={form.company} onChange={handleChange} required placeholder="Firmenname" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="Ansprechpartner" name="contact_name" value={form.contact_name ?? ''} onChange={handleChange} placeholder="Name" />
           <AutocompleteInput label="Funktion" name="role" field="role" value={form.role ?? ''} onChange={handleChange} placeholder="z. B. Geschäftsführung" />
+          <FormField label="Geschäftsführung / Entscheider" name="decision_maker" value={form.decision_maker ?? ''} onChange={handleChange} placeholder="Name (falls abweichend)" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -155,12 +163,16 @@ export default function RainmakerLeadForm() {
 
         <FormField label="Adresse" name="address" type="textarea" value={form.address ?? ''} onChange={handleChange} placeholder="Straße, PLZ Ort" />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <FormField label="Status" name="status" type="select" value={form.status ?? 'new'} onChange={handleChange} options={statusOptions} />
           <FormField label="Priorität" name="priority" type="select" value={form.priority ?? 'medium'} onChange={handleChange} options={priorityOptions} />
           <div>
             <label className="block text-xs text-text-muted mb-2">Geschätzter Wert (€)</label>
             <input type="number" step="0.01" min="0" value={valueInput} onChange={(e) => setValueInput(e.target.value)} className="w-full" placeholder="z. B. 2500" />
+          </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-2">Mitarbeiterzahl</label>
+            <input type="number" step="1" min="0" value={employeeInput} onChange={(e) => setEmployeeInput(e.target.value)} className="w-full" placeholder="z. B. 50" />
           </div>
         </div>
 

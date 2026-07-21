@@ -1,7 +1,9 @@
 """DB-freie Tests für das CSV→Lead-Mapping (services/lead_csv_import.py)."""
+from app.scripts.backfill_lead_notes_fields import extract_from_notes
 from app.services.lead_csv_import import (
     build_notes,
     normalize_header,
+    parse_employee_count,
     resolve_columns,
     row_to_lead_fields,
 )
@@ -89,8 +91,8 @@ class TestRowToLeadFields:
     def test_rich_extras_folded_into_notes(self):
         cm = resolve_columns(PROJEKTRON_HEADERS)
         f = row_to_lead_fields(PROJEKTRON_ROW, cm, target="x", source="s")
-        assert "Geschäftsführung: Manfred Schüller" in f["notes"]
-        assert "Mitarbeiter: 20" in f["notes"]
+        # Geschäftsführung/Mitarbeiterzahl haben eigene Felder → NICHT in den
+        # Notizen (siehe TestEmployeeCountAndDecisionMaker).
         assert "HR: HRB 37520" in f["notes"]
         assert "USt-ID: DE329200987" in f["notes"]
         assert "Kunde seit: 2016" in f["notes"]
@@ -131,6 +133,94 @@ class TestRowToLeadFields:
         f = row_to_lead_fields({"Firma": "X" * 400, "Website": "h" * 900}, cm, target=None, source="s")
         assert len(f["company"]) == 255
         assert len(f["website"]) == 500
+
+
+class TestEmployeeCountAndDecisionMaker:
+    def test_mapped_as_own_fields(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        f = row_to_lead_fields(PROJEKTRON_ROW, cm, target="x", source="s")
+        assert f["employee_count"] == 20
+        assert f["decision_maker"] == "Manfred Schüller"
+
+    def test_no_longer_folded_into_notes(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        f = row_to_lead_fields(PROJEKTRON_ROW, cm, target="x", source="s")
+        assert "Mitarbeiter:" not in (f["notes"] or "")
+        assert "Geschäftsführung:" not in (f["notes"] or "")
+
+    def test_parse_variants(self):
+        assert parse_employee_count("20") == 20
+        assert parse_employee_count("ca. 1.500") == 1500
+        assert parse_employee_count("50-100") == 50      # untere Grenze
+        assert parse_employee_count("19028") == 19028
+
+    def test_parse_rejects_unusable(self):
+        for bad in (None, "", "   ", "unbekannt", "k.A."):
+            assert parse_employee_count(bad) is None
+
+    def test_unparseable_value_stays_in_notes(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        row = {**PROJEKTRON_ROW, "Mitarbeiterzahl (ca.)": "unbekannt"}
+        f = row_to_lead_fields(row, cm, target="x", source="s")
+        assert f["employee_count"] is None
+        assert "Mitarbeiter: unbekannt" in f["notes"]   # nichts geht verloren
+
+    def test_empty_fields_are_none(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        row = {**PROJEKTRON_ROW, "Mitarbeiterzahl (ca.)": "", "Geschäftsführung": ""}
+        f = row_to_lead_fields(row, cm, target="x", source="s")
+        assert f["employee_count"] is None and f["decision_maker"] is None
+
+    def test_decision_maker_independent_of_contact(self):
+        # 92 Projektron-Leads haben eine GF, aber KEINEN Ansprechpartner
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        row = {**PROJEKTRON_ROW, "Ansprechpartner (Referenz)": "", "Position": ""}
+        f = row_to_lead_fields(row, cm, target="x", source="s")
+        assert f["contact_name"] is None
+        assert f["decision_maker"] == "Manfred Schüller"
+
+
+class TestCityFallback:
+    def test_uses_second_city_column_when_primary_empty(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        assert cm["city_fallback"] == "Ort (Projektron-Profil)"
+        row = {**PROJEKTRON_ROW, "Ort (Impressum)": "", "Ort (Projektron-Profil)": "München"}
+        f = row_to_lead_fields(row, cm, target="x", source="s")
+        assert f["address"] == "Nordostpark 102, 90411 München"
+
+    def test_primary_wins_when_present(self):
+        cm = resolve_columns(PROJEKTRON_HEADERS)
+        f = row_to_lead_fields(PROJEKTRON_ROW, cm, target="x", source="s")
+        assert "Nürnberg" in f["address"]
+
+
+class TestBackfillFromNotes:
+    def test_extracts_both_and_cleans(self):
+        notes = "Kurzname: A2\nGeschäftsführung: Manfred Schüller\nMitarbeiter: 20\nHR: HRB 37520"
+        emp, dec, cleaned = extract_from_notes(notes)
+        assert emp == 20
+        assert dec == "Manfred Schüller"
+        assert "Mitarbeiter:" not in cleaned and "Geschäftsführung:" not in cleaned
+        assert "Kurzname: A2" in cleaned and "HR: HRB 37520" in cleaned
+
+    def test_noop_when_nothing_to_extract(self):
+        notes = "Kurzname: A2\nHR: HRB 37520"
+        assert extract_from_notes(notes) == (None, None, notes)
+        assert extract_from_notes(None) == (None, None, None)
+
+    def test_vorstand_counts_as_decision_maker(self):
+        emp, dec, _ = extract_from_notes("Vorstand: Dr. Sven Kleiner")
+        assert dec == "Dr. Sven Kleiner" and emp is None
+
+    def test_unparseable_employee_line_is_kept(self):
+        emp, _, cleaned = extract_from_notes("Mitarbeiter: unbekannt\nHR: X")
+        assert emp is None
+        assert "Mitarbeiter: unbekannt" in cleaned   # Zeile bleibt stehen
+
+    def test_only_one_line_removed_each(self):
+        emp, dec, cleaned = extract_from_notes("Mitarbeiter: 5\nSonstiges: Mitarbeiter: 9")
+        assert emp == 5
+        assert "Sonstiges: Mitarbeiter: 9" in cleaned
 
 
 class TestBuildNotes:

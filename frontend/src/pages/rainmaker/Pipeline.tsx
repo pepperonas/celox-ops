@@ -403,8 +403,15 @@ export default function RainmakerPipeline() {
                         </span>
                       </div>
                     </div>
-                    {lead.contact_name && (
-                      <div className="text-xs text-text-muted mb-1.5 truncate">{lead.contact_name}</div>
+                    {(lead.contact_name || lead.employee_count != null) && (
+                      <div className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5 min-w-0">
+                        {lead.contact_name && <span className="truncate">{lead.contact_name}</span>}
+                        {lead.employee_count != null && (
+                          <span className="shrink-0 tabular-nums" title={`${lead.employee_count.toLocaleString('de-DE')} Mitarbeiter`}>
+                            · 👥 {lead.employee_count.toLocaleString('de-DE')}
+                          </span>
+                        )}
+                      </div>
                     )}
                     {lead.target && (
                       <div className="mb-1.5">

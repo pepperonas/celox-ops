@@ -21,6 +21,8 @@ class RainmakerLeadBase(BaseModel):
     company: str
     contact_name: str | None = None
     role: str | None = None
+    employee_count: int | None = Field(default=None, ge=0, le=10_000_000)
+    decision_maker: str | None = Field(default=None, max_length=255)
     phone: str | None = None
     email: str | None = None
     address: str | None = None
@@ -234,6 +236,8 @@ class RainmakerLeadUpdate(BaseModel):
     company: str | None = None
     contact_name: str | None = None
     role: str | None = None
+    employee_count: int | None = Field(default=None, ge=0, le=10_000_000)
+    decision_maker: str | None = Field(default=None, max_length=255)
     phone: str | None = None
     email: str | None = None
     address: str | None = None

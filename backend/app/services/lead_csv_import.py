@@ -25,11 +25,23 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "plz": ["plz", "postleitzahl", "postal", "zip"],
     "city": ["ort", "stadt", "city", "sitz"],
     "branche": ["branche", "branchen", "industrie", "industry", "sektor"],
+    "employee_count": ["mitarbeiterzahl", "mitarbeiter", "beschaftigte", "employees", "headcount"],
+    "decision_maker": ["geschaftsfuhrung", "geschaftsfuhrer", "vorstand", "inhaber", "ceo"],
+}
+
+# Zweitrangige Spalten, die als Fallback dienen, wenn die primäre leer ist.
+# (z. B. „Ort (Projektron-Profil)", wenn „Ort (Impressum)" fehlt)
+_FALLBACK_KEYWORDS: dict[str, list[str]] = {
+    "city": ["ort", "stadt", "city", "sitz"],
 }
 
 # Zusatzspalten, die (falls vorhanden) mit deutschem Label in `notes` landen.
 # key = normalisiertes Header-Fragment, value = Anzeige-Label.
 _NOTE_FIELDS: list[tuple[str, str]] = [
+    # Geschäftsführung/Vorstand + Mitarbeiterzahl haben eigene Felder
+    # (decision_maker / employee_count) und werden im Normalfall über `used`
+    # übersprungen. Die Labels bleiben hier, damit ein NICHT interpretierbarer
+    # Wert (z. B. Mitarbeiterzahl „unbekannt") als Notiz erhalten bleibt.
     ("geschaftsfuhrung", "Geschäftsführung"),
     ("vorstand", "Vorstand"),
     ("mitarbeiterzahl", "Mitarbeiter"),
@@ -54,27 +66,65 @@ def normalize_header(header: str) -> str:
     return re.sub(r"\s+", " ", h).strip()
 
 
+def _matches(n: str, keywords: list[str]) -> bool:
+    # exakte Übereinstimmung ODER Wortgrenze (verhindert, dass „name" jede
+    # Spalte mit „…name…" fängt: nur wenn das Keyword als ganzes Wort vorkommt)
+    return any(n == kw or re.search(rf"(^| ){re.escape(kw)}( |$)", n) for kw in keywords)
+
+
 def resolve_columns(headers: list[str]) -> dict[str, str]:
     """Ordnet kanonische Feldnamen den ORIGINAL-Headern zu (erste passende Spalte
-    gewinnt). Rückgabe enthält nur gefundene Felder."""
+    gewinnt). Rückgabe enthält nur gefundene Felder; Fallback-Spalten landen
+    unter `<feld>_fallback` (z. B. eine zweite Ort-Spalte)."""
     norm = [(orig, normalize_header(orig)) for orig in headers]
     colmap: dict[str, str] = {}
     for field, keywords in _FIELD_KEYWORDS.items():
         for orig, n in norm:
             if orig in colmap.values():
                 continue
-            # exakte Übereinstimmung ODER Wortgrenze (verhindert, dass „name" jede
-            # Spalte mit „…name…" fängt: nur wenn das Keyword als ganzes Wort vorkommt)
-            if any(n == kw or re.search(rf"(^| ){re.escape(kw)}( |$)", n) for kw in keywords):
+            if _matches(n, keywords):
                 colmap[field] = orig
                 break
+    # Zweite passende Spalte als Fallback merken (nur für definierte Felder).
+    for field, keywords in _FALLBACK_KEYWORDS.items():
+        primary = colmap.get(field)
+        if not primary:
+            continue
+        for orig, n in norm:
+            if orig == primary or orig in colmap.values():
+                continue
+            if _matches(n, keywords):
+                colmap[f"{field}_fallback"] = orig
+                break
     return colmap
+
+
+def parse_employee_count(value: str | None) -> int | None:
+    """„20" → 20; „ca. 1.500" → 1500; „50-100" → 50 (untere Grenze).
+    Nicht interpretierbares → None (der Rohwert bleibt dann in den Notizen)."""
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    # Tausendertrenner entfernen, dann erste Zahl nehmen
+    cleaned = text.replace(".", "").replace(" ", "")
+    m = re.search(r"\d+", cleaned)
+    if not m:
+        return None
+    try:
+        n = int(m.group(0))
+    except ValueError:  # pragma: no cover
+        return None
+    return n if 0 <= n <= 10_000_000 else None
 
 
 def _compose_address(row: dict, colmap: dict[str, str]) -> str | None:
     street = (row.get(colmap.get("street", ""), "") or "").strip()
     plz = (row.get(colmap.get("plz", ""), "") or "").strip()
     city = (row.get(colmap.get("city", ""), "") or "").strip()
+    if not city:  # zweite Ort-Spalte als Fallback (z. B. Profil statt Impressum)
+        city = (row.get(colmap.get("city_fallback", ""), "") or "").strip()
     plz_city = " ".join(p for p in (plz, city) if p).strip()
     parts = [p for p in (street, plz_city) if p]
     return ", ".join(parts) if parts else None
@@ -125,12 +175,22 @@ def row_to_lead_fields(
 
     tags = _split_tags(col("branche"))
     used = {h for h in colmap.values()}
+
+    # Mitarbeiterzahl: nur übernehmen, wenn interpretierbar — sonst bleibt der
+    # Rohwert als Notiz erhalten (nichts geht verloren).
+    raw_employees = col("employee_count")
+    employee_count = parse_employee_count(raw_employees)
+    if raw_employees and employee_count is None:
+        used.discard(colmap.get("employee_count", ""))
+
     notes = build_notes(row, used, target)
 
     fields = {
         "company": company[:255],
         "contact_name": (col("contact_name") or None),
         "role": (col("role") or None),
+        "employee_count": employee_count,
+        "decision_maker": (col("decision_maker") or None),
         "phone": (col("phone") or None),
         "email": (col("email") or None),
         "website": (col("website") or None),
@@ -147,4 +207,6 @@ def row_to_lead_fields(
         fields["website"] = fields["website"][:500]
     if fields["contact_name"]:
         fields["contact_name"] = fields["contact_name"][:255]
+    if fields["decision_maker"]:
+        fields["decision_maker"] = fields["decision_maker"][:255]
     return fields

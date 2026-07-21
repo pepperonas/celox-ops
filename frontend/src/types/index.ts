@@ -496,6 +496,10 @@ export interface RainmakerLead {
   company: string
   contact_name: string | null
   role: string | null
+  /** Firmengröße (Qualifizierungssignal). */
+  employee_count: number | null
+  /** Entscheider (Geschäftsführung/Vorstand) — getrennt vom Ansprechpartner. */
+  decision_maker: string | null
   phone: string | null
   email: string | null
   address: string | null
@@ -526,6 +530,8 @@ export interface RainmakerLeadCreate {
   company: string
   contact_name?: string | null
   role?: string | null
+  employee_count?: number | null
+  decision_maker?: string | null
   phone?: string | null
   email?: string | null
   address?: string | null

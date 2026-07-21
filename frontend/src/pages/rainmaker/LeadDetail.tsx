@@ -178,6 +178,8 @@ export default function RainmakerLeadDetail() {
   const rows: [string, React.ReactNode][] = [
     ['Ansprechpartner', lead.contact_name || '–'],
     ['Funktion', lead.role || '–'],
+    ['Geschäftsführung', lead.decision_maker || '–'],
+    ['Mitarbeiter', lead.employee_count != null ? lead.employee_count.toLocaleString('de-DE') : '–'],
     ['Telefon', lead.phone || '–'],
     ['E-Mail', lead.email ? (
       <span className="inline-flex items-center gap-2 flex-wrap">

@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, Computed, DateTime, Enum, ForeignKey, Index, Numeric, String, Text, func, text,
+    Boolean, Computed, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, Text, func, text,
 )
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
@@ -59,6 +59,11 @@ class RainmakerLead(OwnedMixin, Base):
     company: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Firmengröße als Qualifizierungssignal (ganze Zahl, keine Bereichs-Strings).
+    employee_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Entscheider (Geschäftsführung/Vorstand) — bewusst getrennt vom
+    # Ansprechpartner: oft ist nur der Entscheider bekannt, nicht der Kontakt.
+    decision_maker: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
