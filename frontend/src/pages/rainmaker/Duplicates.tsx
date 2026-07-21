@@ -130,8 +130,11 @@ export default function Duplicates() {
   const [resolved, setResolved] = useState<Set<number>>(new Set())
   const [confirm, setConfirm] = useState<BatchSummary | null>(null)
   const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [lastChecked, setLastChecked] = useState<Date | null>(null)
 
-  const load = async () => {
+  const load = async (manual = false) => {
+    setChecking(true)
     setResolved(new Set()); setConfirm(null)
     try {
       const gs = await getDuplicates()
@@ -144,9 +147,20 @@ export default function Duplicates() {
         }
       })
       setGroups(gs); setSel(init)
+      setLastChecked(new Date())
+      // Ohne Toast wirkt ein manuelles „Erneut prüfen" mit leerem Ergebnis
+      // wirkungslos (die Ansicht ändert sich nicht).
+      if (manual) {
+        toast.success(
+          gs.length === 0
+            ? 'Keine Duplikate gefunden.'
+            : `${gs.length} Verdachtsgruppe${gs.length === 1 ? '' : 'n'} gefunden.`,
+        )
+      }
     } catch {
       toast.error('Duplikate konnten nicht geladen werden.'); setGroups([])
     }
+    setChecking(false)
   }
   useEffect(() => { load() }, [])
 
@@ -212,12 +226,32 @@ export default function Duplicates() {
       <PageHeader title="Duplikate" subtitle="Ähnliche Leads prüfen und zusammenführen" />
       <PipelineNav />
 
-      {groups === null && <p className="text-text-muted text-sm py-8 text-center">Lade…</p>}
+      {/* Prüf-Status — gibt „Erneut prüfen" sichtbares Feedback, auch wenn sich
+          das Ergebnis (weiterhin keine Duplikate) nicht ändert. */}
+      {(checking || lastChecked) && (
+        <div className="flex items-center gap-2 text-xs text-text-muted mb-3">
+          {checking ? (
+            <>
+              <span className="md-spinner !w-3.5 !h-3.5 !border-2" />
+              <span>Prüfe auf Duplikate…</span>
+            </>
+          ) : (
+            <span>
+              Zuletzt geprüft:{' '}
+              {lastChecked!.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          )}
+        </div>
+      )}
+
+      {groups === null && !checking && <p className="text-text-muted text-sm py-8 text-center">Lade…</p>}
       {groups !== null && visible.length === 0 && (
         <div className="text-center py-16">
           <div className="text-4xl mb-2">🎉</div>
           <p className="text-text-muted">Keine Duplikate gefunden.</p>
-          <button onClick={load} className="btn-secondary text-sm mt-4">Erneut prüfen</button>
+          <button onClick={() => load(true)} disabled={checking} className="btn-secondary text-sm mt-4 disabled:opacity-50">
+            {checking ? 'Prüfe…' : 'Erneut prüfen'}
+          </button>
         </div>
       )}
 
