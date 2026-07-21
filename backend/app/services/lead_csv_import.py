@@ -34,7 +34,8 @@ _NOTE_FIELDS: list[tuple[str, str]] = [
     ("vorstand", "Vorstand"),
     ("mitarbeiterzahl", "Mitarbeiter"),
     ("handelsregister", "HR"),
-    ("registergericht", "Registergericht"),
+    # Registergericht bewusst NICHT gefaltet — in vielen Quellen nur ein
+    # Platzhalter („Registergericht"), HR deckt die Registrierung ab.
     ("ust-id", "USt-ID"),
     ("umsatzsteuer", "USt-ID"),
     ("kunde seit", "Kunde seit"),
