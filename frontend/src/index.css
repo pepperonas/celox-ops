@@ -427,6 +427,50 @@ input:-webkit-autofill:focus {
   /* kompakt = dieselbe Box wie ein kompaktes Eingabefeld */
   .md-select-compact { padding: 6px 10px; font-size: 12px; }
 
+  /* ---------- MD3 Switch (components/Toggle.tsx) ----------
+     Bewegung (Knopf) = Spatial-Token (darf federn), Farbe = Effects-Token. */
+  .md-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 52px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--md-shape-full);
+    border: 2px solid var(--md-outline);
+    background: var(--md-surface-container-highest);
+    cursor: pointer;
+    transition: background-color var(--m3-effect-default-dur) var(--m3-effect-default),
+                border-color var(--m3-effect-default-dur) var(--m3-effect-default);
+  }
+  .md-switch:disabled { cursor: not-allowed; }
+  .md-switch-thumb {
+    position: absolute;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--md-outline);
+    transition: transform var(--m3-spatial-fast-dur) var(--m3-spatial-fast),
+                width var(--m3-spatial-fast-dur) var(--m3-spatial-fast),
+                height var(--m3-spatial-fast-dur) var(--m3-spatial-fast),
+                background-color var(--m3-effect-default-dur) var(--m3-effect-default);
+  }
+  .md-switch.is-on {
+    background: var(--md-primary);
+    border-color: var(--md-primary);
+  }
+  /* An: Knopf wächst (MD3-Expressive-Detail) und wandert nach rechts */
+  .md-switch.is-on .md-switch-thumb {
+    width: 24px;
+    height: 24px;
+    left: 0;
+    transform: translateX(24px);
+    background: var(--md-on-primary);
+  }
+  .md-switch:hover:not(:disabled) .md-switch-thumb { background: var(--text-muted); }
+  .md-switch.is-on:hover:not(:disabled) .md-switch-thumb { background: var(--md-on-primary); }
+
   /* ---------- State-layer helper (interactive rows / nav / icon btns) ---------- */
   .md-state {
     position: relative;

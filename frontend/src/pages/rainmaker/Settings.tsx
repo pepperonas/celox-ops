@@ -1,3 +1,4 @@
+import Toggle from '../../components/Toggle'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
@@ -171,9 +172,16 @@ export default function RainmakerSettingsPage() {
             value={settings.reminder_channel}
             onChange={(e) => setSettings({ ...settings, reminder_channel: e.target.value as RainmakerReminderChannel })}
             options={CHANNEL_OPTIONS} />
-          <FormField label="Erinnerung aktiv" name="reminder_enabled" type="checkbox"
-            value={settings.reminder_enabled}
-            onChange={(e) => setSettings({ ...settings, reminder_enabled: (e.target as HTMLInputElement).checked })} />
+          <div className="pb-1">
+            <Toggle
+              checked={settings.reminder_enabled}
+              onChange={(v) => setSettings({ ...settings, reminder_enabled: v })}
+              label="Tägliche Erinnerungs-Mail"
+              hint={settings.reminder_enabled
+                ? `Wird an Werktagen um ${settings.reminder_time.slice(0, 5)} Uhr gesendet, wenn das Pensum noch offen ist.`
+                : 'Aus — es werden keine Erinnerungen verschickt.'}
+            />
+          </div>
         </div>
         <p className="text-xs text-text-muted">Aktuell ist nur der Kanal „E-Mail" aktiv (via konfiguriertem SMTP).</p>
         <div className="flex justify-end">

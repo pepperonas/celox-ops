@@ -1,3 +1,4 @@
+import Toggle from '../components/Toggle'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { api } from '../api/client'
@@ -10,9 +11,9 @@ import {
 } from '../api/emailTemplates'
 import { getSettings, updateSettings } from '../api/settings'
 import { filenameFromDisposition } from '../utils/downloadName'
-import { getAiUsage } from '../api/rainmaker'
+import { getAiUsage, getRainmakerSettings, updateRainmakerSettings } from '../api/rainmaker'
 import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
-import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse } from '../types'
+import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse, RainmakerSettings } from '../types'
 import Select from '../components/Select'
 
 interface TrackerConfig {
@@ -101,6 +102,24 @@ export default function Settings() {
     setTwofaBusy(false)
   }
   const [savingPrice, setSavingPrice] = useState(false)
+  // Rainmaker-Erinnerung (gespiegelt aus den Rainmaker-Einstellungen)
+  const [rmSettings, setRmSettings] = useState<RainmakerSettings | null>(null)
+  const [rmSaving, setRmSaving] = useState(false)
+
+  const saveReminderEnabled = async (enabled: boolean) => {
+    if (!rmSettings) return
+    const prev = rmSettings
+    setRmSettings({ ...rmSettings, reminder_enabled: enabled })   // optimistisch
+    setRmSaving(true)
+    try {
+      setRmSettings(await updateRainmakerSettings({ reminder_enabled: enabled }))
+      toast.success(enabled ? 'Erinnerungs-Mail aktiviert.' : 'Erinnerungs-Mail deaktiviert.')
+    } catch {
+      setRmSettings(prev)
+      toast.error('Konnte nicht gespeichert werden.')
+    }
+    setRmSaving(false)
+  }
   // Google Places (Lead-Suche)
   const [placesConfigured, setPlacesConfigured] = useState(false)
   const [placesHint, setPlacesHint] = useState<string | null>(null)
@@ -132,6 +151,7 @@ export default function Settings() {
     loadConfig()
     loadTemplates()
     getSettings().then(applySettings).catch(() => {})
+    getRainmakerSettings().then(setRmSettings).catch(() => {})
     loadAiUsage()
   }, [])
 
@@ -377,6 +397,34 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Rainmaker-Erinnerung — hier spiegelbar, damit man den Schalter dort
+          findet, wo man Benachrichtigungen erwartet. Quelle bleibt die
+          Rainmaker-Einstellung (dieselbe API), keine zweite Wahrheit. */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">Tägliche Erinnerungs-Mail (Rainmaker)</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Erinnert dich an Werktagen, wenn dein Akquise-Pensum noch offen ist. Läuft nur bei konfiguriertem SMTP.
+        </p>
+        {rmSettings ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <Toggle
+              checked={rmSettings.reminder_enabled}
+              onChange={saveReminderEnabled}
+              disabled={rmSaving}
+              label={rmSettings.reminder_enabled ? 'Aktiv' : 'Aus'}
+              hint={rmSettings.reminder_enabled
+                ? `Versand um ${rmSettings.reminder_time.slice(0, 5)} Uhr, wenn das Pensum (${rmSettings.daily_quota}) noch nicht erfüllt ist.`
+                : 'Es werden keine Erinnerungen verschickt.'}
+            />
+            <a href="/rainmaker/einstellungen" className="text-xs text-accent hover:text-accent-hover shrink-0">
+              Zeit &amp; Pensum ändern →
+            </a>
+          </div>
+        ) : (
+          <div className="h-8 w-40 md-skeleton rounded-full" />
+        )}
+      </div>
 
       {/* Rechnungen */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
