@@ -32,12 +32,45 @@ const TARGET_FILTER_KEY = 'rm-pipeline-targetfilter'
 const SORT_KEY = 'rm-pipeline-sort'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 const FAV_FILTER_KEY = 'rm-pipeline-favfilter'
+// Infinite-Scroll: pro Spalte anfangs so viele Karten rendern, danach je Schritt
+// nachladen, sobald das Sentinel beim Runterscrollen in die Nähe kommt.
+const PAGE_SIZE = 25
 function loadTimeFilter(): TimeFilterValue {
   try {
     return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
   } catch {
     return DEFAULT_TIME_FILTER
   }
+}
+
+/**
+ * „Mehr laden"-Sentinel am Spaltenende: lädt via IntersectionObserver automatisch
+ * nach, sobald es beim Scrollen (mit 400px Vorlauf) sichtbar wird — und bleibt als
+ * klickbarer Button ein Fallback (Tastatur / falls der Observer nicht feuert). Der
+ * Effekt re-observed bei jeder Änderung von `onMore`/`remaining`, füllt so den
+ * Viewport selbst, wenn ein Nachladen noch nicht bis unter die Kante scrollt.
+ */
+function LoadMore({ remaining, onMore }: { remaining: number; onMore: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) onMore() },
+      { rootMargin: '400px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [onMore, remaining])
+  return (
+    <button
+      ref={ref}
+      onClick={onMore}
+      className="w-full text-xs text-accent hover:underline underline-offset-2 py-2"
+    >
+      +{remaining} weitere laden
+    </button>
+  )
 }
 
 export default function RainmakerPipeline() {
@@ -94,7 +127,11 @@ export default function RainmakerPipeline() {
     [timeFilter.field],
   )
   // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
-  const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
+  // Pro Spalte: wie viele Karten aktuell gerendert werden (wächst beim Scrollen).
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({})
+  const showMore = useCallback((statusKey: string) => {
+    setVisibleCounts((prev) => ({ ...prev, [statusKey]: (prev[statusKey] ?? PAGE_SIZE) + PAGE_SIZE }))
+  }, [])
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -392,8 +429,8 @@ export default function RainmakerPipeline() {
             sortMode,
           )
           const isOver = dragOver === statusKey
-          const expanded = expandedCols.has(statusKey)
-          const visibleLeads = expanded ? colLeads : colLeads.slice(0, 100)
+          const count = visibleCounts[statusKey] ?? PAGE_SIZE
+          const visibleLeads = colLeads.slice(0, count)
           const hiddenCount = colLeads.length - visibleLeads.length
           return (
             <div
@@ -498,12 +535,7 @@ export default function RainmakerPipeline() {
                   )
                 })}
                 {hiddenCount > 0 && (
-                  <button
-                    onClick={() => setExpandedCols((prev) => new Set(prev).add(statusKey))}
-                    className="w-full text-xs text-accent hover:underline underline-offset-2 py-2"
-                  >
-                    +{hiddenCount} weitere anzeigen
-                  </button>
+                  <LoadMore remaining={hiddenCount} onMore={() => showMore(statusKey)} />
                 )}
               </div>
             </div>
