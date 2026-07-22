@@ -34,7 +34,7 @@ const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 const FAV_FILTER_KEY = 'rm-pipeline-favfilter'
 // Infinite-Scroll: pro Spalte anfangs so viele Karten rendern, danach je Schritt
 // nachladen, sobald das Sentinel beim Runterscrollen in die Nähe kommt.
-const PAGE_SIZE = 25
+const PAGE_SIZE = 20
 function loadTimeFilter(): TimeFilterValue {
   try {
     return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
