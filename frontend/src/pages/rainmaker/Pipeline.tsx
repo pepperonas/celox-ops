@@ -31,6 +31,7 @@ const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
 const TARGET_FILTER_KEY = 'rm-pipeline-targetfilter'
 const SORT_KEY = 'rm-pipeline-sort'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
+const FAV_FILTER_KEY = 'rm-pipeline-favfilter'
 function loadTimeFilter(): TimeFilterValue {
   try {
     return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
@@ -58,6 +59,7 @@ export default function RainmakerPipeline() {
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
   const [targetFilter, setTargetFilter] = useState<string | null>(() => localStorage.getItem(TARGET_FILTER_KEY) || null)
+  const [favOnly, setFavOnly] = useState<boolean>(() => localStorage.getItem(FAV_FILTER_KEY) === '1')
   const [sortMode, setSortMode] = useState<LeadSort>(() => (localStorage.getItem(SORT_KEY) as LeadSort) || 'default')
   const [timeFilter, setTimeFilter] = useState<TimeFilterValue>(loadTimeFilter)
 
@@ -73,6 +75,10 @@ export default function RainmakerPipeline() {
     if (targetFilter) localStorage.setItem(TARGET_FILTER_KEY, targetFilter)
     else localStorage.removeItem(TARGET_FILTER_KEY)
   }, [targetFilter])
+  useEffect(() => {
+    if (favOnly) localStorage.setItem(FAV_FILTER_KEY, '1')
+    else localStorage.removeItem(FAV_FILTER_KEY)
+  }, [favOnly])
   useEffect(() => { localStorage.setItem(SORT_KEY, sortMode) }, [sortMode])
 
   const patchTimeFilter = useCallback((patch: Partial<TimeFilterValue>) => {
@@ -198,9 +204,12 @@ export default function RainmakerPipeline() {
     if (emailFilter === 'deliverable') ls = ls.filter((l) => l.email_status && EMAIL_DELIVERABLE.has(l.email_status))
     else if (emailFilter === 'problem') ls = ls.filter((l) => l.email_status && EMAIL_PROBLEM.has(l.email_status))
     if (targetFilter !== null) ls = ls.filter((l) => (l.target || '').trim() === targetFilter)
+    if (favOnly) ls = ls.filter((l) => l.pinned)
     if (timeFilter.preset !== 'all') ls = ls.filter((l) => inWindow(leadTs(l), timeWindow))
     return ls
-  }, [leads, sourceFilter, emailFilter, targetFilter, timeFilter.preset, timeWindow, leadTs])
+  }, [leads, sourceFilter, emailFilter, targetFilter, favOnly, timeFilter.preset, timeWindow, leadTs])
+
+  const pinnedCount = useMemo(() => leads.filter((l) => l.pinned).length, [leads])
 
   const emailCounts = useMemo(() => {
     let deliverable = 0, problem = 0
@@ -228,6 +237,9 @@ export default function RainmakerPipeline() {
       setTargetFilter(null)
     }
   }, [leads.length, targetFilter, targetChips])
+  useEffect(() => {
+    if (leads.length && favOnly && pinnedCount === 0) setFavOnly(false)
+  }, [leads.length, favOnly, pinnedCount])
 
   if (loading) return <LoadingIndicator />
 
@@ -327,6 +339,24 @@ export default function RainmakerPipeline() {
               {label}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Favoriten-Filter: ein Toggle-Badge (nur wenn gepinnte Leads existieren). */}
+      {pinnedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-text-muted mr-1">Favoriten:</span>
+          <button
+            onClick={() => setFavOnly((v) => !v)}
+            aria-pressed={favOnly}
+            title={favOnly ? 'Favoriten-Filter aus' : 'Nur Favoriten anzeigen'}
+            className="text-xs px-3 py-1 rounded-full border transition-colors duration-short"
+            style={favOnly
+              ? { borderColor: '#e0a500', backgroundColor: '#e0a50026', color: 'var(--c-text,#eee)' }
+              : { borderColor: 'var(--c-border,#333)', color: 'var(--c-text-muted,#888)' }}
+          >
+            {favOnly ? '★' : '☆'} Favoriten ({pinnedCount})
+          </button>
         </div>
       )}
 
