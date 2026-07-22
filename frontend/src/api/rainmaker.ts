@@ -28,6 +28,8 @@ import type {
   AiDiscoverResponse,
   AiUsageResponse,
   PaginatedResponse,
+  AiRunCost,
+  AiBudget,
 } from '../types'
 
 export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string): Promise<AiDiscoverResponse> {
@@ -257,4 +259,26 @@ export async function updateRainmakerGoal(id: string, data: RainmakerGoalUpdate)
 
 export async function deleteRainmakerGoal(id: string): Promise<void> {
   await api.delete(`/rainmaker/goals/${id}`)
+}
+
+// --- Lead-Akquise-Mail (KI-Entwurf + Versand) ---
+export interface LeadEmailDraft {
+  subject: string
+  body: string
+  product: string | null
+  run: AiRunCost
+  budget: AiBudget
+}
+
+export async function draftLeadEmail(leadId: string): Promise<LeadEmailDraft> {
+  const response = await api.post(`/rainmaker/leads/${leadId}/draft-email`)
+  return response.data
+}
+
+export async function sendLeadEmail(
+  leadId: string,
+  data: { to_email: string; subject: string; message: string; cc?: string[]; bcc?: string[] },
+): Promise<{ ok: boolean; sent_to: string }> {
+  const response = await api.post(`/rainmaker/leads/${leadId}/send-email`, data)
+  return response.data
 }

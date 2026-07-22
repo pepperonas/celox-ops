@@ -150,6 +150,22 @@ class AiBudget(BaseModel):
     warn: bool = False                    # ≥ 80 % verbraucht
 
 
+class LeadEmailDraftResponse(BaseModel):
+    subject: str
+    body: str
+    product: str | None = None
+    run: AiRunCost
+    budget: AiBudget
+
+
+class LeadEmailSendRequest(BaseModel):
+    to_email: str
+    subject: str
+    message: str
+    cc: list[str] | None = None
+    bcc: list[str] | None = None
+
+
 class AiDiscoverResponse(BaseModel):
     candidates: list[DiscoveredCandidate]
     run: AiRunCost

@@ -1,0 +1,94 @@
+"""KI-Entwurf für eine Akquise-Mail an einen Lead.
+
+Reine Orchestrierung (kein DB-Zugriff, testbar mit gemocktem Client): baut aus
+den Lead-Feldern einen Kontext, lässt Claude daraus Betreff + Text als
+strukturierte Ausgabe erzeugen und empfiehlt anhand des `target` das passende
+Produkt. Nutzt dieselben Bausteine wie die KI-Lead-Suche (`ai_lead_agent`).
+"""
+from app.services.ai_lead_agent import _structured
+from app.services.ai_pricing import Usage
+
+# Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
+# der Prompt eine einzige Quelle hat.
+_SENDER = "Martin Pfeffer, celox.io (Berlin) — IT-Sicherheit, Datenschutz & Softwareentwicklung"
+
+_SYSTEM = f"""Du bist {_SENDER} und schreibst eine kurze, seriöse deutsche Erstansprache
+(Kaltakquise per E-Mail) an einen potenziellen Kunden.
+
+Absender-Profil & Portfolio (wähle das EINE Produkt, das am besten zum „Target"
+und zur Branche des Empfängers passt):
+- IT-Sicherheit: Audits, ISMS-Aufbau/-Betreuung nach ISO 27001, IT-Grundschutz,
+  NIS2, Security-Awareness. (Kredential: ISO 27001, BSI IT-Grundschutz.)
+- Datenschutz: externer Datenschutzbeauftragter (IHK), DSGVO-Umsetzung,
+  Datenschutz-Managementsystem (DSMS, datenschutz.celox.io).
+- Zeiterfassung/Projektmanagement (z. B. rund um Projektron BCS): Einführung,
+  Schnittstellen, gesetzeskonforme Arbeitszeiterfassung (BAG-Urteil).
+- Individualsoftware & Prozessautomatisierung.
+
+Regeln:
+- Führe mit dem NUTZEN/Pain aus dem „Target", nicht mit einer Selbstvorstellung.
+- Genau EIN passendes Produkt empfehlen, kein Bauchladen.
+- Konkreter, unaufdringlicher Call-to-Action (kurzes Gespräch / 15-Minuten-Call).
+- Max. ~120 Wörter Fließtext, Sie-Form, keine Übertreibung, keine erfundenen
+  Fakten über den Empfänger (nutze nur die gegebenen Infos).
+- Wenn ein Ansprechpartner bekannt ist: persönliche Anrede („Sehr geehrte/r
+  Herr/Frau …" nur wenn das Geschlecht eindeutig ist, sonst „Sehr geehrte/r …"
+  oder „Guten Tag {{Name}}"). Sonst „Sehr geehrte Damen und Herren".
+- Signatur am Ende: „Mit freundlichen Grüßen\\nMartin Pfeffer\\ncelox.io".
+- `body` als reiner Text mit \\n als Zeilenumbrüchen (kein HTML)."""
+
+_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "subject": {"type": "string", "description": "Prägnante Betreffzeile, max. 80 Zeichen."},
+        "body": {"type": "string", "description": "Der Mailtext inkl. Anrede und Signatur, \\n als Umbruch."},
+        "product": {"type": "string", "description": "Das empfohlene Produkt (kurz), z. B. „Externer DSB“."},
+    },
+    "required": ["subject", "body"],
+}
+
+
+def build_lead_context(lead) -> str:
+    """Lead-Felder → kompakter Kontextblock für den Prompt. Nur vorhandene Felder;
+    keine erfundenen Werte. Reine Funktion (nimmt ein Objekt mit den Attributen)."""
+    def val(x):
+        return str(x).strip() if x not in (None, "") else None
+
+    fields = [
+        ("Firma", val(getattr(lead, "company", None))),
+        ("Ansprechpartner", val(getattr(lead, "contact_name", None))),
+        ("Funktion", val(getattr(lead, "role", None))),
+        ("Geschäftsführung/Entscheider", val(getattr(lead, "decision_maker", None))),
+        ("Target (Verkaufs-Winkel/Pain)", val(getattr(lead, "target", None))),
+        ("Mitarbeiterzahl", val(getattr(lead, "employee_count", None))),
+        ("Website", val(getattr(lead, "website", None))),
+    ]
+    tags = getattr(lead, "tags", None)
+    if tags:
+        fields.append(("Branche/Tags", ", ".join(str(t) for t in tags)))
+    notes = val(getattr(lead, "notes", None))
+    if notes:
+        fields.append(("Notizen", notes[:600]))
+
+    lines = [f"- {k}: {v}" for k, v in fields if v]
+    return "\n".join(lines) if lines else "- (keine strukturierten Angaben)"
+
+
+async def draft_lead_email(ai, model: str, lead, usage: Usage) -> dict:
+    """Erzeugt {subject, body, product?} für den Lead. `usage` wird für die
+    Kostenabrechnung befüllt (wie bei der KI-Lead-Suche)."""
+    context = build_lead_context(lead)
+    user = (
+        "Schreibe die Erstansprache-Mail für diesen Lead. Empfiehl genau EIN "
+        "Produkt, das am besten zum Target passt.\n\nLead-Infos:\n" + context
+    )
+    result = await _structured(
+        ai, model, _SYSTEM, user,
+        tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=900,
+    )
+    # Defensive: Pflichtfelder als Strings garantieren.
+    return {
+        "subject": str(result.get("subject", "")).strip(),
+        "body": str(result.get("body", "")).strip(),
+        "product": str(result.get("product", "")).strip() or None,
+    }

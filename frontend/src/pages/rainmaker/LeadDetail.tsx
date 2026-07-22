@@ -1,3 +1,4 @@
+import LeadEmailDialog from './LeadEmailDialog'
 import { getTodos } from '../../api/todos'
 import { canDelete } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
@@ -49,6 +50,7 @@ export default function RainmakerLeadDetail() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
   const [nextTodo, setNextTodo] = useState<Todo | null>(null)
+  const [showEmail, setShowEmail] = useState(false)
   const mayDelete = canDelete(useAuthStore((st) => st.role))
 
   const togglePin = async () => {
@@ -254,10 +256,10 @@ export default function RainmakerLeadDetail() {
           </a>
         )}
         {lead.email && (
-          <a href={`mailto:${lead.email}`} className="btn-secondary !py-2.5">
+          <button onClick={() => setShowEmail(true)} className="btn-secondary !py-2.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={ACTIVITY_TYPE_ICONS.email} /></svg>
             Mailen
-          </a>
+          </button>
         )}
         {lead.address && (
           <a href={mapsHref(lead.address)} target="_blank" rel="noreferrer" className="btn-secondary !py-2.5">
@@ -452,6 +454,10 @@ export default function RainmakerLeadDetail() {
         title="Lead löschen"
         message={`„${lead.company}" und alle zugehörigen Aktivitäten unwiderruflich löschen?`}
       />
+      {showEmail && lead.email && (
+        <LeadEmailDialog lead={lead} onClose={() => setShowEmail(false)} onSent={load} />
+      )}
+
       {showAdd && id && (
         <AddActivityModal leadId={id} onClose={() => setShowAdd(false)} onAdded={() => { setShowAdd(false); load() }} />
       )}

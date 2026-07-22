@@ -16,6 +16,8 @@ def _send_email_sync(
     cc: list[str] | None,
     bcc: list[str] | None,
     attachment_name: str | None = None,
+    from_email: str | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     """Blocking SMTP send — always call via asyncio.to_thread (an SMTP handshake
     can take seconds and would stall the single-worker event loop)."""
@@ -23,11 +25,17 @@ def _send_email_sync(
     bcc_list = [b.strip() for b in (bcc or []) if b and b.strip()]
 
     msg = MIMEMultipart()
+    # Header-Absender ist ueberschreibbar (z. B. martin.pfeffer@celox.io fuer
+    # Akquise-Mails). Der SMTP-Envelope bleibt die authentifizierte Adresse
+    # (SMTP_FROM_EMAIL) -> keine Ablehnung wegen abweichendem MAIL FROM.
+    header_from = from_email or settings.SMTP_FROM_EMAIL
     msg["From"] = (
-        f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
+        f"{settings.SMTP_FROM_NAME} <{header_from}>"
         if settings.SMTP_FROM_NAME
-        else settings.SMTP_FROM_EMAIL
+        else header_from
     )
+    if reply_to:
+        msg["Reply-To"] = reply_to
     msg["To"] = to_email
     if cc_list:
         msg["Cc"] = ", ".join(cc_list)
@@ -78,6 +86,8 @@ async def send_email(
     cc: list[str] | None = None,
     bcc: list[str] | None = None,
     attachment_name: str | None = None,
+    from_email: str | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     """Send an email with optional PDF attachment via SMTP.
 
@@ -89,5 +99,6 @@ async def send_email(
         raise RuntimeError("SMTP ist nicht konfiguriert. Bitte SMTP_HOST in .env setzen.")
 
     return await asyncio.to_thread(
-        _send_email_sync, to_email, subject, body_html, pdf_path, cc, bcc, attachment_name
+        _send_email_sync, to_email, subject, body_html, pdf_path, cc, bcc,
+        attachment_name, from_email, reply_to,
     )

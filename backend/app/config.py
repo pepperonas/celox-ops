@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = ""
     SMTP_USE_TLS: bool = True
+    # Absender-Header fuer Lead-Akquise-Mails (ueberschreibbar via .env).
+    LEAD_OUTREACH_FROM_EMAIL: str = "martin.pfeffer@celox.io"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

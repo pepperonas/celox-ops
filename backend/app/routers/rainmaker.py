@@ -55,6 +55,8 @@ from app.schemas.rainmaker import (
     LeadDiscoveryImportRequest,
     LeadDiscoveryRequest,
     LeadDiscoveryResult,
+    LeadEmailDraftResponse,
+    LeadEmailSendRequest,
     LinkedInImportRequest,
     LinkedInImportResult,
     LinkedInPreviewRow,
@@ -1533,3 +1535,105 @@ async def delete_goal(
     if not goal:
         raise HTTPException(status_code=404, detail="Ziel nicht gefunden")
     await db.delete(goal)
+
+
+# --------------------------------------------------------------------------- #
+#  Lead-Akquise-Mail (KI-Entwurf + Versand)
+# --------------------------------------------------------------------------- #
+async def _ai_guard_and_model(db: AsyncSession) -> tuple[str, float, float]:
+    """Gemeinsamer KI-Vorlauf: 503 ohne Key, Modell auflösen, Budget hart durch-
+    setzen (402). Rückgabe (model, budget_eur, spent_eur)."""
+    from app.models.app_settings import AppSettings
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503,
+                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    model = (app_row.ai_model if app_row else DEFAULT_MODEL)
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_MODEL
+    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+    spent = await _ai_month_spent_eur(db)
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen."))
+    return model, budget_eur, spent
+
+
+@router.post("/leads/{lead_id}/draft-email", response_model=LeadEmailDraftResponse)
+async def draft_lead_email_endpoint(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> LeadEmailDraftResponse:
+    """KI-Entwurf einer Akquise-Mail für den Lead (Betreff + Text), abgeleitet aus
+    Target + Lead-Infos. Legt nichts an, sendet nichts. Budget/Kosten wie die
+    KI-Lead-Suche."""
+    from app.services.ai_lead_agent import get_client
+    from app.services.ai_pricing import Usage, get_pricing
+    from app.services.exchange_service import get_usd_eur_rate
+    from app.services.lead_email_ai import draft_lead_email
+
+    lead = await _get_lead_or_404(lead_id, db)
+    model, budget_eur, spent = await _ai_guard_and_model(db)
+
+    usage = Usage()
+    try:
+        ai = get_client(settings.ANTHROPIC_API_KEY)
+        draft = await draft_lead_email(ai, model, lead, usage)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.add(AiLeadRun(brief=f"E-Mail-Entwurf: {lead.company}"[:2000], model=model,
+                         status="failed", error=str(e)[:500]))
+        raise HTTPException(status_code=502, detail=f"KI-Entwurf fehlgeschlagen: {e}")
+
+    cost_usd = usage.cost_with(await get_pricing(model))
+    cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+    db.add(AiLeadRun(
+        brief=f"E-Mail-Entwurf: {lead.company}"[:2000], model=model,
+        used_web_search=False, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+        candidates_found=0, status="ok", **usage.as_dict()))
+
+    return LeadEmailDraftResponse(
+        subject=draft["subject"], body=draft["body"], product=draft.get("product"),
+        run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur, **usage.as_dict()),
+        budget=_budget_status(spent + cost_eur, budget_eur),
+    )
+
+
+@router.post("/leads/{lead_id}/send-email")
+async def send_lead_email_endpoint(
+    lead_id: uuid.UUID,
+    data: LeadEmailSendRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Sendet die (ggf. bearbeitete) Akquise-Mail per SMTP — Absender-Header =
+    LEAD_OUTREACH_FROM_EMAIL (martin.pfeffer@celox.io). Protokolliert eine
+    erledigte E-Mail-Aktivität am Lead."""
+    from app.services.email_service import send_email
+
+    lead = await _get_lead_or_404(lead_id, db)
+    to = (data.to_email or "").strip()
+    if not to:
+        raise HTTPException(status_code=422, detail="Keine Empfänger-E-Mail angegeben.")
+
+    body_html = (data.message or "").replace("\n", "<br>")
+    sender = settings.LEAD_OUTREACH_FROM_EMAIL or settings.SMTP_FROM_EMAIL
+    try:
+        await send_email(
+            to_email=to, subject=data.subject, body_html=body_html,
+            cc=data.cc, bcc=data.bcc, from_email=sender, reply_to=sender,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {e}")
+
+    # Erledigte E-Mail-Aktivität (ohne Punkte/Streak — wie der LinkedIn-Import).
+    from datetime import datetime, timezone
+    db.add(RainmakerActivity(
+        lead_id=lead.id, type=RainmakerActivityType.email,
+        status=RainmakerActivityStatus.done,
+        completed_at=datetime.now(timezone.utc),
+        notes=f"E-Mail gesendet: {data.subject}"[:2000],
+    ))
+    return {"ok": True, "sent_to": to}
