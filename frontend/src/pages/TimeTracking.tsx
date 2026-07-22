@@ -1,3 +1,5 @@
+import { useAuthStore } from '../store/authStore'
+import { canDelete } from '../utils/permissions'
 import Select from '../components/Select'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
@@ -42,6 +44,7 @@ function formatDate(iso: string): string {
 }
 
 export default function TimeTracking() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const [customers, setCustomers] = useState<Customer[]>([])
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [summary, setSummary] = useState<TimeEntrySummary[]>([])
@@ -552,7 +555,7 @@ export default function TimeTracking() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
+                      {mayDelete && (<button
                         onClick={() => handleDelete(entry.id)}
                         className="text-text-muted hover:text-danger transition-colors"
                         title="Löschen"
@@ -570,7 +573,7 @@ export default function TimeTracking() {
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                           />
                         </svg>
-                      </button>
+                      </button>)}
                     </td>
                   </tr>
                 ))

@@ -1,3 +1,5 @@
+import { useAuthStore } from '../store/authStore'
+import { canDelete } from '../utils/permissions'
 import Toggle from '../components/Toggle'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -32,6 +34,7 @@ const TEMPLATE_CATEGORIES = [
 ]
 
 export default function Settings() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const [config, setConfig] = useState<TrackerConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -745,12 +748,12 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
                   >
                     Bearbeiten
                   </button>
-                  <button
+{mayDelete && (                  <button
                     onClick={() => handleDeleteTemplate(t.id)}
                     className="text-danger hover:text-danger/80 text-sm px-2 py-1"
                   >
                     Löschen
-                  </button>
+                  </button>)}
                 </div>
               </div>
             ))}

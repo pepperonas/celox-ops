@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
@@ -12,6 +14,7 @@ import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Contract, Invoice } from '../../types'
 
 export default function ContractDetail() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const { id } = useParams()
   const navigate = useAppNavigate()
   const [contract, setContract] = useState<Contract | null>(null)
@@ -55,9 +58,9 @@ export default function ContractDetail() {
           <button onClick={() => navigate(`/vertraege/${id}/bearbeiten`)} className="btn-secondary">
             Bearbeiten
           </button>
-          <button onClick={() => setShowDelete(true)} className="btn-danger">
+          {mayDelete && (<button onClick={() => setShowDelete(true)} className="btn-danger">
             Löschen
-          </button>
+          </button>)}
         </div>
       </div>
 

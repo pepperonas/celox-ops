@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -29,6 +31,7 @@ import type { Invoice, InvoiceStatus } from '../../types'
 import Select from '../../components/Select'
 
 export default function InvoiceDetail() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const { id } = useParams()
   const navigate = useAppNavigate()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
@@ -354,9 +357,9 @@ export default function InvoiceDetail() {
               >
                 Bearbeiten
               </button>
-              <button onClick={() => setShowDelete(true)} className="btn-danger text-sm">
+              {mayDelete && (<button onClick={() => setShowDelete(true)} className="btn-danger text-sm">
                 Löschen
-</button>
+</button>)}
             </>
           )}
           <button

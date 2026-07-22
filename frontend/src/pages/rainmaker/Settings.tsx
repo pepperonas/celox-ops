@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import Toggle from '../../components/Toggle'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -34,6 +36,7 @@ const emptyTpl = { channel: 'email' as RainmakerTemplateChannel, name: '', subje
 const emptyGoal = { name: '', suggested_type: 'call' as RainmakerActivityType, daily_target: 3 }
 
 export default function RainmakerSettingsPage() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const [settings, setSettings] = useState<RainmakerSettings | null>(null)
   const [templates, setTemplates] = useState<RainmakerTemplate[]>([])
   const [loading, setLoading] = useState(true)
@@ -209,7 +212,7 @@ export default function RainmakerSettingsPage() {
                 <span className="text-xs text-text-muted tabular-nums shrink-0">{g.daily_target}/Tag</span>
                 <button onClick={() => toggleGoalActive(g)} className="md-state text-xs text-text-muted hover:text-text px-2 py-1 rounded-full" title={g.active ? 'Deaktivieren' : 'Aktivieren'}>{g.active ? 'Aktiv' : 'Inaktiv'}</button>
                 <button onClick={() => setGoalForm({ id: g.id, name: g.name, suggested_type: g.suggested_type, daily_target: g.daily_target })} className="md-state text-xs text-text-muted hover:text-accent px-2 py-1 rounded-full">Bearbeiten</button>
-                <button onClick={() => setDeleteGoalId(g.id)} className="md-state text-xs text-text-muted hover:text-danger px-2 py-1 rounded-full">Löschen</button>
+                {mayDelete && (<button onClick={() => setDeleteGoalId(g.id)} className="md-state text-xs text-text-muted hover:text-danger px-2 py-1 rounded-full">Löschen</button>)}
               </div>
             ))}
           </div>
@@ -251,7 +254,7 @@ export default function RainmakerSettingsPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent shrink-0">{t.channel === 'email' ? 'E-Mail' : 'Nachricht'}</span>
                 <span className="text-sm text-text flex-1 truncate">{t.name}</span>
                 <button onClick={() => setTplForm({ id: t.id, channel: t.channel, name: t.name, subject: t.subject || '', body: t.body })} className="md-state text-xs text-text-muted hover:text-accent px-2 py-1 rounded-full">Bearbeiten</button>
-                <button onClick={() => setDeleteTplId(t.id)} className="md-state text-xs text-text-muted hover:text-danger px-2 py-1 rounded-full">Löschen</button>
+                {mayDelete && (<button onClick={() => setDeleteTplId(t.id)} className="md-state text-xs text-text-muted hover:text-danger px-2 py-1 rounded-full">Löschen</button>)}
               </div>
             ))}
           </div>

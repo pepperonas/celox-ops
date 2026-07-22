@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -34,6 +36,7 @@ const emptyForm: ExpenseCreate = {
 }
 
 export default function ExpenseForm() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const { id } = useParams()
   const navigate = useNavigate()
   const isEdit = Boolean(id)
@@ -117,7 +120,7 @@ export default function ExpenseForm() {
         <h2 className="text-2xl font-semibold text-text tracking-tight">
           {isEdit ? 'Ausgabe bearbeiten' : 'Neue Ausgabe'}
         </h2>
-        {isEdit && (
+        {isEdit && mayDelete && (
           <button onClick={() => setShowDelete(true)} className="btn-danger">
             Löschen
           </button>

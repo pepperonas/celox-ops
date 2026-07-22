@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
@@ -14,6 +16,7 @@ import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Order, Invoice } from '../../types'
 
 export default function OrderDetail() {
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const { id } = useParams()
   const navigate = useAppNavigate()
   const [order, setOrder] = useState<Order | null>(null)
@@ -111,9 +114,9 @@ export default function OrderDetail() {
           <button onClick={() => navigate(`/auftraege/${id}/bearbeiten`)} className="btn-secondary">
             Bearbeiten
           </button>
-          <button onClick={() => setShowDelete(true)} className="btn-danger">
+          {mayDelete && (<button onClick={() => setShowDelete(true)} className="btn-danger">
             Löschen
-          </button>
+          </button>)}
         </div>
       </div>
 

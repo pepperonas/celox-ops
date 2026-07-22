@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
@@ -44,6 +46,7 @@ export default function CustomerDetail() {
 
   const [attachmentsCount, setAttachmentsCount] = useState(0)
   const [openTodos, setOpenTodos] = useState(0)
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const [compliance, setCompliance] = useState<ComplianceCustomer | null>(null)
   const loadCompliance = useCallback(() => {
     if (id) getCustomerCompliance(id).then(setCompliance).catch(() => {})
@@ -237,9 +240,9 @@ export default function CustomerDetail() {
           <button onClick={() => navigate(`/kunden/${id}/bearbeiten`)} className="btn-secondary">
             Bearbeiten
           </button>
-          <button onClick={() => setShowDelete(true)} className="btn-danger">
+          {mayDelete && (<button onClick={() => setShowDelete(true)} className="btn-danger">
             Löschen
-          </button>
+          </button>)}
         </div>
       </div>
 
@@ -502,7 +505,7 @@ export default function CustomerDetail() {
                         <span className="text-xs text-text-muted">{formatRelativeTime(a.created_at)}</span>
                       </div>
                     </div>
-                    {manualTypes.has(a.type) && (
+                    {mayDelete && manualTypes.has(a.type) && (
                       <button
                         onClick={() => handleDeleteActivity(a.id)}
                         className="text-text-muted hover:text-red-500 transition-colors flex-shrink-0"

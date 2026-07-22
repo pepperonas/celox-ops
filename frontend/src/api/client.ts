@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast'
 import axios from 'axios'
 
 export const api = axios.create({
@@ -26,6 +27,15 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isLoginRequest && !onLoginPage) {
       localStorage.removeItem('token')
       window.location.href = '/login'
+    }
+    // 403 = fehlende Berechtigung (z. B. Rolle „Mitarbeiter“ darf nicht löschen).
+    // Der Server begründet es im Klartext — sonst sähe der Nutzer nur die
+    // generische „Fehler beim …“-Meldung des Aufrufers. Feste id = keine Flut.
+    if (error.response?.status === 403) {
+      const detail = error.response?.data?.detail
+      if (typeof detail === 'string' && detail) {
+        toast.error(detail, { id: 'forbidden', duration: 5000 })
+      }
     }
     return Promise.reject(error)
   },
