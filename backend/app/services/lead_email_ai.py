@@ -8,6 +8,11 @@ Produkt. Nutzt dieselben Bausteine wie die KI-Lead-Suche (`ai_lead_agent`).
 from app.services.ai_lead_agent import _structured
 from app.services.ai_pricing import Usage
 
+# Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
+# Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
+# verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
+PROMPT_VERSION = "2"
+
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
 _SENDER = "Martin Pfeffer, celox.io (Berlin) — IT-Sicherheit, Datenschutz & Softwareentwicklung"
@@ -33,13 +38,23 @@ und zur Branche des Empfängers passt):
   NIS2, Security-Awareness. (Kredential: ISO 27001, BSI IT-Grundschutz.)
 - Datenschutz: externer Datenschutzbeauftragter (IHK), DSGVO-Umsetzung,
   Datenschutz-Managementsystem (DSMS, datenschutz.celox.io).
-- Zeiterfassung/Projektmanagement (z. B. rund um Projektron BCS): Einführung,
-  Schnittstellen, gesetzeskonforme Arbeitszeiterfassung (BAG-Urteil).
+- bcsbook — automatische Zeiterfassung für Projektron BCS: erfasst die
+  Tätigkeiten der Mitarbeitenden automatisch im Hintergrund und bucht sie
+  automatisch nach Projektron BCS. Nutzen: spart jedem Mitarbeitenden rund
+  20 Minuten pro Tag beim Stundenzettel bei zugleich höherer Datenqualität,
+  läuft vollständig lokal/on-premise (Datenschutz by design), Einträge lassen
+  sich kinderleicht löschen, bearbeiten und ergänzen. Passt zur
+  gesetzeskonformen Arbeitszeiterfassung nach dem BAG-Urteil.
 - Individualsoftware & Prozessautomatisierung.
 
 Regeln:
 - Führe mit dem NUTZEN/Pain aus dem „Target", nicht mit einer Selbstvorstellung.
 - Genau EIN passendes Produkt empfehlen, kein Bauchladen.
+- Wenn das „Target"/die Branche mit Zeiterfassung, Stundenzetteln oder Projektron
+  BCS zu tun hat: empfiehl bcsbook und führe mit dem KONKRETEN Nutzen (≈20 Min/Tag
+  gespart pro Mitarbeitendem, höhere Datenqualität, on-premise/lokal, Einträge
+  jederzeit editier- und löschbar) — nicht mit einer generischen „Einführung/
+  Beratung/Anpassung". Keine erfundenen Zahlen darüber hinaus.
 - Konkreter, unaufdringlicher Call-to-Action (kurzes Gespräch / 15-Minuten-Call).
 - Max. ~120 Wörter Fließtext, Sie-Form, keine Übertreibung, keine erfundenen
   Fakten über den Empfänger (nutze nur die gegebenen Infos).

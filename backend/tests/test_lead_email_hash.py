@@ -35,6 +35,15 @@ def test_model_change_changes_hash():
     assert lead_email_hash(_lead(), MODEL) != lead_email_hash(_lead(), "claude-haiku-4-5")
 
 
+def test_prompt_version_change_changes_hash():
+    # Eine Prompt-Änderung (neue Version) muss den Cache invalidieren.
+    assert lead_email_hash(_lead(), MODEL, "1") != lead_email_hash(_lead(), MODEL, "2")
+
+
+def test_prompt_version_default_is_stable():
+    assert lead_email_hash(_lead(), MODEL) == lead_email_hash(_lead(), MODEL, "1")
+
+
 def test_each_relevant_field_changes_hash():
     base = lead_email_hash(_lead(), MODEL)
     for field, value in [

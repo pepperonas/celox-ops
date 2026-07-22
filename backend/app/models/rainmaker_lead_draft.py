@@ -10,16 +10,18 @@ from app.models.customer import Base
 from app.tenancy import OwnedMixin
 
 
-def lead_email_hash(lead, model: str) -> str:
-    """Stabiler Content-Hash der mail-relevanten Lead-Felder + Modell.
+def lead_email_hash(lead, model: str, prompt_version: str = "1") -> str:
+    """Stabiler Content-Hash der mail-relevanten Lead-Felder + Modell + Prompt-Version.
 
-    Rein + testbar. Ändert sich eines dieser Felder, wird der Cache verworfen
-    und neu generiert — sonst würde ein veralteter Entwurf ausgeliefert."""
+    Rein + testbar. Ändert sich eines dieser Felder, das Modell ODER der Prompt
+    (`prompt_version`), wird der Cache verworfen und neu generiert — sonst würde
+    ein veralteter Entwurf ausgeliefert."""
     def s(x):
         return "" if x in (None, "") else str(x).strip()
 
     tags = getattr(lead, "tags", None) or []
     parts = [
+        f"p{prompt_version}",
         model,
         s(getattr(lead, "company", None)),
         s(getattr(lead, "contact_name", None)),

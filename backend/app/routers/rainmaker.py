@@ -1552,7 +1552,7 @@ async def draft_lead_email_endpoint(
     from app.services.ai_lead_agent import get_client
     from app.services.ai_pricing import Usage, get_pricing
     from app.services.exchange_service import get_usd_eur_rate
-    from app.services.lead_email_ai import draft_lead_email
+    from app.services.lead_email_ai import PROMPT_VERSION, draft_lead_email
     from app.models.rainmaker_lead_draft import RainmakerLeadDraft, lead_email_hash
 
     lead = await _get_lead_or_404(lead_id, db)
@@ -1568,7 +1568,7 @@ async def draft_lead_email_endpoint(
     budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
     spent = await _ai_month_spent_eur(db)
 
-    wanted_hash = lead_email_hash(lead, model)
+    wanted_hash = lead_email_hash(lead, model, PROMPT_VERSION)
     cache = (await db.execute(
         select(RainmakerLeadDraft).where(RainmakerLeadDraft.lead_id == lead.id)
     )).scalar_one_or_none()
