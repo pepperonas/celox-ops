@@ -11,7 +11,7 @@ from app.services.ai_pricing import Usage
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
 # verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
-PROMPT_VERSION = "4"
+PROMPT_VERSION = "5"
 
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
@@ -69,10 +69,24 @@ Regeln:
   und dem konkreten Gewinn (Zeit gespart, höhere Abrechnungsqualität,
   on-premise/Datenschutz, Mitarbeitende behalten die Kontrolle). Ziel: Neugier
   und ein GUTES GEFÜHL wecken (Entlastung — nicht noch ein Tool, das Arbeit
-  macht). Wenn die Mitarbeiterzahl bekannt ist, rechne den Nutzen kurz darauf
-  hoch (z. B. „bei 85 Mitarbeitenden…"); sonst NICHT erfinden. KEINE generische
-  „Einführung/Beratung/Anpassung von BCS" — bcsbook ist ein fertiges Produkt, das
-  die BCS-Zeiterfassung automatisiert. Keine erfundenen Zahlen darüber hinaus.
+  macht).
+- Belege den Nutzen mit GENAU EINEM konkreten, gerundeten Anker (Zahlen NICHT
+  stapeln):
+  * Rechenbeispiel/Größenordnung: ~20 Min/Tag je Mitarbeitendem ≈ ⅓
+    Arbeitsstunde; bei ~80 €/Std sind das ≈ ~27 €/Tag je Mitarbeitendem. Für
+    einen Betrieb mit ~80 Mitarbeitenden also grob ~2.000 €/Tag bzw. in der
+    Größenordnung ~45.000 €/Monat zurückgewonnener Arbeitszeit.
+  * Ist die Mitarbeiterzahl DES LEADS bekannt, rechne lieber überschlägig auf
+    DESSEN Größe hoch (gerundet) statt auf die 80er-Referenz.
+  * Formuliere Euro-Zahlen als Größenordnung/Rechenbeispiel („in der
+    Größenordnung", „je nach Setup"), NIE als garantierte Ersparnis. Runde
+    großzügig; bevorzuge die zurückgewonnenen Stunden ODER den Monatswert
+    gegenüber einer aufgeblähten Jahreszahl (keine „halbe Million/Jahr"-Aussagen).
+  * Du darfst dich auf „einen Kunden vergleichbarer Größe" (anonym) beziehen —
+    aber erfinde KEINEN Namen, KEIN Zitat und KEINE Fallstudie.
+- KEINE generische „Einführung/Beratung/Anpassung von BCS" — bcsbook ist ein
+  fertiges Produkt, das die BCS-Zeiterfassung automatisiert. Keine erfundenen
+  Fakten über den Empfänger.
 - Konkreter, unaufdringlicher Call-to-Action (kurzes Gespräch / 15-Minuten-Call).
 - Max. ~150 Wörter Fließtext, Sie-Form, keine Übertreibung, keine erfundenen
   Fakten über den Empfänger (nutze nur die gegebenen Infos). Konkret und
