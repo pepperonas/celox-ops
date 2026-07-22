@@ -100,9 +100,18 @@ class TestDraftLeadEmail:
         result, _, _ = self._run({"subject": "S", "body": "B"}, _lead())
         assert result["product"] is None
 
-    def test_strips_whitespace(self):
+    def test_strips_whitespace_and_appends_signature(self):
+        from app.services.lead_email_ai import SIGNATURE
         result, _, _ = self._run({"subject": "  S  ", "body": "  B  "}, _lead())
-        assert result["subject"] == "S" and result["body"] == "B"
+        assert result["subject"] == "S"
+        assert result["body"].startswith("B")
+        assert result["body"].endswith(SIGNATURE)
+        assert "martin.pfeffer@celox.io" in result["body"]
+
+    def test_signature_not_duplicated(self):
+        from app.services.lead_email_ai import SIGNATURE
+        result, _, _ = self._run({"subject": "S", "body": f"Text\n\n{SIGNATURE}"}, _lead())
+        assert result["body"].count("Martin Pfeffer") == 1
 
     def test_lead_context_reaches_the_prompt(self):
         # Sicherheitsnetz: die Firma/Target müssen im User-Prompt landen

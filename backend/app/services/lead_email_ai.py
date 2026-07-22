@@ -12,6 +12,18 @@ from app.services.ai_pricing import Usage
 # der Prompt eine einzige Quelle hat.
 _SENDER = "Martin Pfeffer, celox.io (Berlin) — IT-Sicherheit, Datenschutz & Softwareentwicklung"
 
+# Feste Signatur — wird IMMER identisch angehängt (die KI generiert sie NICHT,
+# damit Adresse/Titel/Telefon nie halluziniert oder verändert werden).
+SIGNATURE = (
+    "Viele Grüße\n"
+    "Martin Pfeffer\n\n"
+    "celox.io — Softwareentwicklung, IT-Sicherheit & Datenschutz\n"
+    "Datenschutzbeauftragter (IHK) · IT-Sicherheitsbeauftragter (ISO 27001)\n\n"
+    "Flughafenstraße 24, 12053 Berlin\n"
+    "+49 151 590 824 65 · martin.pfeffer@celox.io\n"
+    "https://celox.io"
+)
+
 _SYSTEM = f"""Du bist {_SENDER} und schreibst eine kurze, seriöse deutsche Erstansprache
 (Kaltakquise per E-Mail) an einen potenziellen Kunden.
 
@@ -34,14 +46,16 @@ Regeln:
 - Wenn ein Ansprechpartner bekannt ist: persönliche Anrede („Sehr geehrte/r
   Herr/Frau …" nur wenn das Geschlecht eindeutig ist, sonst „Sehr geehrte/r …"
   oder „Guten Tag {{Name}}"). Sonst „Sehr geehrte Damen und Herren".
-- Signatur am Ende: „Mit freundlichen Grüßen\\nMartin Pfeffer\\ncelox.io".
+- KEINE Grußformel und KEINE Signatur schreiben — die Signatur wird
+  automatisch angehängt. Beende den Text mit dem letzten inhaltlichen Satz
+  (z. B. der Frage nach einem Termin).
 - `body` als reiner Text mit \\n als Zeilenumbrüchen (kein HTML)."""
 
 _SCHEMA = {
     "type": "object",
     "properties": {
         "subject": {"type": "string", "description": "Prägnante Betreffzeile, max. 80 Zeichen."},
-        "body": {"type": "string", "description": "Der Mailtext inkl. Anrede und Signatur, \\n als Umbruch."},
+        "body": {"type": "string", "description": "Der Mailtext inkl. Anrede, OHNE Grußformel/Signatur, \\n als Umbruch."},
         "product": {"type": "string", "description": "Das empfohlene Produkt (kurz), z. B. „Externer DSB“."},
     },
     "required": ["subject", "body"],
@@ -86,9 +100,12 @@ async def draft_lead_email(ai, model: str, lead, usage: Usage) -> dict:
         ai, model, _SYSTEM, user,
         tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=900,
     )
-    # Defensive: Pflichtfelder als Strings garantieren.
+    # Defensive: Pflichtfelder als Strings garantieren; feste Signatur anhängen.
+    body = str(result.get("body", "")).strip()
+    if SIGNATURE not in body:
+        body = f"{body}\n\n{SIGNATURE}"
     return {
         "subject": str(result.get("subject", "")).strip(),
-        "body": str(result.get("body", "")).strip(),
+        "body": body,
         "product": str(result.get("product", "")).strip() or None,
     }

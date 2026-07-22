@@ -1,3 +1,4 @@
+import Linkified from '../../components/Linkified'
 import LeadEmailDialog from './LeadEmailDialog'
 import { getTodos } from '../../api/todos'
 import { canDelete } from '../../utils/permissions'
@@ -399,7 +400,7 @@ export default function RainmakerLeadDetail() {
         {lead.notes && (
           <div className="mt-5 pt-5 border-t border-border">
             <dt className="text-xs text-text-muted mb-1">Notizen</dt>
-            <p className="text-sm text-text whitespace-pre-wrap">{lead.notes}</p>
+            <Linkified text={lead.notes} className="text-sm text-text" />
           </div>
         )}
       </div>
@@ -438,7 +439,7 @@ export default function RainmakerLeadDetail() {
                       {a.outcome && <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-high text-text-muted">{OUTCOME_LABELS[a.outcome]}</span>}
                       <button onClick={() => handleDeleteActivity(a.id)} className="ml-auto min-w-[32px] min-h-[32px] opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger text-sm transition-opacity" title="Löschen" aria-label="Aktivität löschen">✕</button>
                     </div>
-                    {a.notes && <p className="text-sm text-text-muted mt-0.5 whitespace-pre-wrap">{a.notes}</p>}
+                    {a.notes && <Linkified text={a.notes} className="text-sm text-text-muted mt-0.5" />}
                   </div>
                 </div>
               )
