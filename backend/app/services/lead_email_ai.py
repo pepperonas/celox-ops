@@ -11,7 +11,7 @@ from app.services.ai_pricing import Usage
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
 # verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
 
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
@@ -38,26 +38,45 @@ und zur Branche des Empfängers passt):
   NIS2, Security-Awareness. (Kredential: ISO 27001, BSI IT-Grundschutz.)
 - Datenschutz: externer Datenschutzbeauftragter (IHK), DSGVO-Umsetzung,
   Datenschutz-Managementsystem (DSMS, datenschutz.celox.io).
-- bcsbook — automatische Zeiterfassung für Projektron BCS: erfasst die
-  Tätigkeiten der Mitarbeitenden automatisch im Hintergrund und bucht sie
-  automatisch nach Projektron BCS. Nutzen: spart jedem Mitarbeitenden rund
-  20 Minuten pro Tag beim Stundenzettel bei zugleich höherer Datenqualität,
-  läuft vollständig lokal/on-premise (Datenschutz by design), Einträge lassen
-  sich kinderleicht löschen, bearbeiten und ergänzen. Passt zur
-  gesetzeskonformen Arbeitszeiterfassung nach dem BAG-Urteil.
+- bcsbook — unser eigenes Produkt: automatische, aktivitätsbasierte
+  Zeiterfassung, die direkt in ein VORHANDENES Projektron BCS bucht (es ersetzt
+  BCS nicht und führt BCS nicht ein, sondern automatisiert das lästige Erfassen).
+  So funktioniert es: bcsbook erkennt im Hintergrund, woran jemand tatsächlich
+  gearbeitet hat (Git-Commits, IDE-/Editor-Aktivität, KI-CLI-Sitzungen,
+  Azure-DevOps-Tickets — und für Nicht-Entwickler wie PMs/Beratende über eine
+  Anwesenheits-Erkennung), bündelt das in 15-Minuten-Blöcke je Projekt und bucht
+  sie nach kurzer Bestätigung automatisch in BCS. Aus 5–10 händischen
+  BCS-Einträgen pro Tag wird „F5 → prüfen → buchen".
+  Nutzen für den Entscheider (nur nennen, was passt):
+  * Spart jedem Mitarbeitenden ~15–20 Min/Tag Buchungsaufwand — die gesetzlich
+    verpflichtende Zeiterfassung (BAG-Urteil) wird reibungslos statt lästig.
+  * Höhere Datenqualität: Buchungen beruhen auf der realen Tagesaktivität statt
+    auf Abend-Erinnerung/Schätzung → sauberere Projektabrechnung.
+  * Jede Buchung wird gegen BCS verifiziert und bei Bedarf automatisch einmal
+    wiederholt — nichts geht verloren.
+  * Datenschutz & Kontrolle: läuft rein lokal/on-premise (nur 127.0.0.1, keine
+    Cloud), nichts wird ohne Bestätigung gebucht, Einträge sind jederzeit
+    editier- und löschbar — kein Überwachungsgefühl, die Mitarbeitenden behalten
+    die Hand drauf.
 - Individualsoftware & Prozessautomatisierung.
 
 Regeln:
 - Führe mit dem NUTZEN/Pain aus dem „Target", nicht mit einer Selbstvorstellung.
 - Genau EIN passendes Produkt empfehlen, kein Bauchladen.
-- Wenn das „Target"/die Branche mit Zeiterfassung, Stundenzetteln oder Projektron
-  BCS zu tun hat: empfiehl bcsbook und führe mit dem KONKRETEN Nutzen (≈20 Min/Tag
-  gespart pro Mitarbeitendem, höhere Datenqualität, on-premise/lokal, Einträge
-  jederzeit editier- und löschbar) — nicht mit einer generischen „Einführung/
-  Beratung/Anpassung". Keine erfundenen Zahlen darüber hinaus.
+- Wenn das „Target"/die Branche mit Zeiterfassung, Stundenzetteln, BCS oder
+  Projektabrechnung zu tun hat: empfiehl bcsbook und mache den Nutzen GREIFBAR.
+  Führe mit der Transformation (aus 5–10 Handbuchungen/Tag wird kurz bestätigen)
+  und dem konkreten Gewinn (Zeit gespart, höhere Abrechnungsqualität,
+  on-premise/Datenschutz, Mitarbeitende behalten die Kontrolle). Ziel: Neugier
+  und ein GUTES GEFÜHL wecken (Entlastung — nicht noch ein Tool, das Arbeit
+  macht). Wenn die Mitarbeiterzahl bekannt ist, rechne den Nutzen kurz darauf
+  hoch (z. B. „bei 85 Mitarbeitenden…"); sonst NICHT erfinden. KEINE generische
+  „Einführung/Beratung/Anpassung von BCS" — bcsbook ist ein fertiges Produkt, das
+  die BCS-Zeiterfassung automatisiert. Keine erfundenen Zahlen darüber hinaus.
 - Konkreter, unaufdringlicher Call-to-Action (kurzes Gespräch / 15-Minuten-Call).
-- Max. ~120 Wörter Fließtext, Sie-Form, keine Übertreibung, keine erfundenen
-  Fakten über den Empfänger (nutze nur die gegebenen Infos).
+- Max. ~150 Wörter Fließtext, Sie-Form, keine Übertreibung, keine erfundenen
+  Fakten über den Empfänger (nutze nur die gegebenen Infos). Konkret und
+  bildhaft schlägt lang und vage — lieber ein greifbarer Nutzen als drei Floskeln.
 - Wenn ein Ansprechpartner bekannt ist: persönliche Anrede („Sehr geehrte/r
   Herr/Frau …" nur wenn das Geschlecht eindeutig ist, sonst „Sehr geehrte/r …"
   oder „Guten Tag {{Name}}"). Sonst „Sehr geehrte Damen und Herren".
