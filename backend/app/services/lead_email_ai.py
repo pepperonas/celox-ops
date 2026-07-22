@@ -11,7 +11,7 @@ from app.services.ai_pricing import Usage
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
 # verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
-PROMPT_VERSION = "3"
+PROMPT_VERSION = "4"
 
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
@@ -130,12 +130,19 @@ async def draft_lead_email(ai, model: str, lead, usage: Usage) -> dict:
         "Schreibe die Erstansprache-Mail für diesen Lead. Empfiehl genau EIN "
         "Produkt, das am besten zum Target passt.\n\nLead-Infos:\n" + context
     )
+    # max_tokens ist ein CAP, kein Verbrauch — man zahlt nur real erzeugte Tokens.
+    # Grosszuegig, damit ein ~150-Woerter-Text (Deutsch = tokenreich) + Betreff +
+    # Produkt nie mitten in der Tool-JSON abgeschnitten wird (sonst kaeme `body`
+    # leer zurueck = nur Signatur). Gespart wird ueber den Draft-Cache, nicht hier.
     result = await _structured(
         ai, model, _SYSTEM, user,
-        tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=600,
+        tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=1200,
     )
-    # Defensive: Pflichtfelder als Strings garantieren; feste Signatur anhängen.
+    # Defensive: leerer Text (z. B. abgeschnittene Tool-JSON) darf NICHT als
+    # reiner Signatur-Block durchgehen — lieber klarer Fehler + Retry.
     body = str(result.get("body", "")).strip()
+    if not body:
+        raise ValueError("KI lieferte keinen Mailtext (nur leerer Body).")
     if SIGNATURE not in body:
         body = f"{body}\n\n{SIGNATURE}"
     return {

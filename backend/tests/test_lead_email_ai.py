@@ -126,3 +126,16 @@ class TestDraftLeadEmail:
     def test_usage_is_accumulated(self):
         _, _, usage = self._run({"subject": "S", "body": "B"}, _lead())
         assert usage.input_tokens == 300 and usage.output_tokens == 150
+
+    def test_empty_body_raises_not_signature_only(self):
+        # Abgeschnittene Tool-JSON -> leerer body: darf NICHT als reine Signatur
+        # durchgehen (sonst versendet man ein leeres Mail), sondern klar failen.
+        import pytest
+        for payload in ({"subject": "S", "body": ""}, {"subject": "S", "body": "   "}, {"subject": "S"}):
+            with pytest.raises(ValueError):
+                self._run(payload, _lead())
+
+    def test_generous_max_tokens_prevents_truncation(self):
+        # Der Cap muss gross genug fuer einen ~150-Woerter-Text sein.
+        _, client, _ = self._run({"subject": "S", "body": "B"}, _lead())
+        assert client.messages.captured["max_tokens"] >= 1000
