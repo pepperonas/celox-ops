@@ -17,6 +17,8 @@ import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORIT
 import { sourceBadge, sourceKey } from './leadSources'
 import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
 import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from './PipelineTimeFilter'
+import Select from '../../components/Select'
+import { LEAD_SORT_OPTIONS, sortColumn, cityLabel, type LeadSort } from './leadSort'
 import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
 
 // Generische Auto-Tags, die keine Branche sind → auf der Karte nicht als Branche zeigen.
@@ -27,6 +29,7 @@ const brancheTag = (tags: string[] | null): string | null =>
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
 const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
 const TARGET_FILTER_KEY = 'rm-pipeline-targetfilter'
+const SORT_KEY = 'rm-pipeline-sort'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 function loadTimeFilter(): TimeFilterValue {
   try {
@@ -55,6 +58,7 @@ export default function RainmakerPipeline() {
   const [sourceFilter, setSourceFilter] = useState<string | null>(() => localStorage.getItem(SOURCE_FILTER_KEY) || null)
   const [emailFilter, setEmailFilter] = useState<string | null>(() => localStorage.getItem(EMAIL_FILTER_KEY) || null)
   const [targetFilter, setTargetFilter] = useState<string | null>(() => localStorage.getItem(TARGET_FILTER_KEY) || null)
+  const [sortMode, setSortMode] = useState<LeadSort>(() => (localStorage.getItem(SORT_KEY) as LeadSort) || 'default')
   const [timeFilter, setTimeFilter] = useState<TimeFilterValue>(loadTimeFilter)
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function RainmakerPipeline() {
     if (targetFilter) localStorage.setItem(TARGET_FILTER_KEY, targetFilter)
     else localStorage.removeItem(TARGET_FILTER_KEY)
   }, [targetFilter])
+  useEffect(() => { localStorage.setItem(SORT_KEY, sortMode) }, [sortMode])
 
   const patchTimeFilter = useCallback((patch: Partial<TimeFilterValue>) => {
     setTimeFilter((prev) => {
@@ -333,15 +338,29 @@ export default function RainmakerPipeline() {
         totalCount={leads.length}
       />
 
+      {/* Sortierung innerhalb jeder Spalte (gepinnte bleiben immer oben). */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs text-text-muted">Sortieren:</span>
+        <Select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as LeadSort)}
+          compact
+          aria-label="Sortierung"
+          className="!w-auto min-w-[200px]"
+          options={LEAD_SORT_OPTIONS}
+        />
+      </div>
+
       {/* Umbruchfähiges Grid statt horizontalem Scroll: alle Status bleiben
           im Viewport — 6 Spalten auf breiten Screens, sonst 3/2/1 im Umbruch. */}
       <div className="grid gap-4 pb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {PIPELINE_STATUSES.map((statusKey) => {
           const color = STATUS_COLORS[statusKey]
           // Gepinnte Leads oben (stabile Sortierung erhält die restliche Reihenfolge).
-          const colLeads = filteredLeads
-            .filter((l) => l.status === statusKey)
-            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+          const colLeads = sortColumn(
+            filteredLeads.filter((l) => l.status === statusKey),
+            sortMode,
+          )
           const isOver = dragOver === statusKey
           const expanded = expandedCols.has(statusKey)
           const visibleLeads = expanded ? colLeads : colLeads.slice(0, 100)
@@ -411,6 +430,11 @@ export default function RainmakerPipeline() {
                             · 👥 {lead.employee_count.toLocaleString('de-DE')}
                           </span>
                         )}
+                      </div>
+                    )}
+                    {sortMode === 'region' && cityLabel(lead.address) && (
+                      <div className="text-xs text-text-muted mb-1.5 truncate" title={lead.address ?? undefined}>
+                        📍 {cityLabel(lead.address)}
                       </div>
                     )}
                     {lead.target && (
