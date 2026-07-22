@@ -136,6 +136,20 @@ async def ping() -> dict:
 # --------------------------------------------------------------------------- #
 #  Leads
 # --------------------------------------------------------------------------- #
+
+async def _leads_with_open_todos(db: AsyncSession, lead_ids: list) -> set:
+    """IDs der Leads mit mind. einem offenen To-do (owner-scoped via Tenancy).
+    Ein offenes To-do gilt als geplanter nächster Schritt → kein „rotting"."""
+    if not lead_ids:
+        return set()
+    from app.models.todo import Todo, TodoStatus
+    rows = (await db.execute(
+        select(Todo.lead_id).where(
+            Todo.lead_id.in_(lead_ids), Todo.status == TodoStatus.offen
+        )
+    )).scalars().all()
+    return {lid for lid in rows if lid is not None}
+
 @router.get("/leads")
 async def list_leads(
     lead_status: RainmakerLeadStatus | None = Query(None, alias="status"),
@@ -172,9 +186,10 @@ async def list_leads(
     query = query.offset((page - 1) * page_size).limit(page_size)
 
     leads = (await db.execute(query)).scalars().unique().all()
+    with_todo = await _leads_with_open_todos(db, [ld.id for ld in leads])
 
     return {
-        "items": [lead_response(lead) for lead in leads],
+        "items": [lead_response(lead, lead.id in with_todo) for lead in leads],
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -197,7 +212,8 @@ async def get_lead(
     db: AsyncSession = Depends(get_db),
 ) -> RainmakerLeadResponse:
     lead = await _get_lead_or_404(lead_id, db)
-    return lead_response(lead)
+    with_todo = await _leads_with_open_todos(db, [lead.id])
+    return lead_response(lead, lead.id in with_todo)
 
 
 @router.post("/leads", response_model=RainmakerLeadResponse, status_code=status.HTTP_201_CREATED)

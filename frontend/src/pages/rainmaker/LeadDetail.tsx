@@ -1,3 +1,4 @@
+import { getTodos } from '../../api/todos'
 import { canDelete } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
 import Select from '../../components/Select'
@@ -21,7 +22,7 @@ import {
 import { analyzeWebsite, type AnalyzeResult } from '../../api/leads'
 import { emailStatusInfo } from './emailStatus'
 import { toastWithUndo } from '../../utils/undoToast'
-import type { RainmakerTemplate } from '../../types'
+import type { RainmakerTemplate, Todo } from '../../types'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerActivity } from '../../types'
 import {
@@ -47,6 +48,7 @@ export default function RainmakerLeadDetail() {
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
+  const [nextTodo, setNextTodo] = useState<Todo | null>(null)
   const mayDelete = canDelete(useAuthStore((st) => st.role))
 
   const togglePin = async () => {
@@ -76,9 +78,16 @@ export default function RainmakerLeadDetail() {
   const load = useCallback(async () => {
     if (!id) return
     try {
-      const [l, acts] = await Promise.all([getRainmakerLead(id), getLeadActivities(id)])
+      const [l, acts, todos] = await Promise.all([
+        getRainmakerLead(id), getLeadActivities(id),
+        getTodos({ lead_id: id, status: 'offen', page_size: 50 }).then((r) => r.items).catch(() => []),
+      ])
       setLead(l)
       setActivities(acts)
+      // Frühestes offenes To-do (nach Fälligkeit, ohne Datum ans Ende) — zählt
+      // als geplanter nächster Schritt, wenn keine Rainmaker-Aktion existiert.
+      const sorted = [...todos].sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'))
+      setNextTodo(sorted[0] ?? null)
     } catch {
       toast.error('Lead nicht gefunden.')
     }
@@ -330,7 +339,7 @@ export default function RainmakerLeadDetail() {
       )}
 
       {/* Next action */}
-      <div className={`rounded-card p-5 mb-6 border ${nextAction ? 'bg-surface-container border-border' : isClosed ? 'bg-surface-container border-border' : 'bg-danger/10 border-danger/40'}`}>
+      <div className={`rounded-card p-5 mb-6 border ${(nextAction || nextTodo) ? 'bg-surface-container border-border' : isClosed ? 'bg-surface-container border-border' : 'bg-danger/10 border-danger/40'}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs text-text-muted mb-1">Nächster Schritt</p>
@@ -338,6 +347,13 @@ export default function RainmakerLeadDetail() {
               <p className="text-text font-medium">
                 {ACTIVITY_TYPE_LABELS[nextAction.type]}
                 {nextAction.due_date && <span className="text-text-muted font-normal"> · fällig {formatDate(nextAction.due_date)}</span>}
+              </p>
+            ) : nextTodo ? (
+              /* Kein Rainmaker-Schritt, aber ein offenes To-do zählt als geplant. */
+              <p className="text-text font-medium">
+                ✓ {nextTodo.title}
+                {nextTodo.due_date && <span className="text-text-muted font-normal"> · fällig {formatDate(nextTodo.due_date)}</span>}
+                <span className="text-text-muted font-normal text-xs"> (To-do)</span>
               </p>
             ) : isClosed ? (
               <p className="text-text-muted text-sm">Lead abgeschlossen — kein nächster Schritt nötig.</p>

@@ -2,6 +2,7 @@
 Run via: cd backend && pytest -v tests/test_rainmaker.py
 """
 import os
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 # Set required env BEFORE importing app
@@ -16,11 +17,12 @@ from app.models.rainmaker_activity import (  # noqa: E402
     RainmakerActivityStatus,
     RainmakerActivityType,
 )
-from app.models.rainmaker_lead import RainmakerLead, RainmakerLeadStatus  # noqa: E402
+from app.models.rainmaker_lead import RainmakerLead, RainmakerLeadStatus, RainmakerPriority  # noqa: E402
 from app.models.rainmaker_streak import RainmakerStreak  # noqa: E402
 from app.services.rainmaker_service import (  # noqa: E402
     display_streak,
     is_rotting,
+    lead_response,
     is_working_day,
     missed_working_days,
     next_planned_activity,
@@ -42,7 +44,13 @@ def _activity(status, due_date, created_at, type_=RainmakerActivityType.call):
 
 
 def _lead(status, activities):
-    return RainmakerLead(company="X", status=status, activities=activities)
+    # priority/Timestamps setzen, damit auch lead_response(model_validate) läuft
+    # (is_rotting selbst braucht sie nicht).
+    now = datetime.now(timezone.utc)
+    return RainmakerLead(
+        id=uuid.uuid4(), company="X", status=status, activities=activities,
+        priority=RainmakerPriority.medium, pinned=False, created_at=now, updated_at=now,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -67,6 +75,26 @@ def test_closed_lead_is_never_rotting():
 def test_lead_with_only_done_activity_is_rotting():
     done = _activity(RainmakerActivityStatus.done, TODAY, datetime.now(timezone.utc))
     assert is_rotting(_lead(RainmakerLeadStatus.contacted, [done])) is True
+
+
+def test_open_todo_counts_as_next_step():
+    # Regression: ein Lead ohne Rainmaker-Aktion, aber mit offenem To-do galt
+    # faelschlich als „droht zu versanden".
+    lead = _lead(RainmakerLeadStatus.new, [])
+    assert is_rotting(lead) is True                       # reine Aktivitaets-Sicht
+    assert lead_response(lead, has_open_todo=True).needs_next_action is False
+    assert lead_response(lead, has_open_todo=False).needs_next_action is True
+
+
+def test_open_todo_does_not_override_closed_lead():
+    lead = _lead(RainmakerLeadStatus.won, [])
+    assert lead_response(lead, has_open_todo=True).needs_next_action is False
+
+
+def test_planned_activity_beats_missing_todo():
+    a = _activity(RainmakerActivityStatus.planned, TODAY, datetime.now(timezone.utc))
+    lead = _lead(RainmakerLeadStatus.contacted, [a])
+    assert lead_response(lead, has_open_todo=False).needs_next_action is False
 
 
 # --------------------------------------------------------------------------- #

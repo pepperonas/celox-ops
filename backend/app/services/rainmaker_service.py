@@ -54,15 +54,20 @@ def is_rotting(lead: RainmakerLead) -> bool:
     return not planned_activities(lead)
 
 
-def lead_response(lead: RainmakerLead) -> RainmakerLeadResponse:
-    """Build a lead response enriched with the computed next-action fields."""
+def lead_response(lead: RainmakerLead, has_open_todo: bool = False) -> RainmakerLeadResponse:
+    """Build a lead response enriched with the computed next-action fields.
+
+    `has_open_todo`: ein offenes To-do zählt als geplanter nächster Schritt —
+    dann gilt der Lead nicht als „rotting" (aus Nutzersicht ist etwas geplant,
+    auch wenn es keine Rainmaker-Aktivität ist). Der Aufrufer liefert das mit,
+    weil To-dos keine Relationship am Lead sind."""
     resp = RainmakerLeadResponse.model_validate(lead)
     nxt = next_planned_activity(lead)
     if nxt:
         resp.next_action_type = nxt.type
         resp.next_action_due = nxt.due_date
         resp.next_action_id = nxt.id
-    resp.needs_next_action = is_rotting(lead)
+    resp.needs_next_action = is_rotting(lead) and not has_open_todo
     return resp
 
 
