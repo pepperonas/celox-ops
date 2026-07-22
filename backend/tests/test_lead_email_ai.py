@@ -139,3 +139,24 @@ class TestDraftLeadEmail:
         # Der Cap muss gross genug fuer einen ~150-Woerter-Text sein.
         _, client, _ = self._run({"subject": "S", "body": "B"}, _lead())
         assert client.messages.captured["max_tokens"] >= 1000
+
+
+class TestSystemPromptPlaybooks:
+    """Regressionsguard: alle 5 Themen-Playbooks + die Belegregel bleiben im
+    System-Prompt (schuetzt gegen versehentliches Kuerzen)."""
+
+    def test_all_five_playbooks_present(self):
+        from app.services.lead_email_ai import _SYSTEM
+        for marker in ("PROJEKTRON BCS", "SOFTWARE & WEB", "IT-SICHERHEIT",
+                       "DATENSCHUTZ", "BESTAND & EMPFEHLUNG"):
+            assert marker in _SYSTEM, marker
+
+    def test_reference_rule_is_mandatory(self):
+        from app.services.lead_email_ai import _SYSTEM
+        assert "vergleichbaren Kunden" in _SYSTEM
+        # Ehrlichkeits-Leitplanke bleibt: kein erfundener Name/Zitat/Fallstudie.
+        assert "KEIN Zitat" in _SYSTEM and "KEINE Fallstudie" in _SYSTEM
+
+    def test_only_bcsbook_carries_euro_anchor(self):
+        from app.services.lead_email_ai import _SYSTEM
+        assert "Nur bei Playbook [1]" in _SYSTEM
