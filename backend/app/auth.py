@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, workspace_owner_id
 from app.tenancy import current_owner_id
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -90,7 +90,9 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     # Activate multi-tenant scoping for the rest of this request.
-    current_owner_id.set(user.id)
+    # Mitarbeitende arbeiten im Bereich ihres Chefs (works_for_id) — die einzige
+    # Stelle, an der das aufgelöst wird, ist workspace_owner_id().
+    current_owner_id.set(workspace_owner_id(user))
     return user
 
 

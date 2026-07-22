@@ -1,3 +1,5 @@
+import { canDelete } from '../utils/permissions'
+import { useAuthStore } from '../store/authStore'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { createTodo, deleteTodo, getTodos, toggleTodo, updateTodo } from '../api/todos'
@@ -38,6 +40,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
   const [priority, setPriority] = useState<TodoPriority>('normal')
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState<Todo | null>(null)
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
   const scoped = Boolean(customerId || leadId)
 
   const load = useCallback(async () => {
@@ -289,7 +292,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button
+                        {mayDelete && <button
                           onClick={() => handleDelete(todo)}
                           aria-label="To-do löschen"
                           title="Löschen"
@@ -298,7 +301,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </button>
+                        </button>}
                       </div>
                     </div>
                   )

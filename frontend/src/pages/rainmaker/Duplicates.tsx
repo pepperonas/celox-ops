@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore'
+import { canDelete } from '../../utils/permissions'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
@@ -131,6 +133,7 @@ export default function Duplicates() {
   const [confirm, setConfirm] = useState<BatchSummary | null>(null)
   const [busy, setBusy] = useState(false)
   const [checking, setChecking] = useState(false)
+  const mayMerge = canDelete(useAuthStore((st) => st.role))
   const [lastChecked, setLastChecked] = useState<Date | null>(null)
 
   const load = async (manual = false) => {
@@ -255,7 +258,14 @@ export default function Duplicates() {
         </div>
       )}
 
-      {visible.length > 0 && (
+      {!mayMerge && (
+        <p className="text-sm text-text-muted bg-surface border border-border rounded-card p-4 mb-4">
+          Zusammenführen löscht Leads und ist für die Rolle „Mitarbeiter" gesperrt.
+          Du kannst die Verdachtsgruppen ansehen, aber nicht zusammenführen.
+        </p>
+      )}
+
+      {visible.length > 0 && mayMerge && (
         <>
           {/* Aktionsleiste */}
           <div className="sticky top-0 z-10 -mx-1 px-1 py-2 mb-3 bg-bg/80 backdrop-blur flex flex-wrap items-center gap-2">

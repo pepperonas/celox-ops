@@ -38,6 +38,7 @@ import app.models.document_template  # noqa: F401 — register for create_all (g
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
 from app.tenancy import install_tenancy_events, set_owned_models
 from app.middleware.audit import AuditMiddleware
+from app.middleware.permissions import PermissionsMiddleware
 from app.services.cron_service import check_overdue_invoices
 
 # Multi-tenant isolation: every owned entity is auto-scoped to the current user.
@@ -87,8 +88,17 @@ async def run_cron() -> None:
                     from app.services.rainmaker_service import check_rainmaker_reminder
                     from app.tenancy import current_owner_id as _owner
 
+                    # NUR Arbeitsbereichs-Inhaber: Mitarbeitende (works_for_id
+                    # gesetzt) teilen den Bereich ihres Chefs — liefe der Cron
+                    # auch für sie, würden Reminder und Vertragsrechnungen pro
+                    # Bereich doppelt ausgelöst.
                     active_users = (
-                        await db.execute(_sel(_User).where(_User.is_active.is_(True)))
+                        await db.execute(
+                            _sel(_User).where(
+                                _User.is_active.is_(True),
+                                _User.works_for_id.is_(None),
+                            )
+                        )
                     ).scalars().all()
                     for u in active_users:
                         # Token-Reset im finally — ein geleakter Owner würde den
@@ -198,7 +208,11 @@ app = FastAPI(
 _origins_raw = (settings.CORS_ORIGINS or "").strip()
 _allowed_origins = [o.strip() for o in _origins_raw.split(",") if o.strip()] if _origins_raw else []
 
+# Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Die Rechteprüfung muss
+# VOR dem Audit-Log greifen, damit blockierte Aktionen gar nicht erst als
+# Mutation protokolliert werden.
 app.add_middleware(AuditMiddleware)
+app.add_middleware(PermissionsMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

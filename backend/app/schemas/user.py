@@ -11,6 +11,9 @@ class UserResponse(BaseModel):
     google_email: str | None = None
     role: str
     is_active: bool
+    # Geteilter Arbeitsbereich: auf wessen Daten arbeitet dieser Nutzer?
+    works_for_id: uuid.UUID | None = None
+    works_for_username: str | None = None
     created_at: datetime
 
 
@@ -20,6 +23,8 @@ class UserCreate(BaseModel):
     email: str | None = None
     google_email: str | None = None
     role: str = "user"
+    # Pflicht für role="mitarbeiter" (Router erzwingt das)
+    works_for_id: uuid.UUID | None = None
 
 
 class UserUpdate(BaseModel):
@@ -28,6 +33,7 @@ class UserUpdate(BaseModel):
     google_email: str | None = None
     role: str | None = None
     is_active: bool | None = None
+    works_for_id: uuid.UUID | None = None
 
 
 class PasswordSet(BaseModel):

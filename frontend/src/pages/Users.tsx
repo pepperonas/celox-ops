@@ -12,7 +12,7 @@ export default function Users() {
   const [users, setUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', email: '', role: 'user' })
+  const [form, setForm] = useState({ username: '', password: '', email: '', role: 'user', works_for_id: '' })
   const [saving, setSaving] = useState(false)
   const [toDelete, setToDelete] = useState<AppUser | null>(null)
 
@@ -31,10 +31,10 @@ export default function Users() {
     if (form.password.length < 8) { toast.error('Passwort min. 8 Zeichen.'); return }
     setSaving(true)
     try {
-      await createUser({ username: form.username.trim(), password: form.password, email: form.email.trim() || null, role: form.role })
+      await createUser({ username: form.username.trim(), password: form.password, email: form.email.trim() || null, role: form.role, works_for_id: form.role === 'mitarbeiter' ? form.works_for_id || null : null })
       toast.success('Benutzer angelegt.')
       setShowForm(false)
-      setForm({ username: '', password: '', email: '', role: 'user' })
+      setForm({ username: '', password: '', email: '', role: 'user', works_for_id: '' })
       await load()
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Anlegen fehlgeschlagen.')
@@ -118,9 +118,28 @@ export default function Users() {
           <div>
             <label className="block text-xs text-text-muted mb-1">Rolle</label>
             <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full"
-              options={[{ value: 'user', label: 'Benutzer' }, { value: 'admin', label: 'Admin' }]}
+              options={[
+                { value: 'user', label: 'Benutzer (eigener Bereich)' },
+                { value: 'mitarbeiter', label: 'Mitarbeiter (fremder Bereich, kein Löschen)' },
+                { value: 'admin', label: 'Admin' },
+              ]}
             />
           </div>
+          {form.role === 'mitarbeiter' && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Arbeitet im Bereich von</label>
+              <Select
+                value={form.works_for_id}
+                onChange={(e) => setForm({ ...form, works_for_id: e.target.value })}
+                className="w-full"
+                placeholder="— bitte wählen —"
+                options={users.filter((u) => !u.works_for_id).map((u) => ({ value: u.id, label: u.username }))}
+              />
+              <p className="text-[11px] text-text-muted mt-1">
+                Sieht und bearbeitet die Daten dieses Kontos — kann aber nichts löschen oder zusammenführen.
+              </p>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Speichere…' : 'Anlegen'}</button>
           </div>
@@ -137,6 +156,11 @@ export default function Users() {
                 {!u.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger/15 text-danger">deaktiviert</span>}
               </div>
               {u.email && <span className="text-xs text-text-muted">{u.email}</span>}
+              {u.works_for_username && (
+                <span className="block text-xs text-text-muted">
+                  arbeitet im Bereich von <span className="text-text">{u.works_for_username}</span>
+                </span>
+              )}
             </div>
             <Select
               value={u.role}
@@ -144,7 +168,11 @@ export default function Users() {
               disabled={u.username === me}
               className="!w-auto !py-1.5 !text-sm"
               title={u.username === me ? 'Eigene Rolle nicht änderbar' : 'Rolle'}
-              options={[{ value: 'user', label: 'Benutzer' }, { value: 'admin', label: 'Admin' }]}
+              options={[
+                { value: 'user', label: 'Benutzer' },
+                { value: 'mitarbeiter', label: 'Mitarbeiter' },
+                { value: 'admin', label: 'Admin' },
+              ]}
             />
             <button onClick={() => resetPw(u)} className="text-xs px-2.5 py-1 rounded-lg bg-surface-2 text-text hover:bg-border">Passwort</button>
             {u.username !== me && (

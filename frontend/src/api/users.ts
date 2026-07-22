@@ -1,6 +1,9 @@
 import { api } from './client'
 
 export interface AppUser {
+  /** Geteilter Arbeitsbereich (Rolle „mitarbeiter"): auf wessen Daten wird gearbeitet. */
+  works_for_id?: string | null
+  works_for_username?: string | null
   id: string
   username: string
   email: string | null
@@ -19,6 +22,7 @@ export async function createUser(data: {
   password: string
   email?: string | null
   role: string
+  works_for_id?: string | null
 }): Promise<AppUser> {
   const res = await api.post('/users', data)
   return res.data
@@ -26,7 +30,7 @@ export async function createUser(data: {
 
 export async function updateUser(
   id: string,
-  data: { email?: string | null; role?: string; is_active?: boolean },
+  data: { email?: string | null; role?: string; is_active?: boolean; works_for_id?: string | null },
 ): Promise<AppUser> {
   const res = await api.patch(`/users/${id}`, data)
   return res.data

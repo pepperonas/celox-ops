@@ -12,7 +12,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.contract import Contract, ContractStatus
 from app.models.invoice import Invoice, InvoiceStatus
-from app.models.user import User
+from app.models.user import User, workspace_owner_id
 from app.tenancy import current_owner_id
 
 router = APIRouter(prefix="/api/ical", tags=["ical"])
@@ -45,7 +45,8 @@ async def ical_feed(
     if user is None or not user.is_active:
         return Response(status_code=403, content="Forbidden")
     # Scope all following ORM queries to this user (multi-tenant isolation).
-    current_owner_id.set(user.id)
+    # Gleicher Arbeitsbereich wie im UI (Mitarbeitende sehen den des Chefs).
+    current_owner_id.set(workspace_owner_id(user))
 
     lines = [
         "BEGIN:VCALENDAR",

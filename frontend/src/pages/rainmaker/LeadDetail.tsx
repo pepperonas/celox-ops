@@ -1,3 +1,5 @@
+import { canDelete } from '../../utils/permissions'
+import { useAuthStore } from '../../store/authStore'
 import Select from '../../components/Select'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -45,6 +47,7 @@ export default function RainmakerLeadDetail() {
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
 
   const togglePin = async () => {
     if (!lead) return
@@ -229,7 +232,7 @@ export default function RainmakerLeadDetail() {
             <button onClick={() => navigate(`/kunden/neu?fromLead=${lead.id}`)} className="btn-primary">Als Kunde anlegen</button>
           )}
           <button onClick={() => navigate(`/pipeline/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
-          <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>
+          {mayDelete && <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>}
         </div>
       </div>
 

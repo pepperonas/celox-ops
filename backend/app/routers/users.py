@@ -13,11 +13,38 @@ from app.schemas.user import PasswordChange, PasswordSet, UserCreate, UserRespon
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
-def _to_response(u: User) -> UserResponse:
+def _to_response(u: User, works_for_username: str | None = None) -> UserResponse:
     return UserResponse(
         id=u.id, username=u.username, email=u.email, google_email=u.google_email,
         role=u.role.value, is_active=u.is_active, created_at=u.created_at,
+        works_for_id=u.works_for_id, works_for_username=works_for_username,
     )
+
+
+async def _validate_works_for(
+    role: UserRole, works_for_id, db: AsyncSession, self_id=None
+):
+    """Mitarbeitende brauchen einen Arbeitsbereich; andere Rollen dürfen keinen
+    haben. Der Chef muss existieren, aktiv und selbst kein Mitarbeiter sein
+    (keine Ketten) und darf nicht der Nutzer selbst sein."""
+    if role != UserRole.mitarbeiter:
+        return None
+    if not works_for_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Für die Rolle „Mitarbeiter“ muss ein Arbeitsbereich (works_for_id) gewählt werden.",
+        )
+    if self_id and works_for_id == self_id:
+        raise HTTPException(status_code=422, detail="Ein Nutzer kann nicht für sich selbst arbeiten.")
+    boss = (await db.execute(select(User).where(User.id == works_for_id))).scalar_one_or_none()
+    if not boss or not boss.is_active:
+        raise HTTPException(status_code=422, detail="Arbeitsbereich-Inhaber nicht gefunden oder inaktiv.")
+    if boss.works_for_id is not None:
+        raise HTTPException(
+            status_code=422,
+            detail="Der gewählte Nutzer ist selbst Mitarbeiter — verschachtelte Arbeitsbereiche sind nicht möglich.",
+        )
+    return boss
 
 
 async def _active_admin_count(db: AsyncSession, exclude_id: uuid.UUID | None = None) -> int:
@@ -60,7 +87,8 @@ async def change_own_password(
 @router.get("", response_model=list[UserResponse], dependencies=[Depends(require_admin)])
 async def list_users(db: AsyncSession = Depends(get_db)) -> list[UserResponse]:
     rows = (await db.execute(select(User).order_by(User.created_at))).scalars().all()
-    return [_to_response(u) for u in rows]
+    names = {u.id: u.username for u in rows}
+    return [_to_response(u, names.get(u.works_for_id) if u.works_for_id else None) for u in rows]
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED,
@@ -73,18 +101,20 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)) -> U
     exists = (await db.execute(select(User).where(User.username == data.username))).scalar_one_or_none()
     if exists:
         raise HTTPException(status_code=409, detail="Benutzername bereits vergeben")
+    boss = await _validate_works_for(role, data.works_for_id, db)
     user = User(
         username=data.username,
         email=data.email,
         password_hash=hash_password(data.password),
         role=role,
         is_active=True,
+        works_for_id=boss.id if boss else None,
         ical_token=secrets.token_urlsafe(24),
     )
     db.add(user)
     await db.flush()
     await db.refresh(user)
-    return _to_response(user)
+    return _to_response(user, boss.username if boss else None)
 
 
 @router.patch("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_admin)])
@@ -111,6 +141,10 @@ async def update_user(
         if user.role == UserRole.admin and new_role != UserRole.admin:
             if await _active_admin_count(db, exclude_id=user.id) == 0:
                 raise HTTPException(status_code=400, detail="Letzter Admin kann nicht herabgestuft werden")
+        # Arbeitsbereich passend zur (neuen) Rolle setzen bzw. entfernen.
+        target_works_for = data.works_for_id if data.works_for_id is not None else user.works_for_id
+        boss = await _validate_works_for(new_role, target_works_for, db, self_id=user.id)
+        user.works_for_id = boss.id if boss else None
         user.role = new_role
     if data.is_active is not None:
         if not data.is_active:
