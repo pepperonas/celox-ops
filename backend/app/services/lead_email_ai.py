@@ -98,7 +98,7 @@ async def draft_lead_email(ai, model: str, lead, usage: Usage) -> dict:
     )
     result = await _structured(
         ai, model, _SYSTEM, user,
-        tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=900,
+        tool_name="draft_email", schema=_SCHEMA, usage=usage, max_tokens=600,
     )
     # Defensive: Pflichtfelder als Strings garantieren; feste Signatur anhängen.
     body = str(result.get("body", "")).strip()

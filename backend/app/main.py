@@ -33,6 +33,7 @@ from app.models.app_settings import AppSettings
 from app.models.ai_lead_run import AiLeadRun
 from app.models.outreach_template import OutreachTemplate
 from app.models.todo import Todo
+from app.models.rainmaker_lead_draft import RainmakerLeadDraft
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -46,7 +47,7 @@ set_owned_models([
     Customer, Order, Contract, Invoice, Lead, TimeEntry, Expense, Activity, Attachment,
     EmailTemplate, PagespeedResult, ComplianceRecord, RainmakerLead, RainmakerActivity,
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
-    AiLeadRun, OutreachTemplate, Todo,
+    AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft,
 ])
 install_tenancy_events()
 

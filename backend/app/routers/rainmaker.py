@@ -1540,30 +1540,10 @@ async def delete_goal(
 # --------------------------------------------------------------------------- #
 #  Lead-Akquise-Mail (KI-Entwurf + Versand)
 # --------------------------------------------------------------------------- #
-async def _ai_guard_and_model(db: AsyncSession) -> tuple[str, float, float]:
-    """Gemeinsamer KI-Vorlauf: 503 ohne Key, Modell auflösen, Budget hart durch-
-    setzen (402). Rückgabe (model, budget_eur, spent_eur)."""
-    from app.models.app_settings import AppSettings
-
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503,
-                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
-    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
-    model = (app_row.ai_model if app_row else DEFAULT_MODEL)
-    if model not in ALLOWED_MODELS:
-        model = DEFAULT_MODEL
-    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
-    spent = await _ai_month_spent_eur(db)
-    if budget_eur > 0 and spent >= budget_eur:
-        raise HTTPException(status_code=402, detail=(
-            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
-            "Budget in den Einstellungen erhöhen."))
-    return model, budget_eur, spent
-
-
 @router.post("/leads/{lead_id}/draft-email", response_model=LeadEmailDraftResponse)
 async def draft_lead_email_endpoint(
     lead_id: uuid.UUID,
+    force: bool = Query(False, description="Cache umgehen und neu generieren"),
     db: AsyncSession = Depends(get_db),
 ) -> LeadEmailDraftResponse:
     """KI-Entwurf einer Akquise-Mail für den Lead (Betreff + Text), abgeleitet aus
@@ -1573,9 +1553,42 @@ async def draft_lead_email_endpoint(
     from app.services.ai_pricing import Usage, get_pricing
     from app.services.exchange_service import get_usd_eur_rate
     from app.services.lead_email_ai import draft_lead_email
+    from app.models.rainmaker_lead_draft import RainmakerLeadDraft, lead_email_hash
 
     lead = await _get_lead_or_404(lead_id, db)
-    model, budget_eur, spent = await _ai_guard_and_model(db)
+
+    # Modell (fuer den Hash) + Guard vorbereiten. Den Budget-Guard erst NACH dem
+    # Cache-Check anwenden — ein Cache-Treffer kostet nichts und darf auch bei
+    # erreichtem Budget geliefert werden.
+    from app.models.app_settings import AppSettings
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    model = (app_row.ai_model if app_row else DEFAULT_MODEL)
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_MODEL
+    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+    spent = await _ai_month_spent_eur(db)
+
+    wanted_hash = lead_email_hash(lead, model)
+    cache = (await db.execute(
+        select(RainmakerLeadDraft).where(RainmakerLeadDraft.lead_id == lead.id)
+    )).scalar_one_or_none()
+    if not force and cache and cache.content_hash == wanted_hash:
+        # Token-Sparen: unveraenderter Lead -> Entwurf aus dem Cache, kein KI-Call.
+        zero = Usage()
+        return LeadEmailDraftResponse(
+            subject=cache.subject, body=cache.body, product=cache.product, cached=True,
+            run=AiRunCost(model=model, cost_usd=0.0, cost_eur=0.0, **zero.as_dict()),
+            budget=_budget_status(spent, budget_eur),
+        )
+
+    # Kein (gueltiger) Cache -> jetzt erst den Budget-Guard anwenden.
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503,
+                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen."))
 
     usage = Usage()
     try:
@@ -1595,8 +1608,20 @@ async def draft_lead_email_endpoint(
         used_web_search=False, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
         candidates_found=0, status="ok", **usage.as_dict()))
 
+    # Cache upserten (ein Datensatz je Lead).
+    if cache:
+        cache.content_hash = wanted_hash
+        cache.model = model
+        cache.subject = draft["subject"]
+        cache.body = draft["body"]
+        cache.product = draft.get("product")
+    else:
+        db.add(RainmakerLeadDraft(
+            lead_id=lead.id, content_hash=wanted_hash, model=model,
+            subject=draft["subject"], body=draft["body"], product=draft.get("product")))
+
     return LeadEmailDraftResponse(
-        subject=draft["subject"], body=draft["body"], product=draft.get("product"),
+        subject=draft["subject"], body=draft["body"], product=draft.get("product"), cached=False,
         run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur, **usage.as_dict()),
         budget=_budget_status(spent + cost_eur, budget_eur),
     )
@@ -1618,7 +1643,8 @@ async def send_lead_email_endpoint(
     if not to:
         raise HTTPException(status_code=422, detail="Keine Empfänger-E-Mail angegeben.")
 
-    body_html = (data.message or "").replace("\n", "<br>")
+    from app.services.email_html import text_to_html_email
+    body_html = text_to_html_email(data.message or "")
     sender = settings.LEAD_OUTREACH_FROM_EMAIL or settings.SMTP_FROM_EMAIL
     try:
         await send_email(

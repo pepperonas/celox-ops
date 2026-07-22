@@ -266,12 +266,15 @@ export interface LeadEmailDraft {
   subject: string
   body: string
   product: string | null
+  cached: boolean
   run: AiRunCost
   budget: AiBudget
 }
 
-export async function draftLeadEmail(leadId: string): Promise<LeadEmailDraft> {
-  const response = await api.post(`/rainmaker/leads/${leadId}/draft-email`)
+export async function draftLeadEmail(leadId: string, force = false): Promise<LeadEmailDraft> {
+  const response = await api.post(`/rainmaker/leads/${leadId}/draft-email`, null, {
+    params: { force },
+  })
   return response.data
 }
 

@@ -154,6 +154,7 @@ class LeadEmailDraftResponse(BaseModel):
     subject: str
     body: str
     product: str | None = None
+    cached: bool = False              # aus dem Draft-Cache (kein KI-Call, 0 €)
     run: AiRunCost
     budget: AiBudget
 

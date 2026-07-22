@@ -27,14 +27,16 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
   const [sending, setSending] = useState(false)
   const [cost, setCost] = useState<string | null>(null)
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (force = false) => {
     setDrafting(true)
     try {
-      const d = await draftLeadEmail(lead.id)
+      const d = await draftLeadEmail(lead.id, force)
       setSubject(d.subject)
       setBody(d.body)
       setProduct(d.product)
-      setCost(`KI-Kosten: ${d.run.cost_eur.toFixed(3)} € · Budget ${d.budget.spent_eur.toFixed(2)}/${d.budget.budget_eur.toFixed(0)} €`)
+      setCost(d.cached
+        ? `Aus Cache (0 €) · Budget ${d.budget.spent_eur.toFixed(2)}/${d.budget.budget_eur.toFixed(0)} €`
+        : `KI-Kosten: ${d.run.cost_eur.toFixed(3)} € · Budget ${d.budget.spent_eur.toFixed(2)}/${d.budget.budget_eur.toFixed(0)} €`)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       toast.error(err.response?.data?.detail || 'KI-Entwurf fehlgeschlagen.')
@@ -42,8 +44,9 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
     setDrafting(false)
   }, [lead.id])
 
-  // Beim Öffnen genau EINMAL generieren (Kosten!) — Regenerieren nur auf Klick.
-  useEffect(() => { generate() }, [generate])
+  // Beim Öffnen genau EINMAL laden — nutzt den Cache (0 Tokens, wenn unverändert).
+  // Regenerieren nur auf Klick (force=true umgeht den Cache).
+  useEffect(() => { generate(false) }, [generate])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sending) onClose() }
@@ -112,7 +115,7 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-4">
-          <button type="button" onClick={generate} disabled={drafting || sending} className="btn-secondary text-sm">
+          <button type="button" onClick={() => generate(true)} disabled={drafting || sending} className="btn-secondary text-sm">
             {drafting ? '…' : '✨ KI neu vorschlagen'}
           </button>
           {cost && <span className="text-[11px] text-text-muted">{cost}</span>}
