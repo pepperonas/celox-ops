@@ -25,9 +25,11 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
   const [product, setProduct] = useState<string | null>(null)
   const [drafting, setDrafting] = useState(false)
   const [sending, setSending] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [cost, setCost] = useState<string | null>(null)
 
   const generate = useCallback(async (force = false) => {
+    setConfirming(false)  // ein neuer Entwurf macht eine offene Bestätigung stale
     setDrafting(true)
     try {
       const d = await draftLeadEmail(lead.id, force)
@@ -54,9 +56,17 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, sending])
 
-  const send = async () => {
+  // Schritt 1: „Senden" prüft nur und öffnet die Bestätigung — es wird NICHT
+  // sofort gesendet.
+  const requestSend = () => {
     if (!to.trim()) { toast.error('Keine Empfänger-E-Mail.'); return }
     if (!subject.trim() || !body.trim()) { toast.error('Betreff und Text dürfen nicht leer sein.'); return }
+    setConfirming(true)
+  }
+
+  // Schritt 2: erst der bestätigende Klick sendet wirklich.
+  const send = async () => {
+    if (!to.trim() || !subject.trim() || !body.trim()) { setConfirming(false); return }
     setSending(true)
     try {
       await sendLeadEmail(lead.id, { to_email: to.trim(), subject, message: body })
@@ -66,6 +76,7 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } }
       toast.error(err.response?.data?.detail || 'Versand fehlgeschlagen.')
+      setConfirming(false)
     }
     setSending(false)
   }
@@ -91,7 +102,7 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
         <div className="space-y-3">
           <div>
             <label htmlFor="lead-mail-to" className="block text-xs text-text-muted mb-1">An</label>
-            <input id="lead-mail-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} className="w-full" placeholder="empfaenger@firma.de" />
+            <input id="lead-mail-to" type="email" value={to} onChange={(e) => { setTo(e.target.value); setConfirming(false) }} className="w-full" placeholder="empfaenger@firma.de" />
           </div>
           <div>
             <label htmlFor="lead-mail-subject" className="block text-xs text-text-muted mb-1">Betreff</label>
@@ -114,17 +125,31 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 mt-4">
-          <button type="button" onClick={() => generate(true)} disabled={drafting || sending} className="btn-secondary text-sm">
-            {drafting ? '…' : '✨ KI neu vorschlagen'}
-          </button>
-          {cost && <span className="text-[11px] text-text-muted">{cost}</span>}
-          <div className="ml-auto flex gap-2">
-            <button type="button" onClick={onClose} disabled={sending} className="btn-secondary">Abbrechen</button>
-            <button type="button" onClick={send} disabled={sending || drafting} className="btn-primary">
-              {sending ? 'Sende…' : 'Senden'}
-            </button>
-          </div>
+        <div className="mt-4">
+          {confirming ? (
+            <div className="rounded-md border border-accent/40 bg-accent/5 p-3">
+              <p className="text-sm text-text mb-2">
+                Diese E-Mail jetzt an <span className="font-semibold break-all">{to.trim()}</span> senden?
+              </p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setConfirming(false)} disabled={sending} className="btn-secondary text-sm">Zurück</button>
+                <button type="button" onClick={send} disabled={sending} className="btn-primary text-sm">
+                  {sending ? 'Sende…' : 'Ja, jetzt senden'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => generate(true)} disabled={drafting || sending} className="btn-secondary text-sm">
+                {drafting ? '…' : '✨ KI neu vorschlagen'}
+              </button>
+              {cost && <span className="text-[11px] text-text-muted">{cost}</span>}
+              <div className="ml-auto flex gap-2">
+                <button type="button" onClick={onClose} disabled={sending} className="btn-secondary">Abbrechen</button>
+                <button type="button" onClick={requestSend} disabled={sending || drafting} className="btn-primary">Senden</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>,

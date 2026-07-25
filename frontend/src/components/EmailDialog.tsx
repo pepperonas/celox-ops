@@ -29,6 +29,7 @@ export default function EmailDialog({
   const [subject, setSubject] = useState(defaultSubject)
   const [message, setMessage] = useState(defaultMessage)
   const [sending, setSending] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState('')
 
@@ -42,6 +43,7 @@ export default function EmailDialog({
     setSubject(defaultSubject)
     setMessage(defaultMessage)
     setSelectedTemplate('')
+    setConfirming(false)
   }
   if (isOpen !== prevOpen) setPrevOpen(isOpen)
 
@@ -93,6 +95,8 @@ export default function EmailDialog({
         bcc: bccList.length ? bccList : undefined,
       })
       onClose()
+    } catch {
+      setConfirming(false)
     } finally {
       setSending(false)
     }
@@ -133,7 +137,7 @@ export default function EmailDialog({
             <input
               type="email"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => { setTo(e.target.value); setConfirming(false) }}
               className="input w-full"
               placeholder="email@beispiel.de"
             />
@@ -190,18 +194,34 @@ export default function EmailDialog({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="btn-secondary" disabled={sending}>
-            Abbrechen
-          </button>
-          <button
-            onClick={handleSend}
-            className="btn-primary"
-            disabled={sending || !to}
-          >
-            {sending ? 'Wird gesendet...' : 'Senden'}
-          </button>
-        </div>
+        {confirming ? (
+          <div className="mt-6 rounded-lg border border-accent/40 bg-accent/5 p-4">
+            <p className="text-sm text-text mb-3">
+              Diese E-Mail jetzt an <span className="font-semibold break-all">{to}</span> senden?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirming(false)} className="btn-secondary" disabled={sending}>
+                Zurück
+              </button>
+              <button onClick={handleSend} className="btn-primary" disabled={sending || !to}>
+                {sending ? 'Wird gesendet...' : 'Ja, jetzt senden'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-3 mt-6">
+            <button onClick={onClose} className="btn-secondary" disabled={sending}>
+              Abbrechen
+            </button>
+            <button
+              onClick={() => to && setConfirming(true)}
+              className="btn-primary"
+              disabled={sending || !to}
+            >
+              Senden
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
