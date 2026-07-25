@@ -26,6 +26,19 @@ def test_synonyms_point_to_existing_canonical_values():
         assert fold(canon) in all_canonical, f"Synonym '{syn}' → '{canon}' fehlt in TAXONOMIES"
 
 
+def test_source_field_covers_key_channels():
+    """B1: die Quellen-Liste deckt die gängigen Vertriebskanäle breit ab."""
+    src_folded = {fold(v) for v in TAXONOMIES["source"]}
+    for expected in ("Facebook", "Instagram", "TikTok", "X (Twitter)", "YouTube",
+                     "FreelancerMap", "Malt", "Upwork", "North Data", "Bundesanzeiger",
+                     "GitHub", "StepStone", "Indeed", "Yelp", "ProvenExpert",
+                     "Das Örtliche", "Gelbe Seiten", "Google Ads"):
+        assert fold(expected) in src_folded, f"Quelle fehlt: {expected}"
+    assert len(TAXONOMIES["source"]) >= 80
+    assert len(TAXONOMIES["role"]) >= 55
+    assert len(TAXONOMIES["branche"]) >= 90
+
+
 # ---- fold / canonicalize -----------------------------------------------------
 def test_fold_trims_lowercases_and_strips_diacritics():
     assert fold("  Geschäftsführung  ") == "geschaftsfuhrung"
