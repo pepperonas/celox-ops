@@ -7,8 +7,12 @@ wird vom `website_scoring`-Service zum Gesamtscore verrechnet.
 Kategorien (A1, technisch): datenschutz, performance, seo, technik, ux.
 Die KI-Qualitätsbewertung (`ki`) kommt in A2 (opt-in) dazu.
 """
+import asyncio
+import ipaddress
 import re
+import socket
 import time
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -154,52 +158,123 @@ def _unreachable(url: str, reason: str) -> dict:
 
 
 _UA = {"User-Agent": "Mozilla/5.0 (compatible; celox-ops-analyzer/2.0)"}
+_MAX_REDIRECTS = 5
 
 
-async def _get(url: str, verify: bool):
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True, verify=verify) as client:
-        return await client.get(url, headers=_UA)
+class _Blocked(Exception):
+    """Ziel-URL aus Sicherheitsgründen abgelehnt (SSRF-Schutz)."""
+
+
+def _host_is_public(hostname: str) -> bool:
+    """True nur, wenn ALLE aufgelösten Adressen öffentlich sind (SSRF-Schutz).
+    Blockt loopback/privat/link-local (169.254 = Cloud-Metadaten)/reserved/
+    multicast/unspecified — für jede aufgelöste Adresse, nicht nur die erste.
+    Blockierend (DNS) → vom Aufrufer via asyncio.to_thread ausgeführt."""
+    hostname = (hostname or "").rstrip(".").lower()
+    if not hostname:
+        return False
+    try:
+        infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+    except socket.gaierror:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
+def _sanitize_url(raw: str) -> str | None:
+    """Erzwingt http/https, entfernt userinfo (user:pass@), normalisiert den Host.
+    Rückgabe: bereinigte URL oder None (ungültig)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    low = raw.lower()
+    if not low.startswith(("http://", "https://")):
+        if re.match(r"^[a-z][a-z0-9+.\-]*://", low):
+            return None  # fremdes Schema (ftp://, file://, …) → ablehnen
+        raw = "https://" + raw  # nacktes Domain → https voranstellen
+    p = urlsplit(raw)
+    if p.scheme not in ("http", "https") or not p.hostname:
+        return None
+    try:
+        port = p.port
+    except ValueError:
+        return None
+    netloc = p.hostname.rstrip(".").lower()
+    if port:
+        netloc += f":{port}"
+    return urlunsplit((p.scheme, netloc, p.path or "/", p.query, ""))
+
+
+async def _safe_get(url: str, verify: bool):
+    """GET OHNE Auto-Redirects; jeder (Redirect-)Hop wird gegen interne/private
+    Ziele geprüft (SSRF). Wirft `_Blocked` bei nicht-öffentlichem Ziel."""
+    async with httpx.AsyncClient(timeout=15, follow_redirects=False, verify=verify) as client:
+        current = url
+        for _ in range(_MAX_REDIRECTS + 1):
+            p = urlsplit(current)
+            if p.scheme not in ("http", "https") or not p.hostname:
+                raise _Blocked("ungültige URL")
+            if not await asyncio.to_thread(_host_is_public, p.hostname):
+                raise _Blocked("internes/privates Ziel")
+            resp = await client.get(current, headers=_UA)
+            loc = resp.headers.get("location")
+            if resp.is_redirect and loc:
+                current = str(resp.url.join(loc))
+                continue
+            return resp
+        raise _Blocked("zu viele Redirects")
+
+
+def _cert_failed(url: str) -> dict:
+    """Ungültiges TLS-Zertifikat → kritischer Befund OHNE den (unverifizierten)
+    Seiteninhalt zu laden (MITM-Schutz)."""
+    findings = [_f("technik", "TLS-Zertifikat ungültig/abgelaufen oder nicht vertrauenswürdig", "critical")]
+    result = summarize({"datenschutz": None, "performance": None, "seo": None,
+                        "technik": 0, "ux": None, "ki": None}, findings)
+    result.update({"url": url, "analysis_version": ANALYSIS_VERSION, "technologies": [],
+                   "meta": {"reachable": False, "reason": "TLS-Zertifikat ungültig"}})
+    return result
 
 
 async def fetch_and_analyze(url: str) -> dict:
     """Holt die Seite und liefert das vollständige Analyse-Summary
     (Gesamtscore/Ampel/Kategorien/Empfehlungen + Technologien + meta).
 
-    TLS wird ZUERST verifiziert; ein ungültiges/abgelaufenes Zertifikat wird zu
-    einem kritischen Technik-Befund (echtes Kaltakquise-Argument) und die Seite
-    danach ohne Verifikation nur zur Inhaltsanalyse geladen (keine Geheimnisse
-    übertragen — es wird ausschließlich öffentliches HTML gelesen)."""
-    url = url.strip()
-    if not url.startswith("http"):
-        url = f"https://{url}"
-    cert_finding: dict | None = None
+    SSRF-Schutz: Schema http/https erzwungen, userinfo entfernt, jeder Redirect-
+    Hop gegen interne/private/Metadaten-IPs geprüft (Auto-Redirects aus).
+    TLS wird strikt verifiziert; ein ungültiges Zertifikat wird zu einem kritischen
+    Technik-Befund — der Inhalt wird NICHT ungeprüft geladen (kein MITM-Vektor)."""
+    clean = _sanitize_url(url)
+    if clean is None:
+        return _unreachable((url or "").strip(), "Ungültige URL")
     try:
         start = time.time()
-        resp = await _get(url, verify=True)
+        resp = await _safe_get(clean, verify=True)
         load_time_ms = int((time.time() - start) * 1000)
+    except _Blocked as e:
+        return _unreachable(clean, f"Analyse abgelehnt: {e}")
     except httpx.ConnectError as e:
         if "certificate" in str(e).lower() or "ssl" in str(e).lower():
-            cert_finding = _f("technik", "TLS-Zertifikat ungültig/abgelaufen oder nicht vertrauenswürdig", "critical")
-            try:
-                start = time.time()
-                resp = await _get(url, verify=False)
-                load_time_ms = int((time.time() - start) * 1000)
-            except httpx.HTTPError:
-                return _unreachable(url, "Website nicht erreichbar — Verbindung fehlgeschlagen")
-        else:
-            return _unreachable(url, "Website nicht erreichbar — Verbindung fehlgeschlagen")
+            return _cert_failed(clean)
+        return _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen")
     except httpx.TimeoutException:
-        return _unreachable(url, "Website-Timeout nach 15 Sekunden")
+        return _unreachable(clean, "Website-Timeout nach 15 Sekunden")
     except httpx.HTTPError:
-        return _unreachable(url, "Website nicht erreichbar — Verbindung fehlgeschlagen")
+        return _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen")
 
     html_lower = resp.text.lower()
     headers_lower = {k.lower(): v.lower() for k, v in resp.headers.items()}
     analyzed = analyze_html(resp.url.scheme, html_lower, headers_lower,
                             load_time_ms, len(resp.content))
-    if cert_finding is not None:
-        analyzed["subscores"]["technik"] = max(0, analyzed["subscores"]["technik"] - 40)
-        analyzed["findings"].insert(0, cert_finding)
     result = summarize(analyzed["subscores"], analyzed["findings"])
     result.update({
         "url": str(resp.url),

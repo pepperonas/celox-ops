@@ -1,5 +1,5 @@
-"""DB-freie Tests für die reine technische Website-Analyse (analyze_html)."""
-from app.services.website_analysis import analyze_html
+"""DB-freie Tests für die reine technische Website-Analyse (analyze_html) + SSRF-Guard."""
+from app.services.website_analysis import _host_is_public, _sanitize_url, analyze_html
 
 _GOOD = """<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -72,3 +72,34 @@ def test_meta_reports_flags():
     r = analyze_html("https", _GOOD.lower(), _headers(), 600, 50_000)
     assert r["meta"]["has_impressum"] is True
     assert r["meta"]["has_privacy"] is True
+
+
+# ---- SSRF-Guard (rein, IP-Literale → kein Netzwerk) ------------------------
+def test_host_is_public_blocks_internal_ranges():
+    for internal in ("127.0.0.1", "10.0.0.1", "192.168.1.1", "172.16.0.1",
+                     "169.254.169.254", "::1", "0.0.0.0"):
+        assert _host_is_public(internal) is False, internal
+
+
+def test_host_is_public_allows_public_ip():
+    assert _host_is_public("8.8.8.8") is True
+    assert _host_is_public("1.1.1.1") is True
+
+
+def test_host_is_public_empty_is_false():
+    assert _host_is_public("") is False
+
+
+def test_sanitize_url_enforces_scheme_and_defaults_https():
+    assert _sanitize_url("example.com") == "https://example.com/"
+    assert _sanitize_url("http://example.com/path?q=1") == "http://example.com/path?q=1"
+
+
+def test_sanitize_url_strips_userinfo_and_lowercases_host():
+    assert _sanitize_url("https://user:pass@Example.COM/x") == "https://example.com/x"
+
+
+def test_sanitize_url_rejects_non_http_schemes():
+    assert _sanitize_url("ftp://example.com") is None
+    assert _sanitize_url("file:///etc/passwd") is None
+    assert _sanitize_url("") is None
