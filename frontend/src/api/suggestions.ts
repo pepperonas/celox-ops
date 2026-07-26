@@ -19,3 +19,12 @@ export function getSuggestions(field: string): Promise<SuggestionSet> {
   }
   return p
 }
+
+// Nach Verwaltungsänderungen (umbenennen/löschen/anlegen) den Cache verwerfen,
+// damit Autocomplete sofort die neuen Werte lädt. `tag` und `branche` teilen sich
+// die Bestandswerte → beide leeren, wenn eins betroffen ist.
+export function invalidateSuggestions(field?: string): void {
+  if (!field) { cache.clear(); return }
+  cache.delete(field)
+  if (field === 'tag' || field === 'branche') { cache.delete('tag'); cache.delete('branche') }
+}

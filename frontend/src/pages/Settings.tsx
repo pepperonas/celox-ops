@@ -17,6 +17,7 @@ import { getAiUsage, getRainmakerSettings, updateRainmakerSettings } from '../ap
 import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2fa } from '../api/users'
 import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse, RainmakerSettings } from '../types'
 import Select from '../components/Select'
+import ReferenceDataManager from './settings/ReferenceDataManager'
 
 interface TrackerConfig {
   base_url: string
@@ -697,6 +698,9 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
           {exporting ? 'Exportiere...' : 'Datenbank herunterladen'}
         </button>
       </div>
+
+      {/* Referenzwerte / Tags verwalten */}
+      <ReferenceDataManager />
 
       {/* Email Templates */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">

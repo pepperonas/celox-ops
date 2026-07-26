@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 DESTRUCTIVE_POST_PATHS = (
     "/api/rainmaker/duplicates/merge",
     "/api/rainmaker/duplicates/merge-batch",
+    "/api/reference-values/rename",  # benennt Werte in allen Datensätzen um
 )
 
 DENY_MESSAGE = (
