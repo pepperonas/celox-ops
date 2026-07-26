@@ -526,6 +526,12 @@ input:-webkit-autofill:focus {
     100% { left: 100%; }
   }
 
+  /* Pipeline-Karte beim Mounten (auch beim Nachladen) sanft einblenden.
+     BEWUSST ohne fill-mode: die Sichtbarkeit haengt nie an der Animation
+     (prefers-reduced-motion deaktiviert sie global → Karte bleibt sichtbar). */
+  .pipeline-card-in {
+    animation: md-fade-up var(--md-dur-medium) var(--md-ease-soft);
+  }
   .animate-md-enter {
     animation: md-fade-up var(--md-dur-reveal) var(--md-ease-soft) both;
   }

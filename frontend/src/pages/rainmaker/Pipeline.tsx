@@ -11,21 +11,16 @@ import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
 import { useAiLeadStore } from '../../store/aiLeadStore'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
-import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
-import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
+import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS } from './constants'
 import { sourceBadge, sourceKey } from './leadSources'
-import { WebScoreBadge } from './WebsiteAnalysisPanel'
+import PipelineColumn from './PipelineColumn'
+import { PAGE_SIZE, groupByStatus, nextCount } from './pipelineColumns'
 import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
 import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from './PipelineTimeFilter'
 import Select from '../../components/Select'
-import { LEAD_SORT_OPTIONS, sortColumn, cityLabel, type LeadSort } from './leadSort'
+import { LEAD_SORT_OPTIONS, sortColumn, type LeadSort } from './leadSort'
 import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
-
-// Generische Auto-Tags, die keine Branche sind → auf der Karte nicht als Branche zeigen.
-const GENERIC_TAGS = new Set(['discovery', 'rainmaker', 'linkedin', 'ki-recherche'])
-const brancheTag = (tags: string[] | null): string | null =>
-  tags?.find((t) => !GENERIC_TAGS.has(t.trim().toLowerCase())) ?? null
 
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
 const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
@@ -33,45 +28,12 @@ const TARGET_FILTER_KEY = 'rm-pipeline-targetfilter'
 const SORT_KEY = 'rm-pipeline-sort'
 const EMAIL_FILTER_KEY = 'rm-pipeline-emailfilter'
 const FAV_FILTER_KEY = 'rm-pipeline-favfilter'
-// Infinite-Scroll: pro Spalte anfangs so viele Karten rendern, danach je Schritt
-// nachladen, sobald das Sentinel beim Runterscrollen in die Nähe kommt.
-const PAGE_SIZE = 20
 function loadTimeFilter(): TimeFilterValue {
   try {
     return { ...DEFAULT_TIME_FILTER, ...JSON.parse(localStorage.getItem(TIME_FILTER_KEY) || '{}') }
   } catch {
     return DEFAULT_TIME_FILTER
   }
-}
-
-/**
- * „Mehr laden"-Sentinel am Spaltenende: lädt via IntersectionObserver automatisch
- * nach, sobald es beim Scrollen (mit 400px Vorlauf) sichtbar wird — und bleibt als
- * klickbarer Button ein Fallback (Tastatur / falls der Observer nicht feuert). Der
- * Effekt re-observed bei jeder Änderung von `onMore`/`remaining`, füllt so den
- * Viewport selbst, wenn ein Nachladen noch nicht bis unter die Kante scrollt.
- */
-function LoadMore({ remaining, onMore }: { remaining: number; onMore: () => void }) {
-  const ref = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) onMore() },
-      { rootMargin: '400px' },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [onMore, remaining])
-  return (
-    <button
-      ref={ref}
-      onClick={onMore}
-      className="w-full text-xs text-accent hover:underline underline-offset-2 py-2"
-    >
-      +{remaining} weitere laden
-    </button>
-  )
 }
 
 export default function RainmakerPipeline() {
@@ -127,11 +89,17 @@ export default function RainmakerPipeline() {
     (l: RainmakerLead) => toMs(timeFilter.field === 'created' ? l.created_at : l.updated_at),
     [timeFilter.field],
   )
-  // Render-Cap pro Spalte (Performance bei tausenden Karten); "mehr anzeigen" hebt auf
-  // Pro Spalte: wie viele Karten aktuell gerendert werden (wächst beim Scrollen).
+  // Pro Spalte: wie viele Karten aktuell gerendert werden (wächst beim Scrollen
+  // IN der Spalte). Der Deckel hält das DOM klein — Naht für spätere
+  // Virtualisierung/serverseitige Pagination.
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({})
-  const showMore = useCallback((statusKey: string) => {
-    setVisibleCounts((prev) => ({ ...prev, [statusKey]: (prev[statusKey] ?? PAGE_SIZE) + PAGE_SIZE }))
+  const showMore = useCallback((statusKey: string, total: number) => {
+    setVisibleCounts((prev) => ({
+      ...prev, [statusKey]: nextCount(prev[statusKey] ?? PAGE_SIZE, total),
+    }))
+  }, [])
+  const showAll = useCallback((statusKey: string, total: number) => {
+    setVisibleCounts((prev) => ({ ...prev, [statusKey]: total }))
   }, [])
 
   const fetchLeads = useCallback(async () => {
@@ -186,12 +154,17 @@ export default function RainmakerPipeline() {
     }
   }, [])
 
-  const handleDrop = async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
+  // Aktuelle Leads als Ref: so bleibt handleDrop stabil (sonst neue Funktion pro
+  // Render → memo der Spalten/Karten wirkungslos).
+  const leadsRef = useRef(leads)
+  useEffect(() => { leadsRef.current = leads }, [leads])
+
+  const handleDrop = useCallback(async (e: React.DragEvent, newStatus: RainmakerLeadStatus) => {
     e.preventDefault()
     setDragOver(null)
     setDraggingId(null)
     const id = e.dataTransfer.getData('text/plain')
-    const lead = leads.find((l) => l.id === id)
+    const lead = leadsRef.current.find((l) => l.id === id)
     if (!lead || lead.status === newStatus) return
 
     const prevStatus = lead.status
@@ -206,7 +179,22 @@ export default function RainmakerPipeline() {
       toast.error('Fehler beim Verschieben.')
       fetchLeads()
     }
-  }
+  }, [fetchLeads])
+
+  // Stabile Handler für die memoisierten Spalten/Karten.
+  const handleDragOverColumn = useCallback((statusKey: RainmakerLeadStatus, e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOver(statusKey)
+  }, [])
+  const handleDragLeaveColumn = useCallback(() => setDragOver(null), [])
+  const openLead = useCallback((lead: RainmakerLead) => navigate(`/pipeline/leads/${lead.id}`), [navigate])
+  const cardDragStart = useCallback((lead: RainmakerLead, e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', lead.id)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggingId(lead.id)
+  }, [])
+  const cardDragEnd = useCallback(() => { setDraggingId(null); setDragOver(null) }, [])
 
   // Quellen-Chips (nach Häufigkeit) + aktuell gefilterte Leads.
   const sourceChips = useMemo(() => {
@@ -248,6 +236,16 @@ export default function RainmakerPipeline() {
   }, [leads, sourceFilter, emailFilter, targetFilter, favOnly, timeFilter.preset, timeWindow, leadTs])
 
   const pinnedCount = useMemo(() => leads.filter((l) => l.pinned).length, [leads])
+
+  // Ein Durchlauf: nach Status gruppieren, dann je Spalte sortieren (gepinnte oben).
+  // Hängt NUR an filteredLeads/sortMode — ein Nachladen (visibleCounts) rechnet
+  // hier nichts neu.
+  const columns = useMemo(() => {
+    const grouped = groupByStatus(filteredLeads, PIPELINE_STATUSES)
+    const out: Record<string, RainmakerLead[]> = {}
+    for (const st of PIPELINE_STATUSES) out[st] = sortColumn(grouped[st], sortMode)
+    return out
+  }, [filteredLeads, sortMode])
 
   const emailCounts = useMemo(() => {
     let deliverable = 0, problem = 0
@@ -419,130 +417,32 @@ export default function RainmakerPipeline() {
         />
       </div>
 
-      {/* Umbruchfähiges Grid statt horizontalem Scroll: alle Status bleiben
-          im Viewport — 6 Spalten auf breiten Screens, sonst 3/2/1 im Umbruch. */}
+      {/* Umbruchfähiges Grid; jede Spalte scrollt INTERN (Höhe ~70vh gedeckelt) →
+          die Seite bleibt kurz und alle Phasen sind erreichbar, auch wenn eine
+          Spalte hunderte Leads hat. */}
       <div className="grid gap-4 pb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        {PIPELINE_STATUSES.map((statusKey) => {
-          const color = STATUS_COLORS[statusKey]
-          // Gepinnte Leads oben (stabile Sortierung erhält die restliche Reihenfolge).
-          const colLeads = sortColumn(
-            filteredLeads.filter((l) => l.status === statusKey),
-            sortMode,
-          )
-          const isOver = dragOver === statusKey
-          const count = visibleCounts[statusKey] ?? PAGE_SIZE
-          const visibleLeads = colLeads.slice(0, count)
-          const hiddenCount = colLeads.length - visibleLeads.length
-          return (
-            <div
-              key={statusKey}
-              className="min-w-0 flex flex-col"
-              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(statusKey) }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={(e) => handleDrop(e, statusKey)}
-            >
-              <div
-                className="rounded-t-lg px-4 py-2.5 flex items-center justify-between"
-                style={{ backgroundColor: color + '20', borderTop: `3px solid ${color}` }}
-              >
-                <span className="text-sm font-semibold" style={{ color }}>{STATUS_LABELS[statusKey]}</span>
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: color + '25', color }}>
-                  {colLeads.length}
-                </span>
-              </div>
-
-              <div
-                className={`flex-1 min-h-[140px] bg-surface-container border border-border rounded-b-lg p-3 space-y-3 transition-all duration-short ${
-                  isOver ? 'border-accent border-dashed bg-accent/5' : ''
-                }`}
-              >
-                {colLeads.length === 0 && (
-                  <div className="text-center text-text-muted text-xs py-8">Keine Leads</div>
-                )}
-                {visibleLeads.map((lead) => {
-                  const branche = brancheTag(lead.tags)
-                  return (
-                  <div
-                    key={lead.id}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', lead.id); e.dataTransfer.effectAllowed = 'move'; setDraggingId(lead.id) }}
-                    onDragEnd={() => { setDraggingId(null); setDragOver(null) }}
-                    onClick={() => navigate(`/pipeline/leads/${lead.id}`)}
-                    style={lead.pinned ? { borderColor: '#e0a500' } : undefined}
-                    className={`bg-surface-high border border-border rounded-md p-3 cursor-grab active:cursor-grabbing transition-all duration-short hover:border-text-muted hover:shadow-elev-1 ${
-                      draggingId === lead.id ? 'opacity-40' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className="text-sm font-medium text-text line-clamp-2">{lead.company}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); togglePin(lead) }}
-                          title={lead.pinned ? 'Pin lösen' : 'Anpinnen (oben in der Spalte)'}
-                          aria-label={lead.pinned ? 'Pin lösen' : 'Anpinnen'}
-                          className="leading-none text-sm hover:scale-110 transition-transform"
-                          style={{ color: lead.pinned ? '#e0a500' : 'var(--c-text-muted, #888)' }}
-                        >
-                          {lead.pinned ? '★' : '☆'}
-                        </button>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_TONE[lead.priority]}`}>
-                          {PRIORITY_LABELS[lead.priority]}
-                        </span>
-                      </div>
-                    </div>
-                    {(lead.contact_name || lead.employee_count != null) && (
-                      <div className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5 min-w-0">
-                        {lead.contact_name && <span className="truncate">{lead.contact_name}</span>}
-                        {lead.employee_count != null && (
-                          <span className="shrink-0 tabular-nums" title={`${lead.employee_count.toLocaleString('de-DE')} Mitarbeiter`}>
-                            · 👥 {lead.employee_count.toLocaleString('de-DE')}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {sortMode === 'region' && cityLabel(lead.address) && (
-                      <div className="text-xs text-text-muted mb-1.5 truncate" title={lead.address ?? undefined}>
-                        📍 {cityLabel(lead.address)}
-                      </div>
-                    )}
-                    {lead.target && (
-                      <div className="mb-1.5">
-                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium truncate max-w-full"
-                              title={`Target: ${lead.target}`}>🎯 {lead.target}</span>
-                      </div>
-                    )}
-                    {branche && (
-                      <div className="mb-1.5">
-                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-text-muted truncate max-w-full"
-                              title={`Branche: ${branche}`}>{branche}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {(() => { const b = sourceBadge(lead.source); return (
-                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded"
-                                style={{ backgroundColor: b.color + '22', color: b.color }}
-                                title={`Quelle: ${lead.source || 'Manuell'}`}>{b.label}</span>
-                        ) })()}
-                        <WebScoreBadge score={lead.web_score} rating={lead.web_rating} hasCritical={lead.web_has_critical} compact />
-                        {lead.value_estimate ? (
-                          <span className="font-medium tabular-nums truncate" style={{ color }}>{formatCurrency(lead.value_estimate)}</span>
-                        ) : null}
-                      </div>
-                      {lead.needs_next_action && (
-                        <span className="shrink-0 text-danger text-[10px] font-semibold">⚠ kein Schritt</span>
-                      )}
-                    </div>
-                  </div>
-                  )
-                })}
-                {hiddenCount > 0 && (
-                  <LoadMore remaining={hiddenCount} onMore={() => showMore(statusKey)} />
-                )}
-              </div>
-            </div>
-          )
-        })}
+        {PIPELINE_STATUSES.map((statusKey) => (
+          <PipelineColumn
+            key={statusKey}
+            statusKey={statusKey}
+            label={STATUS_LABELS[statusKey]}
+            color={STATUS_COLORS[statusKey]}
+            leads={columns[statusKey]}
+            visible={visibleCounts[statusKey] ?? PAGE_SIZE}
+            isOver={dragOver === statusKey}
+            draggingId={draggingId}
+            sortMode={sortMode}
+            onMore={showMore}
+            onShowAll={showAll}
+            onDragOverColumn={handleDragOverColumn}
+            onDragLeaveColumn={handleDragLeaveColumn}
+            onDropColumn={handleDrop}
+            onOpenLead={openLead}
+            onTogglePin={togglePin}
+            onCardDragStart={cardDragStart}
+            onCardDragEnd={cardDragEnd}
+          />
+        ))}
       </div>
 
       <Fab onClick={() => navigate('/pipeline/leads/neu')} label="Neuer Lead" />
