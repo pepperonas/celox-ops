@@ -11,6 +11,8 @@ class AppSettingsResponse(BaseModel):
     # KI-Lead-Suche
     ai_model: str = "claude-sonnet-5"
     ai_monthly_budget_eur: float = 20.0
+    # Automatische (kostenlose) Website-Analyse nach dem Lead-Import
+    auto_analyze_websites: bool = True
 
 
 class AppSettingsUpdate(BaseModel):
@@ -20,3 +22,4 @@ class AppSettingsUpdate(BaseModel):
     google_places_api_key: str | None = Field(default=None, max_length=255)
     ai_model: str | None = Field(default=None, max_length=40)
     ai_monthly_budget_eur: float | None = Field(default=None, ge=0)
+    auto_analyze_websites: bool | None = None

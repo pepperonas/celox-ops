@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { importDiscoveredLeads } from '../../api/rainmaker'
 import type { DiscoveredCandidate } from '../../types'
 import { emailStatusInfo } from './emailStatus'
+import CandidateFacts, { PrivacyDot } from './CandidateFacts'
 import { matchBriefs } from './briefSuggestions'
 import type { AiLeadRun } from './aiLeadRun'
 
@@ -15,6 +16,30 @@ interface Props {
 }
 
 const REASON_LABEL: Record<string, string> = { email: 'E-Mail', website: 'Website', name: 'Name' }
+
+// Geführter Ablauf: der Dialog macht sichtbar, wo im Prozess man steht.
+const STEPS = ['Wunschkunden beschreiben', 'Recherche & Prüfung', 'Auswählen & importieren'] as const
+
+function StepBar({ current }: { current: number }) {
+  return (
+    <ol className="flex items-center gap-2 mb-4 text-xs" aria-label="Ablauf">
+      {STEPS.map((label, i) => (
+        <li key={i} className="flex items-center gap-2">
+          <span
+            className={`grid place-items-center w-5 h-5 rounded-full text-[10px] font-semibold ${
+              i < current ? 'bg-success/20 text-success'
+                : i === current ? 'bg-accent/20 text-accent' : 'bg-surface-container text-text-muted'
+            }`}
+          >
+            {i < current ? '✓' : i + 1}
+          </span>
+          <span className={i === current ? 'text-text font-medium' : 'text-text-muted'}>{label}</span>
+          {i < STEPS.length - 1 && <span className="text-text-muted opacity-40 mx-1">›</span>}
+        </li>
+      ))}
+    </ol>
+  )
+}
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' €'
 
 export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Props) {
@@ -44,7 +69,8 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
       // Kein Batch-Segment: die Branche steckt pro Kandidat in `segment` (→ Lead-Tag).
       const r = await importDiscoveredLeads(rows)
       toast.success(`${r.created} Lead${r.created === 1 ? '' : 's'} importiert`
-        + (r.skipped_duplicates > 0 ? ` · ${r.skipped_duplicates} Duplikate übersprungen` : '') + '.')
+        + (r.skipped_duplicates > 0 ? ` · ${r.skipped_duplicates} Duplikate übersprungen` : '')
+        + (r.queued_for_analysis ? ` · ${r.queued_for_analysis} Website-Analysen laufen im Hintergrund` : '') + '.')
       onImported(r.created)
     } catch {
       toast.error('Import fehlgeschlagen.')
@@ -54,6 +80,7 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
 
   const dupCount = useMemo(() => res?.candidates.filter((c) => c.duplicate).length ?? 0, [res])
   const hasResults = !!res && res.candidates.length > 0
+  const step = running ? 1 : res ? 2 : 0
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
@@ -69,6 +96,8 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
             </span>
           )}
         </div>
+
+        <StepBar current={step} />
 
         <div className="relative mb-2">
           <textarea
@@ -142,6 +171,11 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
               <span className="text-text"><strong>{res.candidates.length}</strong> Kandidaten</span>
               <span className="text-success text-xs">✓ geprüft</span>
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
+              {res.candidates.some((c) => c.enriched) && (
+                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen).">
+                  ✦ angereichert
+                </span>
+              )}
               <span className="ml-auto text-text-muted text-xs">{selected.size} ausgewählt</span>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-lg">
@@ -166,7 +200,13 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
                           <input type="checkbox" checked={selected.has(i)} disabled={c.duplicate}
                                  onChange={() => toggle(i)} onClick={(e) => e.stopPropagation()} />
                         </td>
-                        <td className="px-2 py-1.5 text-text truncate max-w-[160px]">{c.name}</td>
+                        <td className="px-2 py-1.5 max-w-[230px]">
+                          <div className="flex items-center gap-1.5">
+                            <PrivacyDot rating={c.privacy_rating} hint={c.privacy_hint} />
+                            <span className="text-text truncate">{c.name}</span>
+                          </div>
+                          <CandidateFacts c={c} />
+                        </td>
                         <td className="px-2 py-1.5 text-text-muted truncate max-w-[220px]" title={c.fit_reason || ''}>{c.fit_reason || '–'}</td>
                         <td className="px-2 py-1.5 text-text-muted truncate max-w-[140px]">{c.website?.replace(/^https?:\/\//, '').replace(/\/$/, '') || '–'}</td>
                         <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">

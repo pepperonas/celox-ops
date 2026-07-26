@@ -136,10 +136,14 @@ export default function Settings() {
   const [aiBudget, setAiBudget] = useState('20')
   const [aiSaving, setAiSaving] = useState(false)
   const [aiUsage, setAiUsage] = useState<AiUsageResponse | null>(null)
+  // Automatische Website-Analyse nach dem Lead-Import (kostenlos, In-Process-Worker)
+  const [autoAnalyze, setAutoAnalyze] = useState(true)
+  const [autoAnalyzeSaving, setAutoAnalyzeSaving] = useState(false)
 
   const applySettings = (s: { default_unit_price?: number; invoice_prefix?: string
     google_places_configured?: boolean; google_places_key_hint?: string | null
-    google_places_calls_this_month?: number; ai_model?: string; ai_monthly_budget_eur?: number }) => {
+    google_places_calls_this_month?: number; ai_model?: string; ai_monthly_budget_eur?: number
+    auto_analyze_websites?: boolean }) => {
     if (s.default_unit_price != null) setDefaultPrice(String(s.default_unit_price))
     if (s.invoice_prefix != null) setInvoicePrefix(s.invoice_prefix)
     setPlacesConfigured(Boolean(s.google_places_configured))
@@ -147,6 +151,20 @@ export default function Settings() {
     setPlacesCalls(s.google_places_calls_this_month ?? 0)
     if (s.ai_model != null) setAiModel(s.ai_model)
     if (s.ai_monthly_budget_eur != null) setAiBudget(String(s.ai_monthly_budget_eur))
+    if (s.auto_analyze_websites != null) setAutoAnalyze(s.auto_analyze_websites)
+  }
+
+  // Sofort-Speichern (optimistisch, Rollback bei Fehler) — Repo-Muster.
+  const saveAutoAnalyze = async (next: boolean) => {
+    setAutoAnalyze(next)
+    setAutoAnalyzeSaving(true)
+    try {
+      applySettings(await updateSettings({ auto_analyze_websites: next }))
+    } catch {
+      setAutoAnalyze(!next)
+      toast.error('Speichern fehlgeschlagen.')
+    }
+    setAutoAnalyzeSaving(false)
   }
 
   const loadAiUsage = () => { getAiUsage().then(setAiUsage).catch(() => {}) }
@@ -554,6 +572,27 @@ export default function Settings() {
             </ul>
           </div>
         )}
+      </div>
+
+      {/* Automatische Website-Analyse (kostenlos — kein PageSpeed, keine KI) */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">🌐 Automatische Website-Analyse</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Analysiert die Website jedes neu importierten oder angelegten Leads im Hintergrund
+          (Datenschutz, SEO, Technik, Performance) und hinterlegt Score plus Ampel an der
+          Pipeline-Karte. Läuft im Backend mit begrenzter Parallelität und ist{' '}
+          <strong className="text-text">kostenlos</strong> — die Tiefenanalyse (KI/PageSpeed) bleibt
+          ein bewusster Klick im Lead-Detail.
+        </p>
+        <Toggle
+          checked={autoAnalyze}
+          onChange={saveAutoAnalyze}
+          disabled={autoAnalyzeSaving}
+          label={autoAnalyze ? 'Aktiv' : 'Aus'}
+          hint={autoAnalyze
+            ? 'Neue Leads mit Website werden automatisch eingereiht.'
+            : 'Analysen nur manuell (Lead-Detail oder „Websites analysieren" in der Pipeline).'}
+        />
       </div>
 
       {/* KI-Lead-Suche */}

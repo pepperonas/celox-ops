@@ -97,10 +97,12 @@ from app.services.lead_dedup import (
 )
 from app.models.ai_lead_run import AiLeadRun
 from app.services.ai_lead_agent import run_ai_discovery
+from app.services.analysis_queue import enqueue_after_import
 from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
 from app.services.duplicate_finder import find_groups
 from app.services.email_verifier import verify_email
 from app.services.lead_discovery import discover_google, discover_osm
+from app.services.lead_enrichment import enrich_candidates, enrichment_notes
 from app.services.linkedin_import import (
     normalize_profile_url,
     parse_linkedin_archive,
@@ -245,6 +247,8 @@ async def create_lead(
             "reason": MATCH_WEBSITE,
         })
     await db.refresh(lead)
+    if (lead.website or "").strip():
+        await enqueue_after_import(db, [lead.id])
     return lead_response(lead)
 
 
@@ -654,6 +658,13 @@ async def discover_preview(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Suche fehlgeschlagen: {exc}")
 
+    # Leichte Anreicherung: EIN Startseiten-Abruf je Kandidat (kostenlos, kein
+    # PageSpeed/KI) -> Kurzbeschreibung, Social-Profile, Tech-Stack,
+    # Datenschutz-Ampel und ggf. die fehlende Kontakt-E-Mail. Muss VOR dem
+    # Dedup laufen: eine neu gefundene E-Mail ist ein Dedup-Schluessel.
+    if data.enrich:
+        candidates = await enrich_candidates(candidates)
+
     idx, _ = await _build_dedup_index(db)
     out: list[DiscoveredCandidate] = []
     for c in candidates:
@@ -681,6 +692,7 @@ async def discover_import(
     idx, _ = await _build_dedup_index(db)
     created = skipped = 0
     skipped_rows: list[ImportSkipped] = []
+    new_ids: list = []
     mx_cache: dict = {}
     for c in data.rows:
         lead, reason = idx.match(email=c.email, website=c.website)
@@ -702,7 +714,11 @@ async def discover_import(
             source=c.source,
             status=RainmakerLeadStatus.new,
             tags=tags,
-            notes=f"Automatisch gefunden ({c.source})" + (f" · Ref {c.source_ref}" if c.source_ref else ""),
+            notes="\n".join(
+                [f"Automatisch gefunden ({c.source})"
+                 + (f" · Ref {c.source_ref}" if c.source_ref else "")]
+                + enrichment_notes(c.model_dump())
+            ),
         )
         new_lead.email_status = await _email_status_for(c.email, mx_cache)
         if not await _safe_flush_lead(db, new_lead):
@@ -710,10 +726,15 @@ async def discover_import(
             skipped_rows.append(ImportSkipped(name=c.name or "?", reason=MATCH_WEBSITE))
             continue
         idx.add(new_lead, email=c.email, website=c.website)
+        new_ids.append(new_lead.id)
         created += 1
     await db.flush()
+    # Automatische Website-Analyse einreihen (nur die schnelle, kostenlose
+    # Variante; der In-Process-Worker arbeitet sie im Hintergrund ab).
+    queued = await enqueue_after_import(db, new_ids)
     return LeadDiscoveryResult(
-        created=created, skipped_duplicates=skipped, skipped_rows=skipped_rows)
+        created=created, skipped_duplicates=skipped, skipped_rows=skipped_rows,
+        queued_for_analysis=queued)
 
 
 # --------------------------------------------------------------------------- #
@@ -802,10 +823,16 @@ async def ai_discover_preview(
         candidates_found=len(result.candidates), status="ok", **usage.as_dict()))
     await db.flush()
 
+    # Leichte Anreicherung wie bei der Branchen-Suche (kostenlos, ein Abruf je
+    # Kandidat) — muss vor dem Dedup laufen (neue E-Mail = Dedup-Schluessel).
+    candidates_raw = result.candidates
+    if data.enrich:
+        candidates_raw = await enrich_candidates(candidates_raw)
+
     # Duplikat-Markierung gegen den Bestand (fast alle bekannten sind schon beim
     # Sammeln gefiltert; das fängt E-Mail-/Batch-interne Restfälle ab). Index wiederverwendet.
     out: list[DiscoveredCandidate] = []
-    for c in result.candidates:
+    for c in candidates_raw:
         lead, reason = idx.match(email=c.get("email"), website=c.get("website"))
         idx.add(object(), email=c.get("email"), website=c.get("website"))
         out.append(DiscoveredCandidate(
@@ -813,6 +840,9 @@ async def ai_discover_preview(
             phone=c.get("phone"), address=c.get("address"), source="KI-Recherche",
             source_ref=c.get("source_ref"), email_status=c.get("email_status"),
             fit_reason=c.get("fit_reason"), segment=c.get("segment"),
+            description=c.get("description"), socials=c.get("socials"),
+            technologies=c.get("technologies"), privacy_rating=c.get("privacy_rating"),
+            privacy_hint=c.get("privacy_hint"), enriched=bool(c.get("enriched")),
             duplicate=lead is not None, duplicate_reason=reason if lead is not None else None))
 
     return AiDiscoverResponse(
@@ -1722,10 +1752,8 @@ async def analyze_lead_website(
     bewertung (Budget-Guard + Kostenlogging wie die KI-Lead-Suche), `pagespeed=true`
     misst Performance/Core Web Vitals via Lighthouse. Beide Zusätze sind defensiv:
     fällt einer aus, bleibt die technische Analyse gültig."""
-    from datetime import datetime, timezone
-
-    from app.models.lead_website_analysis import LeadWebsiteAnalysis
     from app.services.website_analysis import analyze_deep, fetch_and_analyze
+    from app.services.website_analysis_store import persist_analysis
 
     lead = await _get_lead_or_404(lead_id, db)
     if not lead.website or not lead.website.strip():
@@ -1781,21 +1809,8 @@ async def analyze_lead_website(
                **usage.as_dict()}
         spent += cost_eur
 
-    row = LeadWebsiteAnalysis(
-        lead_id=lead.id, analysis_version=result["analysis_version"], url=result["url"],
-        overall_score=result["overall_score"], rating=result["rating"],
-        has_critical=result["has_critical"], categories=result["categories"],
-        findings=result["findings"], technologies=result["technologies"],
-        recommendations=result["recommendations"], meta=result["meta"],
-        ai_review=result.get("ai_review"), pagespeed=result.get("pagespeed"),
-    )
-    db.add(row)
-    lead.web_score = result["overall_score"]
-    lead.web_rating = result["rating"]
-    lead.web_has_critical = result["has_critical"]
-    lead.web_analyzed_at = datetime.now(timezone.utc)
-    await db.flush()
-    await db.refresh(row)
+    # Speichern über die geteilte Stelle — der Auto-Analyse-Worker nutzt dieselbe.
+    row = await persist_analysis(db, lead, result)
     from app.services.website_scoring import analysis_diff
     full = _analysis_full(row)
     out = {
@@ -1835,6 +1850,36 @@ async def get_lead_website_analysis(
         "history_count": count,
         "diff": analysis_diff(_analysis_full(latest), _analysis_full(prev) if prev else None),
     }
+
+
+@router.get("/analysis-queue")
+async def get_analysis_queue(db: AsyncSession = Depends(get_db)) -> dict:
+    """Stand der automatischen Website-Analyse (owner-scoped) für die UI-Anzeige."""
+    from app.services.analysis_queue import auto_analyze_enabled, queue_stats
+
+    stats = await queue_stats(db)
+    stats["enabled"] = await auto_analyze_enabled(db)
+    return stats
+
+
+@router.post("/analysis-queue/enqueue-missing")
+async def enqueue_missing_analyses(db: AsyncSession = Depends(get_db)) -> dict:
+    """Reiht alle eigenen Leads mit Website, aber ohne Analyse ein (gedeckelt).
+
+    Bewusst unabhängig vom Auto-Schalter: das ist eine ausdrückliche Nutzeraktion.
+    """
+    from app.services.analysis_queue import (
+        ENQUEUE_MISSING_CAP,
+        enqueue_leads,
+        leads_needing_analysis,
+        queue_stats,
+    )
+
+    ids = await leads_needing_analysis(db)
+    queued = await enqueue_leads(db, ids)
+    stats = await queue_stats(db)
+    return {"queued": queued, "candidates": len(ids), "capped": len(ids) >= ENQUEUE_MISSING_CAP,
+            "pending": stats["pending"]}
 
 
 @router.get("/leads/{lead_id}/website-analyses")

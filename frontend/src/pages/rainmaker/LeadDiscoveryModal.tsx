@@ -7,6 +7,7 @@ import {
   hasEmail, mergeCandidates, parseLocations, sortByQuality,
   type BatchCandidate,
 } from './discoveryBatch'
+import CandidateFacts, { PrivacyDot } from './CandidateFacts'
 
 interface Props {
   onClose: () => void
@@ -132,14 +133,16 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
       // Pro Branche gruppieren, damit der richtige Segment-Tag gesetzt wird.
       const bySeg = new Map<string, BatchCandidate[]>()
       for (const c of chosen) (bySeg.get(c._segment) ?? bySeg.set(c._segment, []).get(c._segment)!).push(c)
-      let created = 0, skipped = 0
+      let created = 0, skipped = 0, queued = 0
       for (const [seg, rows] of bySeg) {
         const r = await importDiscoveredLeads(rows, seg)
         created += r.created
         skipped += r.skipped_duplicates
+        queued += r.queued_for_analysis ?? 0
       }
       toast.success(`${created} Lead${created === 1 ? '' : 's'} importiert` +
-        (skipped > 0 ? ` · ${skipped} Duplikat${skipped === 1 ? '' : 'e'} übersprungen` : '') + '.')
+        (skipped > 0 ? ` · ${skipped} Duplikat${skipped === 1 ? '' : 'e'} übersprungen` : '') +
+        (queued > 0 ? ` · ${queued} Website-Analysen laufen im Hintergrund` : '') + '.')
       onImported(created)
     } catch {
       toast.error('Import fehlgeschlagen.')
@@ -249,6 +252,11 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
             <div className="flex flex-wrap items-center gap-3 mb-2 text-sm">
               <span className="text-text"><strong>{candidates.length}</strong> Firmen</span>
               <span className="text-success text-xs" title="Nur Firmen mit erreichbarer Website (Live-Check); OSM zusätzlich mit E-Mail. Keine Karteileichen.">✓ geprüft</span>
+              {candidates.some((c) => c.enriched) && (
+                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen).">
+                  ✦ angereichert
+                </span>
+              )}
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
               <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
                 <input type="checkbox" checked={onlyEmail} onChange={(e) => setOnlyEmail(e.target.checked)} />
@@ -276,7 +284,13 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
                         <input type="checkbox" checked={selected.has(c._key)} disabled={c.duplicate}
                                onChange={() => toggle(c._key)} onClick={(e) => e.stopPropagation()} />
                       </td>
-                      <td className="px-2 py-1.5 text-text truncate max-w-[200px]">{c.name}</td>
+                      <td className="px-2 py-1.5 max-w-[260px]">
+                        <div className="flex items-center gap-1.5">
+                          <PrivacyDot rating={c.privacy_rating} hint={c.privacy_hint} />
+                          <span className="text-text truncate">{c.name}</span>
+                        </div>
+                        <CandidateFacts c={c} />
+                      </td>
                       <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">{c._combo}</td>
                       <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">
                         {c.website ? c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : (c.phone || '–')}

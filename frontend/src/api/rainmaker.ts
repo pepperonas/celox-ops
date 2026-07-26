@@ -30,10 +30,11 @@ import type {
   PaginatedResponse,
   AiRunCost,
   AiBudget,
+  AnalysisQueueStatus,
 } from '../types'
 
-export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string): Promise<AiDiscoverResponse> {
-  const body = { brief, use_web_search: useWebSearch, model }
+export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string, enrich = true): Promise<AiDiscoverResponse> {
+  const body = { brief, use_web_search: useWebSearch, model, enrich }
   // 502 = Backend gerade nicht erreichbar (z. B. kurzes Deploy-Fenster). Die Anfrage
   // hat den Server nicht erreicht → sicher & kostenfrei erneut versuchen.
   for (let attempt = 0; ; attempt++) {
@@ -148,7 +149,7 @@ export async function importLinkedInLeads(rows: LinkedInImportRow[]): Promise<Li
 
 // --- Lead-Discovery (automatische Suche) ---
 export async function discoverLeadsPreview(params: {
-  source: 'osm' | 'google'; category: string; location: string; limit?: number
+  source: 'osm' | 'google'; category: string; location: string; limit?: number; enrich?: boolean
 }): Promise<DiscoveredCandidate[]> {
   const response = await api.post('/rainmaker/discover/preview', params)
   return response.data
@@ -158,6 +159,19 @@ export async function importDiscoveredLeads(
   rows: DiscoveredCandidate[], segment?: string,
 ): Promise<LeadDiscoveryResult> {
   const response = await api.post('/rainmaker/discover/import', { rows, segment })
+  return response.data
+}
+
+// --- Automatische Website-Analyse (Queue) ---
+export async function getAnalysisQueue(): Promise<AnalysisQueueStatus> {
+  const response = await api.get('/rainmaker/analysis-queue')
+  return response.data
+}
+
+export async function enqueueMissingAnalyses(): Promise<{
+  queued: number; candidates: number; capped: boolean; pending: number
+}> {
+  const response = await api.post('/rainmaker/analysis-queue/enqueue-missing')
   return response.data
 }
 

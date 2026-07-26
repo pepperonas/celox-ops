@@ -654,6 +654,23 @@ export interface DiscoveredCandidate {
   email_status?: string | null
   fit_reason?: string | null         // KI-Begründung
   segment?: string | null            // Branche (z. B. "Steuerberater")
+  // Leichte Anreicherung (ein Startseiten-Abruf im Backend, kostenlos)
+  description?: string | null        // Kurzbeschreibung
+  socials?: Record<string, string> | null
+  technologies?: string[] | null
+  privacy_rating?: string | null     // gruen | gelb | rot
+  privacy_hint?: string | null
+  enriched?: boolean
+}
+
+/** Stand der automatischen Website-Analyse (In-Process-Worker). */
+export interface AnalysisQueueStatus {
+  queued: number
+  running: number
+  done: number
+  error: number
+  pending: number
+  enabled: boolean
 }
 
 export interface AiRunCost {
@@ -713,6 +730,7 @@ export interface LeadDiscoveryResult {
   created: number
   skipped_duplicates: number
   enriched?: number
+  queued_for_analysis?: number   // automatisch zur Website-Analyse eingereiht
   skipped_rows?: ImportSkipped[]
 }
 

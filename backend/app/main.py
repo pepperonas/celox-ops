@@ -35,6 +35,7 @@ from app.models.outreach_template import OutreachTemplate
 from app.models.todo import Todo
 from app.models.rainmaker_lead_draft import RainmakerLeadDraft
 from app.models.reference_value import ReferenceValue
+from app.models.lead_analysis_job import LeadAnalysisJob
 from app.models.lead_website_analysis import LeadWebsiteAnalysis
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
@@ -50,7 +51,7 @@ set_owned_models([
     EmailTemplate, PagespeedResult, ComplianceRecord, RainmakerLead, RainmakerActivity,
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
-    LeadWebsiteAnalysis,
+    LeadWebsiteAnalysis, LeadAnalysisJob,
 ])
 install_tenancy_events()
 
@@ -192,14 +193,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     cron_task = asyncio.create_task(run_cron())
     logger.info("Background-Cron gestartet (Intervall: 1h)")
 
+    # Auto-Analyse-Worker: arbeitet die Website-Analyse-Queue ab (in-process,
+    # begrenzte Parallelitaet, nur die schnelle/kostenlose Analyse).
+    from app.services.analysis_queue import run_analysis_worker
+    analysis_task = asyncio.create_task(run_analysis_worker())
+
     yield
 
     # Cleanup on shutdown
     cron_task.cancel()
-    try:
-        await cron_task
-    except asyncio.CancelledError:
-        pass
+    analysis_task.cancel()
+    for task in (cron_task, analysis_task):
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(

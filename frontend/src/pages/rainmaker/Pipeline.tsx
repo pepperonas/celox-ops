@@ -4,6 +4,7 @@ import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
 import { toastWithUndo } from '../../utils/undoToast'
 import PageHeader from '../../components/PageHeader'
+import AnalysisQueueBadge from './AnalysisQueueBadge'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import PipelineNav from './PipelineNav'
@@ -295,6 +296,9 @@ export default function RainmakerPipeline() {
             <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
               LinkedIn-Import
             </button>
+            {/* Stand der automatischen Website-Analyse; nach dem Durchlauf werden
+                die Leads neu geladen, damit die frischen Scores sichtbar sind. */}
+            <AnalysisQueueBadge onFinished={fetchLeads} />
           </>
         }
       />

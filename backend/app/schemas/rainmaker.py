@@ -94,6 +94,7 @@ class LeadDiscoveryRequest(BaseModel):
     category: str                  # Segment-Key oder OSM-Tag 'key=value'
     location: str                  # Ort/Bezirk (z. B. "Berlin")
     limit: int = 60
+    enrich: bool = True            # Startseiten-Abruf je Kandidat (kostenlos)
 
 
 class DiscoveredCandidate(BaseModel):
@@ -109,6 +110,13 @@ class DiscoveredCandidate(BaseModel):
     email_status: str | None = None       # aus dem Verifier (valid/role/…)
     fit_reason: str | None = None         # KI-Begründung, warum passend
     segment: str | None = None            # Branche (Segment-Label), z. B. "Steuerberater"
+    # Leichte Anreicherung (ein Startseiten-Abruf, services/lead_enrichment.py)
+    description: str | None = None         # Kurzbeschreibung (meta description/Titel)
+    socials: dict[str, str] | None = None  # {"linkedin": "https://…", …}
+    technologies: list[str] | None = None  # CMS/Frameworks
+    privacy_rating: str | None = None      # gruen | gelb | rot
+    privacy_hint: str | None = None        # belegter Grund der Ampel
+    enriched: bool = False
 
 
 class LeadDiscoveryImportRequest(BaseModel):
@@ -120,6 +128,7 @@ class LeadDiscoveryResult(BaseModel):
     created: int
     skipped_duplicates: int
     enriched: int = 0
+    queued_for_analysis: int = 0   # automatisch zur Website-Analyse eingereiht
     skipped_rows: list[ImportSkipped] = []
 
 
@@ -129,6 +138,7 @@ class LeadDiscoveryResult(BaseModel):
 class AiDiscoverRequest(BaseModel):
     brief: str
     use_web_search: bool = False
+    enrich: bool = True                   # Startseiten-Abruf je Kandidat (kostenlos)
     model: str | None = None              # überschreibt das Workspace-Default-Modell
 
 

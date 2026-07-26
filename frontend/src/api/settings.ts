@@ -8,6 +8,8 @@ export interface AppSettings {
   google_places_calls_this_month: number
   ai_model: string
   ai_monthly_budget_eur: number
+  /** Automatische (kostenlose) Website-Analyse nach dem Lead-Import. */
+  auto_analyze_websites: boolean
 }
 
 export interface AppSettingsUpdate {
@@ -17,6 +19,7 @@ export interface AppSettingsUpdate {
   google_places_api_key?: string
   ai_model?: string
   ai_monthly_budget_eur?: number
+  auto_analyze_websites?: boolean
 }
 
 export async function getSettings(): Promise<AppSettings> {

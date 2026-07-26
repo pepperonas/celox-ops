@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Integer, Numeric, String
+from sqlalchemy import Boolean, Integer, Numeric, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,3 +36,7 @@ class AppSettings(OwnedMixin, Base):
         String(40), default="claude-sonnet-5", server_default="claude-sonnet-5", nullable=False)
     ai_monthly_budget_eur: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), default=Decimal("20"), server_default="20", nullable=False)
+    # Automatische (schnelle, kostenlose) Website-Analyse nach dem Lead-Import.
+    # Bestehende DBs: manuelles ALTER (scripts/add_auto_analyze.sql).
+    auto_analyze_websites: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true"), nullable=False)
