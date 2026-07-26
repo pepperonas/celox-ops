@@ -1,7 +1,11 @@
 // Statischer portal-Produktkatalog für die Entitlement-Auswahl im Handoff-Dialog.
-// Quelle: celox-portal server/content (PRODUCTS) — Stand 2026-07-19.
+// Quelle: celox-portal server/content (PRODUCTS) — Stand 2026-07-26.
 // Bewusst statisch (Phase-2-Entscheidung): neue portal-Module hier nachziehen;
 // unbekannte Keys fängt die 422-Validierung des portals ab (Kontrakt §4.1).
+// Ein fehlendes Modul ist dagegen unsichtbar — es lässt sich schlicht nicht
+// buchen. Deshalb beim Abgleich die Liste erzeugen statt abzutippen:
+//   cd _customers/celox/celox-portal/server && \
+//     node -e "console.log(require('./content').PRODUCTS.map(p=>p.key).join('\n'))"
 
 export interface PortalProduct {
   key: string // Entitlement-Key, z. B. "audit:dsgvo" / "training:security"
@@ -16,6 +20,7 @@ export const PORTAL_PRODUCTS: PortalProduct[] = [
   { key: 'audit:ki-reifegrad', label: 'KI-Reifegrad-Audit', kind: 'audit' },
   { key: 'audit:ransomware', label: 'Ransomware-Resilienz-Audit', kind: 'audit' },
   { key: 'audit:ai-act-compliance', label: 'KI-Verordnung (AI Act) — Compliance-Audit', kind: 'audit' },
+  { key: 'audit:bewachung', label: 'Bewachungsgewerbe-Audit (§ 34a GewO)', kind: 'audit' },
   { key: 'training:security', label: 'Cyber-Security-Schulung', kind: 'training' },
   { key: 'training:datenschutz', label: 'Datenschutz im Arbeitsalltag', kind: 'training' },
   { key: 'training:ki-nutzung', label: 'KI sicher nutzen & KI-Verordnung im Betrieb', kind: 'training' },
@@ -32,4 +37,5 @@ export const PORTAL_PRODUCTS: PortalProduct[] = [
   { key: 'training:immobilien', label: 'Datenschutz & Betrugsschutz in der Immobilienbranche', kind: 'training' },
   { key: 'training:fuehrung', label: 'Chefsache Sicherheit: Awareness & Haftung für die Führung', kind: 'training' },
   { key: 'training:advanced-angriffsvektoren', label: 'Angriffsvektoren, mit denen kaum ein Entwickler rechnet', kind: 'training' },
+  { key: 'training:sicherheitsmitarbeiter', label: 'Sicherheitsmitarbeiter (§ 34a) — Recht & Praxis im Dienst', kind: 'training' },
 ]
