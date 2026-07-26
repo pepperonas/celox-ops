@@ -1796,10 +1796,13 @@ async def analyze_lead_website(
     lead.web_analyzed_at = datetime.now(timezone.utc)
     await db.flush()
     await db.refresh(row)
+    from app.services.website_scoring import analysis_diff
+    full = _analysis_full(row)
     out = {
-        "analysis": _analysis_full(row),
+        "analysis": full,
         "previous_score": prev.overall_score if prev else None,
         "previous_at": prev.analyzed_at.isoformat() if prev and prev.analyzed_at else None,
+        "diff": analysis_diff(full, _analysis_full(prev) if prev else None),
     }
     if run is not None:
         out["run"] = run
@@ -1824,11 +1827,13 @@ async def get_lead_website_analysis(
         select(func.count()).select_from(LeadWebsiteAnalysis)
         .where(LeadWebsiteAnalysis.lead_id == lead_id)
     )).scalar_one()
+    from app.services.website_scoring import analysis_diff
     return {
         "analysis": _analysis_full(latest),
         "previous_score": prev.overall_score if prev else None,
         "previous_at": prev.analyzed_at.isoformat() if prev and prev.analyzed_at else None,
         "history_count": count,
+        "diff": analysis_diff(_analysis_full(latest), _analysis_full(prev) if prev else None),
     }
 
 

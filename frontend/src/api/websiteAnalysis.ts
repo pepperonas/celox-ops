@@ -38,11 +38,18 @@ export interface WebsiteAnalysis {
   ai_review: AiReview | null
   pagespeed: PageSpeedResult | null
 }
+export interface AnalysisDiff {
+  score_delta: number
+  category_deltas: Record<string, number>
+  new_findings: WebFinding[]
+  resolved_findings: WebFinding[]
+}
 export interface AnalysisEnvelope {
   analysis: WebsiteAnalysis | null
   previous_score: number | null
   previous_at?: string | null
   history_count?: number
+  diff?: AnalysisDiff | null
   run?: { model: string; cost_eur: number } | null
   budget?: { spent_eur: number; budget_eur: number } | null
 }

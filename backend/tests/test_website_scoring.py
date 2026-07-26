@@ -76,3 +76,43 @@ def test_summarize_flags_critical_and_builds_categories():
     # KI (None) taucht nicht als Kategorie auf
     assert all(c["key"] != "ki" for c in out["categories"])
     assert out["findings"][0]["severity"] == "critical"
+
+
+# ---- analysis_diff (rein) ---------------------------------------------------
+def _analysis(score, cats, findings):
+    return {"overall_score": score,
+            "categories": [{"key": k, "score": v} for k, v in cats.items()],
+            "findings": findings}
+
+
+def test_diff_without_previous_is_empty():
+    from app.services.website_scoring import analysis_diff
+    d = analysis_diff(_analysis(80, {"seo": 90}, []), None)
+    assert d == {"score_delta": 0, "category_deltas": {},
+                 "new_findings": [], "resolved_findings": []}
+
+
+def test_diff_reports_score_and_category_deltas():
+    from app.services.website_scoring import analysis_diff
+    cur = _analysis(84, {"seo": 100, "technik": 60}, [])
+    prev = _analysis(92, {"seo": 100, "technik": 80}, [])
+    d = analysis_diff(cur, prev)
+    assert d["score_delta"] == -8
+    assert d["category_deltas"] == {"technik": -20}   # unveraenderte Kategorie fehlt
+
+
+def test_diff_lists_new_and_resolved_findings():
+    from app.services.website_scoring import analysis_diff
+    f_old = {"category": "SEO", "issue": "Keine Meta-Description", "severity": "warning"}
+    f_new = {"category": "Datenschutz", "issue": "Kein Cookie-Banner", "severity": "critical"}
+    f_keep = {"category": "UX", "issue": "Kein Favicon", "severity": "info"}
+    d = analysis_diff(_analysis(70, {}, [f_new, f_keep]), _analysis(70, {}, [f_old, f_keep]))
+    assert [f["issue"] for f in d["new_findings"]] == ["Kein Cookie-Banner"]
+    assert [f["issue"] for f in d["resolved_findings"]] == ["Keine Meta-Description"]
+
+
+def test_diff_handles_new_category_gracefully():
+    from app.services.website_scoring import analysis_diff
+    # KI kam erst mit der Tiefenanalyse dazu -> kein Delta (kein Vorwert)
+    d = analysis_diff(_analysis(80, {"seo": 90, "ki": 70}, []), _analysis(80, {"seo": 90}, []))
+    assert d["category_deltas"] == {}

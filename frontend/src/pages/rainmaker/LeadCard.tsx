@@ -96,7 +96,8 @@ function LeadCardBase({
                   style={{ backgroundColor: b.color + '22', color: b.color }}
                   title={`Quelle: ${lead.source || 'Manuell'}`}>{b.label}</span>
           ) })()}
-          <WebScoreBadge score={lead.web_score} rating={lead.web_rating} hasCritical={lead.web_has_critical} compact />
+          <WebScoreBadge score={lead.web_score} rating={lead.web_rating} hasCritical={lead.web_has_critical}
+                         analyzedAt={lead.web_analyzed_at} compact />
           {lead.value_estimate ? (
             <span className="font-medium tabular-nums truncate" style={{ color }}>{formatCurrency(lead.value_estimate)}</span>
           ) : null}

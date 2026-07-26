@@ -103,6 +103,13 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
   const trend = scoreTrend(a.overall_score, env?.previous_score ?? null)
   const recs = showAllRecs ? a.recommendations : a.recommendations.slice(0, 6)
   const analyzedAt = a.analyzed_at ? new Date(a.analyzed_at).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : ''
+  const diff = env?.diff ?? null
+  const meta = a.meta as { load_time_ms?: number; content_length?: number; reachable?: boolean }
+  const loadTimeMs = typeof meta.load_time_ms === 'number' ? meta.load_time_ms : null
+  const pageBytes = typeof meta.content_length === 'number' ? meta.content_length : null
+  const reachable = typeof meta.reachable === 'boolean' ? meta.reachable : null
+  // Scoring transparent machen: die tatsächlich verrechneten Gewichte offenlegen.
+  const formula = a.categories.map((c) => `${c.label} ${c.weight}%`).join(' · ')
 
   return (
     <div className="rounded-card p-5 mb-6 border border-border bg-surface-container">
@@ -126,8 +133,9 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
               </span>
             )}
           </div>
-          <p className="text-xs text-text-muted mt-1">
-            {analyzedAt}{env?.history_count ? ` · ${env.history_count} Analyse${env.history_count > 1 ? 'n' : ''}` : ''} · v{a.analysis_version}
+          <p className="text-xs text-text-muted mt-1"
+             title={`Gesamtscore = gewichtetes Mittel der bewerteten Kategorien: ${formula}`}>
+            {analyzedAt}{env?.history_count ? ` · ${env.history_count} Analyse${env.history_count > 1 ? 'n' : ''}` : ''} · v{a.analysis_version} · ⓘ gewichtet
           </p>
           {a.technologies.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -146,18 +154,98 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
         </div>
       </div>
 
-      {/* Kategorie-Ringe */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        {a.categories.map((c) => (
-          <div key={c.key} className="flex items-center gap-2 rounded-md bg-surface-high/50 px-2.5 py-2" title={`Gewicht ${c.weight}%`}>
-            <ScoreRing score={c.score} size={40} stroke={4} />
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-text truncate">{c.label}</p>
-              <p className="text-[10px] text-text-muted">{c.findings.length} Befund{c.findings.length !== 1 ? 'e' : ''}</p>
-            </div>
-          </div>
-        ))}
+      {/* Kennzahlen der Seite (aus meta) */}
+      {(loadTimeMs != null || pageBytes != null || reachable != null) && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-xs text-text-muted">
+          {reachable != null && (
+            <span>Erreichbarkeit: <span className={reachable ? 'text-text' : 'text-danger font-medium'}>
+              {reachable ? 'erreichbar' : 'nicht erreichbar'}</span></span>
+          )}
+          {loadTimeMs != null && (
+            <span>Ladezeit: <span className="text-text tabular-nums font-medium"
+              style={{ color: scoreColor(loadTimeMs > 5000 ? 20 : loadTimeMs > 3000 ? 50 : loadTimeMs > 1500 ? 70 : 95) }}>
+              {(loadTimeMs / 1000).toFixed(1)} s</span></span>
+          )}
+          {pageBytes != null && (
+            <span>Seitengröße: <span className="text-text tabular-nums">
+              {pageBytes > 1_000_000 ? `${(pageBytes / 1_000_000).toFixed(1)} MB` : `${Math.round(pageBytes / 1000)} KB`}</span></span>
+          )}
+        </div>
+      )}
+
+      {/* Kategorien — aufklappbar, mit Befunden und Veränderung zum Vorlauf */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-5">
+        {a.categories.map((c) => {
+          const d = env?.diff?.category_deltas?.[c.key]
+          return (
+            <details key={c.key} className="group rounded-md bg-surface-high/50 overflow-hidden">
+              <summary className="flex items-center gap-2 px-2.5 py-2 cursor-pointer list-none md-state"
+                       title={`Gewicht ${c.weight}% am Gesamtscore`}>
+                <ScoreRing score={c.score} size={40} stroke={4} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-text truncate">{c.label}</p>
+                  <p className="text-[10px] text-text-muted">
+                    {c.findings.length} Befund{c.findings.length !== 1 ? 'e' : ''} · Gewicht {c.weight}%
+                  </p>
+                </div>
+                {d != null && d !== 0 && (
+                  <span className="text-[10px] font-semibold shrink-0"
+                        style={{ color: d > 0 ? '#22c55e' : '#ef4444' }}
+                        title="Veränderung gegenüber der vorherigen Analyse">
+                    {d > 0 ? '▲' : '▼'}{Math.abs(d)}
+                  </span>
+                )}
+                <span className="text-text-muted text-[10px] shrink-0 transition-transform group-open:rotate-90">▶</span>
+              </summary>
+              <div className="px-2.5 pb-2.5 pt-0.5">
+                {c.findings.length === 0 ? (
+                  <p className="text-[11px] text-text-muted">Keine Auffälligkeiten.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {c.findings.map((f, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-text-muted">
+                        <span className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: SEVERITY_COLORS[f.severity] ?? '#60a5fa' }} />
+                        {f.issue}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </details>
+          )
+        })}
       </div>
+
+      {/* Änderungen gegenüber der vorherigen Analyse */}
+      {diff && (diff.new_findings.length > 0 || diff.resolved_findings.length > 0) && (
+        <div className="mb-5 grid sm:grid-cols-2 gap-3">
+          {diff.new_findings.length > 0 && (
+            <div className="rounded-md border border-danger/30 bg-danger/5 p-2.5">
+              <p className="text-[11px] font-semibold text-danger mb-1">
+                Neu seit letzter Analyse ({diff.new_findings.length})
+              </p>
+              <ul className="space-y-0.5">
+                {diff.new_findings.slice(0, 5).map((f, i) => (
+                  <li key={i} className="text-[11px] text-text-muted">• {f.category}: {f.issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {diff.resolved_findings.length > 0 && (
+            <div className="rounded-md border p-2.5" style={{ borderColor: '#22c55e4d', backgroundColor: '#22c55e0d' }}>
+              <p className="text-[11px] font-semibold mb-1" style={{ color: '#22c55e' }}>
+                Behoben ({diff.resolved_findings.length})
+              </p>
+              <ul className="space-y-0.5">
+                {diff.resolved_findings.slice(0, 5).map((f, i) => (
+                  <li key={i} className="text-[11px] text-text-muted">✓ {f.category}: {f.issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PageSpeed (Lighthouse) — nur nach Tiefenanalyse */}
       {a.pagespeed && Object.keys(a.pagespeed.scores).length > 0 && (
@@ -260,16 +348,35 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
   )
 }
 
-/** Kompaktes Badge für Karten/Header (aus den denormalisierten Lead-Feldern). */
-export function WebScoreBadge({ score, rating, hasCritical, compact }: {
-  score: number | null; rating?: string | null; hasCritical?: boolean | null; compact?: boolean
+/**
+ * Kompaktes Badge für Listen/Karten — liest die denormalisierten Lead-Felder
+ * (kein Join, kein Extra-Request). Zeigt auch den Zustand „noch nicht analysiert",
+ * damit in der Liste erkennbar ist, wo eine Analyse fehlt.
+ */
+export function WebScoreBadge({ score, rating, hasCritical, analyzedAt, compact }: {
+  score: number | null
+  rating?: string | null
+  hasCritical?: boolean | null
+  analyzedAt?: string | null
+  compact?: boolean
 }) {
-  if (score == null) return null
+  if (score == null) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded
+                       bg-surface-container text-text-muted"
+            title="Website noch nicht analysiert">
+        🌐 <span className="opacity-70">n. a.</span>
+      </span>
+    )
+  }
   const color = scoreColor(score)
+  const when = analyzedAt
+    ? new Date(analyzedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    : null
   return (
     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded"
       style={{ backgroundColor: color + '22', color }}
-      title={`Website-Score ${score}/100 · ${ratingLabel(rating)}`}>
+      title={`Website-Score ${score}/100 · ${ratingLabel(rating)}${when ? ` · zuletzt geprüft ${when}` : ''}${hasCritical ? ' · kritische Probleme' : ''}`}>
       🌐 {score}{hasCritical ? ' ⚠' : ''}{!compact && rating ? ` · ${ratingLabel(rating)}` : ''}
     </span>
   )

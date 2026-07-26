@@ -81,6 +81,37 @@ def build_recommendations(findings: list[dict]) -> list[dict]:
     return out
 
 
+def _finding_key(f: dict) -> str:
+    """Stabiler Schlüssel eines Befunds für den Vergleich zweier Läufe."""
+    return f"{f.get('category', '')}|{f.get('issue', '')}"
+
+
+def analysis_diff(current: dict, previous: dict | None) -> dict:
+    """Vergleicht zwei gespeicherte Analysen (rein, testbar).
+
+    Rückgabe: {score_delta, category_deltas: {key: delta}, new_findings: [...],
+    resolved_findings: [...]} — `previous=None` ⇒ alles leer/0 (Erstanalyse)."""
+    if not previous:
+        return {"score_delta": 0, "category_deltas": {},
+                "new_findings": [], "resolved_findings": []}
+
+    prev_cats = {c["key"]: c.get("score", 0) for c in (previous.get("categories") or [])}
+    cur_cats = {c["key"]: c.get("score", 0) for c in (current.get("categories") or [])}
+    deltas = {k: cur_cats[k] - prev_cats[k] for k in cur_cats if k in prev_cats
+              and cur_cats[k] != prev_cats[k]}
+
+    cur_f = {_finding_key(f): f for f in (current.get("findings") or [])}
+    prev_f = {_finding_key(f): f for f in (previous.get("findings") or [])}
+    new = [f for k, f in cur_f.items() if k not in prev_f]
+    resolved = [f for k, f in prev_f.items() if k not in cur_f]
+    return {
+        "score_delta": (current.get("overall_score") or 0) - (previous.get("overall_score") or 0),
+        "category_deltas": deltas,
+        "new_findings": new,
+        "resolved_findings": resolved,
+    }
+
+
 def summarize(subscores: dict[str, int | None], findings: list[dict]) -> dict:
     """Baut das komplette Bewertungs-Summary (Gesamtscore, Ampel, kritisch-Flag,
     Kategorien mit Score+Befunden, priorisierte Empfehlungen)."""
