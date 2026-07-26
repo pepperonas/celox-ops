@@ -8,6 +8,11 @@ import {
   PRIORITY_ORDER, ratingLabel, scoreColor, scoreTrend, SEVERITY_COLORS,
 } from './webScore'
 
+const PS_LABELS: Record<string, string> = {
+  performance: 'Performance', accessibility: 'Barrierefreiheit',
+  'best-practices': 'Best Practices', seo: 'SEO',
+}
+
 /** SVG-Fortschrittsring. */
 function ScoreRing({ score, size = 96, stroke = 8 }: { score: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2
@@ -59,12 +64,13 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
     return () => { alive = false }
   }, [leadId])
 
-  const runAnalyze = useCallback(async () => {
+  const runAnalyze = useCallback(async (opts?: { deep?: boolean; pagespeed?: boolean }) => {
     setAnalyzing(true)
     try {
-      const e = await analyzeLeadWebsite(leadId)
+      const e = await analyzeLeadWebsite(leadId, opts)
       setEnv(e)
       if (e.analysis) onAnalyzed?.(e.analysis)
+      if (e.run) toast.success(`Tiefenanalyse fertig · KI-Kosten ${e.run.cost_eur.toFixed(3)} €`)
     } catch (err: unknown) {
       const ex = err as { response?: { data?: { detail?: string } } }
       toast.error(ex.response?.data?.detail || 'Analyse fehlgeschlagen.')
@@ -81,7 +87,15 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
         <p className="text-sm text-text-muted mb-3">
           {website ? 'Noch keine Website-Analyse für diesen Lead.' : 'Kein Website-URL hinterlegt.'}
         </p>
-        {website && <button onClick={runAnalyze} className="btn-primary text-sm">Website analysieren</button>}
+        {website && (
+          <div className="flex flex-wrap gap-2 justify-center">
+            <button onClick={() => runAnalyze()} className="btn-primary text-sm">Website analysieren</button>
+            <button onClick={() => runAnalyze({ deep: true, pagespeed: true })} className="btn-secondary text-sm"
+              title="Zusätzlich KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)">
+              ✨ Tiefenanalyse
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -123,7 +137,13 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
             </div>
           )}
         </div>
-        <button onClick={runAnalyze} className="btn-secondary text-sm">Neu analysieren</button>
+        <div className="flex flex-col gap-1.5">
+          <button onClick={() => runAnalyze()} className="btn-secondary text-sm">Neu analysieren</button>
+          <button onClick={() => runAnalyze({ deep: true, pagespeed: true })} className="btn-secondary text-sm"
+            title="Technik + KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)">
+            ✨ Tiefenanalyse
+          </button>
+        </div>
       </div>
 
       {/* Kategorie-Ringe */}
@@ -138,6 +158,80 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
           </div>
         ))}
       </div>
+
+      {/* PageSpeed (Lighthouse) — nur nach Tiefenanalyse */}
+      {a.pagespeed && Object.keys(a.pagespeed.scores).length > 0 && (
+        <div className="mb-5 rounded-md border border-border bg-surface-high/40 p-3">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
+            PageSpeed{a.pagespeed.strategy ? ` · ${a.pagespeed.strategy}` : ''}
+          </p>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {Object.entries(a.pagespeed.scores).map(([k, v]) => (
+              <span key={k} className="text-[11px] font-medium px-2 py-1 rounded"
+                style={{ backgroundColor: scoreColor(v) + '22', color: scoreColor(v) }}>
+                {PS_LABELS[k] ?? k}: {v}
+              </span>
+            ))}
+          </div>
+          {a.pagespeed.metrics.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
+              {a.pagespeed.metrics.map((m) => (
+                <div key={m.label} className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="text-text-muted truncate" title={m.label}>{m.label}</span>
+                  <span className="tabular-nums font-medium shrink-0"
+                    style={{ color: m.score == null ? undefined : scoreColor(m.score) }}>{m.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* KI-Qualitätsbewertung — nur nach Tiefenanalyse */}
+      {a.ai_review && (
+        <div className="mb-5 rounded-md border border-accent/30 bg-accent/5 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">✨ KI-Qualitätsbewertung</p>
+            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: scoreColor(a.ai_review.score) + '22', color: scoreColor(a.ai_review.score) }}>
+              {a.ai_review.score}/100
+            </span>
+          </div>
+          {a.ai_review.summary && <p className="text-sm text-text mb-2">{a.ai_review.summary}</p>}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 mb-2">
+            {a.ai_review.dimensions.map((d) => (
+              <div key={d.key} className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-text-muted truncate" title={d.label}>{d.label}</span>
+                <span className="tabular-nums font-medium shrink-0" style={{ color: scoreColor(d.score) }}>{d.score}</span>
+              </div>
+            ))}
+          </div>
+          {(a.ai_review.strengths.length > 0 || a.ai_review.weaknesses.length > 0) && (
+            <div className="grid sm:grid-cols-2 gap-3 mt-2">
+              {a.ai_review.strengths.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-text-muted mb-1">Stärken</p>
+                  <ul className="space-y-0.5">
+                    {a.ai_review.strengths.map((s, i) => (
+                      <li key={i} className="text-xs text-text-muted">✓ {s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {a.ai_review.weaknesses.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-text-muted mb-1">Schwächen</p>
+                  <ul className="space-y-0.5">
+                    {a.ai_review.weaknesses.map((s, i) => (
+                      <li key={i} className="text-xs text-text-muted">• {s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Priorisierte Empfehlungen */}
       {a.recommendations.length > 0 && (

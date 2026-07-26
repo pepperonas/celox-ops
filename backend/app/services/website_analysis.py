@@ -245,6 +245,52 @@ def _cert_failed(url: str) -> dict:
     return result
 
 
+async def _load(url: str) -> tuple[object | None, int, dict | None, str | None]:
+    """Lädt die Seite SSRF-sicher mit strikter TLS-Prüfung.
+    Rückgabe: (resp, load_time_ms, error_result, clean_url) — bei Fehler ist
+    `error_result` ein fertiges Analyse-Summary und `resp` None."""
+    clean = _sanitize_url(url)
+    if clean is None:
+        return None, 0, _unreachable((url or "").strip(), "Ungültige URL"), None
+    try:
+        start = time.time()
+        resp = await _safe_get(clean, verify=True)
+        return resp, int((time.time() - start) * 1000), None, clean
+    except _Blocked as e:
+        return None, 0, _unreachable(clean, f"Analyse abgelehnt: {e}"), clean
+    except httpx.ConnectError as e:
+        if "certificate" in str(e).lower() or "ssl" in str(e).lower():
+            return None, 0, _cert_failed(clean), clean
+        return None, 0, _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen"), clean
+    except httpx.TimeoutException:
+        return None, 0, _unreachable(clean, "Website-Timeout nach 15 Sekunden"), clean
+    except httpx.HTTPError:
+        return None, 0, _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen"), clean
+
+
+def _technical(resp, load_time_ms: int) -> dict:
+    html_lower = resp.text.lower()
+    headers_lower = {k.lower(): v.lower() for k, v in resp.headers.items()}
+    return analyze_html(resp.url.scheme, html_lower, headers_lower,
+                        load_time_ms, len(resp.content))
+
+
+def _finalize(resp, analyzed: dict, extra_meta: dict | None = None,
+              ai_review: dict | None = None, pagespeed: dict | None = None) -> dict:
+    result = summarize(analyzed["subscores"], analyzed["findings"])
+    result.update({
+        "url": str(resp.url),
+        "analysis_version": ANALYSIS_VERSION,
+        "technologies": analyzed["technologies"],
+        "meta": {"reachable": True, **analyzed["meta"], **(extra_meta or {})},
+    })
+    if ai_review is not None:
+        result["ai_review"] = ai_review
+    if pagespeed is not None:
+        result["pagespeed"] = pagespeed
+    return result
+
+
 async def fetch_and_analyze(url: str) -> dict:
     """Holt die Seite und liefert das vollständige Analyse-Summary
     (Gesamtscore/Ampel/Kategorien/Empfehlungen + Technologien + meta).
@@ -253,33 +299,47 @@ async def fetch_and_analyze(url: str) -> dict:
     Hop gegen interne/private/Metadaten-IPs geprüft (Auto-Redirects aus).
     TLS wird strikt verifiziert; ein ungültiges Zertifikat wird zu einem kritischen
     Technik-Befund — der Inhalt wird NICHT ungeprüft geladen (kein MITM-Vektor)."""
-    clean = _sanitize_url(url)
-    if clean is None:
-        return _unreachable((url or "").strip(), "Ungültige URL")
-    try:
-        start = time.time()
-        resp = await _safe_get(clean, verify=True)
-        load_time_ms = int((time.time() - start) * 1000)
-    except _Blocked as e:
-        return _unreachable(clean, f"Analyse abgelehnt: {e}")
-    except httpx.ConnectError as e:
-        if "certificate" in str(e).lower() or "ssl" in str(e).lower():
-            return _cert_failed(clean)
-        return _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen")
-    except httpx.TimeoutException:
-        return _unreachable(clean, "Website-Timeout nach 15 Sekunden")
-    except httpx.HTTPError:
-        return _unreachable(clean, "Website nicht erreichbar — Verbindung fehlgeschlagen")
+    resp, load_time_ms, err, _ = await _load(url)
+    if err is not None:
+        return err
+    return _finalize(resp, _technical(resp, load_time_ms))
 
-    html_lower = resp.text.lower()
-    headers_lower = {k.lower(): v.lower() for k, v in resp.headers.items()}
-    analyzed = analyze_html(resp.url.scheme, html_lower, headers_lower,
-                            load_time_ms, len(resp.content))
-    result = summarize(analyzed["subscores"], analyzed["findings"])
-    result.update({
-        "url": str(resp.url),
-        "analysis_version": ANALYSIS_VERSION,
-        "technologies": analyzed["technologies"],
-        "meta": {"reachable": True, **analyzed["meta"]},
-    })
-    return result
+
+async def analyze_deep(url: str, *, ai=None, model: str | None = None, usage=None,
+                       with_pagespeed: bool = False, pagespeed_strategy: str = "mobile") -> dict:
+    """Tiefenanalyse (A2, opt-in): technische Basis + optional PageSpeed
+    (überschreibt den heuristischen Performance-Subscore) + optional KI-
+    Qualitätsbewertung (liefert den `ki`-Subscore).
+
+    Beide Zusatzquellen sind defensiv: fällt eine aus, bleibt die technische
+    Analyse vollständig gültig (kein Abbruch)."""
+    resp, load_time_ms, err, clean = await _load(url)
+    if err is not None:
+        return err
+    analyzed = _technical(resp, load_time_ms)
+    final_url = str(resp.url)
+    extra_meta: dict = {}
+
+    pagespeed = None
+    if with_pagespeed:
+        from app.services.website_pagespeed import fetch_pagespeed
+        pagespeed = await fetch_pagespeed(final_url, pagespeed_strategy)
+        if pagespeed and pagespeed["scores"].get("performance") is not None:
+            # Gemessener Lighthouse-Wert schlägt die Ladezeit-Heuristik.
+            analyzed["subscores"]["performance"] = pagespeed["scores"]["performance"]
+            extra_meta["performance_source"] = "pagespeed"
+        elif with_pagespeed:
+            extra_meta["pagespeed_error"] = "PageSpeed nicht verfügbar"
+
+    ai_review = None
+    if ai is not None and model:
+        from app.services.website_ai_review import extract_text, review_website
+        try:
+            text = extract_text(resp.text)
+            ai_review = await review_website(ai, model, final_url, text,
+                                             analyzed["meta"], analyzed["technologies"], usage)
+            analyzed["subscores"]["ki"] = ai_review["score"]
+        except Exception as e:  # KI-Ausfall darf die Analyse nicht killen
+            extra_meta["ai_error"] = str(e)[:200]
+
+    return _finalize(resp, analyzed, extra_meta, ai_review, pagespeed)

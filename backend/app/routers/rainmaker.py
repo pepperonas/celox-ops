@@ -1683,6 +1683,8 @@ def _analysis_full(row) -> dict:
         "technologies": row.technologies,
         "recommendations": row.recommendations,
         "meta": row.meta,
+        "ai_review": row.ai_review,
+        "pagespeed": row.pagespeed,
     }
 
 
@@ -1709,22 +1711,75 @@ async def _latest_analysis(lead_id: uuid.UUID, db: AsyncSession, offset: int = 0
 @router.post("/leads/{lead_id}/analyze-website")
 async def analyze_lead_website(
     lead_id: uuid.UUID,
+    deep: bool = Query(False, description="Tiefenanalyse: KI-Qualitätsbewertung (kostet Tokens)"),
+    pagespeed: bool = Query(False, description="Google PageSpeed/Core Web Vitals mitmessen (langsam)"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Analysiert die Website des Leads (technisch), speichert eine neue Version,
-    aktualisiert die denormalisierte Zusammenfassung am Lead und liefert den
-    Trend zum vorherigen Lauf."""
+    """Analysiert die Website des Leads, speichert eine neue Version, aktualisiert
+    die denormalisierte Zusammenfassung am Lead und liefert den Trend zum Vorlauf.
+
+    Standard = schnelle technische Analyse. `deep=true` ergänzt die KI-Qualitäts-
+    bewertung (Budget-Guard + Kostenlogging wie die KI-Lead-Suche), `pagespeed=true`
+    misst Performance/Core Web Vitals via Lighthouse. Beide Zusätze sind defensiv:
+    fällt einer aus, bleibt die technische Analyse gültig."""
     from datetime import datetime, timezone
 
     from app.models.lead_website_analysis import LeadWebsiteAnalysis
-    from app.services.website_analysis import fetch_and_analyze
+    from app.services.website_analysis import analyze_deep, fetch_and_analyze
 
     lead = await _get_lead_or_404(lead_id, db)
     if not lead.website or not lead.website.strip():
         raise HTTPException(status_code=422, detail="Der Lead hat keine Website hinterlegt.")
 
     prev = await _latest_analysis(lead.id, db)
-    result = await fetch_and_analyze(lead.website)
+
+    ai = None
+    model = None
+    usage = None
+    budget_eur = 0.0
+    spent = 0.0
+    if deep:
+        # KI-Vorlauf wie beim Mail-Entwurf: 503 ohne Key, Budget hart (402).
+        from app.models.app_settings import AppSettings
+        from app.services.ai_lead_agent import get_client
+        from app.services.ai_pricing import Usage
+
+        if not settings.ANTHROPIC_API_KEY:
+            raise HTTPException(status_code=503,
+                                detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+        app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+        model = (app_row.ai_model if app_row else DEFAULT_MODEL)
+        if model not in ALLOWED_MODELS:
+            model = DEFAULT_MODEL
+        budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+        spent = await _ai_month_spent_eur(db)
+        if budget_eur > 0 and spent >= budget_eur:
+            raise HTTPException(status_code=402, detail=(
+                f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+                "Budget in den Einstellungen erhöhen."))
+        ai = get_client(settings.ANTHROPIC_API_KEY)
+        usage = Usage()
+
+    if deep or pagespeed:
+        result = await analyze_deep(lead.website, ai=ai, model=model, usage=usage,
+                                    with_pagespeed=pagespeed)
+    else:
+        result = await fetch_and_analyze(lead.website)
+
+    run: dict | None = None
+    if deep and usage is not None:
+        from app.services.ai_pricing import get_pricing
+        from app.services.exchange_service import get_usd_eur_rate
+
+        cost_usd = usage.cost_with(await get_pricing(model))
+        cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+        db.add(AiLeadRun(
+            brief=f"Website-Analyse: {lead.company}"[:2000], model=model,
+            used_web_search=False, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+            candidates_found=0, status="ok", **usage.as_dict()))
+        run = {"model": model, "cost_usd": round(cost_usd, 6), "cost_eur": cost_eur,
+               **usage.as_dict()}
+        spent += cost_eur
 
     row = LeadWebsiteAnalysis(
         lead_id=lead.id, analysis_version=result["analysis_version"], url=result["url"],
@@ -1732,6 +1787,7 @@ async def analyze_lead_website(
         has_critical=result["has_critical"], categories=result["categories"],
         findings=result["findings"], technologies=result["technologies"],
         recommendations=result["recommendations"], meta=result["meta"],
+        ai_review=result.get("ai_review"), pagespeed=result.get("pagespeed"),
     )
     db.add(row)
     lead.web_score = result["overall_score"]
@@ -1740,11 +1796,15 @@ async def analyze_lead_website(
     lead.web_analyzed_at = datetime.now(timezone.utc)
     await db.flush()
     await db.refresh(row)
-    return {
+    out = {
         "analysis": _analysis_full(row),
         "previous_score": prev.overall_score if prev else None,
         "previous_at": prev.analyzed_at.isoformat() if prev and prev.analyzed_at else None,
     }
+    if run is not None:
+        out["run"] = run
+        out["budget"] = _budget_status(spent, budget_eur).model_dump()
+    return out
 
 
 @router.get("/leads/{lead_id}/website-analysis")

@@ -39,3 +39,7 @@ class LeadWebsiteAnalysis(OwnedMixin, Base):
     technologies: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     recommendations: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     meta: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    # Tiefenanalyse (A2, opt-in) — NULL, wenn nicht mitgelaufen.
+    # Bestehende DBs: manuelles ALTER (scripts/add_lead_web_analysis_deep.sql).
+    ai_review: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    pagespeed: Mapped[dict | None] = mapped_column(JSON, nullable=True)
