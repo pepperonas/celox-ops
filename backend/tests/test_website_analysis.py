@@ -4,11 +4,13 @@ from app.services.website_analysis import _host_is_public, _sanitize_url, analyz
 _GOOD = """<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Beispiel GmbH — Softwareentwicklung</title>
-<meta name="description" content="Wir bauen Software.">
+<meta name="description" content="Wir entwickeln individuelle Software fuer den Mittelstand und begleiten Projekte von der Idee bis zum Betrieb.">
+<meta property="og:title" content="Beispiel GmbH"><meta property="og:image" content="/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://beispiel.de/">
 <link rel="icon" href="/favicon.ico">
-<script type="application/ld+json">{}</script></head>
-<body><h1>Willkommen</h1>
+<script type="application/ld+json">{"@type":"Organization"}</script></head>
+<body><h1>Willkommen</h1><h2>Leistungen</h2>
 <a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a>
 <img src="a.jpg" alt="x"></body></html>"""
 
@@ -44,7 +46,7 @@ def test_missing_impressum_and_privacy_are_critical():
 def test_trackers_without_banner_flagged_and_detected():
     r = analyze_html("https", _BAD.lower(), _headers(), 800, 20_000)
     assert "Google Analytics" in r["technologies"]
-    assert "Google Fonts" in r["technologies"]
+    assert "Google Fonts (extern)" in r["technologies"]
     assert any("Cookie-Banner" in f["issue"] for f in r["findings"])
     assert any("Google Fonts" in f["issue"] for f in r["findings"])
 
@@ -103,3 +105,39 @@ def test_sanitize_url_rejects_non_http_schemes():
     assert _sanitize_url("ftp://example.com") is None
     assert _sanitize_url("file:///etc/passwd") is None
     assert _sanitize_url("") is None
+
+
+# ---- Erweiterte Signale (Phase 1) ------------------------------------------
+def test_good_site_has_og_and_structured_data_signals():
+    r = analyze_html("https", _GOOD, _headers(), 600, 50_000, final_url="https://beispiel.de/")
+    sig = r["signals"]
+    assert sig["meta"]["og_present"] is True
+    assert sig["meta"]["twitter_present"] is True
+    assert sig["meta"]["canonical"] is True
+    assert sig["meta"]["favicon"] is True
+    assert sig["meta"]["lang"] == "de"
+    assert sig["seo"]["headings"]["h1"] == 1 and sig["seo"]["headings"]["h2"] == 1
+    assert "Organization" in sig["seo"]["structured_data"]
+
+
+def test_noindex_is_critical_seo_finding():
+    html = _GOOD.replace("<head>", '<head><meta name="robots" content="noindex,nofollow">')
+    r = analyze_html("https", html, _headers(), 600, 50_000, final_url="https://x.de/")
+    assert r["signals"]["meta"]["noindex"] is True
+    assert any(f["severity"] == "critical" and "noindex" in f["issue"] for f in r["findings"])
+
+
+def test_missing_sitemap_and_broken_links_from_extras():
+    r = analyze_html("https", _GOOD, _headers(), 600, 50_000, final_url="https://x.de/",
+                     extras={"robots_txt": False, "sitemap": False,
+                             "broken_links": ["404 https://x.de/alt"], "links_checked": 10})
+    issues = " ".join(f["issue"] for f in r["findings"])
+    assert "robots.txt" in issues and "sitemap.xml" in issues and "defekte interne Links" in issues
+
+
+def test_server_and_powered_by_headers_are_flagged():
+    r = analyze_html("https", _GOOD, _headers(server="Apache/2.4.41", **{"x-powered-by": "PHP/7.4"}),
+                     600, 50_000, final_url="https://x.de/")
+    issues = " ".join(f["issue"] for f in r["findings"])
+    assert "X-Powered-By" in issues and "Server-Header" in issues
+    assert r["signals"]["tech"]["server"] == "apache/2.4.41"

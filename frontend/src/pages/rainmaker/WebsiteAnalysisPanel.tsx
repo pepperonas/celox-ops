@@ -7,6 +7,7 @@ import {
 import {
   PRIORITY_ORDER, ratingLabel, scoreColor, scoreTrend, SEVERITY_COLORS,
 } from './webScore'
+import WebsiteFactSheet from './WebsiteFactSheet'
 
 const PS_LABELS: Record<string, string> = {
   performance: 'Performance', accessibility: 'Barrierefreiheit',
@@ -173,6 +174,9 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
         </div>
       )}
 
+      {/* Technik-Steckbrief (alle Roh-Signale, aufklappbar) */}
+      <WebsiteFactSheet signals={(a.meta as { signals?: never }).signals} />
+
       {/* Kategorien — aufklappbar, mit Befunden und Veränderung zum Vorlauf */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-5">
         {a.categories.map((c) => {
@@ -261,6 +265,27 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
               </span>
             ))}
           </div>
+          {a.pagespeed.field_metrics && a.pagespeed.field_metrics.length > 0 ? (
+            <div className="mb-2">
+              <p className="text-[10px] text-text-muted mb-1">
+                Felddaten echter Nutzer (CrUX, 28 Tage{a.pagespeed.field_source === 'origin' ? ', Domain-Ebene' : ''})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {a.pagespeed.field_metrics.map((f) => (
+                  <span key={f.label} className="text-[11px] px-2 py-0.5 rounded bg-surface-container"
+                        title={f.category ?? undefined}>
+                    {f.label}: <span className="tabular-nums font-medium"
+                      style={{ color: f.category === 'FAST' ? '#22c55e' : f.category === 'SLOW' ? '#ef4444' : '#f59e0b' }}>
+                      {f.percentile ?? '–'}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] text-text-muted mb-2">
+              Keine CrUX-Felddaten (u. a. INP) — die Seite hat zu wenig Traffic für Googles Nutzerdatensatz.
+            </p>
+          )}
           {a.pagespeed.metrics.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
               {a.pagespeed.metrics.map((m) => (

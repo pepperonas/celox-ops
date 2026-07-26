@@ -17,9 +17,13 @@ export interface AiReview {
   version: string
 }
 export interface PageSpeedMetric { label: string; value: string; score: number | null }
+export interface PageSpeedField { label: string; percentile: number | null; category: string | null }
 export interface PageSpeedResult {
   scores: Record<string, number>
   metrics: PageSpeedMetric[]
+  /** CrUX-Felddaten echter Nutzer — einzige Quelle für INP (fehlt bei wenig Traffic). */
+  field_metrics?: PageSpeedField[]
+  field_source?: 'url' | 'origin' | null
   strategy?: string | null
 }
 export interface WebsiteAnalysis {
