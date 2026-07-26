@@ -282,6 +282,11 @@ class RainmakerLeadResponse(RainmakerLeadBase):
     email_status: str | None = None      # valid/role/disposable/no_mx/invalid_syntax/unknown/None
     customer_id: uuid.UUID | None = None  # verknüpfter Kunde (nach Konvertierung)
     pinned: bool = False                  # Bookmark → oben in der Pipeline-Spalte
+    # Denormalisierte Website-Analyse-Zusammenfassung (Liste-Badge; Details separat)
+    web_score: int | None = None
+    web_rating: str | None = None         # gruen/gelb/orange/rot
+    web_has_critical: bool | None = None
+    web_analyzed_at: datetime | None = None
 
     # Computed "next action" summary (populated by the activation engine).
     next_action_type: RainmakerActivityType | None = None

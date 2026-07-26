@@ -517,6 +517,11 @@ export interface RainmakerLead {
   updated_at: string
   // E-Mail-Qualitätsurteil (SMTP-frei): valid/role/disposable/no_mx/invalid_syntax/unknown/null
   email_status: string | null
+  // Denormalisierte Website-Analyse-Zusammenfassung (Liste-Badge; Details separat)
+  web_score: number | null
+  web_rating: string | null
+  web_has_critical: boolean | null
+  web_analyzed_at: string | null
   // Verknüpfter Kunde nach Lead→Kunde-Konvertierung
   customer_id: string | null
   // Activation-engine computed fields

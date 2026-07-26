@@ -15,6 +15,7 @@ import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
 import { sourceBadge, sourceKey } from './leadSources'
+import { WebScoreBadge } from './WebsiteAnalysisPanel'
 import { EMAIL_DELIVERABLE, EMAIL_PROBLEM } from './emailStatus'
 import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from './PipelineTimeFilter'
 import Select from '../../components/Select'
@@ -523,6 +524,7 @@ export default function RainmakerPipeline() {
                                 style={{ backgroundColor: b.color + '22', color: b.color }}
                                 title={`Quelle: ${lead.source || 'Manuell'}`}>{b.label}</span>
                         ) })()}
+                        <WebScoreBadge score={lead.web_score} rating={lead.web_rating} hasCritical={lead.web_has_critical} compact />
                         {lead.value_estimate ? (
                           <span className="font-medium tabular-nums truncate" style={{ color }}>{formatCurrency(lead.value_estimate)}</span>
                         ) : null}

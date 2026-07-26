@@ -1663,3 +1663,127 @@ async def send_lead_email_endpoint(
         notes=f"E-Mail gesendet: {data.subject}"[:2000],
     ))
     return {"ok": True, "sent_to": to}
+
+
+# --------------------------------------------------------------------------- #
+#  Website-Analyse (A1): persistent + versioniert pro Lead
+# --------------------------------------------------------------------------- #
+def _analysis_full(row) -> dict:
+    """Vollständiges Analyse-Objekt für Detail-Dashboard."""
+    return {
+        "id": str(row.id),
+        "analyzed_at": row.analyzed_at.isoformat() if row.analyzed_at else None,
+        "analysis_version": row.analysis_version,
+        "url": row.url,
+        "overall_score": row.overall_score,
+        "rating": row.rating,
+        "has_critical": row.has_critical,
+        "categories": row.categories,
+        "findings": row.findings,
+        "technologies": row.technologies,
+        "recommendations": row.recommendations,
+        "meta": row.meta,
+    }
+
+
+def _analysis_brief(row) -> dict:
+    return {
+        "id": str(row.id),
+        "analyzed_at": row.analyzed_at.isoformat() if row.analyzed_at else None,
+        "overall_score": row.overall_score,
+        "rating": row.rating,
+        "has_critical": row.has_critical,
+    }
+
+
+async def _latest_analysis(lead_id: uuid.UUID, db: AsyncSession, offset: int = 0):
+    from app.models.lead_website_analysis import LeadWebsiteAnalysis
+    return (await db.execute(
+        select(LeadWebsiteAnalysis)
+        .where(LeadWebsiteAnalysis.lead_id == lead_id)
+        .order_by(LeadWebsiteAnalysis.analyzed_at.desc())
+        .offset(offset).limit(1)
+    )).scalar_one_or_none()
+
+
+@router.post("/leads/{lead_id}/analyze-website")
+async def analyze_lead_website(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Analysiert die Website des Leads (technisch), speichert eine neue Version,
+    aktualisiert die denormalisierte Zusammenfassung am Lead und liefert den
+    Trend zum vorherigen Lauf."""
+    from datetime import datetime, timezone
+
+    from app.models.lead_website_analysis import LeadWebsiteAnalysis
+    from app.services.website_analysis import fetch_and_analyze
+
+    lead = await _get_lead_or_404(lead_id, db)
+    if not lead.website or not lead.website.strip():
+        raise HTTPException(status_code=422, detail="Der Lead hat keine Website hinterlegt.")
+
+    prev = await _latest_analysis(lead.id, db)
+    result = await fetch_and_analyze(lead.website)
+
+    row = LeadWebsiteAnalysis(
+        lead_id=lead.id, analysis_version=result["analysis_version"], url=result["url"],
+        overall_score=result["overall_score"], rating=result["rating"],
+        has_critical=result["has_critical"], categories=result["categories"],
+        findings=result["findings"], technologies=result["technologies"],
+        recommendations=result["recommendations"], meta=result["meta"],
+    )
+    db.add(row)
+    lead.web_score = result["overall_score"]
+    lead.web_rating = result["rating"]
+    lead.web_has_critical = result["has_critical"]
+    lead.web_analyzed_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(row)
+    return {
+        "analysis": _analysis_full(row),
+        "previous_score": prev.overall_score if prev else None,
+        "previous_at": prev.analyzed_at.isoformat() if prev and prev.analyzed_at else None,
+    }
+
+
+@router.get("/leads/{lead_id}/website-analysis")
+async def get_lead_website_analysis(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Neueste Analyse + Trend zum Vorlauf + Historien-Anzahl (für das Dashboard)."""
+    from app.models.lead_website_analysis import LeadWebsiteAnalysis
+
+    await _get_lead_or_404(lead_id, db)
+    latest = await _latest_analysis(lead_id, db)
+    if latest is None:
+        return {"analysis": None, "previous_score": None, "history_count": 0}
+    prev = await _latest_analysis(lead_id, db, offset=1)
+    count = (await db.execute(
+        select(func.count()).select_from(LeadWebsiteAnalysis)
+        .where(LeadWebsiteAnalysis.lead_id == lead_id)
+    )).scalar_one()
+    return {
+        "analysis": _analysis_full(latest),
+        "previous_score": prev.overall_score if prev else None,
+        "previous_at": prev.analyzed_at.isoformat() if prev and prev.analyzed_at else None,
+        "history_count": count,
+    }
+
+
+@router.get("/leads/{lead_id}/website-analyses")
+async def list_lead_website_analyses(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Kompakte Historie aller Analysen (neueste zuerst)."""
+    from app.models.lead_website_analysis import LeadWebsiteAnalysis
+
+    await _get_lead_or_404(lead_id, db)
+    rows = (await db.execute(
+        select(LeadWebsiteAnalysis)
+        .where(LeadWebsiteAnalysis.lead_id == lead_id)
+        .order_by(LeadWebsiteAnalysis.analyzed_at.desc())
+    )).scalars().all()
+    return {"items": [_analysis_brief(r) for r in rows]}

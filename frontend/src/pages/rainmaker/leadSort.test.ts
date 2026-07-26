@@ -12,6 +12,7 @@ function lead(over: Partial<RainmakerLead> = {}): RainmakerLead {
     tags: null, target: null, pinned: false, notes: null,
     created_at: '2026-07-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z',
     email_status: null, customer_id: null,
+    web_score: null, web_rating: null, web_has_critical: null, web_analyzed_at: null,
     next_action_type: null, next_action_due: null, next_action_id: null, needs_next_action: false,
     ...over,
   }

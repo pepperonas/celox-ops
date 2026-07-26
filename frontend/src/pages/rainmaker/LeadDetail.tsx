@@ -21,7 +21,7 @@ import {
   verifyLeadEmail,
   updateRainmakerLead,
 } from '../../api/rainmaker'
-import { analyzeWebsite, type AnalyzeResult } from '../../api/leads'
+import WebsiteAnalysisPanel from './WebsiteAnalysisPanel'
 import { emailStatusInfo } from './emailStatus'
 import { toastWithUndo } from '../../utils/undoToast'
 import type { RainmakerTemplate, Todo } from '../../types'
@@ -48,8 +48,6 @@ export default function RainmakerLeadDetail() {
   const [showDelete, setShowDelete] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
   const [nextTodo, setNextTodo] = useState<Todo | null>(null)
   const [showEmail, setShowEmail] = useState(false)
   const mayDelete = canDelete(useAuthStore((st) => st.role))
@@ -64,18 +62,6 @@ export default function RainmakerLeadDetail() {
       toast.error('Konnte den Pin nicht ändern.')
       setLead({ ...lead, pinned: !next })
     }
-  }
-
-  const handleAnalyze = async () => {
-    if (!lead?.website) return
-    setAnalyzing(true)
-    setAnalysis(null)
-    try {
-      setAnalysis(await analyzeWebsite(lead.website))
-    } catch {
-      toast.error('Website konnte nicht geprüft werden.')
-    }
-    setAnalyzing(false)
   }
 
   const load = useCallback(async () => {
@@ -268,12 +254,6 @@ export default function RainmakerLeadDetail() {
             Route
           </a>
         )}
-        {lead.website && (
-          <button onClick={handleAnalyze} disabled={analyzing} className="btn-secondary !py-2.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            {analyzing ? 'Prüfe…' : 'Website prüfen'}
-          </button>
-        )}
         {linkedInUrl && (
           <a href={linkedInUrl} target="_blank" rel="noreferrer" className="btn-secondary !py-2.5">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
@@ -304,42 +284,15 @@ export default function RainmakerLeadDetail() {
         )}
       </div>
 
-      {/* Website-Analyse (Kaltakquise-Argumente) */}
-      {analysis && (
-        <div className="rounded-card p-5 mb-6 border border-border bg-surface-container">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-3">
-              <span
-                className="inline-flex items-center justify-center w-12 h-12 rounded-full text-lg font-bold"
-                style={{
-                  backgroundColor: (analysis.score >= 80 ? '#22c55e' : analysis.score >= 50 ? '#f59e0b' : '#ef4444') + '26',
-                  color: analysis.score >= 80 ? '#22c55e' : analysis.score >= 50 ? '#f59e0b' : '#ef4444',
-                }}
-              >{analysis.score}</span>
-              <div>
-                <p className="text-text font-medium">Website-Score</p>
-                <p className="text-xs text-text-muted">Ladezeit {(analysis.load_time_ms / 1000).toFixed(1)}s · {analysis.findings.length} Befunde</p>
-              </div>
-            </div>
-            <button onClick={() => setAnalysis(null)} className="text-text-muted hover:text-text text-xs">Schließen</button>
-          </div>
-          {analysis.findings.length === 0 ? (
-            <p className="text-sm text-text-muted">Keine Auffälligkeiten gefunden.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {analysis.findings.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span
-                    className="shrink-0 mt-1.5 w-2 h-2 rounded-full"
-                    style={{ backgroundColor: f.severity === 'critical' ? '#ef4444' : f.severity === 'warning' ? '#f59e0b' : '#60a5fa' }}
-                  />
-                  <span className="text-text-muted"><span className="text-text font-medium">{f.category}:</span> {f.issue}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {/* Website-Analyse: persistentes Dashboard (Score/Ampel/Kategorien/Empfehlungen) */}
+      <WebsiteAnalysisPanel
+        leadId={lead.id}
+        website={lead.website}
+        onAnalyzed={(res) => setLead((l) => l ? {
+          ...l, web_score: res.overall_score, web_rating: res.rating,
+          web_has_critical: res.has_critical, web_analyzed_at: res.analyzed_at,
+        } : l)}
+      />
 
       {/* Next action */}
       <div className={`rounded-card p-5 mb-6 border ${(nextAction || nextTodo) ? 'bg-surface-container border-border' : isClosed ? 'bg-surface-container border-border' : 'bg-danger/10 border-danger/40'}`}>

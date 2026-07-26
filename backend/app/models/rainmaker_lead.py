@@ -101,6 +101,13 @@ class RainmakerLead(OwnedMixin, Base):
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Denormalisierte Website-Analyse-Zusammenfassung (für die Liste ohne Join;
+    # Details/Historie in lead_website_analyses). Bestehende DBs: manuelles ALTER
+    # (scripts/add_lead_web_analysis.sql).
+    web_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    web_rating: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    web_has_critical: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    web_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Generierte, normalisierte Dedup-Schlüssel (read-only) — treiben die
     # partiellen Unique-Indizes (race-sicher gegen parallele Importe).
     email_norm: Mapped[str | None] = mapped_column(

@@ -35,6 +35,7 @@ from app.models.outreach_template import OutreachTemplate
 from app.models.todo import Todo
 from app.models.rainmaker_lead_draft import RainmakerLeadDraft
 from app.models.reference_value import ReferenceValue
+from app.models.lead_website_analysis import LeadWebsiteAnalysis
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -49,6 +50,7 @@ set_owned_models([
     EmailTemplate, PagespeedResult, ComplianceRecord, RainmakerLead, RainmakerActivity,
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
+    LeadWebsiteAnalysis,
 ])
 install_tenancy_events()
 
