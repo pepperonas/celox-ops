@@ -25,6 +25,7 @@ from app.schemas.customer import (
     CustomerUpdate,
 )
 from app.services.filenames import customer_label, download_name
+from app.services.business_time import now as business_now, today as business_today
 
 router = APIRouter(
     prefix="/api/customers",
@@ -255,7 +256,7 @@ async def dsgvo_export(
 
     export = {
         "export_type": "DSGVO Art. 15 — Auskunft",
-        "export_date": datetime.now().isoformat(),
+        "export_date": business_now().isoformat(),
         "kunde": _row_to_dict(customer),
         "auftraege": orders,
         "vertraege": contracts,
@@ -268,7 +269,7 @@ async def dsgvo_export(
     json_str = json.dumps(export, default=_dsgvo_serialize, ensure_ascii=False, indent=2)
 
     filename = download_name(
-        "DSGVO-Export", customer_label(customer), date.today().isoformat(), ext="json"
+        "DSGVO-Export", customer_label(customer), business_today().isoformat(), ext="json"
     )
     return Response(
         content=json_str,

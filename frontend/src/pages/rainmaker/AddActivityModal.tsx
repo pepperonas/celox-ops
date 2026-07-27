@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { createLeadActivity, getRainmakerGoals } from '../../api/rainmaker'
 import type { RainmakerActivityType, RainmakerGoal } from '../../types'
@@ -55,7 +56,10 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
     }
   }
 
-  return (
+  // An document.body portalt (Repo-Regel): waehrend der Seiten-Reveal-Animation
+  // ist `.page-enter` transformiert und wuerde als Containing-Block fuer
+  // position:fixed dienen -> der Dialog saesse falsch.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[420px] w-full mx-4 animate-md-scale">
@@ -94,6 +98,7 @@ export default function AddActivityModal({ leadId, onClose, onAdded }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
@@ -297,7 +298,7 @@ export default function CustomerForm() {
       </form>
 
       {/* Project Picker Modal */}
-      {showProjectPicker && (
+      {showProjectPicker && createPortal(
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowProjectPicker(false)}>
           <div className="bg-surface border border-border rounded-dialog p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">Projekt verknüpfen</h3>
@@ -335,10 +336,11 @@ export default function CustomerForm() {
               <button type="button" onClick={() => setShowProjectPicker(false)} className="btn-secondary">Abbrechen</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
       {/* GitHub Repo Picker */}
-      {showGithubPicker && (
+      {showGithubPicker && createPortal(
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowGithubPicker(false)}>
           <div className="bg-surface border border-border rounded-dialog p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">GitHub Repository verknüpfen</h3>
@@ -384,7 +386,8 @@ export default function CustomerForm() {
               <button type="button" onClick={() => setShowGithubPicker(false)} className="btn-secondary">Abbrechen</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

@@ -1,6 +1,5 @@
 import io
 import csv
-from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -12,6 +11,7 @@ from app.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.expense import Expense
 from app.services.filenames import download_name
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/euer",
@@ -130,7 +130,7 @@ async def _build_overview(year: int, db: AsyncSession) -> dict:
 
 @router.get("/overview")
 async def euer_overview(
-    year: int = Query(default_factory=lambda: date.today().year),
+    year: int = Query(default_factory=lambda: business_today().year),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await _build_overview(year, db)
@@ -138,7 +138,7 @@ async def euer_overview(
 
 @router.get("/export")
 async def euer_export(
-    year: int = Query(default_factory=lambda: date.today().year),
+    year: int = Query(default_factory=lambda: business_today().year),
     format: str = Query("csv"),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
@@ -179,7 +179,7 @@ async def euer_export(
 
 @router.get("/forecast")
 async def tax_forecast(
-    year: int = Query(default=date.today().year),
+    year: int = Query(default=business_today().year),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Steuerprognose: hochrechnung Jahresende basierend auf YTD-Daten + simple Steuersatz-Schätzung.
@@ -188,7 +188,7 @@ async def tax_forecast(
     - Vereinfachte ESt-Schätzung mit progressivem Tarif
     - Solidaritätszuschlag entfällt (über Bagatellgrenze)
     """
-    today = date.today()
+    today = business_today()
     is_current_year = year == today.year
 
     # YTD revenue (paid)

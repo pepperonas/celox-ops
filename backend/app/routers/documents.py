@@ -4,7 +4,6 @@ import asyncio
 import os
 import uuid
 import zipfile
-from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -19,6 +18,7 @@ from app.models.customer import Customer
 from app.models.document_template import DocumentTemplate
 from app.schemas.document_template import DocumentTemplateResponse, GenerateRequest
 from app.services.filenames import customer_label, download_name
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/documents",
@@ -73,7 +73,7 @@ def _load_signature_html() -> str:
 
 
 def _replace_placeholders(text: str, customer: Customer) -> str:
-    today = date.today()
+    today = business_today()
     replacements = {
         "{firma}": customer.company or customer.name,
         "{kunde_name}": customer.name,

@@ -1,7 +1,7 @@
 import asyncio
 import math
 import uuid
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -25,6 +25,7 @@ from app.schemas.time_entry import (
     TimeEntryUpdate,
 )
 from app.services.filenames import customer_label, download_name
+from app.services.business_time import now as business_now
 
 router = APIRouter(
     prefix="/api/time-entries",
@@ -210,7 +211,7 @@ def _render_timesheet(customer, entries, date_from: date, date_to: date) -> byte
         date_to=date_to,
         total_hours=total_hours,
         total_amount=total_amount,
-        generated_at=datetime.now(),
+        generated_at=business_now(),
         settings=settings,
     )
     pdf_bytes_holder: list[bytes] = []

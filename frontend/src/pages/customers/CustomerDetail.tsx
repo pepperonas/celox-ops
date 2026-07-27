@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../store/authStore'
 import { canDelete } from '../../utils/permissions'
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useAppNavigate } from '../../utils/transitions'
 import toast from 'react-hot-toast'
@@ -709,7 +710,7 @@ export default function CustomerDetail() {
       />
 
       {/* Schnellrechnung Modal */}
-      {showQuickInvoice && (
+      {showQuickInvoice && createPortal(
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50" onClick={() => setShowQuickInvoice(false)}>
           <div className="bg-surface border border-border rounded-dialog p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-text mb-1">Schnellrechnung</h3>
@@ -781,7 +782,8 @@ export default function CustomerDetail() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

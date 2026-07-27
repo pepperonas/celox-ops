@@ -1,4 +1,3 @@
-from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import select, text
@@ -7,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.invoice import Invoice
 from app.tenancy import current_owner_id
+from app.services.business_time import now as business_now
 
 # Offset for externally issued invoices not tracked in this system.
 # Set INVOICE_NUMBER_OFFSET in .env to the number of invoices already
@@ -34,7 +34,7 @@ async def generate_invoice_number(db: AsyncSession) -> str:
             )
         )
 
-    year = datetime.now().year
+    year = business_now().year
     # Per-owner prefix (query is owner-scoped via tenancy events; default "CO").
     row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
     prefix_code = (row.invoice_prefix if row and row.invoice_prefix else "CO")
@@ -56,6 +56,36 @@ async def generate_invoice_number(db: AsyncSession) -> str:
 
 
 CREDIT_NOTE_PREFIX = "GS"
+
+
+# Felder, die eine Kopie NICHT aus der Quelle übernimmt (werden neu gesetzt).
+DUPLICATE_RESET_FIELDS = ("invoice_date", "due_date")
+
+
+def copy_invoice_content(src) -> dict:
+    """Alle inhaltlichen Felder einer Rechnung für eine Kopie.
+
+    Einzige Quelle der Wahrheit ist `invoice_lock.FIELD_LABELS` — dieselbe Liste,
+    die den GoBD-Riegel treibt und per Test gegen `InvoiceUpdate` abgeglichen
+    wird. Vorher zählte `duplicate_invoice` die Felder von Hand auf und verlor
+    dabei still die Nachweis-Felder (KI-Zeitraum, Commit-Zeitraum, Tracker-/
+    Repo-Auswahl, Aktivitätsdiagramm) — besonders schmerzhaft, weil Storno +
+    Duplizieren der vorgeschriebene Korrekturweg für gestellte Rechnungen ist.
+
+    `positions` wird kopiert (nicht referenziert): dieselbe Liste an zwei Zeilen
+    würde bei einer späteren In-Place-Änderung beide Rechnungen verändern.
+    """
+    from app.services.invoice_lock import FIELD_LABELS
+
+    values = {}
+    for field in FIELD_LABELS:
+        if field in DUPLICATE_RESET_FIELDS:
+            continue
+        value = getattr(src, field, None)
+        if field == "positions" and isinstance(value, list):
+            value = [dict(p) if isinstance(p, dict) else p for p in value]
+        values[field] = value
+    return values
 
 
 def build_credit_note_positions(positions: list[dict]) -> list[dict]:
@@ -117,7 +147,7 @@ async def generate_credit_note_number(db: AsyncSession) -> str:
                 ns=_INVOICE_LOCK_NS, owner=f"gs:{owner}"
             )
         )
-    year = datetime.now().year
+    year = business_now().year
     prefix = f"{CREDIT_NOTE_PREFIX}-{year}-"
     result = await db.execute(
         select(Invoice.invoice_number).where(Invoice.invoice_number.like(f"{prefix}%"))

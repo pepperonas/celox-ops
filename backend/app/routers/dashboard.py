@@ -28,6 +28,7 @@ from app.models.lead import Lead, LeadStatus
 from app.models.order import Order, OrderStatus
 from app.models.time_entry import TimeEntry
 from app.services.filenames import download_name
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/dashboard",
@@ -97,7 +98,7 @@ async def get_stats(
     now = datetime.now(timezone.utc)
     current_year = now.year
     current_month = now.month
-    today = date.today()
+    today = business_today()
 
     _m_start, _m_end = _month_bounds(current_year, current_month)
     _y_start, _y_end = date(current_year, 1, 1), date(current_year + 1, 1, 1)
@@ -202,7 +203,7 @@ async def get_chart_data(
     entry = _charts_cache.get(cache_key)
     if entry is not None and time.monotonic() < entry["expires"]:
         return entry["data"]
-    today = date.today()
+    today = business_today()
 
     # --- Revenue data ---
     if period == "30d":

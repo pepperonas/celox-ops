@@ -241,3 +241,33 @@ def test_prefixes_are_derived_from_invoices_when_not_given():
             "credit": True, "counterparty": None, "reference": None}]
     res = match_transactions(txs, [_inv("RE-2026-0003", "10.00")])
     assert res["proposals"][0]["confidence"] == CONFIDENCE_EXACT
+
+
+# ---- Soll/Haben-Spalten (Betrag ohne Vorzeichen) ---------------------------
+_CSV_SH = """Buchungstag;Auftraggeber;Verwendungszweck;Betrag;Soll/Haben
+15.07.2026;Beispiel GmbH;Zahlung CO-2026-0007;1130,50;H
+16.07.2026;Hoster AG;Serverkosten CO-2026-0007;49,99;S
+"""
+
+
+def test_soll_haben_column_overrides_missing_sign():
+    """Ohne diese Spalte gälte die zweite Zeile als Gutschrift — eine
+    Ausgangszahlung würde dann als Zahlungseingang vorgeschlagen."""
+    from app.services.bank_import import is_credit_marker
+
+    txs = parse_csv(_CSV_SH)
+    assert [t["credit"] for t in txs] == [True, False]
+    assert is_credit_marker("H") is True and is_credit_marker("Soll") is False
+    assert is_credit_marker("") is None and is_credit_marker("xyz") is None
+
+
+def test_debit_with_invoice_number_is_not_proposed():
+    res = match_transactions(parse_csv(_CSV_SH), [_inv("CO-2026-0007", "1130.50")])
+    assert len(res["proposals"]) == 1
+    assert res["ignored_debits"] == 1
+
+
+def test_sign_wins_over_marker_only_when_marker_is_unclear():
+    csv_unclear = ("Buchungstag;Verwendungszweck;Betrag;Kennzeichen\n"
+                   "15.07.2026;Test;-10,00;?\n")
+    assert parse_csv(csv_unclear)[0]["credit"] is False

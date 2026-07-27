@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { getEmailTemplates } from '../api/emailTemplates'
 import type { EmailTemplate } from '../types'
 import Select from '../components/Select'
@@ -102,7 +103,10 @@ export default function EmailDialog({
     }
   }
 
-  return (
+  // An document.body portalt (Repo-Regel): waehrend der Seiten-Reveal-Animation
+  // ist `.page-enter` transformiert und wuerde als Containing-Block fuer
+  // position:fixed dienen -> der Dialog saesse falsch.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-8 max-w-[520px] w-full mx-4 animate-md-scale max-h-[90vh] overflow-y-auto">
@@ -223,6 +227,7 @@ export default function EmailDialog({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

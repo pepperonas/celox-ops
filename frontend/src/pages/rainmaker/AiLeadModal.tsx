@@ -22,19 +22,33 @@ const STEPS = ['Wunschkunden beschreiben', 'Recherche & Prüfung', 'Auswählen &
 
 function StepBar({ current }: { current: number }) {
   return (
-    <ol className="flex items-center gap-2 mb-4 text-xs" aria-label="Ablauf">
+    // Auf schmalen Displays nur Nummern + der aktive Schritt: die drei Labels
+    // brauchen ~520 px, im Dialog stehen bei 390 px Viewport ~302 px zur
+    // Verfügung. Da der Dialog an document.body portalt, greift das
+    // overflow-x-hidden von <main> nicht — der Überlauf hätte die ganze Seite
+    // horizontal scrollbar gemacht.
+    <ol className="flex items-center gap-1.5 sm:gap-2 mb-4 text-xs" aria-label="Ablauf">
       {STEPS.map((label, i) => (
-        <li key={i} className="flex items-center gap-2">
+        <li key={i} className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <span
-            className={`grid place-items-center w-5 h-5 rounded-full text-[10px] font-semibold ${
+            className={`grid place-items-center w-5 h-5 shrink-0 rounded-full text-[10px] font-semibold ${
               i < current ? 'bg-success/20 text-success'
                 : i === current ? 'bg-accent/20 text-accent' : 'bg-surface-container text-text-muted'
             }`}
+            aria-current={i === current ? 'step' : undefined}
           >
             {i < current ? '✓' : i + 1}
           </span>
-          <span className={i === current ? 'text-text font-medium' : 'text-text-muted'}>{label}</span>
-          {i < STEPS.length - 1 && <span className="text-text-muted opacity-40 mx-1">›</span>}
+          <span
+            className={`truncate ${i === current
+              ? 'text-text font-medium'
+              : 'text-text-muted hidden sm:inline'}`}
+          >
+            {label}
+          </span>
+          {i < STEPS.length - 1 && (
+            <span className="text-text-muted opacity-40 mx-0.5 sm:mx-1 shrink-0">›</span>
+          )}
         </li>
       ))}
     </ol>

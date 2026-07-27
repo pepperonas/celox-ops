@@ -19,6 +19,12 @@ services:
     volumes:
       - invoice_data:/data
     env_file: .env
+    # Geschaeftszeitzone: haelt Logs, Dateinamen und localtime-Bibliotheken
+    # deutsch. Die Geschaeftslogik selbst ist ueber services/business_time.py
+    # schon unabhaengig davon korrekt (frueher lieferte date.today() im
+    # UTC-Container zwischen 00:00 und 02:00 den Vortag).
+    environment:
+      TZ: Europe/Berlin
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

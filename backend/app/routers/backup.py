@@ -14,6 +14,7 @@ from app.config import settings
 from app.auth import require_admin
 from app.database import get_db
 from app.models.customer import Base
+from app.services.business_time import now as business_now
 
 router = APIRouter(
     prefix="/api/backup",
@@ -72,7 +73,7 @@ async def export_database(db: AsyncSession = Depends(get_db)) -> Response:
                     pdfs[filename] = base64.b64encode(f.read()).decode("utf-8")
     data["pdfs"] = pdfs
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    timestamp = business_now().strftime("%Y-%m-%d_%H-%M")
     json_str = json.dumps(data, default=_serialize, ensure_ascii=False, indent=2)
 
     return Response(

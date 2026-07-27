@@ -21,6 +21,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from xml.etree import ElementTree as ET
+from app.services.business_time import today as business_today
 
 # --------------------------------------------------------------------------- #
 #  Datenhaltung
@@ -165,7 +166,7 @@ def parse_camt(content: bytes | str) -> list[dict]:
         party = next((n for n in entry.iter() if _local(n.tag) == party_tag), None)
         counterparty = _find_text(party, "Nm") if party is not None else None
 
-        out.append(tx(booking or date.today(), amount.copy_abs(), purpose,
+        out.append(tx(booking or business_today(), amount.copy_abs(), purpose,
                       counterparty=counterparty,
                       reference=_find_text(entry, "EndToEndId", "AcctSvcrRef"),
                       currency=currency, credit=credit))
@@ -186,6 +187,14 @@ _COL_PARTY = ("beguenstigter/zahlpflichtiger", "beguenstigter", "zahlungsempfaen
               "auftraggeber/empfaenger", "auftraggeber", "empfaenger", "name",
               "payer", "payee", "partner name", "counterparty")
 _COL_TYPE = ("buchungstext", "umsatzart", "vorgang", "transaction type", "typ")
+# Manche Exporte (DATEV-Stil) liefern den Betrag OHNE Vorzeichen und daneben ein
+# Soll/Haben-Kennzeichen. Ohne diese Spalte gälte jede Zeile als Gutschrift —
+# eine Ausgangszahlung mit Rechnungsnummer im Zweck würde dann als Zahlungs-
+# eingang vorgeschlagen.
+_COL_DEBIT_CREDIT = ("soll/haben", "soll/haben-kennzeichen", "s/h", "sh-kennzeichen",
+                     "haben/soll", "debit/credit", "cd-kennzeichen", "kennzeichen")
+_CREDIT_MARKERS = ("h", "haben", "c", "crdt", "credit", "gutschrift", "+")
+_DEBIT_MARKERS = ("s", "soll", "d", "dbit", "debit", "lastschrift", "belastung", "-")
 
 
 def _fold(text: str) -> str:
@@ -215,7 +224,21 @@ def resolve_columns(header: list[str]) -> dict:
         "purpose": pick(_COL_PURPOSE),
         "party": pick(_COL_PARTY),
         "type": pick(_COL_TYPE),
+        "sign": pick(_COL_DEBIT_CREDIT),
     }
+
+
+def is_credit_marker(value: str | None) -> bool | None:
+    """Soll/Haben-Kennzeichen → True (Gutschrift) / False (Belastung) / None
+    (nicht deutbar → das Vorzeichen des Betrags entscheidet). Rein."""
+    text = _fold(value or "").strip()
+    if not text:
+        return None
+    if text in _CREDIT_MARKERS:
+        return True
+    if text in _DEBIT_MARKERS:
+        return False
+    return None
 
 
 def parse_csv(content: bytes | str) -> list[dict]:
@@ -257,10 +280,13 @@ def parse_csv(content: bytes | str) -> list[dict]:
         purpose_parts = [row[cols["purpose"]]] if cols["purpose"] is not None else []
         if cols["type"] is not None and row[cols["type"]].strip():
             purpose_parts.append(row[cols["type"]].strip())
+        # Ein ausdrückliches Soll/Haben-Kennzeichen schlägt das Vorzeichen —
+        # nur wenn es fehlt oder unklar ist, entscheidet das Vorzeichen.
+        marker = is_credit_marker(row[cols["sign"]]) if cols["sign"] is not None else None
         out.append(tx(
             booking, amount.copy_abs(), " ".join(p for p in purpose_parts if p),
             counterparty=row[cols["party"]] if cols["party"] is not None else None,
-            credit=amount > 0,
+            credit=amount > 0 if marker is None else marker,
         ))
     return out
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface DeleteDialogProps {
   isOpen: boolean
@@ -27,7 +28,10 @@ export default function DeleteDialog({
 
   if (!isOpen) return null
 
-  return (
+  // An document.body portalt (Repo-Regel): waehrend der Seiten-Reveal-Animation
+  // ist `.page-enter` transformiert und wuerde als Containing-Block fuer
+  // position:fixed dienen -> der Dialog saesse falsch.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-8 max-w-[400px] w-full mx-4 animate-md-scale">
@@ -42,6 +46,7 @@ export default function DeleteDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

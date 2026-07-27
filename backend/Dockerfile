@@ -8,7 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     libcairo2 \
     weasyprint \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# Geschaeftszeitzone als Default (compose setzt sie zusaetzlich). tzdata ist
+# explizit installiert, damit sie nicht nur als Nebenprodukt anderer Pakete
+# vorhanden ist — ohne Zoneinfo faellt TZ still auf UTC zurueck.
+ENV TZ=Europe/Berlin
 
 WORKDIR /app
 

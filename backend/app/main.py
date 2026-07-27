@@ -43,6 +43,7 @@ import app.models.user  # noqa: F401 — register for create_all (global, not ow
 from app.tenancy import install_tenancy_events, set_owned_models
 from app.middleware.audit import AuditMiddleware
 from app.middleware.permissions import PermissionsMiddleware
+from app.services.business_time import BUSINESS_TZ_NAME, container_timezone_ok
 from app.services.cron_service import check_overdue_invoices
 
 # Multi-tenant isolation: every owned entity is auto-scoped to the current user.
@@ -327,5 +328,9 @@ async def health_check() -> JSONResponse:
         "sentry": "configured" if settings.SENTRY_DSN else "off",
         "totp": "enabled" if settings.TOTP_SECRET else "disabled",
         "smtp": "configured" if settings.SMTP_HOST else "off",
+        # Geschaeftsdaten sind ueber services/business_time.py auch ohne
+        # passende Container-TZ korrekt; eine Abweichung betrifft nur Logs und
+        # localtime-Bibliotheken — hier sichtbar statt still.
+        "timezone": BUSINESS_TZ_NAME if container_timezone_ok() else "abweichend (UTC?)",
     }
     return JSONResponse(content=payload, status_code=200 if db_ok else 503)

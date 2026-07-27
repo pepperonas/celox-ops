@@ -35,6 +35,11 @@ IDLE_SECONDS = 20
 MAX_ATTEMPTS = 2
 # Sicherheitsnetz gegen hängengebliebene Jobs (Neustart mitten im Lauf).
 STALE_MINUTES = 15
+# Wie oft nach hängenden Jobs gesucht wird. **Nicht nur beim Start:** wird beim
+# Deploy ein Job mitten im Lauf abgebrochen und ist beim Neustart jünger als
+# STALE_MINUTES, blieb er sonst für immer auf „running" — die Pipeline-Pille
+# drehte dann endlos.
+STALE_CHECK_EVERY = 20
 # Obergrenze für den Nachzieh-Lauf („alle ohne Analyse einreihen").
 ENQUEUE_MISSING_CAP = 500
 
@@ -82,6 +87,21 @@ async def enqueue_after_import(db, lead_ids: list) -> int:
     return await enqueue_leads(db, lead_ids)
 
 
+async def enqueue_company_websites(db, lead_ids: list) -> int:
+    """Wie `enqueue_after_import`, filtert aber vorher Social-/Profil-URLs aus.
+
+    Genutzt vom Lead-Anlegen: dort kann als „Website" auch ein LinkedIn-Profil
+    stehen (so kommen LinkedIn-Kontakte in den Bestand).
+    """
+    if not lead_ids or not await auto_analyze_enabled(db):
+        return 0
+    rows = (await db.execute(
+        select(RainmakerLead.id, RainmakerLead.website)
+        .where(RainmakerLead.id.in_(lead_ids))
+    )).all()
+    return await enqueue_leads(db, [i for i, w in rows if is_company_website(w)])
+
+
 async def queue_stats(db) -> dict:
     """Zählerstand für die UI (owner-scoped): offen/laufend/fertig/Fehler."""
     rows = (await db.execute(
@@ -97,16 +117,31 @@ async def queue_stats(db) -> dict:
     }
 
 
+# Hosts, deren „Website" kein Firmenauftritt ist. LinkedIn-Importe tragen im
+# website-Feld das PROFIL — analysieren wäre sinnlos (Bot-Sperre, kein
+# Firmenauftritt) und würde Tausende Anfragen an einen Host schicken. Der
+# Auto-Import überspringt sie schon; hier gilt dieselbe Regel an einer Stelle.
+NON_COMPANY_HOSTS = ("linkedin.com", "xing.com", "facebook.com", "instagram.com")
+
+
+def is_company_website(url: str | None) -> bool:
+    """False für Social-/Profil-URLs — die sind keine Firmenwebsite. Rein."""
+    text = (url or "").strip().lower()
+    if not text:
+        return False
+    return not any(host in text for host in NON_COMPANY_HOSTS)
+
+
 async def leads_needing_analysis(db, cap: int = ENQUEUE_MISSING_CAP) -> list:
-    """IDs der Leads mit Website, aber ohne Analyse (owner-scoped)."""
+    """IDs der Leads mit echter Firmen-Website, aber ohne Analyse (owner-scoped)."""
     rows = (await db.execute(
-        select(RainmakerLead.id)
+        select(RainmakerLead.id, RainmakerLead.website)
         .where(RainmakerLead.website.isnot(None), RainmakerLead.website != "",
                RainmakerLead.web_analyzed_at.is_(None))
         .order_by(RainmakerLead.created_at.desc())
         .limit(cap)
-    )).scalars().all()
-    return list(rows)
+    )).all()
+    return [lead_id for lead_id, website in rows if is_company_website(website)]
 
 
 # --------------------------------------------------------------------------- #
@@ -193,16 +228,18 @@ async def _run_job(job_id, owner_id, lead_id) -> None:
 async def run_analysis_worker() -> None:
     """Endlosschleife: Jobs übernehmen und mit begrenzter Parallelität abarbeiten."""
     logger.info("Website-Analyse-Worker gestartet (Parallelität: %d)", CONCURRENCY)
-    first = True
+    tick = 0
     while True:
         try:
             async with async_session_factory() as db:
-                if first:
+                # Beim Start (tick 0) und danach regelmäßig — ein Job, der beim
+                # Deploy abgebrochen wurde, heilt so von selbst.
+                if tick % STALE_CHECK_EVERY == 0:
                     reset = await _reset_stale_jobs(db)
                     if reset:
                         await db.commit()
                         logger.info("Analyse-Worker: %d hängende Jobs zurückgesetzt", reset)
-                    first = False
+                tick += 1
                 jobs = await _claim_jobs(db, CONCURRENCY)
                 claimed = [(j.id, j.owner_id, j.lead_id) for j in jobs]
             if not claimed:

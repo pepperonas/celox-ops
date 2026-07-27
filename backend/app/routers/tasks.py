@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models.contract import Contract, ContractStatus
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.order import Order, OrderStatus
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/tasks",
@@ -38,7 +39,7 @@ class TasksResponse(BaseModel):
 async def get_tasks(
     db: AsyncSession = Depends(get_db),
 ) -> TasksResponse:
-    today = date.today()
+    today = business_today()
     in_30_days = today + timedelta(days=30)
     in_60_days = today + timedelta(days=60)
 

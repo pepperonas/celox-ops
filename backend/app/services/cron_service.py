@@ -1,9 +1,9 @@
-from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.invoice import Invoice, InvoiceStatus
+from app.services.business_time import today as business_today
 
 
 async def check_overdue_invoices(db: AsyncSession) -> int:
@@ -11,7 +11,7 @@ async def check_overdue_invoices(db: AsyncSession) -> int:
 
     Returns the number of invoices marked as overdue.
     """
-    today = date.today()
+    today = business_today()
     result = await db.execute(
         select(Invoice).where(
             Invoice.status == InvoiceStatus.gestellt,

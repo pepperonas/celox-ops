@@ -97,7 +97,7 @@ from app.services.lead_dedup import (
 )
 from app.models.ai_lead_run import AiLeadRun
 from app.services.ai_lead_agent import run_ai_discovery
-from app.services.analysis_queue import enqueue_after_import
+from app.services.analysis_queue import enqueue_after_import, enqueue_company_websites
 from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
 from app.services.duplicate_finder import find_groups
 from app.services.email_verifier import verify_email
@@ -123,6 +123,7 @@ from app.services.rainmaker_service import (
     priority_weight,
     register_completion,
 )
+from app.services.business_time import day_start_utc, today as business_today
 
 router = APIRouter(
     prefix="/api/rainmaker",
@@ -248,7 +249,9 @@ async def create_lead(
         })
     await db.refresh(lead)
     if (lead.website or "").strip():
-        await enqueue_after_import(db, [lead.id])
+        # Gefiltert: ein manuell angelegter Lead kann ein LinkedIn-Profil als
+        # „Website" tragen — das ist keine Firmenseite.
+        await enqueue_company_websites(db, [lead.id])
     return lead_response(lead)
 
 
@@ -1151,7 +1154,7 @@ async def complete_activity(
 # --------------------------------------------------------------------------- #
 @router.get("/today", response_model=RainmakerTodayResponse)
 async def today(db: AsyncSession = Depends(get_db)) -> RainmakerTodayResponse:
-    today_date = date.today()
+    today_date = business_today()
     leads = (await db.execute(select(RainmakerLead))).scalars().unique().all()
 
     queue: list[RainmakerTodayItem] = []
@@ -1192,7 +1195,7 @@ async def today(db: AsyncSession = Depends(get_db)) -> RainmakerTodayResponse:
     )
 
     # Per-goal progress today (active goals only).
-    start = datetime.combine(today_date, datetime.min.time(), tzinfo=timezone.utc)
+    start = day_start_utc(today_date)
     done_by_goal_rows = (await db.execute(
         select(RainmakerActivity.goal_id, func.count())
         .where(
@@ -1238,10 +1241,10 @@ _FUNNEL_ORDER = [
 
 @router.get("/stats", response_model=RainmakerStatsResponse)
 async def stats(db: AsyncSession = Depends(get_db)) -> RainmakerStatsResponse:
-    today_date = date.today()
+    today_date = business_today()
 
     # Completed activities grouped by type (last 30 days).
-    since_30 = datetime.combine(today_date - timedelta(days=30), datetime.min.time(), tzinfo=timezone.utc)
+    since_30 = day_start_utc(today_date - timedelta(days=30))
     by_type_rows = (await db.execute(
         select(RainmakerActivity.type, func.count())
         .where(
@@ -1253,7 +1256,7 @@ async def stats(db: AsyncSession = Depends(get_db)) -> RainmakerStatsResponse:
     activity_by_type = [RmTypeCount(type=t, count=c) for t, c in by_type_rows]
 
     # Completed activities per day (last 14 days, zero-filled).
-    since_14 = datetime.combine(today_date - timedelta(days=13), datetime.min.time(), tzinfo=timezone.utc)
+    since_14 = day_start_utc(today_date - timedelta(days=13))
     day_col = func.date(RainmakerActivity.completed_at)
     by_day_rows = (await db.execute(
         select(day_col, func.count())
@@ -1322,13 +1325,13 @@ async def dream(db: AsyncSession = Depends(get_db)) -> RainmakerDreamResponse:
     the start date carries its statistical value (plus won leads as "realized");
     in "invoices" mode paid invoice totals drive the bar instead."""
     s = await get_or_create_settings(db)
-    today_date = date.today()
+    today_date = business_today()
     if s.dream_start_date is None:
         # First visit starts the challenge.
         s.dream_start_date = today_date
         await db.flush()
     start = s.dream_start_date
-    start_dt = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
+    start_dt = day_start_utc(start)
 
     ev_unit = dream_ev_per_contact(
         s.dream_avg_deal_value, s.dream_savings_rate_pct, s.dream_contacts_per_win
@@ -1382,13 +1385,13 @@ async def dream(db: AsyncSession = Depends(get_db)) -> RainmakerDreamResponse:
     pct = float(min(saved_total / price, Decimal(1))) if price > 0 else 0.0
 
     # Today's earned value (clipped to the challenge start).
-    today_dt = datetime.combine(today_date, datetime.min.time(), tzinfo=timezone.utc)
+    today_dt = day_start_utc(today_date)
     _tc, today_ev = await _activity_ev_since(max(today_dt, start_dt))
 
     # Pace: Ø €/day over the last 28 days (window clipped to the start date).
     window_start = max(start, today_date - timedelta(days=27))
     window_days = (today_date - window_start).days + 1
-    window_dt = datetime.combine(window_start, datetime.min.time(), tzinfo=timezone.utc)
+    window_dt = day_start_utc(window_start)
     if s.dream_mode == RainmakerDreamMode.invoices:
         window_total = (await _paid_invoices_since(window_start)) * rate
     else:

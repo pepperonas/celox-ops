@@ -107,3 +107,56 @@ class TestCreditNoteStatuses:
         # `bezahlt` werden — das erzeugte einen negativen Umsatz aus dem Nichts.
         gs, _ = credit_note_statuses(InvoiceStatus.gestellt)
         assert gs != InvoiceStatus.bezahlt
+
+
+# --------------------------------------------------------------------------- #
+#  Duplizieren: darf keine Inhaltsfelder verlieren
+#  (Storno + Duplizieren ist der vorgeschriebene Korrekturweg für gestellte
+#  Rechnungen — eine Kopie ohne Nachweis-Felder wäre ein stiller Belegverlust.)
+# --------------------------------------------------------------------------- #
+class TestDuplicateContent:
+    def test_covers_every_content_field(self):
+        """Regressionsguard: die Kopier-Liste MUSS alle Felder aus InvoiceUpdate
+        abdecken (bis auf die bewusst neu gesetzten Datumsfelder)."""
+        from app.schemas.invoice import InvoiceUpdate
+        from app.services.invoice_service import DUPLICATE_RESET_FIELDS, copy_invoice_content
+
+        class _Src:
+            pass
+
+        src = _Src()
+        for field in InvoiceUpdate.model_fields:
+            setattr(src, field, f"wert-{field}")
+        copied = copy_invoice_content(src)
+
+        expected = set(InvoiceUpdate.model_fields) - set(DUPLICATE_RESET_FIELDS)
+        assert set(copied) == expected
+        # Die frühere Lücke konkret festgenagelt:
+        for lost in ("token_usage_from", "token_usage_to", "github_commits_from",
+                     "github_commits_to", "selected_tracker_urls",
+                     "selected_github_repos", "include_activity_chart"):
+            assert lost in copied, f"{lost} ginge beim Duplizieren verloren"
+
+    def test_dates_are_not_carried_over(self):
+        from app.services.invoice_service import copy_invoice_content
+
+        class _Src:
+            invoice_date = "2026-01-01"
+            due_date = "2026-01-15"
+            title = "Beratung"
+        copied = copy_invoice_content(_Src())
+        assert "invoice_date" not in copied and "due_date" not in copied
+        assert copied["title"] == "Beratung"
+
+    def test_positions_are_copied_not_referenced(self):
+        """Dieselbe Liste an zwei Zeilen würde bei einer In-Place-Änderung beide
+        Rechnungen verändern."""
+        from app.services.invoice_service import copy_invoice_content
+
+        original = [{"beschreibung": "Beratung", "menge": 1}]
+
+        class _Src:
+            positions = original
+        copied = copy_invoice_content(_Src())["positions"]
+        copied[0]["beschreibung"] = "Geändert"
+        assert original[0]["beschreibung"] == "Beratung"

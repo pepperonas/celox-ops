@@ -269,3 +269,32 @@ async def test_owner_delete_cascades(sessionmaker, two_users):
 
         names = set((await db.execute(select(Customer.name))).scalars().all())
         assert names == {"CascB"}, "A's Daten müssen mit A verschwinden"
+
+
+async def test_session_get_is_also_scoped(sessionmaker, two_users):
+    """`db.get()` ist ein Primärschlüssel-Zugriff — Router-Code (documents.py,
+    compliance.py, github.py) verlässt sich darauf, dass die Mandantenfilterung
+    auch dort greift. Bisher stand das nur als Kommentar im Code; hier ist es
+    festgenagelt.
+    """
+    from app.models.customer import Customer
+    from app.tenancy import current_owner_id
+
+    a, b = two_users
+    async with sessionmaker() as db:
+        tok = current_owner_id.set(b)
+        foreign = await _customer(db, "FremdGet")
+        await db.commit()
+        current_owner_id.reset(tok)
+
+    # Frische Session: kein Treffer im Identity-Map, es muss wirklich SQL laufen.
+    async with sessionmaker() as db:
+        tok = current_owner_id.set(a)
+        assert await db.get(Customer, foreign.id) is None
+        current_owner_id.reset(tok)
+
+    # Und als Eigentümer findet er sie natürlich.
+    async with sessionmaker() as db:
+        tok = current_owner_id.set(b)
+        assert (await db.get(Customer, foreign.id)).name == "FremdGet"
+        current_owner_id.reset(tok)

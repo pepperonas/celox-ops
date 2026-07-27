@@ -1,6 +1,5 @@
 import os
 import uuid
-from datetime import date as DateType
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -28,6 +27,7 @@ from app.schemas.compliance import (
     RequiredTemplate,
     RequiredToggle,
 )
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/compliance",
@@ -198,7 +198,7 @@ async def mark(data: MarkRequest, db: AsyncSession = Depends(get_db)) -> Complia
 
     rec = await _get_or_create_record(db, cid, tid)
     if data.signed:
-        rec.signed_at = data.signed_at or DateType.today()
+        rec.signed_at = data.signed_at or business_today()
         rec.method = "manual"
         rec.note = data.note
     else:
@@ -273,7 +273,7 @@ async def upload_signed(
         await db.flush()
 
         rec = await _get_or_create_record(db, cid, tid)
-        rec.signed_at = DateType.today()
+        rec.signed_at = business_today()
         rec.method = "upload"
         rec.attachment_id = file_id
         await db.flush()

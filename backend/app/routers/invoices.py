@@ -52,6 +52,7 @@ from app.services.invoice_lock import (
 )
 from app.services.invoice_service import (
     build_credit_note_positions,
+    copy_invoice_content,
     calculate_invoice_totals,
     credit_note_statuses,
     flush_new_invoice,
@@ -59,6 +60,7 @@ from app.services.invoice_service import (
     generate_invoice_number,
 )
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
+from app.services.business_time import today as business_today
 
 
 class EmailRequest(PydanticBaseModel):
@@ -707,14 +709,14 @@ async def send_reminder_email(
 @router.post("/refresh-drafts")
 async def refresh_drafts(db: AsyncSession = Depends(get_db)) -> dict:
     """Aktualisiert alle Entwürfe: token_usage_to + github_commits_to auf heute, reimportiert KI-Daten, regeneriert PDFs."""
-    from datetime import date, timedelta
+    from datetime import timedelta
     import json
     import logging
     import re
     import httpx
 
     logger = logging.getLogger(__name__)
-    today = date.today()
+    today = business_today()
 
     # Matches "<anything> (YYYY-MM-DD – YYYY-MM-DD)" with en-dash or hyphen
     _period_pattern = re.compile(r"\(\d{4}-\d{2}-\d{2}\s+[–-]\s+\d{4}-\d{2}-\d{2}\)\s*$")
@@ -925,7 +927,7 @@ async def quick_invoice(
 
     invoice_number = await generate_invoice_number(db)
 
-    from datetime import date, timedelta
+    from datetime import timedelta
     from decimal import Decimal
 
     gesamt = data.menge * data.einzelpreis
@@ -948,7 +950,7 @@ async def quick_invoice(
         tax_amount = subtotal * tax_rate / Decimal("100")
     total = subtotal + tax_amount
 
-    today = date.today()
+    today = business_today()
     invoice = Invoice(
         customer_id=data.customer_id,
         invoice_number=invoice_number,
@@ -1068,26 +1070,19 @@ async def duplicate_invoice(
     new_number = await generate_invoice_number(db)
     today = date_type.today()
     new = Invoice(
-        customer_id=src.customer_id,
-        order_id=src.order_id,
-        contract_id=src.contract_id,
-        invoice_number=new_number,
-        title=src.title,
-        positions=src.positions,
+        # Inhaltliche Felder aus EINER kanonischen Liste (siehe
+        # invoice_service.copy_invoice_content) — die handgepflegte Aufzählung
+        # hier verlor still die Nachweis-Felder (KI-/Commit-Zeitraum, Tracker-
+        # und Repo-Auswahl, Aktivitätsdiagramm).
+        **copy_invoice_content(src),
+        # Abgeleitete Beträge: nicht Teil der Inhaltsliste, aber identisch.
         subtotal=src.subtotal,
-        tax_rate=src.tax_rate,
-        tax_exempt=src.tax_exempt,
         tax_amount=src.tax_amount,
         total=src.total,
+        invoice_number=new_number,
         invoice_date=today,
         due_date=today + timedelta(days=14),
         status=InvoiceStatus.entwurf,
-        notes=src.notes,
-        special_terms=src.special_terms,
-        service_description=src.service_description,
-        discount_type=src.discount_type,
-        discount_value=src.discount_value,
-        discount_reason=src.discount_reason,
     )
     await flush_new_invoice(db, new)
     await db.refresh(new)

@@ -5,7 +5,7 @@ due_date. An active lead (status not won/lost/dormant) WITHOUT a planned
 activity is "rotting" and must be surfaced prominently.
 """
 import logging
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -23,6 +23,7 @@ from app.models.rainmaker_settings import RainmakerSettings
 from app.models.rainmaker_streak import RainmakerStreak
 from app.schemas.rainmaker import RainmakerLeadResponse
 from app.services.email_service import send_email
+from app.services.business_time import day_start_utc, now as business_now, today as business_today
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ async def get_or_create_streak(db: AsyncSession) -> RainmakerStreak:
 
 async def count_done_today(db: AsyncSession) -> int:
     """Activities completed today (UTC day)."""
-    start = datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
+    start = day_start_utc(business_today())
     result = await db.execute(
         select(func.count())
         .select_from(RainmakerActivity)
@@ -149,7 +150,7 @@ async def _ensure_monthly_freezes(
     db: AsyncSession, streak: RainmakerStreak, settings: RainmakerSettings
 ) -> None:
     """Replenish the freeze budget at the start of each month."""
-    key = _period_key(date.today())
+    key = _period_key(business_today())
     if streak.freeze_period != key:
         streak.freeze_remaining = settings.freezes_per_month
         streak.freeze_period = key
@@ -160,7 +161,7 @@ async def get_streak_display(db: AsyncSession) -> tuple[RainmakerStreak, int]:
     settings = await get_or_create_settings(db)
     streak = await get_or_create_streak(db)
     await _ensure_monthly_freezes(db, streak, settings)
-    return streak, display_streak(streak, date.today())
+    return streak, display_streak(streak, business_today())
 
 
 async def register_completion(db: AsyncSession, activity_type: RainmakerActivityType) -> None:
@@ -171,7 +172,7 @@ async def register_completion(db: AsyncSession, activity_type: RainmakerActivity
     working day; missed working days consume freezes before the streak resets."""
     settings = await get_or_create_settings(db)
     streak = await get_or_create_streak(db)
-    today = date.today()
+    today = business_today()
     await _ensure_monthly_freezes(db, streak, settings)
 
     base = ACTIVITY_POINTS.get(activity_type, 0)
@@ -264,11 +265,11 @@ async def check_rainmaker_reminder(db: AsyncSession, user=None) -> bool:
     if channel != "email":
         return False
 
-    now = datetime.now()
+    now = business_now()
     if now.hour != settings.reminder_time.hour:
         return False
 
-    today = date.today()
+    today = business_today()
     dedupe_key = getattr(user, "id", None)
     if _reminder_sent_on.get(dedupe_key) == today:
         return False

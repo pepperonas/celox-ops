@@ -6,7 +6,7 @@ validiert keine Inserts (Tenancy-Invariante Nr. 3 in CLAUDE.md).
 """
 import math
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
@@ -18,6 +18,7 @@ from app.models.customer import Customer
 from app.models.rainmaker_lead import RainmakerLead
 from app.models.todo import Todo, TodoStatus
 from app.schemas.todo import TodoCreate, TodoResponse, TodoToggle, TodoUpdate
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/todos",
@@ -97,7 +98,7 @@ async def list_todos(
     if overdue:
         conditions.append(Todo.status == TodoStatus.offen)
         conditions.append(Todo.due_date.is_not(None))
-        conditions.append(Todo.due_date < date.today())
+        conditions.append(Todo.due_date < business_today())
     if search:
         pattern = f"%{search}%"
         conditions.append(or_(Todo.title.ilike(pattern), Todo.notes.ilike(pattern)))
@@ -131,7 +132,7 @@ async def list_todos(
 @router.get("/stats")
 async def todo_stats(db: AsyncSession = Depends(get_db)) -> dict:
     """Zähler für Dashboard-Karte und Übersicht."""
-    today = date.today()
+    today = business_today()
     row = (
         await db.execute(
             select(
