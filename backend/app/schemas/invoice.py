@@ -138,6 +138,60 @@ class PaymentRequest(BaseModel):
     amount: Decimal
 
 
+# --------------------------------------------------------------------------- #
+#  Kontoauszug-Import (Zahlungsabgleich)
+# --------------------------------------------------------------------------- #
+class BankMatchProposal(BaseModel):
+    """Ein Zuordnungsvorschlag Buchung -> Rechnung. Wird nie automatisch gebucht."""
+    invoice_id: uuid.UUID
+    invoice_number: str
+    customer_name: str = ""
+    invoice_total: Decimal
+    invoice_open: Decimal
+    amount: Decimal
+    confidence: str          # exact | number | amount
+    reason: str
+    booking_date: str
+    purpose: str = ""
+    counterparty: str | None = None
+
+
+class BankUnmatched(BaseModel):
+    booking_date: str
+    amount: Decimal
+    purpose: str = ""
+    counterparty: str | None = None
+    reason: str
+
+
+class BankImportPreview(BaseModel):
+    proposals: list[BankMatchProposal] = []
+    unmatched: list[BankUnmatched] = []
+    ignored_debits: int = 0
+    transactions_total: int = 0
+    open_invoices: int = 0
+
+
+class BankImportApplyRequest(BaseModel):
+    rows: list[BankMatchProposal]
+
+
+class BankAppliedRow(BaseModel):
+    invoice_id: uuid.UUID
+    invoice_number: str
+    amount: Decimal
+    # Stand VOR der Buchung -> ermoeglicht das bestehende Undo
+    # (PUT /invoices/{id}/payment-state).
+    previous_amount_paid: Decimal
+    previous_status: InvoiceStatus
+    new_status: InvoiceStatus
+
+
+class BankImportResult(BaseModel):
+    applied: list[BankAppliedRow] = []
+    skipped: list[str] = []
+
+
 class PaymentStateRestore(BaseModel):
     """Undo-Payload: setzt Zahlungsstand + Status auf einen früheren Stand
     zurück (z. B. nach versehentlichem Bulk-„Als bezahlt")."""

@@ -126,3 +126,63 @@ export async function createCreditNote(id: string): Promise<Invoice> {
   const response = await api.post(`/invoices/${id}/credit-note`)
   return response.data
 }
+
+// --- Kontoauszug-Import (Zahlungsabgleich) ---
+export interface BankMatchProposal {
+  invoice_id: string
+  invoice_number: string
+  customer_name: string
+  invoice_total: number
+  invoice_open: number
+  amount: number
+  confidence: 'exact' | 'number' | 'amount'
+  reason: string
+  booking_date: string
+  purpose: string
+  counterparty: string | null
+}
+
+export interface BankUnmatched {
+  booking_date: string
+  amount: number
+  purpose: string
+  counterparty: string | null
+  reason: string
+}
+
+export interface BankImportPreview {
+  proposals: BankMatchProposal[]
+  unmatched: BankUnmatched[]
+  ignored_debits: number
+  transactions_total: number
+  open_invoices: number
+}
+
+export interface BankAppliedRow {
+  invoice_id: string
+  invoice_number: string
+  amount: number
+  previous_amount_paid: number
+  previous_status: string
+  new_status: string
+}
+
+export interface BankImportResult {
+  applied: BankAppliedRow[]
+  skipped: string[]
+}
+
+export async function previewBankStatement(file: File): Promise<BankImportPreview> {
+  const form = new FormData()
+  form.append('file', file)
+  // Content-Type muss undefined sein, damit Axios die multipart-Boundary setzt.
+  const response = await api.post('/invoices/bank-import/preview', form, {
+    headers: { 'Content-Type': undefined },
+  })
+  return response.data
+}
+
+export async function applyBankMatches(rows: BankMatchProposal[]): Promise<BankImportResult> {
+  const response = await api.post('/invoices/bank-import/apply', { rows })
+  return response.data
+}

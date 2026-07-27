@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import FilterChips from '../../components/FilterChips'
 import LoadingIndicator from '../../components/LoadingIndicator'
+import BankImportModal from './BankImportModal'
 import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment, restorePaymentState } from '../../api/invoices'
 import { toastWithUndo } from '../../utils/undoToast'
 import { formatDate, formatCurrency } from '../../utils/formatters'
@@ -51,6 +52,7 @@ export default function InvoiceList() {
   }, [fetchData])
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBankImport, setShowBankImport] = useState(false)
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -201,7 +203,18 @@ export default function InvoiceList() {
 
   return (
     <div>
-      <PageHeader title="Rechnungen" />
+      <PageHeader
+        title="Rechnungen"
+        actions={
+          <button onClick={() => setShowBankImport(true)} className="btn-secondary text-sm"
+                  title="camt.053 oder CSV aus dem Online-Banking einlesen und Zahlungen zuordnen">
+            Kontoauszug einlesen
+          </button>
+        }
+      />
+      {showBankImport && (
+        <BankImportModal onClose={() => setShowBankImport(false)} onApplied={fetchData} />
+      )}
 
       <div className="flex gap-3 items-center mb-5 flex-wrap">
         <FilterChips

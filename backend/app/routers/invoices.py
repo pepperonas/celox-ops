@@ -4,7 +4,16 @@ import os
 import uuid
 from decimal import Decimal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +25,10 @@ from app.database import get_db
 from app.models.customer import Customer
 from app.models.invoice import Invoice, InvoiceStatus
 from app.schemas.invoice import (
+    BankAppliedRow,
+    BankImportApplyRequest,
+    BankImportPreview,
+    BankImportResult,
     InvoiceCreate,
     InvoiceDetail,
     InvoiceResponse,
@@ -1205,3 +1218,127 @@ async def delete_invoice(
         except OSError:
             pass
     await db.delete(invoice)
+
+
+# --------------------------------------------------------------------------- #
+#  Kontoauszug-Import: Zahlungen zuordnen (Vorschlag -> Bestaetigung)
+# --------------------------------------------------------------------------- #
+async def _open_invoices_for_matching(db: AsyncSession) -> list[dict]:
+    """Offene Rechnungen als schlichte dicts fuer den reinen Matcher
+    (owner-scoped ueber die Session-Events). Gutschriften bleiben aussen vor."""
+    rows = (await db.execute(
+        select(Invoice).options(joinedload(Invoice.customer)).where(
+            Invoice.status.in_([InvoiceStatus.gestellt, InvoiceStatus.ueberfaellig]),
+            Invoice.is_credit_note.is_(False),
+        )
+    )).scalars().unique().all()
+    return [{
+        "id": inv.id,
+        "invoice_number": inv.invoice_number,
+        "customer_name": inv.customer.name if inv.customer else "",
+        "total": inv.total,
+        "amount_paid": inv.amount_paid or Decimal("0"),
+    } for inv in rows]
+
+
+@router.post("/bank-import/preview", response_model=BankImportPreview)
+async def bank_import_preview(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> BankImportPreview:
+    """Kontoauszug (camt.053-XML oder CSV) einlesen und Zahlungen den offenen
+    Rechnungen zuordnen. Legt und bucht nichts — reine Vorschlagsliste."""
+    from app.services.bank_import import (
+        MAX_STATEMENT_BYTES,
+        match_transactions,
+        parse_statement,
+    )
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Die Datei ist leer.")
+    if len(content) > MAX_STATEMENT_BYTES:
+        raise HTTPException(status_code=413, detail="Die Datei ist zu groß (max. 10 MB).")
+
+    try:
+        transactions = parse_statement(file.filename or "", content)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if not transactions:
+        raise HTTPException(status_code=422, detail="Keine Buchungen in der Datei gefunden.")
+
+    invoices = await _open_invoices_for_matching(db)
+    # Eigener Nummernkreis (Praefix) aus den Einstellungen — sonst wuerden
+    # Nummern anderer Praefixe im Verwendungszweck nicht erkannt.
+    from app.routers.settings import get_or_create_settings
+    settings_row = await get_or_create_settings(db)
+    prefixes = sorted({settings_row.invoice_prefix} | {
+        str(i["invoice_number"]).split("-")[0] for i in invoices
+        if i["invoice_number"] and "-" in str(i["invoice_number"])
+    })
+
+    result = match_transactions(transactions, invoices, prefixes=prefixes)
+    return BankImportPreview(**result, open_invoices=len(invoices))
+
+
+@router.post("/bank-import/apply", response_model=BankImportResult)
+async def bank_import_apply(
+    data: BankImportApplyRequest,
+    db: AsyncSession = Depends(get_db),
+) -> BankImportResult:
+    """Bestaetigte Vorschlaege als Zahlungen buchen — gleiche Wirkung wie die
+    manuelle Zahlungserfassung (amount_paid + Status + Aktivitaet).
+
+    Jede Rechnung darf pro Aufruf nur einmal vorkommen; der Zahlungsstand VOR
+    der Buchung wird zurueckgegeben, damit das bestehende Undo greift.
+    """
+    if len(data.rows) > 500:
+        raise HTTPException(status_code=413, detail="Zu viele Zeilen (max. 500).")
+
+    applied: list[BankAppliedRow] = []
+    skipped: list[str] = []
+    seen: set = set()
+
+    for row in data.rows:
+        if row.invoice_id in seen:
+            skipped.append(f"{row.invoice_number}: in diesem Lauf bereits gebucht")
+            continue
+        seen.add(row.invoice_id)
+        if row.amount <= Decimal("0"):
+            skipped.append(f"{row.invoice_number}: Betrag muss positiv sein")
+            continue
+        # Owner-scoped Select — eine fremde ID findet sich hier nicht.
+        invoice = (await db.execute(
+            select(Invoice).options(joinedload(Invoice.customer))
+            .where(Invoice.id == row.invoice_id)
+        )).scalar_one_or_none()
+        if invoice is None:
+            skipped.append(f"{row.invoice_number}: Rechnung nicht gefunden")
+            continue
+        if invoice.is_credit_note:
+            skipped.append(f"{row.invoice_number}: Gutschriften nehmen keine Zahlungen auf")
+            continue
+
+        previous_paid = invoice.amount_paid or Decimal("0")
+        previous_status = invoice.status
+        invoice.amount_paid = previous_paid + row.amount
+        if invoice.amount_paid >= invoice.total:
+            invoice.status = InvoiceStatus.bezahlt
+        db.add(Activity(
+            customer_id=invoice.customer_id,
+            type="payment",
+            title=f"Zahlung aus Kontoauszug: {invoice.invoice_number}",
+            description=(
+                f"{float(row.amount):.2f} € am {row.booking_date} — Gesamt bezahlt: "
+                f"{float(invoice.amount_paid):.2f} € von {float(invoice.total):.2f} €"
+                + (f" · {row.purpose[:200]}" if row.purpose else "")
+            ),
+        ))
+        applied.append(BankAppliedRow(
+            invoice_id=invoice.id, invoice_number=invoice.invoice_number,
+            amount=row.amount, previous_amount_paid=previous_paid,
+            previous_status=previous_status, new_status=invoice.status,
+        ))
+
+    await db.flush()
+    return BankImportResult(applied=applied, skipped=skipped)
