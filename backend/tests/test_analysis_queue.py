@@ -89,3 +89,27 @@ def test_worker_scopes_owner_per_job():
     src = inspect.getsource(analysis_queue._run_job)
     assert "current_owner_id.set(owner_id)" in src
     assert "current_owner_id.reset(token)" in src
+
+
+def test_worker_refuses_jobs_without_owner():
+    """Ein Job ohne owner_id würde die Analyse ungescopet schreiben — der Lead
+    zeigte dann einen Score, das owner-scoped Detail fände aber keine Analyse.
+    Solche Jobs werden abgewiesen, nicht stumm ausgeführt."""
+    src = inspect.getsource(analysis_queue._run_job)
+    assert "if owner_id is None:" in src
+    # Muss vor dem AUFRUF der Analyse greifen (der Import steht weiter oben)
+    assert src.index("if owner_id is None:") < src.index("await fetch_and_analyze(")
+
+
+def test_social_urls_are_never_analyzed():
+    """Profil-URLs sind keine Firmenwebsite — eine Regel für Auto-Import,
+    manuelles Anlegen und den Nachzieh-Knopf."""
+    from app.services.analysis_queue import is_company_website
+
+    for url in ("https://www.linkedin.com/in/max-mustermann/",
+                "https://linkedin.com/company/muster", "https://xing.com/profile/x",
+                "https://www.facebook.com/muster", "https://instagram.com/muster"):
+        assert is_company_website(url) is False, url
+    for url in ("https://muster-elektro.de", "https://www.beispiel.de/kontakt"):
+        assert is_company_website(url) is True, url
+    assert is_company_website(None) is False and is_company_website("  ") is False

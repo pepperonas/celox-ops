@@ -199,6 +199,19 @@ async def _run_job(job_id, owner_id, lead_id) -> None:
             lead = await db.get(RainmakerLead, lead_id)
             if job is None:
                 return
+            if owner_id is None:
+                # Ein Job ohne Owner darf NICHT laufen: `current_owner_id` wäre
+                # None, die Analyse würde ungescopet geschrieben und läge dann
+                # mit owner_id NULL in der DB — der Lead zeigte einen Score,
+                # das Detail-Dashboard (owner-scoped) fände aber keine Analyse.
+                # Das kann nur durch fehlerhaftes Einreihen entstehen, also hier
+                # sichtbar abweisen statt stumm unsichtbare Daten erzeugen.
+                job.status = ERROR
+                job.error = "Job ohne owner_id — nicht ausgeführt (fehlerhaft eingereiht)"
+                job.finished_at = datetime.now(timezone.utc)
+                await db.commit()
+                logger.warning("Analyse-Worker: Job %s ohne owner_id abgewiesen", job_id)
+                return
             if lead is None or not (lead.website or "").strip():
                 job.status = ERROR
                 job.error = "Lead hat keine Website (mehr)"
