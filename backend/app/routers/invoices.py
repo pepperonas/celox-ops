@@ -31,6 +31,12 @@ from app.models.activity import Activity
 from app.services.email_service import send_email
 from app.services.filenames import customer_label, download_name
 from app.services.exchange_service import get_usd_eur_rate
+from app.services.invoice_lock import (
+    FIELD_LABELS,
+    changed_locked_fields,
+    is_locked,
+    lock_error,
+)
 from app.services.invoice_service import (
     build_credit_note_positions,
     calculate_invoice_totals,
@@ -294,6 +300,16 @@ async def update_invoice(
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # GoBD: eine gestellte Rechnung ist inhaltlich unveränderlich. Verglichen
+    # werden WERTE, nicht Anwesenheit — ein Formular, das den Datensatz
+    # unverändert zurücksendet, läuft damit durch. Korrekturweg = Storno
+    # (Gutschrift) + Duplizieren; DELETE ist schon auf Entwürfe beschränkt.
+    if is_locked(invoice.status):
+        current = {f: getattr(invoice, f, None) for f in FIELD_LABELS}
+        blocked = changed_locked_fields(current, update_data)
+        if blocked:
+            raise HTTPException(status_code=409, detail=lock_error(blocked))
 
     # Prevent reassigning to another tenant's records (scoped selects return
     # None for foreign rows) — mirrors the guard in time_entries/create_invoice.

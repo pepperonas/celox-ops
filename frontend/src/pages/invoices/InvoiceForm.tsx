@@ -94,6 +94,10 @@ export default function InvoiceForm() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
+  // Gestellte Rechnungen sind inhaltlich unveraenderlich (GoBD, serverseitig
+  // durchgesetzt). Der Direktaufruf der Bearbeiten-URL landet hier — dann
+  // zeigen wir statt des Formulars den korrekten Weg (Storno + Duplizieren).
+  const [lockedStatus, setLockedStatus] = useState<string | null>(null)
   const prefilledCustomerId = searchParams.get('customer_id') || ''
   const [form, setForm] = useState<InvoiceCreate>(
     prefilledCustomerId ? { ...emptyForm, customer_id: prefilledCustomerId } : emptyForm
@@ -147,6 +151,7 @@ export default function InvoiceForm() {
 
     if (id) {
       getInvoice(id).then((inv) => {
+        if (inv.status !== 'entwurf') setLockedStatus(inv.status)
         setForm({
           customer_id: inv.customer_id,
           order_id: inv.order_id,
@@ -506,10 +511,39 @@ export default function InvoiceForm() {
         toast.success('Rechnung erstellt.')
         navigate(`/rechnungen/${created.id}`)
       }
-    } catch {
-      toast.error('Fehler beim Speichern.')
+    } catch (err) {
+      // 409 = GoBD-Riegel: der Server nennt den Grund + den richtigen Weg.
+      const res = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+      if (res?.status === 409 && res.data?.detail) {
+        toast.error(res.data.detail, { duration: 9000 })
+      } else {
+        toast.error('Fehler beim Speichern.')
+      }
     }
     setLoading(false)
+  }
+
+  if (lockedStatus) {
+    return (
+      <div className="max-w-2xl">
+        <h2 className="md-display text-2xl text-text mb-4">Rechnung bearbeiten</h2>
+        <div className="bg-surface border border-border rounded-card p-5">
+          <p className="text-sm text-text mb-2">
+            Diese Rechnung ist bereits gestellt und darf inhaltlich nicht mehr geändert
+            werden.
+          </p>
+          <p className="text-sm text-text-muted mb-4">
+            Für eine Korrektur: <strong className="text-text">Stornieren (Gutschrift)</strong> und
+            anschließend <strong className="text-text">Duplizieren</strong> — das erzeugt eine neue
+            Rechnung mit neuer Nummer, während die bisherige nachvollziehbar erhalten bleibt.
+            Interne Vermerke gehören in die Aktivitäten des Kunden.
+          </p>
+          <button onClick={() => navigate(`/rechnungen/${id}`)} className="btn-primary text-sm">
+            Zur Rechnung
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
