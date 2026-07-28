@@ -55,6 +55,22 @@ def is_rotting(lead: RainmakerLead) -> bool:
     return not planned_activities(lead)
 
 
+async def reload_lead(db, lead):
+    """Lead VOLLSTÄNDIG neu laden, bevor `lead_response()` ihn liest.
+
+    Wer vorher eigene Lead-Spalten geändert hat (Status, Notizen, Stammdaten),
+    löst mit dem Flush ein UPDATE aus. Damit verfällt das server-generierte
+    `updated_at` (`onupdate=func.now()`) und wird beim nächsten Zugriff nachgeladen
+    — im synchronen Pydantic-Validator ist das IO am falschen Ort und endet in
+    `MissingGreenlet`. Ein `refresh(lead, attribute_names=["activities"])` allein
+    genügt nicht: es holt genau die Beziehung, nicht die Spalten.
+
+    Ein volles `refresh` holt Spalten UND die eager geladene `activities`-Sammlung.
+    """
+    await db.refresh(lead)
+    return lead
+
+
 def lead_response(lead: RainmakerLead, has_open_todo: bool = False) -> RainmakerLeadResponse:
     """Build a lead response enriched with the computed next-action fields.
 

@@ -298,3 +298,52 @@ async def test_session_get_is_also_scoped(sessionmaker, two_users):
         tok = current_owner_id.set(b)
         assert (await db.get(Customer, foreign.id)).name == "FremdGet"
         current_owner_id.reset(tok)
+
+
+# --------------------------------------------------------------------------- #
+#  Nachgelagerte Spaltenverfall-Falle (MissingGreenlet)
+# --------------------------------------------------------------------------- #
+async def test_updated_at_needs_a_full_refresh_after_own_column_changes(sessionmaker, two_users):
+    """Beim Chat-Import-Undo in Produktion aufgetreten: nach einer eigenen
+    Spaltenänderung + Flush verfällt das server-generierte `updated_at`
+    (`onupdate=func.now()`). Ein synchroner Zugriff — wie im Pydantic-Validator
+    von `lead_response()` — löst dann IO an der falschen Stelle aus und endet in
+    `MissingGreenlet`.
+
+    Dieser Test hält beides fest: dass der Wert nach dem Flush wirklich verfallen
+    ist, und dass `reload_lead()` (volles `refresh`) ihn samt der eager geladenen
+    `activities`-Sammlung wiederherstellt.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.models.rainmaker_activity import RainmakerActivity, RainmakerActivityType
+    from app.models.rainmaker_lead import RainmakerLead
+    from app.services.rainmaker_service import reload_lead
+    from app.tenancy import current_owner_id
+
+    a, _ = two_users
+    async with sessionmaker() as db:
+        tok = current_owner_id.set(a)
+        lead = RainmakerLead(company="Verfall GmbH")
+        db.add(lead)
+        await db.flush()
+        db.add(RainmakerActivity(lead_id=lead.id, type=RainmakerActivityType.call))
+        await db.commit()
+
+        # Eigene Spalte ändern → UPDATE → updated_at ist server-generiert und verfällt.
+        lead.notes = "geändert"
+        await db.flush()
+        assert "updated_at" in sa_inspect(lead).unloaded, (
+            "Vorbedingung: updated_at muss nach dem Flush verfallen sein")
+
+        # Nur die Beziehung nachzuladen behebt das NICHT (der alte Weg).
+        await db.refresh(lead, attribute_names=["activities"])
+        assert "updated_at" in sa_inspect(lead).unloaded
+
+        # Volles Neuladen holt Spalten UND die Sammlung.
+        await reload_lead(db, lead)
+        unloaded = sa_inspect(lead).unloaded
+        assert "updated_at" not in unloaded
+        assert "activities" not in unloaded, "selectin-Sammlung muss mitgeladen werden"
+        assert lead.updated_at is not None and len(lead.activities) == 1
+        current_owner_id.reset(tok)

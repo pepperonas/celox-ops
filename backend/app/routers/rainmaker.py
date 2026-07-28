@@ -114,6 +114,7 @@ from app.services.linkedin_import import (
     row_to_lead_fields,
 )
 from app.services.rainmaker_service import (
+    reload_lead,
     DREAM_EV_WEIGHTS,
     count_done_today,
     dream_activities_ev,
@@ -1147,9 +1148,10 @@ async def complete_activity(
         )
 
     await db.flush()
-    # Reload the activities collection so the recomputed next-action reflects the
-    # just-completed activity AND the newly planned one.
-    await db.refresh(lead, attribute_names=["activities"])
+    # Vollständig neu laden: die Aktivitäten für die neu berechnete nächste Aktion
+    # UND die Spalten — beim Abschließen wurde `lead.status` geändert, wodurch
+    # `updated_at` verfällt (siehe reload_lead).
+    await reload_lead(db, lead)
     return lead_response(lead)
 
 
@@ -2196,5 +2198,5 @@ async def chat_import_undo(
 
     row.reverted_at = datetime.now(timezone.utc)
     await db.flush()
-    await db.refresh(lead, attribute_names=["activities"])
+    await reload_lead(db, lead)
     return lead_response(lead)
