@@ -1,6 +1,8 @@
 import { canDelete } from '../utils/permissions'
 import { useAuthStore } from '../store/authStore'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { applyFrozenOrder, orderSnapshot } from '../utils/listOrder'
+import { useFlipOrder } from '../utils/useFlipOrder'
 import toast from 'react-hot-toast'
 import { createTodo, deleteTodo, getTodos, toggleTodo, updateTodo } from '../api/todos'
 import { toastWithUndo } from '../utils/undoToast'
@@ -116,9 +118,42 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
     }
   }
 
+  /**
+   * Reihenfolge einfrieren, solange der Nutzer an einer Zeile arbeitet.
+   *
+   * Der Prioritäts-Punkt ist ein Durchklick-Schalter — würde die Zeile sofort
+   * an ihren neuen Platz springen, läge der Punkt nicht mehr unter dem Zeiger
+   * und der nächste Klick träfe eine andere Zeile. Nach `THAW_MS` ohne weiteren
+   * Klick wird der Frost gelöst und die Zeile gleitet an ihren Platz (FLIP).
+   */
+  const [frozenIds, setFrozenIds] = useState<string[] | null>(null)
+  const thawTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const THAW_MS = 1400
+
+  const visible = showDone ? todos : todos.filter((t) => t.status === 'offen')
+  const groups = groupTodos(visible).map((g) => ({
+    ...g, items: applyFrozenOrder(g.items, frozenIds),
+  }))
+  // Der Schlüssel ändert sich genau dann, wenn sich die Anzeigereihenfolge
+  // ändert — nur dann animiert der FLIP-Haken.
+  const listRef = useRef<HTMLDivElement>(null)
+  useFlipOrder(listRef, orderSnapshot(groups).join(','))
+
+  const freezeOrder = (snapshot: string[]) => {
+    // Nur beim ERSTEN Klick eine Aufnahme machen — sonst würde jede weitere
+    // Änderung die schon eingefrorene Reihenfolge überschreiben.
+    setFrozenIds((prev) => prev ?? snapshot)
+    if (thawTimer.current) clearTimeout(thawTimer.current)
+    thawTimer.current = setTimeout(() => setFrozenIds(null), THAW_MS)
+  }
+
+  // Offener Timer beim Verlassen der Seite aufräumen.
+  useEffect(() => () => { if (thawTimer.current) clearTimeout(thawTimer.current) }, [])
+
   const cyclePriority = async (todo: Todo) => {
     const next: Record<TodoPriority, TodoPriority> = { niedrig: 'normal', normal: 'hoch', hoch: 'niedrig' }
     const value = next[todo.priority]
+    freezeOrder(orderSnapshot(groups))
     setTodos((prev) => prev.map((t) => (t.id === todo.id ? { ...t, priority: value } : t)))
     try {
       await updateTodo(todo.id, { priority: value })
@@ -129,8 +164,6 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
     }
   }
 
-  const visible = showDone ? todos : todos.filter((t) => t.status === 'offen')
-  const groups = groupTodos(visible)
   const openCount = todos.filter((t) => t.status === 'offen').length
   const doneCount = todos.length - openCount
 
@@ -214,7 +247,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5" ref={listRef}>
           {groups.map((group) => (
             <div key={group.key}>
               <p className={`text-xs font-semibold mb-2 ${group.key === 'overdue' ? 'text-danger' : 'text-text-muted'}`}>
@@ -227,6 +260,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                   return (
                     <div
                       key={todo.id}
+                      data-flip-id={todo.id}
                       className={`bg-surface border rounded-card p-3 flex items-start gap-3 transition-colors duration-short ${
                         group.key === 'overdue' ? 'border-danger/40' : 'border-border'
                       } ${done ? 'opacity-60' : ''}`}
