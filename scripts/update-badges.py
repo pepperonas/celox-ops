@@ -153,6 +153,34 @@ def build_table(loc: dict[str, tuple[int, int]], loc_app: int, tests_loc: int) -
     return "\n".join(rows)
 
 
+def _slug(heading: str) -> str:
+    """GitHubs Anker-Regel (vereinfacht): klein, Sonderzeichen weg, Leerzeichen→'-'.
+
+    Wichtig: jedes Leerzeichen wird EINZELN ersetzt — „Rechnungen & Geld" ergibt
+    `rechnungen--geld`, nicht `rechnungen-geld`. Umlaute bleibt GitHub erhalten.
+    """
+    text = heading.strip().lower()
+    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    return text.replace(" ", "-")
+
+
+def fix_anchors(markdown: str, target_text: str) -> str:
+    """Links auf nicht vorhandene Überschriften entschärfen.
+
+    Die Badge-Zeile ist für alle READMEs dieselbe, die Überschriften sind es nicht
+    (`## Projektumfang` gibt es nur auf Deutsch). Ein Link ins Nichts ist kein
+    Beinbruch, aber vermeidbar: fehlt der Anker, bleibt das Bild ohne Link.
+    """
+    have = {_slug(m.group(1)) for m in re.finditer(r"^#{1,6}\s+(.+)$", target_text, re.M)}
+
+    def strip(match: re.Match) -> str:
+        image, anchor = match.group(1), match.group(2)
+        return match.group(0) if anchor in have else image
+
+    # [![Bild](url)](#anker) → nur [![Bild](url)], wenn der Anker fehlt.
+    return re.sub(r"\[(!\[[^\]]*\]\([^)]*\))\]\(#([^)]+)\)", strip, markdown)
+
+
 def replace_block(text: str, marker: str, content: str) -> tuple[str, bool]:
     pattern = re.compile(
         rf"(<!-- {marker}:begin -->\n).*?(\n<!-- {marker}:end -->)", re.S)
@@ -197,7 +225,7 @@ def main() -> None:
         if not path.exists():
             continue
         original = path.read_text(encoding="utf-8")
-        text, hit_b = replace_block(original, "badges", badges)
+        text, hit_b = replace_block(original, "badges", fix_anchors(badges, original))
         text, hit_t = replace_block(text, "loc-table", table)
         if not (hit_b or hit_t):
             continue
