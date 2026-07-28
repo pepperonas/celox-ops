@@ -683,7 +683,8 @@ export interface LeadIntakeDraft {
   source: string | null
   status: string
   priority: string
-  value_estimate: number | null
+  // Decimal kommt als STRING aus Pydantic — nie ungeprueft rechnen (Number()).
+  value_estimate: number | string | null
   tags: string[] | null
   target: string | null
   notes: string | null

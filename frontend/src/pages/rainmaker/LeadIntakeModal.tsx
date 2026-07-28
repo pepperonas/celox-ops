@@ -286,6 +286,13 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
                           🎯 {d.target}
                         </span>
                       )}
+                      {d.value_estimate != null && d.value_estimate !== '' && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-surface text-text"
+                              title="Genannter Betrag (Budget/Angebotssumme)">
+                          {/* Decimal kommt als String — erst durch Number(). */}
+                          💰 {Number(d.value_estimate).toLocaleString('de-DE')} €
+                        </span>
+                      )}
                       {d.confidence != null && (
                         <span className="px-1.5 py-0.5 rounded-full bg-surface text-text-muted"
                               title="Sicherheit der KI">
