@@ -196,8 +196,9 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
                              text-sm text-text placeholder:text-text-muted"
                 />
                 <p className="text-[11px] text-text-muted mt-1">
-                  Wird abgerufen — <strong className="text-text">Startseite und Impressum</strong>.
-                  Dort stehen Firmenname, Adresse, Geschäftsführung und Kontakt.
+                  Wird abgerufen — <strong className="text-text">Startseite und
+                  Impressum/Kontakt</strong>. Dort stehen Firmenname, Adresse,
+                  Geschäftsführung und Kontaktdaten.
                 </p>
               </div>
               <div>

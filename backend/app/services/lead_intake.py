@@ -312,6 +312,25 @@ def truncate_material(text: str) -> tuple[str, str | None]:
 # --------------------------------------------------------------------------- #
 #  Website abrufen (die einzige unreine Vorstufe)
 # --------------------------------------------------------------------------- #
+def _reason(exc: BaseException) -> str:
+    """Abbruchgrund in Klartext. Der Klassenname eines internen Fehlertyps
+    (`_Blocked`) sagt dem Nutzer nichts — und wäre bei einer nicht auflösbaren
+    Domain sogar irreführend („internes Ziel"), weil der SSRF-Guard genau dann
+    greift, wenn sich der Host nicht auflösen lässt.
+    """
+    name = type(exc).__name__
+    if name == "_Blocked":
+        return "Adresse nicht auflösbar oder kein öffentlicher Server"
+    text = name.lower()
+    if "timeout" in text:
+        return "Zeitüberschreitung"
+    if "ssl" in text or "certificate" in text:
+        return "TLS-Zertifikat nicht vertrauenswürdig"
+    if "connect" in text:
+        return "keine Verbindung möglich"
+    return "Abruf fehlgeschlagen"
+
+
 async def fetch_website_material(url: str) -> tuple[str, str | None]:
     """Startseite + Impressum abrufen und als Material aufbereiten.
 
@@ -342,8 +361,7 @@ async def fetch_website_material(url: str) -> tuple[str, str | None]:
     try:
         resp = await _safe_get(clean, verify=True)
     except Exception as exc:  # noqa: BLE001 — auch _Blocked (SSRF) landet hier
-        return "", (f"{clean} war nicht erreichbar ({type(exc).__name__}) — "
-                    "es wurde kein Seiteninhalt ausgewertet.")
+        return "", f"{clean} war nicht erreichbar ({_reason(exc)}) — kein Seiteninhalt ausgewertet."
     if resp.status_code >= 400:
         return "", (f"{clean} antwortete mit HTTP {resp.status_code} — "
                     "es wurde kein Seiteninhalt ausgewertet.")

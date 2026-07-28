@@ -595,3 +595,40 @@ class TestFetchWebsiteMaterial:
         li = await self._patched(monkeypatch, {"https://muster.de/": "<img src='a.png'>"})
         material, note = await li.fetch_website_material("https://muster.de/")
         assert material == "" and note and "keinen lesbaren Text" in note
+
+
+class TestFailureReasons:
+    """Fehlermeldungen landen im Dialog — dort hilft kein interner Klassenname."""
+
+    async def test_internal_block_becomes_plain_german(self):
+        from app.services.lead_intake import _reason
+        from app.services.website_analysis import _Blocked
+
+        text = _reason(_Blocked("internes/privates Ziel"))
+        assert "_Blocked" not in text
+        assert "nicht auflösbar" in text
+
+    async def test_common_network_errors_are_named(self):
+        import httpx
+
+        from app.services.lead_intake import _reason
+
+        import ssl
+
+        assert _reason(httpx.ConnectTimeout("x")) == "Zeitüberschreitung"
+        assert _reason(httpx.ConnectError("x")) == "keine Verbindung möglich"
+        assert "TLS" in _reason(ssl.SSLCertVerificationError("x"))
+        # Unbekanntes bleibt neutral statt einen Grund zu erfinden.
+        assert _reason(RuntimeError("x")) == "Abruf fehlgeschlagen"
+
+    async def test_no_reason_leaks_an_underscore_class(self, monkeypatch):
+        from app.services import lead_intake
+        import app.services.website_analysis as wa
+        from app.services.website_analysis import _Blocked
+
+        async def boom(url, verify=True, chain=None):
+            raise _Blocked("internes/privates Ziel")
+
+        monkeypatch.setattr(wa, "_safe_get", boom)
+        _, note = await lead_intake.fetch_website_material("https://weg.invalid/")
+        assert note and "_Blocked" not in note and "nicht auflösbar" in note
