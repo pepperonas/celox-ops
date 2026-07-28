@@ -19,7 +19,11 @@ class ExpenseBase(BaseModel):
 
 
 class ExpenseCreate(ExpenseBase):
-    pass
+    # Herkunftsschlüssel (z. B. „hostinger:<abo>:<datum>"). Beim normalen Anlegen
+    # leer; wird gesetzt, wenn eine gelöschte importierte Ausgabe per „Rückgängig"
+    # wiederhergestellt wird — sonst gälte ihr Zeitraum als nicht importiert und
+    # der nächste Hostinger-Lauf würde sie ein zweites Mal buchen.
+    external_ref: str | None = None
 
 
 class ExpenseUpdate(BaseModel):
@@ -37,6 +41,9 @@ class ExpenseResponse(ExpenseBase):
 
     id: uuid.UUID
     created_at: datetime
+    # Nötig, damit die Liste beim Wiederherstellen einer gelöschten Ausgabe die
+    # Herkunft mitgeben kann (siehe ExpenseCreate).
+    external_ref: str | None = None
 
 
 # --------------------------------------------------------------------------- #

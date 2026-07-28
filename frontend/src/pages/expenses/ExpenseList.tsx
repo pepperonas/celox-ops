@@ -10,6 +10,8 @@ import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import { getExpenses, getExpenseSummary, deleteExpense, createExpense } from '../../api/expenses'
 import { toastWithUndo } from '../../utils/undoToast'
+import { canDelete } from '../../utils/permissions'
+import { useAuthStore } from '../../store/authStore'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
@@ -42,6 +44,15 @@ export default function ExpenseList() {
   const [showHostinger, setShowHostinger] = useState(false)
   const [summary, setSummary] = useState<ExpenseSummary | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  // Die ausgewählten ZEILEN, nicht nur ihre IDs: „alle auswählen" kann über die
+  // Seitengrenze hinausgehen, und dann liegen die Objekte nicht mehr in
+  // `expenses` — ohne sie könnte weder gelöscht noch wiederhergestellt werden.
+  const [selected, setSelected] = useState<Map<string, Expense>>(new Map())
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  // Löschen ist Sache des Bereichs-Inhabers; die verbindliche Sperre sitzt
+  // serverseitig (middleware/permissions.py), das hier blendet nur aus.
+  const mayDelete = canDelete(useAuthStore((st) => st.role))
 
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
@@ -99,27 +110,34 @@ export default function ExpenseList() {
     return opt?.label || topCategory.category
   }, [topCategory])
 
+  /** Alle Felder inkl. `external_ref` — eine wiederhergestellte importierte
+   *  Ausgabe muss ihre Herkunft behalten, sonst bucht der nächste
+   *  Hostinger-Lauf denselben Zeitraum ein zweites Mal. Die ID ist neu
+   *  (Repo-Muster: Wiederherstellen = Neuanlage). */
+  const restore = (e: Expense) => createExpense({
+    description: e.description,
+    category: e.category,
+    amount: Number(e.amount),
+    date: e.date,
+    vendor: e.vendor || undefined,
+    recurring: e.recurring,
+    notes: e.notes || undefined,
+    external_ref: e.external_ref,
+  })
+
+  const refresh = () => { fetchData(); fetchSummary() }
+
   const handleDelete = async () => {
     if (!deleteId) return
     const deleted = expenses.find((e) => e.id === deleteId)
     try {
       await deleteExpense(deleteId)
       setDeleteId(null)
-      fetchData()
-      fetchSummary()
+      refresh()
       if (deleted) {
         toastWithUndo('Ausgabe gelöscht.', async () => {
-          await createExpense({
-            description: deleted.description,
-            category: deleted.category,
-            amount: Number(deleted.amount),
-            date: deleted.date,
-            vendor: deleted.vendor || undefined,
-            recurring: deleted.recurring,
-            notes: deleted.notes || undefined,
-          })
-          fetchData()
-          fetchSummary()
+          await restore(deleted)
+          refresh()
         })
       } else {
         toast.success('Ausgabe gelöscht.')
@@ -129,8 +147,112 @@ export default function ExpenseList() {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (!selected.size || busy) return
+    setBusy(true)
+    // Die Zeilen liegen bereits im State (auch seitenübergreifend) — nach dem
+    // Löschen gäbe es nichts mehr, woraus „Rückgängig" sie bauen könnte.
+    const doomed = [...selected.values()]
+    let failed = 0
+    const gone: Expense[] = []
+    for (const e of doomed) {
+      try {
+        await deleteExpense(e.id)
+        gone.push(e)
+      } catch {
+        failed++
+      }
+    }
+    setBulkOpen(false)
+    setSelected(new Map())
+    setBusy(false)
+    refresh()
+    if (!gone.length) {
+      toast.error('Löschen fehlgeschlagen.')
+      return
+    }
+    const label = `${gone.length} Ausgabe${gone.length === 1 ? '' : 'n'} gelöscht`
+      + (failed ? `, ${failed} fehlgeschlagen` : '') + '.'
+    toastWithUndo(label, async () => {
+      for (const e of gone) {
+        try {
+          await restore(e)
+        } catch { /* z. B. 409, falls dieselbe Herkunft zwischenzeitlich existiert */ }
+      }
+      refresh()
+    })
+  }
+
+  const toggleSelect = (e: Expense) => setSelected((prev) => {
+    const next = new Map(prev)
+    if (next.has(e.id)) next.delete(e.id); else next.set(e.id, e)
+    return next
+  })
+
+  const pageSelected = expenses.length > 0 && expenses.every((e) => selected.has(e.id))
+
+  const toggleSelectAll = () => setSelected((prev) => {
+    const next = new Map(prev)
+    if (pageSelected) expenses.forEach((e) => next.delete(e.id))
+    else expenses.forEach((e) => next.set(e.id, e))
+    return next
+  })
+
+  /** Alle Zeilen des aktuellen Filters auswählen — auch die auf anderen Seiten.
+   *  Ein Abruf (page_size ist serverseitig auf 1000 gedeckelt). */
+  const selectAllMatching = async () => {
+    setBusy(true)
+    try {
+      const res = await getExpenses({
+        page: 1, page_size: 1000,
+        search: search || undefined,
+        category: categoryFilter || undefined,
+        from: dateFrom || undefined,
+        to: dateTo || undefined,
+      })
+      setSelected(new Map(res.items.map((e) => [e.id, e])))
+      if (res.total > res.items.length) {
+        toast(`${res.items.length} von ${res.total} ausgewählt (Höchstmenge je Abruf).`)
+      }
+    } catch {
+      toast.error('Auswahl fehlgeschlagen.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Summe der Auswahl — im Bestätigungsdialog, damit man sieht, was weggeht. */
+  const selectedSum = useMemo(
+    () => [...selected.values()].reduce((acc, e) => acc + Number(e.amount), 0),
+    [selected])
+
   const columns: Column<Expense>[] = useMemo(
     () => [
+      // Auswahl und Löschen nur zeigen, wenn die Rolle es darf — sonst klickt
+      // man ins Leere und bekommt bloß den 403 des Servers.
+      ...(mayDelete ? [{
+        key: 'select',
+        label: (
+          <input
+            type="checkbox"
+            aria-label="Alle auf dieser Seite auswählen"
+            checked={pageSelected}
+            onChange={toggleSelectAll}
+            onClick={(ev) => ev.stopPropagation()}
+            className="cursor-pointer"
+          />
+        ),
+        render: (e: Expense) => (
+          <input
+            type="checkbox"
+            aria-label={`${e.description} auswählen`}
+            checked={selected.has(e.id)}
+            onChange={() => toggleSelect(e)}
+            onClick={(ev) => ev.stopPropagation()}
+            className="cursor-pointer"
+          />
+        ),
+      } satisfies Column<Expense>] : []),
       {
         key: 'date',
         label: 'Datum',
@@ -163,8 +285,24 @@ export default function ExpenseList() {
           </span>
         ),
       },
+      ...(mayDelete ? [{
+        key: 'actions',
+        label: '',
+        render: (e: Expense) => (
+          <button
+            type="button"
+            title="Ausgabe löschen"
+            aria-label={`${e.description} löschen`}
+            onClick={(ev) => { ev.stopPropagation(); setDeleteId(e.id) }}
+            className="md-state w-11 h-11 sm:w-8 sm:h-8 grid place-items-center rounded-full
+                       text-text-muted hover:text-danger"
+          >
+            🗑
+          </button>
+        ),
+      } satisfies Column<Expense>] : []),
     ],
-    [],
+    [mayDelete, expenses, selected, pageSelected],
   )
 
   return (
@@ -259,6 +397,25 @@ export default function ExpenseList() {
           className="input-field w-auto"
           placeholder="Bis"
         />
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-text-muted">{selected.size} ausgewählt</span>
+            {selected.size < total && (
+              <button onClick={selectAllMatching} disabled={busy}
+                      className="md-state text-accent text-xs rounded-xs px-1">
+                alle {total} auswählen
+              </button>
+            )}
+            <button onClick={() => setBulkOpen(true)} disabled={busy}
+                    className="btn-danger text-xs !py-1.5 !px-4">
+              Löschen
+            </button>
+            <button onClick={() => setSelected(new Map())} aria-label="Auswahl aufheben"
+                    className="md-state text-text-muted text-xs hover:text-text w-7 h-7 rounded-full">
+              ×
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -282,6 +439,16 @@ export default function ExpenseList() {
         onConfirm={handleDelete}
         title="Ausgabe löschen"
         message="Soll diese Ausgabe wirklich gelöscht werden?"
+      />
+
+      <DeleteDialog
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        onConfirm={handleBulkDelete}
+        title={`${selected.size} Ausgabe${selected.size === 1 ? '' : 'n'} löschen`}
+        message={`${selected.size} Ausgabe${selected.size === 1 ? '' : 'n'} über `
+          + `${formatCurrency(selectedSum)} werden gelöscht. `
+          + 'Direkt danach lässt sich das per „Rückgängig" zurücknehmen.'}
       />
     </div>
   )

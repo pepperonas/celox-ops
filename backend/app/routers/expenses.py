@@ -4,6 +4,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import extract, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -153,7 +154,15 @@ async def create_expense(
 ) -> ExpenseResponse:
     expense = Expense(**data.model_dump())
     db.add(expense)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        # Kollidiert nur am partiellen Unique-Index auf external_ref: derselbe
+        # importierte Zeitraum existiert schon. Klartext statt 500.
+        await db.rollback()
+        raise HTTPException(status_code=409, detail=(
+            "Für diese Herkunft existiert bereits eine Ausgabe "
+            f"({data.external_ref}).")) from exc
     await db.refresh(expense)
     return ExpenseResponse.model_validate(expense)
 

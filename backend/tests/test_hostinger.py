@@ -347,6 +347,23 @@ class TestIdempotency:
         assert external_ref(DOMAIN_SUB, date(2026, 7, 4)) == \
                external_ref(dict(DOMAIN_SUB), date(2026, 7, 4))
 
+    def test_restoring_a_deleted_expense_keeps_its_origin(self):
+        """Eine gelöschte importierte Ausgabe wird per „Rückgängig" neu angelegt.
+        Ohne `external_ref` im Create-Schema verlöre sie ihre Herkunft — der
+        nächste Hostinger-Lauf würde denselben Zeitraum ein zweites Mal buchen."""
+        from app.schemas.expense import ExpenseCreate, ExpenseResponse
+
+        assert "external_ref" in ExpenseCreate.model_fields
+        # Und die Liste muss ihn lesen können, um ihn zurückgeben zu können.
+        assert "external_ref" in ExpenseResponse.model_fields
+        created = ExpenseCreate(description="x", category="domain", amount="1.00",
+                                date=date(2026, 7, 4),
+                                external_ref="hostinger:A:2026-07-04")
+        assert created.external_ref == "hostinger:A:2026-07-04"
+        # Normale Ausgaben tragen keine Herkunft.
+        assert ExpenseCreate(description="x", category="buero", amount="1.00",
+                             date=date(2026, 7, 4)).external_ref is None
+
     def test_next_year_is_a_new_ref(self):
         """Die Verlängerung im nächsten Jahr MUSS importierbar sein — nur
         derselbe Zeitraum nicht zweimal."""

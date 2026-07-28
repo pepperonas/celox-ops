@@ -396,6 +396,8 @@ export interface Expense {
   recurring: boolean
   notes: string | null
   created_at: string
+  /** Herkunft importierter Ausgaben (z. B. „hostinger:<abo>:<datum>"). */
+  external_ref: string | null
 }
 
 export interface ExpenseCreate {
@@ -406,6 +408,9 @@ export interface ExpenseCreate {
   vendor?: string
   recurring?: boolean
   notes?: string
+  /** Nur beim Wiederherstellen einer gelöschten importierten Ausgabe setzen —
+   *  sonst gilt ihr Zeitraum als nicht importiert und würde erneut gebucht. */
+  external_ref?: string | null
 }
 
 export interface ExpenseUpdate extends Partial<ExpenseCreate> {}
