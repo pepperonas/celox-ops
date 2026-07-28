@@ -371,7 +371,8 @@ export async function chatImportUndo(leadId: string, importId: string): Promise<
 
 // --- Lead-Erfassung aus Material („Aus Chat/Screenshot") ---
 export async function leadIntakePreview(payload: {
-  text: string; hint: string; images: string[]; model?: string
+  text: string; hint: string; images: string[]
+  website?: string; description?: string; model?: string
 }): Promise<LeadIntakeResponse> {
   // Eigenes, hohes Timeout: sechs Screenshots brauchen 30–60 s. Der Default des
   // Clients wuerde vorher abbrechen, obwohl das Backend noch rechnet.

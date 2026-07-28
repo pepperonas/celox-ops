@@ -207,17 +207,28 @@ class LeadIntakeDraft(RainmakerLeadBase):
 
 
 class LeadIntakeRequest(BaseModel):
-    """Material für einen Lauf. Text ODER mindestens ein Bild ist Pflicht."""
+    """Material für einen Lauf. Mindestens EINE Quelle ist Pflicht.
+
+    Vier Eingaben, zwei Vertrauensstufen: `text`/`images`/`website` sind Data
+    (Anweisungen darin werden nicht befolgt), `description`/`hint` sind
+    Nutzereingabe. Die Website wird serverseitig abgerufen (Startseite +
+    Impressum) — die KI selbst hat keinen Webzugriff.
+    """
     text: str = Field(default="", max_length=200_000)
     hint: str = Field(default="", max_length=2_000)
     # Data-URL oder nacktes Base64; der Router dekodiert und prüft Format/Größe.
     images: list[str] = Field(default_factory=list, max_length=6)
+    website: str = Field(default="", max_length=500)
+    description: str = Field(default="", max_length=4_000)
     model: str | None = None
 
     @model_validator(mode="after")
     def _needs_material(self):
-        if not self.text.strip() and not self.images:
-            raise ValueError("Bitte Text einfügen oder mindestens einen Screenshot anhängen.")
+        if not any((self.text.strip(), self.images, self.website.strip(),
+                    self.description.strip())):
+            raise ValueError(
+                "Bitte mindestens eine Quelle angeben: Text, Screenshot, "
+                "Website oder Beschreibung.")
         return self
 
 

@@ -25,6 +25,8 @@ interface Shot { id: string; dataUrl: string; name: string; kb: number }
 export default function LeadIntakeModal({ onClose, onImported }: Props) {
   const [text, setText] = useState('')
   const [hint, setHint] = useState('')
+  const [website, setWebsite] = useState('')
+  const [description, setDescription] = useState('')
   const [shots, setShots] = useState<Shot[]>([])
   const [res, setRes] = useState<LeadIntakeResponse | null>(null)
   const [drafts, setDrafts] = useState<LeadIntakeDraft[]>([])
@@ -85,15 +87,15 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
 
   const run = async () => {
     if (loading) return
-    if (!text.trim() && shots.length === 0) {
-      setError('Bitte Material einfügen oder Screenshots anhängen.')
+    if (!text.trim() && shots.length === 0 && !website.trim() && !description.trim()) {
+      setError('Bitte mindestens eine Quelle angeben: Text, Screenshot, Website oder Beschreibung.')
       return
     }
     setLoading(true)
     setError(null)
     try {
       const out = await leadIntakePreview({
-        text, hint, images: shots.map((s) => s.dataUrl),
+        text, hint, website, description, images: shots.map((s) => s.dataUrl),
       })
       setRes(out)
       setDrafts(out.leads)
@@ -170,17 +172,66 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
           {res
             ? <>Entwürfe prüfen und anpassen — <strong className="text-text">angelegt wird nur,
               was angehakt ist</strong>.</>
-            : <>Chatverlauf, E-Mail, Visitenkarte oder Impressum einfügen — Screenshots per
-              Ziehen oder <kbd className="px-1 rounded bg-surface-container">Strg/⌘+V</kbd>.</>}
+            : <>Eine Quelle genügt: Verlauf einfügen, Screenshots anhängen
+              (<kbd className="px-1 rounded bg-surface-container">Strg/⌘+V</kbd>) — oder einfach
+              eine Website angeben und beschreiben, worum es geht.</>}
         </p>
 
         {/* ---------- Schritt 1: Material ---------- */}
         {!res && (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+              <div>
+                <label htmlFor="intake-website" className="block text-xs text-text-muted mb-1">
+                  Website der Firma
+                </label>
+                <input
+                  id="intake-website"
+                  type="url"
+                  inputMode="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="muster-elektro.de"
+                  className="w-full bg-surface-container border border-border rounded-lg px-3 py-2
+                             text-sm text-text placeholder:text-text-muted"
+                />
+                <p className="text-[11px] text-text-muted mt-1">
+                  Wird abgerufen — <strong className="text-text">Startseite und Impressum</strong>.
+                  Dort stehen Firmenname, Adresse, Geschäftsführung und Kontakt.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="intake-description" className="block text-xs text-text-muted mb-1">
+                  Beschreibung
+                </label>
+                <textarea
+                  id="intake-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  placeholder="z. B. Zahnarztpraxis in Kreuzberg, Website von 2014 — Kandidat für Relaunch"
+                  className="w-full bg-surface-container border border-border rounded-lg px-3 py-2
+                             text-sm text-text placeholder:text-text-muted resize-y"
+                />
+                <p className="text-[11px] text-text-muted mt-1">
+                  Deine Einordnung: Branche, Anlass, Bedarf. Darf Fakten liefern, die auf der
+                  Seite nicht stehen.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[10px] uppercase tracking-wide text-text-muted">
+                oder Gesprächsmaterial
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              rows={8}
+              rows={6}
               placeholder="Chatverlauf, E-Mail-Text, Impressum, Notiz …"
               className="w-full bg-surface-container border border-border rounded-lg px-3 py-2
                          text-sm text-text placeholder:text-text-muted resize-y"
@@ -240,8 +291,8 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
             </div>
 
             <p className="text-[11px] text-text-muted">
-              Material und Bilder gehen zur Auswertung an Anthropic und können Daten Dritter
-              enthalten. <strong className="text-text">Gespeichert wird das Rohmaterial
+              Material, Bilder und abgerufener Seitentext gehen zur Auswertung an Anthropic und
+              können Daten Dritter enthalten. <strong className="text-text">Gespeichert wird das Rohmaterial
               nicht</strong> — nur die Entwürfe, die du bestätigst.
             </p>
             {error && <p className="text-sm text-danger">{error}</p>}

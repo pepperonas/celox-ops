@@ -941,7 +941,11 @@ async def lead_intake_preview(
 
     from app.services.business_time import today as business_today
     from app.services.exchange_service import get_usd_eur_rate
-    from app.services.lead_intake import MAX_IMAGES, extract_leads
+    from app.services.lead_intake import (
+        MAX_IMAGES,
+        extract_leads,
+        fetch_website_material,
+    )
 
     # Schlüssel des Arbeitsbereichs (kein globaler .env-Rückfall).
     api_key = await require_anthropic_key(db)
@@ -961,18 +965,26 @@ async def lead_intake_preview(
         raise HTTPException(status_code=413, detail=f"Zu viele Screenshots (max. {MAX_IMAGES}).")
     images = [_decode_image(raw, i) for i, raw in enumerate(data.images, start=1)]
 
+    # Angegebene Website serverseitig abrufen (Startseite + Impressum). Die KI hat
+    # in diesem Aufruf keinen Webzugriff — ohne Abruf wäre die URL nutzlos.
+    website_text, website_note = await fetch_website_material(data.website)
+
     known_targets, known_tags = await _intake_vocabulary(db)
     own_identity = ", ".join(p for p in (
         settings.BUSINESS_NAME, settings.BUSINESS_OWNER,
         settings.BUSINESS_EMAIL, settings.BUSINESS_WEB) if p)
     brief = (f"Lead-Erfassung: {len(data.text)} Zeichen Text, {len(images)} Screenshot(s)"
+             + (f", Website: {data.website.strip()[:120]}" if data.website.strip() else "")
+             + (f", Beschreibung: {data.description.strip()[:80]}" if data.description.strip() else "")
              + (f", Hinweis: {data.hint[:120]}" if data.hint.strip() else ""))
 
     try:
         result = await extract_leads(
             ai=get_client(api_key), model=model, text=data.text, hint=data.hint,
             images=images, own_identity=own_identity, known_targets=known_targets,
-            known_tags=known_tags, today=business_today())
+            known_tags=known_tags, today=business_today(),
+            website=data.website, description=data.description,
+            website_text=website_text)
     except Exception as exc:  # noqa: BLE001
         db.add(AiLeadRun(brief=brief[:2000], model=model, used_web_search=False,
                          status="failed", error=str(exc)[:1000]))
@@ -986,6 +998,11 @@ async def lead_intake_preview(
         cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
         candidates_found=len(result.leads), status="ok", **result.usage.as_dict()))
     await db.flush()
+
+    # Ein nicht erreichbarer Server ist kein Fehlschlag des Laufs, aber der Nutzer
+    # muss es sehen — sonst wundert er sich über einen dünnen Entwurf.
+    if website_note:
+        result.ignored.insert(0, website_note)
 
     # Duplikat-Markierung gegen den Bestand (owner-scoped). Der Dialog wählt
     # Duplikate nicht vor — angelegt wird nur mit ausdrücklichem force.
