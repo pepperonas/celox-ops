@@ -154,24 +154,24 @@ gib eine leere Lead-Liste zurück und begründe es in `ignored`."""
 # --------------------------------------------------------------------------- #
 _LEAD_PROPERTIES = {
     "company": {"type": "string", "description": "Firmenname wörtlich, inkl. Rechtsform."},
-    "contact_name": {"type": ["string", "null"], "description": "Operativer Ansprechpartner (Person)."},
-    "role": {"type": ["string", "null"], "description": "Funktion wie geschrieben."},
-    "decision_maker": {"type": ["string", "null"], "description": "Nur Geschäftsführung/Vorstand/Inhaber."},
-    "employee_count": {"type": ["integer", "null"], "description": "Ganze Zahl; Bereich → untere Grenze."},
-    "phone": {"type": ["string", "null"], "description": "Internationales Format, +49 30 1234567."},
-    "email": {"type": ["string", "null"], "description": "Nur wörtlich vorhandene Adresse, kleingeschrieben."},
-    "address": {"type": ["string", "null"], "description": "Einzeilig 'Straße Nr., PLZ Ort'."},
-    "website": {"type": ["string", "null"], "description": "Mit https://, keine Social-Profile."},
-    "source": {"type": ["string", "null"], "description": "Herkunft des Kontakts (LinkedIn, Messe, …)."},
+    "contact_name": {"type": "string", "description": "Operativer Ansprechpartner (Person)."},
+    "role": {"type": "string", "description": "Funktion wie geschrieben."},
+    "decision_maker": {"type": "string", "description": "Nur Geschäftsführung/Vorstand/Inhaber."},
+    "employee_count": {"type": "integer", "description": "Ganze Zahl; Bereich → untere Grenze."},
+    "phone": {"type": "string", "description": "Internationales Format, +49 30 1234567."},
+    "email": {"type": "string", "description": "Nur wörtlich vorhandene Adresse, kleingeschrieben."},
+    "address": {"type": "string", "description": "Einzeilig 'Straße Nr., PLZ Ort'."},
+    "website": {"type": "string", "description": "Mit https://, keine Social-Profile."},
+    "source": {"type": "string", "description": "Herkunft des Kontakts (LinkedIn, Messe, …)."},
     "status": {"type": "string", "enum": [s.value for s in RainmakerLeadStatus],
                "description": "Aus dem Material abgeleitet, nicht geraten."},
     "priority": {"type": "string", "enum": [p.value for p in RainmakerPriority]},
-    "value_estimate": {"type": ["number", "null"], "description": "Nur bei konkreter Zahl."},
-    "tags": {"type": ["array", "null"], "items": {"type": "string"},
+    "value_estimate": {"type": "number", "description": "Nur bei konkreter Zahl."},
+    "tags": {"type": "array", "items": {"type": "string"},
              "description": "Bevorzugt aus bekannte_tags."},
-    "target": {"type": ["string", "null"], "maxLength": 120,
+    "target": {"type": "string", "maxLength": 120,
                "description": "EIN Pitch-Winkel, bevorzugt aus bekannte_targets."},
-    "notes": {"type": ["string", "null"], "description": "Stichpunkte, eine Zeile je Sachverhalt."},
+    "notes": {"type": "string", "description": "Stichpunkte, eine Zeile je Sachverhalt."},
     "activities": {
         "type": "array", "maxItems": 3,
         "description": "1–3 Aktionen; leer bei won/lost/dormant.",
@@ -275,6 +275,45 @@ def truncate_material(text: str) -> tuple[str, str | None]:
 # --------------------------------------------------------------------------- #
 #  Der Lauf
 # --------------------------------------------------------------------------- #
+def coerce_payload(out) -> dict:
+    """Tool-Ausgabe geradeziehen — Modelle weichen manchmal in einen JSON-String aus.
+
+    Beobachtet (live, 2026-07-28): statt `{"leads": [...], "ignored": [...]}` kam
+    `{"leads": "{\"leads\":[...],\"ignored\":[]}"}` — das ganze Ergebnis als
+    String im ersten Feld. Ohne diese Behandlung iteriert man über die ZEICHEN des
+    Strings und bekommt still ein leeres Ergebnis, ohne Fehler. Wir können das
+    Modellverhalten nicht garantieren, also fangen wir es hier ab.
+    """
+    import json
+
+    if isinstance(out, str):
+        try:
+            out = json.loads(out)
+        except (ValueError, TypeError):
+            return {"leads": [], "ignored": []}
+    if not isinstance(out, dict):
+        return {"leads": [], "ignored": []}
+
+    leads = out.get("leads")
+    if isinstance(leads, str):
+        try:
+            parsed = json.loads(leads)
+        except (ValueError, TypeError):
+            return {"leads": [], "ignored": list(out.get("ignored") or [])}
+        if isinstance(parsed, dict):
+            # Das ganze Ergebnis war eingepackt — inklusive `ignored`.
+            return {"leads": list(parsed.get("leads") or []),
+                    "ignored": list(parsed.get("ignored") or out.get("ignored") or [])}
+        if isinstance(parsed, list):
+            return {"leads": parsed, "ignored": list(out.get("ignored") or [])}
+        return {"leads": [], "ignored": list(out.get("ignored") or [])}
+
+    ignored = out.get("ignored")
+    if isinstance(ignored, str):
+        ignored = [ignored]
+    return {"leads": list(leads or []), "ignored": list(ignored or [])}
+
+
 async def extract_leads(*, ai, model: str, text: str, hint: str = "",
                         images: list[dict] | None = None, own_identity: str,
                         known_targets: list[str] | None = None,
@@ -293,11 +332,12 @@ async def extract_leads(*, ai, model: str, text: str, hint: str = "",
         # Geschäftsdatum, nicht UTC — der Prompt rechnet Fristen daraus ab.
         today=today or business_today(),
     )
-    out = await _structured(ai, model, INTAKE_SYSTEM, blocks, "extracted_leads",
+    raw = await _structured(ai, model, INTAKE_SYSTEM, blocks, "extracted_leads",
                             EXTRACTED_LEADS_SCHEMA, usage, max_tokens=8000)
+    out = coerce_payload(raw)
 
-    leads = [lead for lead in (out.get("leads") or []) if isinstance(lead, dict)]
-    ignored = [str(i).strip() for i in (out.get("ignored") or []) if str(i).strip()]
+    leads = [lead for lead in out["leads"] if isinstance(lead, dict)]
+    ignored = [str(i).strip() for i in out["ignored"] if str(i).strip()]
     if cut_note:
         ignored.insert(0, cut_note)
     return IntakeResult(leads=leads, ignored=ignored, usage=usage)

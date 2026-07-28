@@ -359,3 +359,67 @@ class TestDecodeImage:
             with pytest.raises(HTTPException) as exc:
                 self._decode(raw)
             assert exc.value.status_code == 400
+
+
+# --------------------------------------------------------------------------- #
+#  Modell weicht in einen JSON-String aus (live beobachtet)
+# --------------------------------------------------------------------------- #
+class TestCoercePayload:
+    """Am 2026-07-28 lieferte das Modell das GANZE Ergebnis als JSON-String im
+    Feld `leads`. Ohne Behandlung iteriert man über die Zeichen des Strings und
+    bekommt still ein leeres Ergebnis — der schlimmste Fehlerfall: keine Meldung,
+    keine Daten. Modellverhalten lässt sich nicht garantieren, also wird es hier
+    abgefangen."""
+
+    async def test_whole_result_packed_as_string(self):
+        from app.services.lead_intake import coerce_payload
+
+        payload = {"leads": '{"leads":[{"company":"Berger GmbH"}],"ignored":["nichts sonst"]}'}
+        out = coerce_payload(payload)
+        assert out["leads"] == [{"company": "Berger GmbH"}]
+        assert out["ignored"] == ["nichts sonst"]
+
+    async def test_only_the_list_packed_as_string(self):
+        from app.services.lead_intake import coerce_payload
+
+        out = coerce_payload({"leads": '[{"company":"X"}]', "ignored": ["y"]})
+        assert out["leads"] == [{"company": "X"}] and out["ignored"] == ["y"]
+
+    async def test_plain_payload_passes_through(self):
+        from app.services.lead_intake import coerce_payload
+
+        out = coerce_payload({"leads": [{"company": "A"}], "ignored": ["b"]})
+        assert out["leads"] == [{"company": "A"}] and out["ignored"] == ["b"]
+
+    async def test_garbage_degrades_to_empty_instead_of_crashing(self):
+        from app.services.lead_intake import coerce_payload
+
+        for bad in ({"leads": "kein json"}, {}, None, "quatsch", 42, {"leads": '"nur ein string"'}):
+            out = coerce_payload(bad)
+            assert out["leads"] == [] and isinstance(out["ignored"], list)
+
+    async def test_ignored_as_single_string_becomes_a_list(self):
+        from app.services.lead_intake import coerce_payload
+
+        assert coerce_payload({"leads": [], "ignored": "ein Grund"})["ignored"] == ["ein Grund"]
+
+    async def test_end_to_end_through_extract_leads(self):
+        """Der volle Weg: gefakte String-Antwort → brauchbare Entwürfe."""
+        packed = {"leads": '{"leads":[' + '{"company":"Berger GmbH","status":"new",'
+                  '"priority":"medium","evidence":"e","confidence":0.8,"activities":[]}'
+                  + '],"ignored":[]}'}
+        result, _ = await _run(packed)
+        assert len(result.leads) == 1 and result.leads[0]["company"] == "Berger GmbH"
+
+
+class TestSchemaUsesPlainTypes:
+    async def test_no_union_types_in_the_tool_schema(self):
+        """Union-Typen (`["string","null"]`) waren der wahrscheinliche Grund, warum
+        das Modell in einen JSON-String ausgewichen ist. Optional wird über
+        `required` ausgedrückt, nicht über Typ-Arrays."""
+        import json
+
+        dumped = json.dumps(EXTRACTED_LEADS_SCHEMA)
+        assert '"null"' not in dumped
+        props = EXTRACTED_LEADS_SCHEMA["properties"]["leads"]["items"]["properties"]
+        assert all(isinstance(p.get("type"), str) for p in props.values())
