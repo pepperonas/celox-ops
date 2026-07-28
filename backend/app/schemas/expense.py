@@ -54,6 +54,13 @@ class HostingerDraft(BaseModel):
     external_ref: str
     subscription_id: str | None = None
     duplicate: bool = False
+    # Zugeordnete Domain und woher sie kommt: `confirmed` = vom Nutzer bestätigt,
+    # `same_order` = Sekunden nach dem Abo registriert, `sequence` = nur über die
+    # Reihenfolge abgeleitet (prüfen), `unmatched` = keine gefunden.
+    domain: str | None = None
+    domain_confidence: str | None = None
+    domain_delta_seconds: int | None = None
+    domain_candidates: list[str] = []
 
 
 class HostingerPreview(BaseModel):
@@ -62,10 +69,14 @@ class HostingerPreview(BaseModel):
     total: Decimal = Decimal("0")
     counts: dict[str, int] = {}
     already_imported: int = 0
+    all_domains: list[str] = []   # zur Korrektur einer Zuordnung im Dialog
 
 
 class HostingerImportRequest(BaseModel):
     refs: list[str] = []          # Auswahl über external_ref
+    # Korrigierte Zuordnungen {subscription_id: domain}. Werden gegen das echte
+    # Portfolio geprüft und für künftige Läufe gespeichert.
+    domains: dict[str, str] = {}
 
 
 class HostingerImportResult(BaseModel):

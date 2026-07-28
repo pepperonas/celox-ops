@@ -13,15 +13,18 @@ import pytest
 
 from app.models.expense import ExpenseCategory
 from app.services.hostinger import (
+    SAME_ORDER_SECONDS,
     VENDOR,
     HostingerError,
     build_drafts,
     build_notes,
     category_for,
     describe,
+    domain_tld,
     external_ref,
     fetch_account,
     last_billed_on,
+    match_domains,
     parse_price_cents,
     period_label,
     shift_back,
@@ -160,6 +163,11 @@ class TestMapping:
         assert tld_of("KVM 4") is None
         assert tld_of("") is None
 
+    def test_tld_of_a_domain_name(self):
+        assert domain_tld("mapsmate.de") == ".de"
+        assert domain_tld("Nice-To-Be-Nice.WTF") == ".wtf"
+        assert domain_tld("kaputt") is None
+
     def test_categories(self):
         assert category_for(".DE Domain") is ExpenseCategory.domain
         assert category_for("KVM 4") is ExpenseCategory.hosting
@@ -173,7 +181,11 @@ class TestMapping:
         text = describe(VPS_SUB, {VPS["subscription_id"]: VPS})
         assert text == f"VPS KVM 4 · celox.server ({VENDOR})"
 
-    def test_domains_stay_generic_because_the_api_does_not_say_which(self):
+    def test_domain_is_named_when_one_is_assigned(self):
+        assert describe(DOMAIN_SUB, {}, domain="mapsmate.de") == f"Domain mapsmate.de ({VENDOR})"
+
+    def test_domain_stays_generic_without_an_assignment(self):
+        """Lieber „.de" als ein geratener Name in einer Buchung."""
         assert describe(DOMAIN_SUB, {}) == f"Domain .de ({VENDOR})"
 
     def test_notes_carry_subscription_period_and_renewal(self):
@@ -182,10 +194,31 @@ class TestMapping:
         assert "Periode 1 Jahr" in notes
         assert "Nächste Verlängerung: 2027-07-04" in notes
 
-    def test_notes_list_the_portfolio_of_that_tld_and_admit_the_gap(self):
+    def test_notes_list_the_portfolio_when_nothing_could_be_assigned(self):
         notes = build_notes(DOMAIN_SUB, domains_by_tld={".de": ["villa-kinder.de", "jpaulo-bau.de"]})
         assert "villa-kinder.de" in notes
-        assert "sagt nicht, welche Domain" in notes
+        assert "Keine Domain zuordenbar" in notes
+
+    def test_notes_state_where_the_domain_name_comes_from(self):
+        """Ein abgeleiteter Name darf später nicht wie eine API-Auskunft aussehen —
+        die Herkunft steht deshalb in der Buchung selbst."""
+        same_order = build_notes(DOMAIN_SUB, match={
+            "domain": "mapsmate.de", "delta_seconds": 1, "confidence": "same_order"})
+        assert "mapsmate.de" in same_order
+        assert "dieselbe Bestellung" in same_order
+        assert "verknüpft Abo und Domain nicht" in same_order
+
+        derived = build_notes(DOMAIN_SUB, match={
+            "domain": "gooooo.xyz", "delta_seconds": 433828, "confidence": "sequence"})
+        assert "Bestellreihenfolge" in derived
+        assert "5 Tage" in derived            # Abstand wird benannt, nicht verschwiegen
+        assert "Bitte prüfen" in derived
+
+        confirmed = build_notes(DOMAIN_SUB, match={
+            "domain": "mapsmate.de", "delta_seconds": 1, "confidence": "same_order"},
+            confirmed=True)
+        assert "Zuordnung bestätigt" in confirmed
+        assert "Bitte prüfen" not in confirmed
 
     def test_notes_carry_the_vps_ip(self):
         notes = build_notes(VPS_SUB, vps_by_subscription={VPS["subscription_id"]: VPS})
@@ -195,6 +228,111 @@ class TestMapping:
         assert period_label({"billing_period": 1, "billing_period_unit": "year"}) == "1 Jahr"
         assert period_label({"billing_period": 2, "billing_period_unit": "years"}) == "2 Jahre"
         assert period_label({"billing_period": 1, "billing_period_unit": "month"}) == "1 Monat"
+
+
+# --------------------------------------------------------------------------- #
+#  Welche Domain gehört zu welchem Abo?
+#
+#  Die API verknüpft beide Seiten nicht. Die Zeitstempel hier sind die echten
+#  Werte aus dem Konto (zwei .de-Abos 92 Sekunden auseinander, zwei .wtf, ein
+#  .xyz mit 5 Tagen Verzug) — genau die Fälle, an denen eine zu naive Regel
+#  scheitert.
+# --------------------------------------------------------------------------- #
+_S = "2026-07-02T02:26:25Z"       # Abo A (.de)
+_S2 = "2026-07-02T00:54:16Z"      # Abo B (.de), 92 s früher bestellt
+
+DE_SUBS = [
+    {**DOMAIN_SUB, "id": "A", "created_at": _S},
+    {**DOMAIN_SUB, "id": "B", "created_at": _S2},
+]
+DE_DOMS = [
+    {"domain": "mahnung-portal.de", "created_at": "2026-07-02T02:26:28Z"},     # +3 s zu A
+    {"domain": "anmeldung-portal.de", "created_at": "2026-07-02T00:54:17Z"},   # +1 s zu B
+]
+
+
+class TestDomainMatching:
+    def test_order_within_a_tld_decides(self):
+        """Die Domain wird direkt nach dem Abo registriert — also paart die
+        Reihenfolge. Am Konto gegen das kostenminimale Verfahren geprüft."""
+        m = match_domains(DE_SUBS, DE_DOMS)
+        assert m["A"]["domain"] == "mahnung-portal.de"
+        assert m["B"]["domain"] == "anmeldung-portal.de"
+        assert m["A"]["delta_seconds"] == 3
+        assert m["B"]["delta_seconds"] == 1
+        assert {v["confidence"] for v in m.values()} == {"same_order"}
+
+    def test_tlds_never_mix(self):
+        subs = DE_SUBS + [{**DOMAIN_SUB, "id": "W", "name": ".WTF Domain",
+                           "created_at": "2026-04-05T09:36:53Z"}]
+        doms = DE_DOMS + [{"domain": "nicetobenice.wtf",
+                           "created_at": "2026-04-05T09:36:55Z"}]
+        m = match_domains(subs, doms)
+        assert m["W"]["domain"] == "nicetobenice.wtf"
+        assert all(v["domain"].endswith(".de") for k, v in m.items() if k != "W")
+
+    def test_a_late_registration_still_lands_right_but_is_flagged(self):
+        """Realer Fall: gooooo.xyz wurde 5 Tage nach der Bestellung registriert.
+        Die Reihenfolge stimmt weiter — die Zeile wird aber als prüfbedürftig
+        markiert statt die Zuordnung stillschweigend zu behaupten."""
+        sub = {**DOMAIN_SUB, "id": "X", "name": ".XYZ Domain",
+               "created_at": "2025-01-23T15:32:09Z"}
+        m = match_domains([sub], [{"domain": "gooooo.xyz",
+                                   "created_at": "2025-01-28T15:52:39Z"}])
+        assert m["X"]["domain"] == "gooooo.xyz"
+        assert m["X"]["confidence"] == "sequence"
+        assert m["X"]["delta_seconds"] > SAME_ORDER_SECONDS
+
+    def test_candidates_are_offered_for_correction(self):
+        m = match_domains(DE_SUBS, DE_DOMS)
+        assert sorted(m["A"]["candidates"]) == ["anmeldung-portal.de", "mahnung-portal.de"]
+
+    def test_surplus_stays_unassigned_instead_of_being_guessed(self):
+        """Eine weggezogene Domain darf nicht dazu führen, dass ein Abo irgendeine
+        andere zugeschrieben bekommt."""
+        m = match_domains(DE_SUBS + [{**DOMAIN_SUB, "id": "C",
+                                      "created_at": "2020-01-01T00:00:00Z"}], DE_DOMS)
+        assert m["C"]["domain"] is None
+        assert m["C"]["confidence"] == "unmatched"
+        assert m["C"]["candidates"]                       # trotzdem auswählbar
+        # Die belegten Paare bleiben unberührt.
+        assert m["A"]["domain"] == "mahnung-portal.de"
+
+    def test_no_timestamps_means_no_claim(self):
+        m = match_domains([{**DOMAIN_SUB, "id": "A", "created_at": None}],
+                          [{"domain": "irgendwas.de"}])
+        assert m["A"]["domain"] is None
+
+    def test_non_renewing_subscriptions_must_be_counted_in(self):
+        """Wichtig: die Zuordnung braucht ALLE Domain-Abos, auch die nicht
+        übernommenen. Fehlten sie, verschöbe sich die Reihenfolge und jede Domain
+        landete beim falschen Abo."""
+        subs = [DE_SUBS[1], {**DE_SUBS[0], "status": "non_renewing"}]
+        out = build_drafts(subs, today=TODAY, domains=DE_DOMS)
+        assert len(out["drafts"]) == 1
+        assert out["drafts"][0]["domain"] == "anmeldung-portal.de"
+        assert out["drafts"][0]["description"] == f"Domain anmeldung-portal.de ({VENDOR})"
+
+    def test_confirmed_assignment_beats_the_derivation(self):
+        out = build_drafts(DE_SUBS, today=TODAY, domains=DE_DOMS,
+                           confirmed={"A": "anmeldung-portal.de"})
+        by_id = {d["subscription_id"]: d for d in out["drafts"]}
+        assert by_id["A"]["domain"] == "anmeldung-portal.de"
+        assert by_id["A"]["domain_confidence"] == "confirmed"
+        assert "Zuordnung bestätigt" in by_id["A"]["notes"]
+
+    def test_draft_carries_everything_the_dialog_needs(self):
+        out = build_drafts(DE_SUBS, today=TODAY, domains=DE_DOMS)
+        draft = out["drafts"][0]
+        assert draft["domain_confidence"] in {"same_order", "sequence", "confirmed"}
+        assert isinstance(draft["domain_delta_seconds"], int)
+        assert len(draft["domain_candidates"]) == 2
+
+    def test_vps_needs_no_derivation(self):
+        """Der VPS ist über die `subscription_id` belegt — er darf nie in die
+        Domain-Zuordnung geraten."""
+        m = match_domains([VPS_SUB], DE_DOMS)
+        assert m == {}
 
 
 # --------------------------------------------------------------------------- #
@@ -250,10 +388,13 @@ class TestBuildDrafts:
         assert all(d["vendor"] == VENDOR and d["recurring"] is True for d in out["drafts"])
 
     def test_domain_portfolio_is_grouped_by_tld(self):
+        """Ohne Zeitstempel im Portfolio ist keine Zuordnung belegbar — dann steht
+        die TLD-Liste in der Notiz, damit man selbst zuordnen kann."""
         out = build_drafts([DOMAIN_SUB], today=TODAY, domains=DOMAINS)
         notes = out["drafts"][0]["notes"]
         assert "villa-kinder.de" in notes and "jpaulo-bau.de" in notes
         assert "mixupp.com" not in notes          # andere TLD
+        assert out["drafts"][0]["domain"] is None
 
     def test_newest_first(self):
         older = {**DOMAIN_SUB, "id": "old", "next_billing_at": "2027-01-04T00:00:00Z"}

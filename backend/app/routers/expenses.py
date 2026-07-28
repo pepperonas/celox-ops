@@ -204,6 +204,41 @@ async def _hostinger_key(db: AsyncSession) -> str:
     return key
 
 
+async def _confirmed_links(db: AsyncSession) -> dict[str, str]:
+    """Vom Nutzer bestätigte Abo→Domain-Zuordnungen (owner-scoped)."""
+    from app.models.hostinger_link import HostingerDomainLink
+
+    rows = (await db.execute(select(HostingerDomainLink))).scalars().all()
+    return {r.subscription_id: r.domain for r in rows}
+
+
+async def _save_links(db: AsyncSession, wanted: dict[str, str], valid: set[str],
+                      known_subs: set[str]) -> int:
+    """Korrigierte Zuordnungen speichern.
+
+    Die Domain MUSS im echten Portfolio des Kontos stehen und die Abo-ID aus der
+    abgerufenen Liste kommen — sonst könnte ein manipulierter Request beliebigen
+    Text in eine Buchungsbeschreibung schreiben.
+    """
+    from app.models.hostinger_link import HostingerDomainLink
+
+    clean = {sub: dom.strip().lower() for sub, dom in (wanted or {}).items()
+             if sub in known_subs and (dom or "").strip().lower() in valid}
+    if not clean:
+        return 0
+    existing = {r.subscription_id: r for r in (await db.execute(
+        select(HostingerDomainLink).where(
+            HostingerDomainLink.subscription_id.in_(list(clean))))).scalars().all()}
+    for sub, dom in clean.items():
+        row = existing.get(sub)
+        if row is None:
+            db.add(HostingerDomainLink(subscription_id=sub, domain=dom))
+        elif row.domain != dom:
+            row.domain = dom
+    await db.flush()
+    return len(clean)
+
+
 async def _mark_duplicates(db: AsyncSession, drafts: list[dict]) -> int:
     """Schon importierte Zeiträume markieren (owner-scoped über external_ref)."""
     refs = [d["external_ref"] for d in drafts if d.get("external_ref")]
@@ -229,7 +264,7 @@ async def hostinger_preview(db: AsyncSession = Depends(get_db)) -> HostingerPrev
 
     key = await _hostinger_key(db)
     try:
-        result = await load_drafts(key)
+        result = await load_drafts(key, confirmed=await _confirmed_links(db))
     except HostingerError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 
@@ -238,7 +273,8 @@ async def hostinger_preview(db: AsyncSession = Depends(get_db)) -> HostingerPrev
     fresh = [d for d in drafts if not d["duplicate"]]
     return HostingerPreview(
         drafts=drafts, skipped=result["skipped"], total=total_of(fresh),
-        counts=result.get("counts", {}), already_imported=already)
+        counts=result.get("counts", {}), already_imported=already,
+        all_domains=result.get("all_domains", []))
 
 
 @router.post("/hostinger/import", response_model=HostingerImportResult)
@@ -257,17 +293,37 @@ async def hostinger_import(
 
     from sqlalchemy.exc import IntegrityError
 
-    from app.services.hostinger import HostingerError, load_drafts, total_of
+    from app.services.hostinger import (
+        HostingerError,
+        build_drafts,
+        load_drafts,
+        total_of,
+    )
+    from app.services.business_time import today as business_today
 
     wanted = {r for r in (data.refs or []) if r}
     if not wanted:
         raise HTTPException(status_code=422, detail="Keine Position ausgewählt.")
 
     key = await _hostinger_key(db)
+    links = await _confirmed_links(db)
     try:
-        result = await load_drafts(key)
+        result = await load_drafts(key, confirmed=links)
     except HostingerError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+    # Korrekturen aus dem Dialog: gegen das echte Portfolio prüfen, speichern und
+    # die Entwürfe damit neu aufbauen (ohne zweiten Abruf).
+    account = result.get("account") or {}
+    if data.domains:
+        saved = await _save_links(
+            db, data.domains, set(result.get("all_domains") or []),
+            {s.get("id") for s in account.get("subscriptions") or [] if isinstance(s, dict)})
+        if saved:
+            links = await _confirmed_links(db)
+            result = build_drafts(account.get("subscriptions") or [], today=business_today(),
+                                  domains=account.get("domains") or [],
+                                  vps=account.get("vps") or [], confirmed=links)
 
     drafts = [d for d in result["drafts"] if d["external_ref"] in wanted]
     await _mark_duplicates(db, drafts)

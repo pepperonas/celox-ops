@@ -7,12 +7,16 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
+import Select from '../../components/Select'
 import {
   hostingerImport,
   hostingerPreview,
+  type DomainConfidence,
+  type HostingerDraft,
   type HostingerPreview as Preview,
 } from '../../api/hostinger'
 import { formatCurrency, formatDate } from '../../utils/formatters'
+import { domainHint, shortDescription } from '../../utils/hostingerDomain'
 
 const CATEGORY_LABEL: Record<string, string> = {
   hosting: 'Hosting', domain: 'Domain', software: 'Software', lizenz: 'Lizenz',
@@ -25,6 +29,55 @@ interface Props {
   onImported: () => void
 }
 
+/**
+ * Domain der Zeile — mit Herkunft und Korrekturmöglichkeit.
+ *
+ * Bewusst kein reiner Text: die Zuordnung ist **abgeleitet** (die API verknüpft
+ * Abo und Domain nicht), also muss sie sichtbar begründet und korrigierbar sein.
+ * Eine Korrektur merkt sich der Server für künftige Läufe.
+ */
+function DomainCell({ draft, value, onPick, options }: {
+  draft: HostingerDraft
+  value: string
+  onPick: (domain: string) => void
+  options: string[]
+}) {
+  const [edit, setEdit] = useState(false)
+  const changed = value !== (draft.domain ?? '')
+  const hint = domainHint(
+    changed ? 'confirmed' : (draft.domain_confidence as DomainConfidence | null),
+    draft.domain_delta_seconds)
+  const tone = hint.tone === 'ok' ? 'text-success'
+    : hint.tone === 'warn' ? 'text-warning' : 'text-text-muted'
+  // Domains derselben TLD zuerst — die Zuordnung wechselt praktisch nie die TLD.
+  const choices = draft.domain_candidates.length
+    ? [...draft.domain_candidates, ...options.filter((o) => !draft.domain_candidates.includes(o))]
+    : options
+
+  if (edit) {
+    return (
+      <Select
+        compact
+        value={value}
+        options={choices.map((o) => ({ value: o, label: o }))}
+        placeholder="— keine —"
+        aria-label="Domain zuordnen"
+        onChange={(e) => { onPick(e.target.value); setEdit(false) }}
+      />
+    )
+  }
+  return (
+    <button type="button" onClick={() => setEdit(true)}
+            title={`${hint.title} Klicken zum Ändern.`}
+            className="md-state text-left rounded-xs px-1 -mx-1 max-w-[15rem] truncate">
+      <span className={`mr-1 ${tone}`} aria-hidden>{hint.mark}</span>
+      <span className={value ? 'text-text' : 'text-text-muted italic'}>
+        {value || 'nicht zugeordnet'}
+      </span>
+    </button>
+  )
+}
+
 export default function HostingerImportModal({ onClose, onImported }: Props) {
   const [preview, setPreview] = useState<Preview | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -33,6 +86,8 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [showSkipped, setShowSkipped] = useState(false)
   const [openNotes, setOpenNotes] = useState<string | null>(null)
+  // Korrekturen der Domain-Zuordnung: {subscription_id: domain}
+  const [fixes, setFixes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,7 +128,7 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
     if (saving || picked.size === 0) return
     setSaving(true)
     try {
-      const res = await hostingerImport([...picked])
+      const res = await hostingerImport([...picked], fixes)
       const bits = [
         `${res.created} Ausgabe${res.created === 1 ? '' : 'n'}`,
         `${formatCurrency(Number(res.total))}`,
@@ -90,6 +145,11 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
   }
 
   const drafts = preview?.drafts || []
+  // Zeilen, deren Zuordnung nur über die Reihenfolge kam und die der Nutzer nicht
+  // schon bestätigt hat.
+  const needCheck = drafts.filter((d) => d.category === 'domain'
+    && !fixes[d.subscription_id || '']
+    && domainHint(d.domain_confidence, d.domain_delta_seconds).check).length
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
@@ -97,10 +157,18 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
       <div className="relative bg-surface-high rounded-dialog shadow-elev-3 p-5 sm:p-7
                       max-w-[900px] w-full mx-4 animate-modal-in max-h-[88vh] flex flex-col">
         <h3 className="text-lg font-semibold text-text mb-1">Hostinger-Kosten übernehmen</h3>
-        <p className="text-xs text-text-muted mb-4">
+        <p className="text-xs text-text-muted mb-2">
           Je <strong className="text-text">aktivem Abo</strong> eine wiederkehrende Ausgabe,
           datiert auf die letzte Abrechnung. Die Hostinger-API liefert Verträge, keine
           Rechnungsbelege — vergangene Perioden werden deshalb nicht hochgerechnet.
+        </p>
+        <p className="text-xs text-text-muted mb-4">
+          Die API sagt nicht, welche Domain zu welchem Abo gehört. Die Zuordnung ist
+          <strong className="text-text"> aus der Bestellreihenfolge abgeleitet</strong>:
+          <span className="text-success"> ≈</span> = Domain wenige Sekunden nach dem Abo
+          registriert, also dieselbe Bestellung ·<span className="text-warning"> ?</span> =
+          großer Abstand, bitte prüfen. Klick auf den Namen ändert die Zuordnung; die
+          Korrektur wird für künftige Läufe gemerkt.
         </p>
 
         {loading && (
@@ -122,6 +190,9 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                 <span>· {preview.already_imported} schon importiert</span>
               )}
               {preview.skipped.length > 0 && <span>· {preview.skipped.length} übersprungen</span>}
+              {needCheck > 0 && (
+                <span className="text-warning">· {needCheck} Zuordnung(en) prüfen</span>
+              )}
               <span className="ml-auto text-text">
                 Auswahl: <strong>{formatCurrency(sum)}</strong>
               </span>
@@ -132,8 +203,8 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                 <thead className="sticky top-0 bg-surface-container">
                   <tr className="text-left text-xs text-text-muted">
                     <th className="px-3 py-2 w-8"></th>
-                    <th className="px-2 py-2">Beschreibung</th>
-                    <th className="px-2 py-2">Kategorie</th>
+                    <th className="px-2 py-2">Position</th>
+                    <th className="px-2 py-2">Domain / Zuordnung</th>
                     <th className="px-2 py-2">Letzte Abrechnung</th>
                     <th className="px-2 py-2 text-right">Betrag</th>
                     <th className="px-2 py-2 w-8"></th>
@@ -155,7 +226,10 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                                  onClick={(e) => e.stopPropagation()} />
                         </td>
                         <td className="px-2 py-1.5 text-text">
-                          {d.description}
+                          {shortDescription(d.description, d.domain)}
+                          <span className="ml-2 text-[10px] text-text-muted">
+                            {CATEGORY_LABEL[d.category] || d.category}
+                          </span>
                           {d.duplicate && (
                             <span className="ml-2 text-[10px] text-warning"
                                   title="Dieser Abrechnungszeitraum ist schon als Ausgabe erfasst">
@@ -163,8 +237,14 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                             </span>
                           )}
                         </td>
-                        <td className="px-2 py-1.5 text-text-muted">
-                          {CATEGORY_LABEL[d.category] || d.category}
+                        <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                          {d.category === 'domain' ? <DomainCell
+                            draft={d}
+                            value={fixes[d.subscription_id || ''] ?? d.domain ?? ''}
+                            onPick={(dom) => setFixes((prev) => ({
+                              ...prev, [d.subscription_id || '']: dom }))}
+                            options={preview.all_domains}
+                          /> : <span className="text-text-muted">—</span>}
                         </td>
                         <td className="px-2 py-1.5 text-text-muted tabular-nums">
                           {formatDate(d.date)}

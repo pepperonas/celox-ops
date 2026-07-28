@@ -1,5 +1,8 @@
 import { api } from './client'
 
+/** Woher der Domainname der Zeile kommt. */
+export type DomainConfidence = 'confirmed' | 'same_order' | 'sequence' | 'unmatched'
+
 /** Ein Ausgaben-Entwurf aus einem Hostinger-Abo (Server setzt `duplicate`). */
 export interface HostingerDraft {
   description: string
@@ -13,6 +16,12 @@ export interface HostingerDraft {
   external_ref: string
   subscription_id: string | null
   duplicate: boolean
+  /** Zugeordnete Domain — die API verknuepft Abo und Domain nicht, siehe backend. */
+  domain: string | null
+  domain_confidence: DomainConfidence | null
+  domain_delta_seconds: number | null
+  /** Alle Domains dieser TLD — Auswahl fuer eine Korrektur. */
+  domain_candidates: string[]
 }
 
 export interface HostingerPreview {
@@ -21,6 +30,7 @@ export interface HostingerPreview {
   total: string
   counts: Record<string, number>
   already_imported: number
+  all_domains: string[]
 }
 
 export interface HostingerImportResult {
@@ -36,7 +46,15 @@ export async function hostingerPreview(): Promise<HostingerPreview> {
   return response.data
 }
 
-export async function hostingerImport(refs: string[]): Promise<HostingerImportResult> {
-  const response = await api.post('/expenses/hostinger/import', { refs }, { timeout: 60_000 })
+/**
+ * `domains` = korrigierte Zuordnungen {subscription_id: domain}. Der Server
+ * prueft sie gegen das echte Portfolio und merkt sie sich fuer kuenftige Laeufe.
+ */
+export async function hostingerImport(
+  refs: string[],
+  domains: Record<string, string> = {},
+): Promise<HostingerImportResult> {
+  const response = await api.post('/expenses/hostinger/import', { refs, domains },
+    { timeout: 60_000 })
   return response.data
 }
