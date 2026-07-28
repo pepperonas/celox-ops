@@ -5,6 +5,7 @@ import DataTable, { type Column } from '../../components/DataTable'
 import StatusBadge from '../../components/StatusBadge'
 import DeleteDialog from '../../components/DeleteDialog'
 import PageHeader from '../../components/PageHeader'
+import HostingerImportModal from './HostingerImportModal'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import { getExpenses, getExpenseSummary, deleteExpense, createExpense } from '../../api/expenses'
@@ -38,6 +39,7 @@ export default function ExpenseList() {
   const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [showHostinger, setShowHostinger] = useState(false)
   const [summary, setSummary] = useState<ExpenseSummary | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
@@ -167,7 +169,21 @@ export default function ExpenseList() {
 
   return (
     <div>
-      <PageHeader title="Ausgaben" />
+      <PageHeader
+        title="Ausgaben"
+        actions={
+          <button onClick={() => setShowHostinger(true)} className="btn-secondary text-sm"
+                  title="Laufende VPS- und Domain-Kosten aus dem Hostinger-Konto übernehmen">
+            Hostinger-Kosten übernehmen
+          </button>
+        }
+      />
+      {showHostinger && (
+        <HostingerImportModal
+          onClose={() => setShowHostinger(false)}
+          onImported={() => { fetchData(); fetchSummary() }}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="md-stagger grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

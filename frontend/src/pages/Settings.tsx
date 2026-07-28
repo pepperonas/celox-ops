@@ -142,6 +142,11 @@ export default function Settings() {
   const [aiKeyInput, setAiKeyInput] = useState('')
   const [aiKeySaving, setAiKeySaving] = useState(false)
   const [aiKeyGuideOpen, setAiKeyGuideOpen] = useState(false)
+  // Hostinger (Kostenimport VPS/Domains)
+  const [hostConfigured, setHostConfigured] = useState(false)
+  const [hostHint, setHostHint] = useState<string | null>(null)
+  const [hostInput, setHostInput] = useState('')
+  const [hostSaving, setHostSaving] = useState(false)
   // Automatische Website-Analyse nach dem Lead-Import (kostenlos, In-Process-Worker)
   const [autoAnalyze, setAutoAnalyze] = useState(true)
   const [autoAnalyzeSaving, setAutoAnalyzeSaving] = useState(false)
@@ -149,7 +154,8 @@ export default function Settings() {
   const applySettings = (s: { default_unit_price?: number; invoice_prefix?: string
     google_places_configured?: boolean; google_places_key_hint?: string | null
     google_places_calls_this_month?: number; ai_model?: string; ai_monthly_budget_eur?: number
-    auto_analyze_websites?: boolean; ai_key_configured?: boolean; ai_key_hint?: string | null }) => {
+    auto_analyze_websites?: boolean; ai_key_configured?: boolean; ai_key_hint?: string | null
+    hostinger_configured?: boolean; hostinger_key_hint?: string | null }) => {
     if (s.default_unit_price != null) setDefaultPrice(String(s.default_unit_price))
     if (s.invoice_prefix != null) setInvoicePrefix(s.invoice_prefix)
     setPlacesConfigured(Boolean(s.google_places_configured))
@@ -160,6 +166,35 @@ export default function Settings() {
     if (s.auto_analyze_websites != null) setAutoAnalyze(s.auto_analyze_websites)
     setAiKeyConfigured(Boolean(s.ai_key_configured))
     setAiKeyHint(s.ai_key_hint ?? null)
+    setHostConfigured(Boolean(s.hostinger_configured))
+    setHostHint(s.hostinger_key_hint ?? null)
+  }
+
+  const handleSaveHostKey = async () => {
+    const key = hostInput.trim()
+    if (!key) { toast.error('Bitte einen API-Key eingeben.'); return }
+    setHostSaving(true)
+    try {
+      applySettings(await updateSettings({ hostinger_api_key: key }))
+      setHostInput('')
+      toast.success('Hostinger-Key gespeichert.')
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Speichern fehlgeschlagen.')
+    }
+    setHostSaving(false)
+  }
+
+  const handleRemoveHostKey = async () => {
+    setHostSaving(true)
+    try {
+      applySettings(await updateSettings({ hostinger_api_key: '' }))
+      toast.success('Hostinger-Key entfernt.')
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Entfernen fehlgeschlagen.')
+    }
+    setHostSaving(false)
   }
 
   const handleSaveAiKey = async () => {
@@ -609,6 +644,57 @@ export default function Settings() {
             </ul>
           </div>
         )}
+      </div>
+
+      {/* Hostinger: Kostenimport (VPS, Domains) */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">🖥️ Hostinger (Kostenimport)</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Mit einem Hostinger-API-Key lassen sich die laufenden VPS- und Domain-Kosten unter
+          „Ausgaben" übernehmen — je aktivem Abo eine wiederkehrende Ausgabe, datiert auf die
+          letzte Abrechnung. Nur lesende Abfragen. Mitarbeitende im Arbeitsbereich können den
+          Key nicht ändern.
+        </p>
+
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`w-2.5 h-2.5 rounded-full inline-block ${hostConfigured ? 'bg-success' : 'bg-text-muted'}`}></span>
+          <span className="text-sm text-text">
+            {hostConfigured
+              ? <>Key hinterlegt <span className="text-text-muted font-mono">({hostHint})</span></>
+              : 'Kein Key hinterlegt'}
+          </span>
+          {hostConfigured && (
+            <button onClick={handleRemoveHostKey} disabled={hostSaving}
+                    className="ml-auto text-xs text-danger hover:underline">
+              entfernen
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-end">
+          <div>
+            <label htmlFor="host-key" className="block text-xs text-text-muted mb-2">
+              {hostConfigured ? 'Neuen Key eintragen (ersetzt den bestehenden)' : 'API-Key'}
+            </label>
+            <input
+              id="host-key"
+              type="password"
+              autoComplete="off"
+              value={hostInput}
+              onChange={(e) => setHostInput(e.target.value)}
+              placeholder="Bearer-Token aus dem hPanel"
+              className="w-full bg-surface-container border border-border rounded-lg px-3 py-2
+                         text-sm text-text placeholder:text-text-muted font-mono"
+            />
+            <p className="text-[11px] text-text-muted mt-1">
+              hPanel → Konto → API → Token erzeugen. Er ist nur einmal sichtbar.
+            </p>
+          </div>
+          <button onClick={handleSaveHostKey} disabled={hostSaving || !hostInput.trim()}
+                  className="btn-primary text-sm disabled:opacity-40">
+            {hostSaving ? 'Speichere…' : 'Speichern'}
+          </button>
+        </div>
       </div>
 
       {/* Automatische Website-Analyse (kostenlos — kein PageSpeed, keine KI) */}

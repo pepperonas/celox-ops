@@ -13,6 +13,9 @@ export interface AppSettings {
   ai_monthly_budget_eur: number
   /** Automatische (kostenlose) Website-Analyse nach dem Lead-Import. */
   auto_analyze_websites: boolean
+  /** Hostinger-Kostenimport — nie im Klartext, nur Zustand + Maske. */
+  hostinger_configured: boolean
+  hostinger_key_hint: string | null
 }
 
 export interface AppSettingsUpdate {
@@ -25,6 +28,8 @@ export interface AppSettingsUpdate {
   ai_model?: string
   ai_monthly_budget_eur?: number
   auto_analyze_websites?: boolean
+  // "" entfernt den Schluessel
+  hostinger_api_key?: string
 }
 
 export async function getSettings(): Promise<AppSettings> {

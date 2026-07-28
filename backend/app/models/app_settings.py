@@ -38,6 +38,10 @@ class AppSettings(OwnedMixin, Base):
     # aufgelöst wird). Bestehende DBs: manuelles ALTER
     # (scripts/add_anthropic_key.sql).
     anthropic_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Hostinger-API-Key pro Arbeitsbereich (Kostenimport VPS/Domains). Wie der
+    # Anthropic- und der Places-Key: nie im Klartext zurückgegeben, nur von
+    # Bereichs-Inhabern änderbar. Migration: scripts/add_hostinger_key.sql.
+    hostinger_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # KI-Lead-Suche: Standard-Modell + hartes Monatsbudget (EUR).
     ai_model: Mapped[str] = mapped_column(
         String(40), default="claude-sonnet-5", server_default="claude-sonnet-5", nullable=False)

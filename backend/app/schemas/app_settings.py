@@ -8,6 +8,9 @@ class AppSettingsResponse(BaseModel):
     google_places_configured: bool = False
     google_places_key_hint: str | None = None  # z. B. "••••Ab12"
     google_places_calls_this_month: int = 0
+    # Hostinger (Kostenimport) — Schlüssel nie im Klartext.
+    hostinger_configured: bool = False
+    hostinger_key_hint: str | None = None
     # KI-Zugang: der Schlüssel wird NIE im Klartext zurückgegeben.
     ai_key_configured: bool = False
     ai_key_hint: str | None = None        # z. B. "••••Ab12"
@@ -25,6 +28,7 @@ class AppSettingsUpdate(BaseModel):
     google_places_api_key: str | None = Field(default=None, max_length=255)
     # "" = Schlüssel entfernen; None = unverändert; sonst neuer Schlüssel.
     anthropic_api_key: str | None = Field(default=None, max_length=255)
+    hostinger_api_key: str | None = Field(default=None, max_length=255)
     ai_model: str | None = Field(default=None, max_length=40)
     ai_monthly_budget_eur: float | None = Field(default=None, ge=0)
     auto_analyze_websites: bool | None = None

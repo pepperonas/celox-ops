@@ -33,6 +33,8 @@ def _to_response(row: AppSettings) -> AppSettingsResponse:
         google_places_configured=bool(key),
         google_places_key_hint=mask_key(key),
         google_places_calls_this_month=calls_this_month(row.google_places_period, row.google_places_calls),
+        hostinger_configured=bool(row.hostinger_api_key),
+        hostinger_key_hint=mask_key(row.hostinger_api_key),
         ai_key_configured=bool(row.anthropic_api_key),
         ai_key_hint=mask_key(row.anthropic_api_key),
         ai_model=row.ai_model,
@@ -58,10 +60,13 @@ async def update_settings(
     # Bereich und nutzen dessen Schlüssel — sie dürfen ihn nicht austauschen
     # oder entfernen (das würde auf Kosten oder zulasten des Inhabers gehen).
     if not may_manage_api_keys(current_user) and (
-            data.anthropic_api_key is not None or data.google_places_api_key is not None):
+            data.anthropic_api_key is not None or data.google_places_api_key is not None
+            or data.hostinger_api_key is not None):
         raise HTTPException(status_code=403, detail=(
             "API-Schlüssel kann nur der Inhaber des Arbeitsbereichs ändern."))
 
+    if data.hostinger_api_key is not None:
+        row.hostinger_api_key = data.hostinger_api_key.strip() or None
     if data.anthropic_api_key is not None:
         # "" entfernt den Schlüssel, sonst setzen (getrimmt).
         row.anthropic_api_key = data.anthropic_api_key.strip() or None

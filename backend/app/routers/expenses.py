@@ -8,11 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.expense import Expense
+from app.models.expense import Expense, ExpenseCategory
 from app.schemas.expense import (
     ExpenseCreate,
     ExpenseResponse,
     ExpenseUpdate,
+    HostingerImportRequest,
+    HostingerImportResult,
+    HostingerPreview,
 )
 
 router = APIRouter(
@@ -183,3 +186,121 @@ async def delete_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="Ausgabe nicht gefunden")
     await db.delete(expense)
+
+
+# --------------------------------------------------------------------------- #
+#  Hostinger-Kostenimport (VPS, Domains)
+# --------------------------------------------------------------------------- #
+async def _hostinger_key(db: AsyncSession) -> str:
+    """Key des Arbeitsbereichs — wie beim Anthropic-Key kein globaler Rückfall."""
+    from app.models.app_settings import AppSettings
+
+    row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    key = (row.hostinger_api_key or "").strip() if row else ""
+    if not key:
+        raise HTTPException(status_code=503, detail=(
+            "Für diesen Arbeitsbereich ist kein Hostinger-API-Key hinterlegt. "
+            "Einstellungen → Hostinger → Key eintragen (hPanel → Konto → API)."))
+    return key
+
+
+async def _mark_duplicates(db: AsyncSession, drafts: list[dict]) -> int:
+    """Schon importierte Zeiträume markieren (owner-scoped über external_ref)."""
+    refs = [d["external_ref"] for d in drafts if d.get("external_ref")]
+    if not refs:
+        return 0
+    known = set((await db.execute(
+        select(Expense.external_ref).where(Expense.external_ref.in_(refs))
+    )).scalars().all())
+    for draft in drafts:
+        draft["duplicate"] = draft.get("external_ref") in known
+    return sum(1 for d in drafts if d["duplicate"])
+
+
+@router.post("/hostinger/preview", response_model=HostingerPreview)
+async def hostinger_preview(db: AsyncSession = Depends(get_db)) -> HostingerPreview:
+    """Laufende Hostinger-Kosten abrufen und als Ausgaben-Entwürfe zeigen.
+
+    Schreibt nichts. Die API liefert Verträge, keine Belege — übernommen wird der
+    **Ist-Stand**: je aktivem Abo eine wiederkehrende Ausgabe, datiert auf die
+    letzte Abrechnung. Vergangene Perioden werden bewusst nicht hochgerechnet.
+    """
+    from app.services.hostinger import HostingerError, load_drafts, total_of
+
+    key = await _hostinger_key(db)
+    try:
+        result = await load_drafts(key)
+    except HostingerError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    drafts = result["drafts"]
+    already = await _mark_duplicates(db, drafts)
+    fresh = [d for d in drafts if not d["duplicate"]]
+    return HostingerPreview(
+        drafts=drafts, skipped=result["skipped"], total=total_of(fresh),
+        counts=result.get("counts", {}), already_imported=already)
+
+
+@router.post("/hostinger/import", response_model=HostingerImportResult)
+async def hostinger_import(
+    data: HostingerImportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> HostingerImportResult:
+    """Übernimmt die ausgewählten Entwürfe als Ausgaben.
+
+    Die Werte kommen NICHT aus dem Request, sondern werden frisch von Hostinger
+    geholt und über `external_ref` ausgewählt — so kann ein manipulierter Request
+    keine beliebigen Beträge buchen. Doppelte Zeiträume werden übersprungen
+    (zusätzlich abgesichert durch den partiellen Unique-Index auf external_ref).
+    """
+    from decimal import Decimal
+
+    from sqlalchemy.exc import IntegrityError
+
+    from app.services.hostinger import HostingerError, load_drafts, total_of
+
+    wanted = {r for r in (data.refs or []) if r}
+    if not wanted:
+        raise HTTPException(status_code=422, detail="Keine Position ausgewählt.")
+
+    key = await _hostinger_key(db)
+    try:
+        result = await load_drafts(key)
+    except HostingerError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    drafts = [d for d in result["drafts"] if d["external_ref"] in wanted]
+    await _mark_duplicates(db, drafts)
+
+    created: list[Expense] = []
+    skipped = 0
+    for draft in drafts:
+        if draft["duplicate"]:
+            skipped += 1
+            continue
+        expense = Expense(
+            description=draft["description"],
+            category=ExpenseCategory(draft["category"]),
+            amount=Decimal(draft["amount"]),
+            date=date.fromisoformat(draft["date"]),
+            vendor=draft["vendor"],
+            recurring=draft["recurring"],
+            notes=draft["notes"],
+            external_ref=draft["external_ref"],
+        )
+        db.add(expense)
+        try:
+            # SAVEPOINT: eine Unique-Verletzung (Doppel-Submit) überspringt nur
+            # diese Zeile, statt die ganze Transaktion zu zerstören.
+            async with db.begin_nested():
+                await db.flush()
+        except IntegrityError:
+            skipped += 1
+            continue
+        created.append(expense)
+
+    await db.flush()
+    return HostingerImportResult(
+        created=len(created), skipped_duplicates=skipped,
+        total=total_of([{"amount": str(e.amount)} for e in created]),
+        expense_ids=[e.id for e in created])
