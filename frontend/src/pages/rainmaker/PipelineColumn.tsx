@@ -1,8 +1,9 @@
-import { memo, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import type { LeadSort } from './leadSort'
 import LeadCard from './LeadCard'
 import { countLabel, visibleCount } from './pipelineColumns'
+import { containmentClass, needsContainment } from '../../utils/scrollContainment'
 
 /**
  * „Mehr laden"-Sentinel am Spaltenende. Der IntersectionObserver beobachtet
@@ -75,6 +76,26 @@ function PipelineColumnBase({
   const hidden = leads.length - shown
   const label2 = countLabel(shown, leads.length)
 
+  // Scroll-Verkettung nur kappen, wenn die Spalte wirklich scrollen kann —
+  // sonst schluckt eine leere/kurze Spalte das Mausrad und die Seite steht
+  // (siehe utils/scrollContainment).
+  const [scrollable, setScrollable] = useState(false)
+  const measure = useCallback(() => {
+    const el = scrollRef.current
+    if (el) setScrollable(needsContainment(el.scrollHeight, el.clientHeight))
+  }, [])
+
+  // Inhalt geändert (Filter, Nachladen, Drag&Drop) …
+  useEffect(measure, [measure, leads, shown])
+  // … und Boxgröße geändert (Viewport/70vh, Zoom, Sortierleiste).
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measure])
+
   return (
     <div
       className="min-w-0 flex flex-col"
@@ -101,7 +122,7 @@ function PipelineColumnBase({
       {/* Eigener Scroll-Container: hält die Seite kurz und begrenzt das DOM. */}
       <div
         ref={scrollRef}
-        className={`max-h-[70vh] sm:h-[70vh] sm:max-h-[820px] overflow-y-auto overscroll-contain bg-surface-container border border-border rounded-b-lg p-3 space-y-3 transition-all duration-short ${
+        className={`max-h-[70vh] sm:h-[70vh] sm:max-h-[820px] overflow-y-auto ${containmentClass(scrollable)} bg-surface-container border border-border rounded-b-lg p-3 space-y-3 transition-all duration-short ${
           isOver ? 'border-accent border-dashed bg-accent/5' : ''
         }`}
       >
