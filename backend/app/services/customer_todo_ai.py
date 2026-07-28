@@ -23,9 +23,13 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
-# Bei jeder inhaltlichen Prompt-Änderung hochzählen — die Version fließt in den
-# Cache-Hash, sonst käme ein alter Vorschlag zurück.
-PROMPT_VERSION = "1"
+# Version alles dessen, was das GESPEICHERTE Ergebnis formt: Prompt **und**
+# Prüflogik. Gecacht wird der geprüfte Vorschlag, nicht die Rohantwort — eine
+# Änderung an `validate_suggestions` oder `_norm` muss den Cache deshalb genauso
+# entwerten wie eine Prompt-Änderung. Live gelernt: nach dem Kodierungs-Fix kam
+# weiter das alte, falsch gefilterte Ergebnis zurück, weil nur der Prompt als
+# „inhaltlich" galt. Bei jeder solchen Änderung hochzählen.
+PROMPT_VERSION = "2"
 
 MAX_SUGGESTIONS = 6
 MAX_CONTEXT_CHARS = 24_000
