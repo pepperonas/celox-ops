@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.app_settings import AppSettings
+from app.models.user import User, may_manage_api_keys
 from app.schemas.app_settings import AppSettingsResponse, AppSettingsUpdate
 from app.services.places_usage import calls_this_month, mask_key
 
@@ -32,6 +33,8 @@ def _to_response(row: AppSettings) -> AppSettingsResponse:
         google_places_configured=bool(key),
         google_places_key_hint=mask_key(key),
         google_places_calls_this_month=calls_this_month(row.google_places_period, row.google_places_calls),
+        ai_key_configured=bool(row.anthropic_api_key),
+        ai_key_hint=mask_key(row.anthropic_api_key),
         ai_model=row.ai_model,
         ai_monthly_budget_eur=float(row.ai_monthly_budget_eur),
         auto_analyze_websites=bool(row.auto_analyze_websites),
@@ -45,9 +48,23 @@ async def read_settings(db: AsyncSession = Depends(get_db)) -> AppSettingsRespon
 
 @router.put("", response_model=AppSettingsResponse)
 async def update_settings(
-    data: AppSettingsUpdate, db: AsyncSession = Depends(get_db)
+    data: AppSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> AppSettingsResponse:
     row = await get_or_create_settings(db)
+
+    # API-Schlüssel gehören dem Bereichs-Inhaber. Mitarbeitende arbeiten IM
+    # Bereich und nutzen dessen Schlüssel — sie dürfen ihn nicht austauschen
+    # oder entfernen (das würde auf Kosten oder zulasten des Inhabers gehen).
+    if not may_manage_api_keys(current_user) and (
+            data.anthropic_api_key is not None or data.google_places_api_key is not None):
+        raise HTTPException(status_code=403, detail=(
+            "API-Schlüssel kann nur der Inhaber des Arbeitsbereichs ändern."))
+
+    if data.anthropic_api_key is not None:
+        # "" entfernt den Schlüssel, sonst setzen (getrimmt).
+        row.anthropic_api_key = data.anthropic_api_key.strip() or None
     if data.default_unit_price is not None:
         row.default_unit_price = data.default_unit_price
     if data.invoice_prefix is not None:

@@ -63,6 +63,16 @@ class User(Base):
     )
 
 
+def may_manage_api_keys(user) -> bool:
+    """Darf dieser Nutzer die API-Schlüssel des Arbeitsbereichs ändern?
+
+    Nein für Mitarbeitende: sie arbeiten IM Bereich ihres Inhabers und nutzen
+    dessen Schlüssel (und dessen Abrechnung). Ihn austauschen oder entfernen wäre
+    eine Entscheidung über fremdes Geld.
+    """
+    return getattr(user, "role", None) != UserRole.mitarbeiter
+
+
 def workspace_owner_id(user: "User") -> uuid.UUID:
     """Wessen Daten sieht dieser Nutzer? Mitarbeitende arbeiten im Bereich ihres
     Chefs, alle anderen in ihrem eigenen. Einzige Stelle, die das entscheidet."""

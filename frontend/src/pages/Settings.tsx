@@ -136,6 +136,12 @@ export default function Settings() {
   const [aiBudget, setAiBudget] = useState('20')
   const [aiSaving, setAiSaving] = useState(false)
   const [aiUsage, setAiUsage] = useState<AiUsageResponse | null>(null)
+  // KI-Zugang: eigener Anthropic-Key pro Arbeitsbereich
+  const [aiKeyConfigured, setAiKeyConfigured] = useState(false)
+  const [aiKeyHint, setAiKeyHint] = useState<string | null>(null)
+  const [aiKeyInput, setAiKeyInput] = useState('')
+  const [aiKeySaving, setAiKeySaving] = useState(false)
+  const [aiKeyGuideOpen, setAiKeyGuideOpen] = useState(false)
   // Automatische Website-Analyse nach dem Lead-Import (kostenlos, In-Process-Worker)
   const [autoAnalyze, setAutoAnalyze] = useState(true)
   const [autoAnalyzeSaving, setAutoAnalyzeSaving] = useState(false)
@@ -143,7 +149,7 @@ export default function Settings() {
   const applySettings = (s: { default_unit_price?: number; invoice_prefix?: string
     google_places_configured?: boolean; google_places_key_hint?: string | null
     google_places_calls_this_month?: number; ai_model?: string; ai_monthly_budget_eur?: number
-    auto_analyze_websites?: boolean }) => {
+    auto_analyze_websites?: boolean; ai_key_configured?: boolean; ai_key_hint?: string | null }) => {
     if (s.default_unit_price != null) setDefaultPrice(String(s.default_unit_price))
     if (s.invoice_prefix != null) setInvoicePrefix(s.invoice_prefix)
     setPlacesConfigured(Boolean(s.google_places_configured))
@@ -152,6 +158,37 @@ export default function Settings() {
     if (s.ai_model != null) setAiModel(s.ai_model)
     if (s.ai_monthly_budget_eur != null) setAiBudget(String(s.ai_monthly_budget_eur))
     if (s.auto_analyze_websites != null) setAutoAnalyze(s.auto_analyze_websites)
+    setAiKeyConfigured(Boolean(s.ai_key_configured))
+    setAiKeyHint(s.ai_key_hint ?? null)
+  }
+
+  const handleSaveAiKey = async () => {
+    const key = aiKeyInput.trim()
+    if (!key) { toast.error('Bitte einen API-Key eingeben.'); return }
+    setAiKeySaving(true)
+    try {
+      applySettings(await updateSettings({ anthropic_api_key: key }))
+      setAiKeyInput('')
+      loadAiUsage()
+      toast.success('KI-Zugang gespeichert.')
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Speichern fehlgeschlagen.')
+    }
+    setAiKeySaving(false)
+  }
+
+  const handleRemoveAiKey = async () => {
+    setAiKeySaving(true)
+    try {
+      applySettings(await updateSettings({ anthropic_api_key: '' }))
+      loadAiUsage()
+      toast.success('KI-Zugang entfernt — KI-Funktionen sind deaktiviert.')
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Entfernen fehlgeschlagen.')
+    }
+    setAiKeySaving(false)
   }
 
   // Sofort-Speichern (optimistisch, Rollback bei Fehler) — Repo-Muster.
@@ -593,6 +630,73 @@ export default function Settings() {
             ? 'Neue Leads mit Website werden automatisch eingereiht.'
             : 'Analysen nur manuell (Lead-Detail oder „Websites analysieren" in der Pipeline).'}
         />
+      </div>
+
+      {/* KI-Zugang: eigener Anthropic-Key pro Arbeitsbereich */}
+      <div className="bg-surface border border-border rounded-card p-5 mb-6">
+        <h3 className="text-sm font-semibold text-text mb-1">🔑 KI-Zugang (Anthropic)</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Alle KI-Funktionen (Lead-Suche, Mailentwurf, Chat-Import, Website-Tiefenanalyse)
+          laufen über <strong className="text-text">deinen eigenen API-Key</strong> — die Nutzung
+          wird über dein Anthropic-Konto abgerechnet. Ohne Key sind die KI-Funktionen
+          deaktiviert (sie melden sich mit einem Hinweis, statt still zu scheitern).
+          Mitarbeitende im Arbeitsbereich nutzen diesen Key mit, können ihn aber nicht ändern.
+        </p>
+
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`w-2.5 h-2.5 rounded-full inline-block ${aiKeyConfigured ? 'bg-success' : 'bg-text-muted'}`}></span>
+          <span className="text-sm text-text">
+            {aiKeyConfigured
+              ? <>Key hinterlegt <span className="text-text-muted font-mono">({aiKeyHint})</span></>
+              : 'Kein Key hinterlegt'}
+          </span>
+          {aiKeyConfigured && (
+            <button onClick={handleRemoveAiKey} disabled={aiKeySaving}
+                    className="ml-auto text-xs text-danger hover:underline">
+              entfernen
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-end">
+          <div>
+            <label htmlFor="ai-key" className="block text-xs text-text-muted mb-2">
+              {aiKeyConfigured ? 'Neuen Key eintragen (ersetzt den bestehenden)' : 'API-Key'}
+            </label>
+            <input
+              id="ai-key"
+              type="password"
+              autoComplete="off"
+              value={aiKeyInput}
+              onChange={(e) => setAiKeyInput(e.target.value)}
+              placeholder="sk-ant-…"
+              className="w-full bg-surface-container border border-border rounded-lg px-3 py-2
+                         text-sm text-text placeholder:text-text-muted font-mono"
+            />
+          </div>
+          <button onClick={handleSaveAiKey} disabled={aiKeySaving || !aiKeyInput.trim()}
+                  className="btn-primary text-sm disabled:opacity-40">
+            {aiKeySaving ? 'Speichere…' : 'Speichern'}
+          </button>
+        </div>
+
+        <button onClick={() => setAiKeyGuideOpen((v) => !v)}
+                className="mt-4 text-xs text-accent hover:underline">
+          {aiKeyGuideOpen ? 'Anleitung ausblenden' : 'Woher bekomme ich einen Key?'}
+        </button>
+        {aiKeyGuideOpen && (
+          <ol className="mt-2 text-xs text-text-muted space-y-1 list-decimal list-inside">
+            <li>
+              Auf <a href="https://console.anthropic.com/settings/keys" target="_blank"
+                     rel="noopener noreferrer" className="text-accent hover:underline">
+              console.anthropic.com</a> anmelden.
+            </li>
+            <li>Unter „API keys" einen neuen Key erzeugen (er ist nur einmal sichtbar).</li>
+            <li>Guthaben aufladen bzw. Zahlungsmittel hinterlegen — ohne Guthaben antwortet die API nicht.</li>
+            <li>Key hier einsetzen und speichern. Er wird verschlüsselt übertragen und nie wieder im Klartext angezeigt.</li>
+            <li>Das Monatsbudget unten wirkt als zusätzliche Bremse in dieser App.</li>
+          </ol>
+        )}
       </div>
 
       {/* KI-Lead-Suche */}

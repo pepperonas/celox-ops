@@ -100,6 +100,7 @@ from app.services.lead_dedup import (
     norm_website,
 )
 from app.models.ai_lead_run import AiLeadRun
+from app.services.ai_key import require_anthropic_key, resolve_anthropic_key
 from app.services.ai_lead_agent import run_ai_discovery
 from app.services.analysis_queue import enqueue_after_import, enqueue_company_websites
 from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
@@ -783,9 +784,9 @@ async def ai_discover_preview(
     from app.models.app_settings import AppSettings
     from app.services.exchange_service import get_usd_eur_rate
 
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503,
-                            detail="KI-Lead-Suche ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    # Schlüssel des Arbeitsbereichs (kein globaler .env-Rückfall — sonst fragte
+    # ein Bereich auf Kosten eines anderen ab).
+    api_key = await require_anthropic_key(db)
 
     app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
     model = data.model or (app_row.ai_model if app_row else DEFAULT_MODEL)
@@ -811,7 +812,7 @@ async def ai_discover_preview(
         async with httpx.AsyncClient(timeout=40, headers={"User-Agent": "celox-ops-rainmaker/1.0"}) as client:
             result = await run_ai_discovery(
                 brief=data.brief, model=model, use_web_search=data.use_web_search,
-                api_key=settings.ANTHROPIC_API_KEY, http_client=client, known=_known)
+                api_key=api_key, http_client=client, known=_known)
     except Exception as exc:  # noqa: BLE001
         db.add(AiLeadRun(brief=data.brief[:2000], model=model,
                          used_web_search=data.use_web_search, status="failed",
@@ -883,7 +884,7 @@ async def ai_usage(db: AsyncSession = Depends(get_db)) -> AiUsageResponse:
         budget=_budget_status(spent_eur, budget_eur),
         runs_this_month=runs, spent_usd=round(spent_usd, 4),
         avg_cost_eur=round(spent_eur / runs, 4) if runs else 0.0,
-        configured=bool(settings.ANTHROPIC_API_KEY), model=model,
+        configured=bool(await resolve_anthropic_key(db)), model=model,
         pricing_source=pricing_source(), recent=recent)
 
 
@@ -1620,10 +1621,8 @@ async def draft_lead_email_endpoint(
             budget=_budget_status(spent, budget_eur),
         )
 
-    # Kein (gueltiger) Cache -> jetzt erst den Budget-Guard anwenden.
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503,
-                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    # Kein (gueltiger) Cache -> jetzt erst Schluessel- und Budget-Guard.
+    api_key = await require_anthropic_key(db)
     if budget_eur > 0 and spent >= budget_eur:
         raise HTTPException(status_code=402, detail=(
             f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
@@ -1631,7 +1630,7 @@ async def draft_lead_email_endpoint(
 
     usage = Usage()
     try:
-        ai = get_client(settings.ANTHROPIC_API_KEY)
+        ai = get_client(api_key)
         draft = await draft_lead_email(ai, model, lead, usage)
     except HTTPException:
         raise
@@ -1781,9 +1780,7 @@ async def analyze_lead_website(
         from app.services.ai_lead_agent import get_client
         from app.services.ai_pricing import Usage
 
-        if not settings.ANTHROPIC_API_KEY:
-            raise HTTPException(status_code=503,
-                                detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+        api_key = await require_anthropic_key(db)
         app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
         model = (app_row.ai_model if app_row else DEFAULT_MODEL)
         if model not in ALLOWED_MODELS:
@@ -1794,7 +1791,7 @@ async def analyze_lead_website(
             raise HTTPException(status_code=402, detail=(
                 f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
                 "Budget in den Einstellungen erhöhen."))
-        ai = get_client(settings.ANTHROPIC_API_KEY)
+        ai = get_client(api_key)
         usage = Usage()
 
     if deep or pagespeed:
@@ -1911,13 +1908,11 @@ async def list_lead_website_analyses(
 # --------------------------------------------------------------------------- #
 #  Chat-Import: Lead aus einem Gesprächsverlauf aktualisieren (KI, Vorschlag)
 # --------------------------------------------------------------------------- #
-async def _chat_ai_context(db: AsyncSession) -> tuple[str, float, float]:
-    """Modell + Budgetstand — gleiche Vorprüfung wie beim Mail-Entwurf."""
+async def _chat_ai_context(db: AsyncSession) -> tuple[str, str, float, float]:
+    """Schlüssel + Modell + Budgetstand des Arbeitsbereichs (wie beim Mail-Entwurf)."""
     from app.models.app_settings import AppSettings
 
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=503,
-                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    api_key = await require_anthropic_key(db)
     row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
     model = (row.ai_model if row else DEFAULT_MODEL)
     if model not in ALLOWED_MODELS:
@@ -1928,7 +1923,7 @@ async def _chat_ai_context(db: AsyncSession) -> tuple[str, float, float]:
         raise HTTPException(status_code=402, detail=(
             f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
             "Budget in den Einstellungen erhöhen."))
-    return model, budget_eur, spent
+    return api_key, model, budget_eur, spent
 
 
 @router.post("/leads/{lead_id}/chat-import/preview", response_model=ChatImportPreview)
@@ -1996,7 +1991,7 @@ async def chat_import_preview(
         digests.append(hashlib.sha256(blob).hexdigest())
         payload.append({"media_type": mime, "b64": base64.b64encode(blob).decode()})
 
-    model, budget_eur, spent = await _chat_ai_context(db)
+    api_key, model, budget_eur, spent = await _chat_ai_context(db)
     wanted = material_hash(material, digests, lead, model, PROMPT_VERSION)
 
     # Cache: identisches Material am unveränderten Lead → derselbe Vorschlag,
@@ -2013,7 +2008,7 @@ async def chat_import_preview(
             import_id=cached.id, cached=True, proposal=cached.proposal,
             run=AiRunCost(model=cached.model), budget=_budget_status(spent, budget_eur))
 
-    ai = get_client(settings.ANTHROPIC_API_KEY)
+    ai = get_client(api_key)
     usage = Usage()
     try:
         raw = await analyze_chat(ai, model, text=material, images=payload, lead=lead, usage=usage)
