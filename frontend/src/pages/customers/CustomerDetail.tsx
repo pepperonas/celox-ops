@@ -20,6 +20,7 @@ import FileAttachments from '../../components/FileAttachments'
 import CustomerComplianceCard from '../../components/CustomerComplianceCard'
 import HandoffCard from '../../components/HandoffCard'
 import TodoList from '../../components/TodoList'
+import TodoSuggestionsDialog from './TodoSuggestionsDialog'
 import { getCustomerCompliance, type ComplianceCustomer } from '../../api/compliance'
 import TokenUsage from '../../components/TokenUsage'
 import LoadingIndicator from '../../components/LoadingIndicator'
@@ -47,6 +48,8 @@ export default function CustomerDetail() {
 
   const [attachmentsCount, setAttachmentsCount] = useState(0)
   const [openTodos, setOpenTodos] = useState(0)
+  const [showTodoAi, setShowTodoAi] = useState(false)
+  const [todoReload, setTodoReload] = useState(0)
   const mayDelete = canDelete(useAuthStore((st) => st.role))
   const [compliance, setCompliance] = useState<ComplianceCustomer | null>(null)
   const loadCompliance = useCallback(() => {
@@ -417,7 +420,25 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'todos' && id && (
-        <TodoList customerId={id} hideHeading onCountChange={setOpenTodos} />
+        <>
+          <div className="flex justify-end mb-3">
+            <button onClick={() => setShowTodoAi(true)} className="btn-secondary text-sm"
+                    title="Aufgaben aus den vorliegenden Kundendaten ableiten — Vorschau, du entscheidest">
+              ✨ To-dos vorschlagen
+            </button>
+          </div>
+          {/* key-Bump laedt die Liste neu, nachdem Vorschlaege uebernommen wurden. */}
+          <TodoList key={`todos-${todoReload}`} customerId={id} hideHeading
+                    onCountChange={setOpenTodos} />
+          {showTodoAi && (
+            <TodoSuggestionsDialog
+              customerId={id}
+              customerName={customer.company || customer.name}
+              onClose={() => setShowTodoAi(false)}
+              onCreated={() => setTodoReload((n) => n + 1)}
+            />
+          )}
+        </>
       )}
 
       {activeTab === 'dokumente' && (

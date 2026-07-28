@@ -39,6 +39,7 @@ from app.models.lead_analysis_job import LeadAnalysisJob
 from app.models.lead_chat_import import LeadChatImport
 from app.models.lead_website_analysis import LeadWebsiteAnalysis
 from app.models.hostinger_link import HostingerDomainLink
+from app.models.customer_todo_suggestion import CustomerTodoSuggestion
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -55,6 +56,7 @@ set_owned_models([
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
     LeadWebsiteAnalysis, LeadAnalysisJob, LeadChatImport, HostingerDomainLink,
+    CustomerTodoSuggestion,
 ])
 install_tenancy_events()
 

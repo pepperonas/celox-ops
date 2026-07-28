@@ -39,7 +39,6 @@ from app.models.rainmaker_lead import (
 from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
-    AiBudget,
     LeadIntakeCommitRequest,
     LeadIntakeCommitResult,
     LeadIntakeDraft,
@@ -108,6 +107,7 @@ from app.models.ai_lead_run import AiLeadRun
 from app.services.ai_key import require_anthropic_key, resolve_anthropic_key
 from app.services.ai_lead_agent import run_ai_discovery
 from app.services.analysis_queue import enqueue_after_import, enqueue_company_websites
+from app.services import ai_budget
 from app.services.ai_pricing import ALLOWED_MODELS, DEFAULT_MODEL
 from app.services.duplicate_finder import find_groups
 from app.services.email_verifier import verify_email
@@ -754,26 +754,12 @@ async def discover_import(
 # --------------------------------------------------------------------------- #
 #  KI-Lead-Suche (Anthropic) — Brief → verifizierte, gerankte Kandidaten
 # --------------------------------------------------------------------------- #
-def _budget_status(spent_eur: float, budget_eur: float) -> AiBudget:
-    return AiBudget(
-        budget_eur=round(budget_eur, 2), spent_eur=round(spent_eur, 4),
-        remaining_eur=round(max(0.0, budget_eur - spent_eur), 4),
-        warn=budget_eur > 0 and spent_eur >= 0.8 * budget_eur,
-    )
-
-
-def _month_start() -> datetime:
-    now = datetime.now(timezone.utc)
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-
-async def _ai_month_spent_eur(db: AsyncSession) -> float:
-    """EUR-Verbrauch der KI-Läufe im laufenden Monat (owner-scoped via Events)."""
-    total = (await db.execute(
-        select(func.coalesce(func.sum(AiLeadRun.cost_eur), 0))
-        .where(AiLeadRun.created_at >= _month_start())
-    )).scalar_one()
-    return float(total or 0)
+# Die Budget-Regel liegt in `services/ai_budget.py` — zweite Nutzerin ist der
+# KI-To-do-Vorschlag am Kunden. Diese Namen bleiben als dünne Weiterleitung
+# stehen, damit die vielen Aufrufstellen hier unverändert lesbar sind.
+_budget_status = ai_budget.budget_status
+_month_start = ai_budget.month_start
+_ai_month_spent_eur = ai_budget.month_spent_eur
 
 
 @router.post("/discover/ai/preview", response_model=AiDiscoverResponse)

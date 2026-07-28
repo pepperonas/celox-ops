@@ -23,6 +23,7 @@ from app.schemas.customer import (
     CustomerDetail,
     CustomerResponse,
     CustomerUpdate,
+    TodoSuggestionResponse,
 )
 from app.services.filenames import customer_label, download_name
 from app.services.business_time import now as business_now, today as business_today
@@ -276,3 +277,147 @@ async def dsgvo_export(
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# --------------------------------------------------------------------------- #
+#  KI-Vorschläge für To-dos zu diesem Kunden
+# --------------------------------------------------------------------------- #
+@router.post("/{customer_id}/todo-suggestions", response_model=TodoSuggestionResponse)
+async def suggest_customer_todos(
+    customer_id: uuid.UUID,
+    force: bool = Query(False, description="Cache umgehen und neu ableiten"),
+    hint: str = Query("", max_length=2000, description="Eigener Hinweis an die KI"),
+    db: AsyncSession = Depends(get_db),
+) -> TodoSuggestionResponse:
+    """Leitet aus den vorliegenden Kundendaten Aufgaben ab. **Legt nichts an.**
+
+    Die fünf regelbasierten Hinweise (`routers/tasks.py`) gehen als „bereits
+    erkannt" in den Kontext, damit die KI sie nicht wiederholt — der Mehrwert
+    liegt in Notizen, Kontakthistorie und Lead-Vorgeschichte.
+
+    Kosten: ein Aufruf liegt im Cent-Bereich; ein unveränderter Kunde liefert den
+    Vorschlag aus dem Cache **ohne** KI-Aufruf (auch bei erreichtem Budget).
+    """
+    from app.models.ai_lead_run import AiLeadRun
+    from app.models.compliance_record import ComplianceRecord
+    from app.models.customer_todo_suggestion import CustomerTodoSuggestion
+    from app.models.document_template import DocumentTemplate
+    from app.models.lead_website_analysis import LeadWebsiteAnalysis
+    from app.models.rainmaker_lead import RainmakerLead
+    from app.models.todo import Todo, TodoStatus
+    from app.schemas.customer import TodoSuggestion
+    from app.schemas.rainmaker import AiRunCost
+    from app.services import ai_budget, customer_todo_ai
+    from app.services.ai_key import require_anthropic_key
+    from app.services.ai_pricing import Usage, get_pricing
+    from app.services.exchange_service import get_usd_eur_rate
+
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == customer_id))).scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    # Alle Quellen einsammeln (owner-scoped über die Tenancy-Events).
+    orders = (await db.execute(
+        select(Order).where(Order.customer_id == customer_id))).scalars().all()
+    contracts = (await db.execute(
+        select(Contract).where(Contract.customer_id == customer_id))).scalars().all()
+    invoices = (await db.execute(
+        select(Invoice).where(Invoice.customer_id == customer_id)
+        .order_by(Invoice.invoice_date.desc()).limit(40))).scalars().all()
+    activities = (await db.execute(
+        select(Activity).where(Activity.customer_id == customer_id)
+        .order_by(Activity.created_at.desc()).limit(30))).scalars().all()
+    attachments = (await db.execute(
+        select(Attachment).where(Attachment.customer_id == customer_id)
+        .limit(40))).scalars().all()
+    open_todos = (await db.execute(
+        select(Todo).where(Todo.customer_id == customer_id,
+                           Todo.status == TodoStatus.offen))).scalars().all()
+
+    # Pflicht-Rechtsdokumente ohne Unterschrift.
+    required = (await db.execute(
+        select(DocumentTemplate).where(
+            DocumentTemplate.compliance_required.is_(True)))).scalars().all()
+    signed = {r.template_id for r in (await db.execute(
+        select(ComplianceRecord).where(
+            ComplianceRecord.customer_id == customer_id,
+            ComplianceRecord.signed_at.isnot(None)))).scalars().all()}
+    compliance_missing = [t.name for t in required if t.id not in signed]
+
+    # Falls dieser Kunde aus einem Lead entstanden ist: Lead + neueste Analyse.
+    lead = (await db.execute(
+        select(RainmakerLead).where(
+            RainmakerLead.customer_id == customer_id))).scalars().first()
+    lead_analysis = None
+    if lead is not None:
+        row = (await db.execute(
+            select(LeadWebsiteAnalysis).where(LeadWebsiteAnalysis.lead_id == lead.id)
+            .order_by(LeadWebsiteAnalysis.created_at.desc()).limit(1))).scalars().first()
+        if row is not None:
+            lead_analysis = {
+                "overall_score": row.overall_score,
+                "rating": row.rating,
+                "findings": json.loads(row.findings) if row.findings else [],
+            }
+
+    today = business_today()
+    context = customer_todo_ai.build_context(
+        customer=customer, orders=orders, contracts=contracts, invoices=invoices,
+        activities=activities, attachments=attachments, todos=open_todos,
+        compliance_missing=compliance_missing, lead=lead,
+        lead_analysis=lead_analysis, today=today)
+
+    model, budget_eur, spent = await ai_budget.ai_context(db)
+    wanted = customer_todo_ai.context_hash(context + hint, model)
+
+    cache = (await db.execute(
+        select(CustomerTodoSuggestion).where(
+            CustomerTodoSuggestion.customer_id == customer_id))).scalar_one_or_none()
+    if not force and cache and cache.context_hash == wanted:
+        stored = json.loads(cache.payload)
+        zero = Usage()
+        return TodoSuggestionResponse(
+            suggestions=[TodoSuggestion(**s) for s in stored.get("suggestions", [])],
+            ignored=stored.get("ignored", []), cached=True,
+            run=AiRunCost(model=model, cost_usd=0.0, cost_eur=0.0, **zero.as_dict()),
+            budget=ai_budget.budget_status(spent, budget_eur))
+
+    api_key = await require_anthropic_key(db)
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen."))
+
+    label = f"To-do-Vorschläge: {customer.company or customer.name}"[:2000]
+    try:
+        result, usage = await customer_todo_ai.suggest_todos(
+            context=context, hint=hint, model=model, api_key=api_key,
+            open_titles=[t.title for t in open_todos], today=today)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.add(AiLeadRun(brief=label, model=model, status="failed", error=str(exc)[:500]))
+        raise HTTPException(status_code=502, detail=f"KI-Vorschlag fehlgeschlagen: {exc}")
+
+    cost_usd = usage.cost_with(await get_pricing(model))
+    cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+    db.add(AiLeadRun(brief=label, model=model, used_web_search=False,
+                     cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+                     candidates_found=len(result["suggestions"]), status="ok",
+                     **usage.as_dict()))
+
+    payload = json.dumps(result, ensure_ascii=False)
+    if cache:
+        cache.context_hash = wanted
+        cache.payload = payload
+    else:
+        db.add(CustomerTodoSuggestion(customer_id=customer_id, context_hash=wanted,
+                                      payload=payload))
+
+    return TodoSuggestionResponse(
+        suggestions=[TodoSuggestion(**s) for s in result["suggestions"]],
+        ignored=result["ignored"], cached=False,
+        run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+                      **usage.as_dict()),
+        budget=ai_budget.budget_status(spent + cost_eur, budget_eur))
