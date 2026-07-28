@@ -272,8 +272,35 @@ def build_context(*, customer, orders: list, contracts: list, invoices: list,
 # --------------------------------------------------------------------------- #
 #  Prüfung der Antwort (rein)
 # --------------------------------------------------------------------------- #
+# Typografische Varianten, die dasselbe Zeichen meinen. Ohne diese Abbildung
+# scheitert der Beleg-Vergleich an reiner Schreibweise: live gesehen bei
+# „Report-Löschung-Rechtsverletzung.pdf" — die Datei existiert, das Zitat wurde
+# trotzdem verworfen.
+_TYPOGRAPHIC = {
+    "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-",
+    "−": "-", " ": " ", " ": " ", " ": " ",
+    "„": '"', "“": '"', "”": '"', "«": '"', "»": '"',
+    "‘": "'", "’": "'", "…": "...",
+}
+
+
 def _norm(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip().lower())
+    """Für den Beleg-Vergleich vereinheitlichen — Bedeutung bleibt, Schreibweise nicht.
+
+    **Unicode-Normalisierung ist hier nicht optional.** Ein „ö" kann als ein
+    Zeichen (NFC) oder als „o" plus Diakritikum (NFD) kodiert sein; beide sehen
+    identisch aus, sind als Zeichenkette aber verschieden. Genau daran ist in
+    Produktion ein *berechtigter* Vorschlag gescheitert. Dasselbe gilt für
+    typografische Binde- und Anführungszeichen, die Modelle gern einsetzen.
+
+    Der Belegzwang wird dadurch nicht schwächer: das Zitat muss weiterhin
+    inhaltlich im Material stehen.
+    """
+    import unicodedata
+
+    text = unicodedata.normalize("NFC", text or "")
+    text = "".join(_TYPOGRAPHIC.get(ch, ch) for ch in text)
+    return re.sub(r"\s+", " ", text.strip().lower())
 
 
 def fold_title(title: str) -> str:
@@ -339,8 +366,11 @@ def validate_suggestions(payload: Any, *, context: str, open_titles: list[str],
             ignored.append(f"{title}: kein ausreichender Beleg angegeben.")
             continue
         if _norm(evidence) not in haystack:
-            ignored.append(f"{title}: das angegebene Zitat steht nicht in den "
-                           "Kundendaten.")
+            # Das strittige Zitat mitgeben — sonst ist so ein Fall in der
+            # Oberfläche nicht diagnostizierbar (live gebraucht bei einem
+            # Kodierungs-Unterschied im Dateinamen).
+            ignored.append(f"{title}: das angegebene Zitat \"{evidence[:80]}\" "
+                           "steht nicht in den Kundendaten.")
             continue
         key = fold_title(title)
         if key in seen:

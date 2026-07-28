@@ -304,3 +304,64 @@ class TestSchemaAndCache:
     def test_titel_vergleich_ignoriert_zeichensetzung_und_grossschreibung(self):
         assert fold_title("Angebot nachfassen!") == fold_title("angebot   nachfassen")
         assert fold_title("Prüfen: AVV") == fold_title("prüfen avv")
+
+
+# --------------------------------------------------------------------------- #
+#  Schreibweise vs. Bedeutung beim Beleg-Vergleich
+#
+#  In Produktion wurde ein BERECHTIGTER Vorschlag verworfen: das zitierte Dokument
+#  „Report-Löschung-Rechtsverletzung.pdf" existiert, das Zitat galt aber als nicht
+#  vorhanden. Ursache ist die Kodierung — ein „ö" kann ein Zeichen (NFC) oder
+#  „o" + Diakritikum (NFD) sein, und Modelle setzen gern typografische
+#  Bindestriche. Beides sieht identisch aus, ist als Zeichenkette aber verschieden.
+# --------------------------------------------------------------------------- #
+class TestEvidenceEncoding:
+    DOC = "Report-Löschung-Rechtsverletzung.pdf"
+
+    def _ctx(self):
+        return build_context(
+            customer=customer(), orders=[], contracts=[], invoices=[], activities=[],
+            attachments=[NS(original_name=self.DOC, description=None)],
+            todos=[], compliance_missing=[], today=TODAY)
+
+    def _accepted(self, evidence):
+        out = validate_suggestions(
+            {"todos": [{"title": "Dokument prüfen", "evidence": evidence}]},
+            context=self._ctx(), open_titles=[], today=TODAY)
+        return len(out["suggestions"]) == 1
+
+    def test_zerlegter_umlaut_wird_erkannt(self):
+        import unicodedata
+
+        assert self._accepted(unicodedata.normalize("NFD", self.DOC))
+
+    def test_zusammengesetzter_umlaut_wird_erkannt(self):
+        import unicodedata
+
+        assert self._accepted(unicodedata.normalize("NFC", self.DOC))
+
+    def test_typografische_bindestriche_werden_erkannt(self):
+        assert self._accepted(self.DOC.replace("-", "‑"))    # U+2011
+        assert self._accepted(self.DOC.replace("-", "–"))    # Halbgeviertstrich
+
+    def test_geschuetztes_leerzeichen_wird_erkannt(self):
+        text = build_context(
+            customer=customer(notes="Termin am 5. August bestätigt."), orders=[],
+            contracts=[], invoices=[], activities=[], attachments=[], todos=[],
+            compliance_missing=[], today=TODAY)
+        out = validate_suggestions(
+            {"todos": [{"title": "Termin vorbereiten",
+                        "evidence": "Termin am 5. August bestätigt"}]},
+            context=text, open_titles=[], today=TODAY)
+        assert len(out["suggestions"]) == 1
+
+    def test_erfundenes_bleibt_erfunden(self):
+        """Die Normalisierung darf den Belegzwang NICHT aufweichen."""
+        assert not self._accepted("Report-Kuendigung-Vertragsbruch.pdf")
+
+    def test_begruendung_nennt_das_strittige_zitat(self):
+        """Sonst ist so ein Fall in der Oberfläche nicht diagnostizierbar."""
+        out = validate_suggestions(
+            {"todos": [{"title": "Irgendwas", "evidence": "frei erfundenes Zitat"}]},
+            context=self._ctx(), open_titles=[], today=TODAY)
+        assert any("frei erfundenes Zitat" in line for line in out["ignored"])
