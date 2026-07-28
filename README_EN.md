@@ -828,23 +828,23 @@ CO-2026-0001
 ## Project size
 
 <!-- badges:begin -->
-![Lines of Code](https://img.shields.io/badge/Lines_of_Code-55.298-1f6feb?style=for-the-badge&logo=files&logoColor=white)
-![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.038_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)
-[![pytest](https://img.shields.io/badge/pytest-735-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+![Lines of Code](https://img.shields.io/badge/Lines_of_Code-56.355-1f6feb?style=for-the-badge&logo=files&logoColor=white)
+![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.073_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)
+[![pytest](https://img.shields.io/badge/pytest-770-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-303-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
 <!-- loc-table:begin -->
 | Bereich | Zeilen | Dateien |
 |---|---:|---:|
-| Backend (Python) | 24.435 | 136 |
-| Frontend (TS/TSX) | 28.738 | 169 |
+| Backend (Python) | 25.157 | 139 |
+| Frontend (TS/TSX) | 29.073 | 171 |
 | Betrieb (Shell/SQL) | 483 | 21 |
 | PDF-Vorlagen (Jinja) | 1.642 | 5 |
-| **Anwendungscode** | **55.298** | |
-| Tests (Backend) | 7.221 | 53 |
+| **Anwendungscode** | **56.355** | |
+| Tests (Backend) | 7.588 | 54 |
 | Tests (Frontend) | 2.208 | 40 |
-| **Testcode** | **9.429** | |
+| **Testcode** | **9.796** | |
 <!-- loc-table:end -->
 
 31 DB tables · multi-user with isolated workspaces. These numbers are **measured, not
