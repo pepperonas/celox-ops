@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
 import FilterChips from '../../components/FilterChips'
 import LoadingIndicator from '../../components/LoadingIndicator'
+import CustomerLink from '../../components/CustomerLink'
 import BankImportModal from './BankImportModal'
 import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment, restorePaymentState } from '../../api/invoices'
 import { toastWithUndo } from '../../utils/undoToast'
@@ -158,7 +159,12 @@ export default function InvoiceList() {
         ),
       },
       { key: 'invoice_number', label: 'Rechnungsnr.' },
-      { key: 'customer_name', label: 'Kunde' },
+      {
+        key: 'customer_name',
+        label: 'Kunde',
+        // Klick auf den Namen führt zum Kunden statt zur Rechnung.
+        render: (inv) => <CustomerLink customerId={inv.customer_id} name={inv.customer_name} />,
+      },
       { key: 'title', label: 'Titel' },
       {
         key: 'total',
