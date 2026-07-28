@@ -299,3 +299,69 @@ export async function sendLeadEmail(
   const response = await api.post(`/rainmaker/leads/${leadId}/send-email`, data)
   return response.data
 }
+
+// --- Chat-Import: Lead per KI aus einem Gespraechsverlauf aktualisieren ---
+export interface ChatProposalNote { key: string; text: string; preselected: boolean }
+export interface ChatProposalActivity {
+  key: string; type: string; day: string; direction: string | null
+  excerpt: string; fingerprint: string; note: string
+  duplicate: boolean; preselected: boolean
+}
+export interface ChatProposalNext {
+  key: string; type: string; due_date: string; reason: string; preselected: boolean
+}
+export interface ChatProposalField {
+  key: string; field: string; label: string; old: string; new: string
+  evidence: string; preselected: boolean
+}
+export interface ChatProposalIgnored { field: string; label: string; reason: string }
+
+export interface ChatProposal {
+  notes: ChatProposalNote[]
+  activities: ChatProposalActivity[]
+  next_action: ChatProposalNext | null
+  fields: ChatProposalField[]
+  ignored: ChatProposalIgnored[]
+  summary: string
+}
+
+export interface ChatImportPreview {
+  import_id: string
+  cached: boolean
+  proposal: ChatProposal
+  run: AiRunCost
+  budget: AiBudget
+}
+
+export interface ChatImportResult {
+  applied_notes: number
+  applied_activities: number
+  applied_fields: string[]
+  planned_next: boolean
+  can_undo: boolean
+}
+
+export async function chatImportPreview(
+  leadId: string, text: string, images: File[],
+): Promise<ChatImportPreview> {
+  const form = new FormData()
+  form.append('text', text)
+  for (const img of images) form.append('images', img, img.name)
+  // Content-Type muss undefined sein, damit Axios die multipart-Boundary setzt.
+  const response = await api.post(`/rainmaker/leads/${leadId}/chat-import/preview`, form, {
+    headers: { 'Content-Type': undefined },
+  })
+  return response.data
+}
+
+export async function chatImportApply(
+  leadId: string, importId: string, keys: string[],
+): Promise<ChatImportResult> {
+  const response = await api.post(
+    `/rainmaker/leads/${leadId}/chat-import/${importId}/apply`, { keys })
+  return response.data
+}
+
+export async function chatImportUndo(leadId: string, importId: string): Promise<void> {
+  await api.post(`/rainmaker/leads/${leadId}/chat-import/${importId}/undo`)
+}

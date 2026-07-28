@@ -1,5 +1,6 @@
 import Linkified from '../../components/Linkified'
 import LeadEmailDialog from './LeadEmailDialog'
+import ChatImportDialog from './ChatImportDialog'
 import { getTodos } from '../../api/todos'
 import { canDelete } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
@@ -50,6 +51,7 @@ export default function RainmakerLeadDetail() {
   const [completing, setCompleting] = useState<RainmakerActivity | null>(null)
   const [nextTodo, setNextTodo] = useState<Todo | null>(null)
   const [showEmail, setShowEmail] = useState(false)
+  const [showChatImport, setShowChatImport] = useState(false)
   const mayDelete = canDelete(useAuthStore((st) => st.role))
 
   const togglePin = async () => {
@@ -229,6 +231,10 @@ export default function RainmakerLeadDetail() {
           ) : (
             <button onClick={() => navigate(`/kunden/neu?fromLead=${lead.id}`)} className="btn-primary">Als Kunde anlegen</button>
           )}
+          <button onClick={() => setShowChatImport(true)} className="btn-secondary"
+                  title="Chat-Verlauf oder Screenshots einwerfen — die KI schlägt Notizen, Aktivitäten und Stammdaten vor">
+            ✨ Aus Chat aktualisieren
+          </button>
           <button onClick={() => navigate(`/pipeline/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
           {mayDelete && <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>}
         </div>
@@ -410,6 +416,13 @@ export default function RainmakerLeadDetail() {
       />
       {showEmail && lead.email && (
         <LeadEmailDialog lead={lead} onClose={() => setShowEmail(false)} onSent={load} />
+      )}
+      {showChatImport && (
+        <ChatImportDialog
+          lead={lead}
+          onClose={() => setShowChatImport(false)}
+          onApplied={load}
+        />
       )}
 
       {showAdd && id && (

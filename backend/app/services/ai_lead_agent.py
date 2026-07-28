@@ -50,11 +50,16 @@ def get_client(api_key: str):
 KnownFn = "Callable[[str | None, str | None, str | None], bool]"
 
 
-async def _structured(ai, model: str, system: str, user: str, tool_name: str,
+async def _structured(ai, model: str, system: str, user: str | list, tool_name: str,
                       schema: dict, usage: Usage, *, max_tokens: int = 1500,
                       extra_tools: list | None = None) -> dict:
     """Ein Claude-Call mit erzwungener strukturierter Ausgabe (Tool-Use).
-    System-Prompt wird gecacht. Rückgabe: das Tool-Input-Objekt (dict)."""
+    System-Prompt wird gecacht. Rückgabe: das Tool-Input-Objekt (dict).
+
+    `user` ist entweder ein Text ODER eine Liste von Content-Blöcken — letzteres
+    für Bild-Eingaben (Chat-Import mit Screenshots). Bewusst hier erweitert
+    statt in einem zweiten KI-Stack: Kostenzählung, Prompt-Caching und die
+    Tool-Erzwingung bleiben an einer Stelle."""
     tools = [{"name": tool_name, "description": f"Gib das Ergebnis strukturiert über {tool_name} zurück.",
               "input_schema": schema}]
     kwargs = dict(

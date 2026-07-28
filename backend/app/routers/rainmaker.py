@@ -13,7 +13,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
 from sqlalchemy import update as sa_update
@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.models.user import User
 from app.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.rainmaker_activity import (
@@ -39,6 +40,9 @@ from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
     AiBudget,
+    ChatImportApplyRequest,
+    ChatImportPreview,
+    ChatImportResult,
     AiDiscoverRequest,
     AiDiscoverResponse,
     AiRunCost,
@@ -1900,3 +1904,297 @@ async def list_lead_website_analyses(
         .order_by(LeadWebsiteAnalysis.analyzed_at.desc())
     )).scalars().all()
     return {"items": [_analysis_brief(r) for r in rows]}
+
+
+# --------------------------------------------------------------------------- #
+#  Chat-Import: Lead aus einem Gesprächsverlauf aktualisieren (KI, Vorschlag)
+# --------------------------------------------------------------------------- #
+async def _chat_ai_context(db: AsyncSession) -> tuple[str, float, float]:
+    """Modell + Budgetstand — gleiche Vorprüfung wie beim Mail-Entwurf."""
+    from app.models.app_settings import AppSettings
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503,
+                            detail="KI ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt in der .env).")
+    row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    model = (row.ai_model if row else DEFAULT_MODEL)
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_MODEL
+    budget_eur = float(row.ai_monthly_budget_eur) if row else 20.0
+    spent = await _ai_month_spent_eur(db)
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen."))
+    return model, budget_eur, spent
+
+
+@router.post("/leads/{lead_id}/chat-import/preview", response_model=ChatImportPreview)
+async def chat_import_preview(
+    lead_id: uuid.UUID,
+    text: str = Form(""),
+    images: list[UploadFile] = File(default=[]),
+    db: AsyncSession = Depends(get_db),
+) -> ChatImportPreview:
+    """Wertet Chat-Text und/oder Screenshots aus und liefert einen Vorschlag.
+
+    Schreibt **nichts** am Lead. Das Rohmaterial wird NICHT gespeichert (nur sein
+    Hash) — Chat-Screenshots enthalten regelmäßig Daten Dritter.
+    """
+    import base64
+    import hashlib
+
+    from app.models.lead_chat_import import LeadChatImport
+    from app.services.ai_lead_agent import get_client
+    from app.services.ai_pricing import Usage, get_pricing
+    from app.services.exchange_service import get_usd_eur_rate
+    from app.services.lead_chat_import import (
+        ALLOWED_IMAGE_MIME,
+        MAX_IMAGE_BYTES,
+        MAX_IMAGES,
+        MAX_TEXT_CHARS,
+        MAX_TOTAL_IMAGE_BYTES,
+        PROMPT_VERSION,
+        analyze_chat,
+        build_proposal,
+        material_hash,
+    )
+
+    lead = await _get_lead_or_404(lead_id, db)
+
+    material = (text or "").strip()
+    if len(material) > MAX_TEXT_CHARS:
+        raise HTTPException(status_code=413,
+                            detail=f"Der Text ist zu lang (max. {MAX_TEXT_CHARS} Zeichen).")
+    files = [f for f in (images or []) if f is not None and (f.filename or "")]
+    if len(files) > MAX_IMAGES:
+        raise HTTPException(status_code=413, detail=f"Zu viele Screenshots (max. {MAX_IMAGES}).")
+    if not material and not files:
+        raise HTTPException(status_code=422,
+                            detail="Bitte einen Chat-Verlauf einfügen oder Screenshots hochladen.")
+
+    payload: list[dict] = []
+    digests: list[str] = []
+    total = 0
+    for upload in files:
+        blob = await upload.read()
+        mime = (upload.content_type or "").split(";")[0].strip().lower()
+        if mime not in ALLOWED_IMAGE_MIME:
+            raise HTTPException(status_code=415, detail=(
+                f"Bildformat {mime or 'unbekannt'} wird nicht unterstützt "
+                f"(erlaubt: {', '.join(sorted(ALLOWED_IMAGE_MIME))})."))
+        if len(blob) > MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=413, detail=(
+                f"'{upload.filename}' ist zu groß (max. {MAX_IMAGE_BYTES // (1024 * 1024)} MB)."))
+        total += len(blob)
+        if total > MAX_TOTAL_IMAGE_BYTES:
+            raise HTTPException(status_code=413, detail=(
+                f"Die Screenshots sind zusammen zu groß (max. "
+                f"{MAX_TOTAL_IMAGE_BYTES // (1024 * 1024)} MB)."))
+        digests.append(hashlib.sha256(blob).hexdigest())
+        payload.append({"media_type": mime, "b64": base64.b64encode(blob).decode()})
+
+    model, budget_eur, spent = await _chat_ai_context(db)
+    wanted = material_hash(material, digests, lead, model, PROMPT_VERSION)
+
+    # Cache: identisches Material am unveränderten Lead → derselbe Vorschlag,
+    # ohne zweiten KI-Call (und mit denselben Aktivitäts-Fingerprints).
+    cached = (await db.execute(
+        select(LeadChatImport)
+        .where(LeadChatImport.lead_id == lead.id,
+               LeadChatImport.material_hash == wanted,
+               LeadChatImport.applied_at.is_(None))
+        .order_by(LeadChatImport.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+    if cached is not None:
+        return ChatImportPreview(
+            import_id=cached.id, cached=True, proposal=cached.proposal,
+            run=AiRunCost(model=cached.model), budget=_budget_status(spent, budget_eur))
+
+    ai = get_client(settings.ANTHROPIC_API_KEY)
+    usage = Usage()
+    try:
+        raw = await analyze_chat(ai, model, text=material, images=payload, lead=lead, usage=usage)
+    except Exception as exc:  # noqa: BLE001
+        db.add(AiLeadRun(brief=f"Chat-Import: {lead.company}"[:2000], model=model,
+                         used_web_search=False, status="failed", error=str(exc)[:1000]))
+        await db.flush()
+        raise HTTPException(status_code=502, detail=f"KI-Auswertung fehlgeschlagen: {exc}")
+
+    proposal = build_proposal(raw, lead, lead.activities)
+
+    cost_usd = usage.cost_with(await get_pricing(model))
+    cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+    db.add(AiLeadRun(
+        brief=f"Chat-Import: {lead.company}"[:2000], model=model, used_web_search=False,
+        cost_usd=round(cost_usd, 6), cost_eur=cost_eur, candidates_found=0,
+        status="ok", **usage.as_dict()))
+    row = LeadChatImport(
+        lead_id=lead.id, material_hash=wanted, prompt_version=PROMPT_VERSION,
+        model=model, images=len(payload), proposal=proposal, cost_eur=cost_eur)
+    db.add(row)
+    await db.flush()
+
+    return ChatImportPreview(
+        import_id=row.id, cached=False, proposal=proposal,
+        run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+                      **usage.as_dict()),
+        budget=_budget_status(spent + cost_eur, budget_eur))
+
+
+@router.post("/leads/{lead_id}/chat-import/{import_id}/apply", response_model=ChatImportResult)
+async def chat_import_apply(
+    lead_id: uuid.UUID,
+    import_id: uuid.UUID,
+    data: ChatImportApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ChatImportResult:
+    """Übernimmt die ausgewählten Vorschläge — und nur die.
+
+    Erledigte Aktivitäten werden direkt mit `status=done` angelegt: kein
+    `register_completion` (keine Punkte/Streak für importierte Historie) und
+    damit auch kein Next-Action-Zwang, der bei `/complete` greifen würde.
+    """
+    from app.models.lead_chat_import import LeadChatImport
+    from app.services.business_time import day_start_utc, today as business_today
+    from app.services.lead_chat_import import append_notes, notes_block, select_items
+
+    lead = await _get_lead_or_404(lead_id, db)
+    row = (await db.execute(
+        select(LeadChatImport).where(LeadChatImport.id == import_id,
+                                     LeadChatImport.lead_id == lead.id)
+    )).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Vorschlag nicht gefunden")
+    if row.applied_at is not None:
+        raise HTTPException(status_code=409, detail="Dieser Vorschlag wurde bereits übernommen.")
+
+    picked = select_items(row.proposal or {}, data.keys)
+    day = business_today().strftime("%d.%m.%Y")
+
+    # Snapshot VOR dem Schreiben — treibt die Rücknahme.
+    snapshot: dict = {"notes": lead.notes, "fields": {}, "activity_ids": []}
+
+    if picked["note_lines"]:
+        lead.notes = append_notes(lead.notes, notes_block(picked["note_lines"], day))
+
+    for field in picked["fields"]:
+        name = field["field"]
+        old = getattr(lead, name, None)
+        snapshot["fields"][name] = (
+            [str(t) for t in old] if isinstance(old, list)
+            else (str(getattr(old, "value", old)) if old is not None else None))
+        setattr(lead, name, field["value"])
+
+    created = []
+    for act in picked["activities"]:
+        # Beginn des GESCHÄFTStages (nicht UTC-Mitternacht): der Zeitpunkt liegt
+        # damit im richtigen deutschen Kalendertag — konsistent mit
+        # count_done_today und den übrigen Tagesgrenzen.
+        occurred = day_start_utc(date.fromisoformat(act["day"]))
+        activity = RainmakerActivity(
+            lead_id=lead.id,
+            type=RainmakerActivityType(act["type"]),
+            status=RainmakerActivityStatus.done,
+            completed_at=occurred,
+            notes=act["note"][:2000],
+        )
+        db.add(activity)
+        created.append(activity)
+
+    planned = False
+    if picked["next_action"]:
+        nxt = picked["next_action"]
+        planned_activity = RainmakerActivity(
+            lead_id=lead.id,
+            type=RainmakerActivityType(nxt["type"]),
+            status=RainmakerActivityStatus.planned,
+            due_date=date.fromisoformat(nxt["due_date"]),
+            notes=f"[KI aus Chat, {day}] {nxt.get('reason') or 'nächster Schritt'}"[:2000],
+        )
+        db.add(planned_activity)
+        created.append(planned_activity)
+        planned = True
+
+    await db.flush()
+    snapshot["activity_ids"] = [str(a.id) for a in created]
+
+    # E-Mail geändert → Qualitätsurteil neu berechnen (wie bei update_lead).
+    if any(f["field"] == "email" for f in picked["fields"]):
+        lead.email_status = await _email_status_for(lead.email)
+
+    row.applied = {"keys": list(data.keys or []), "snapshot": snapshot}
+    row.applied_at = datetime.now(timezone.utc)
+    row.applied_by = current_user.id
+    await db.flush()
+
+    return ChatImportResult(
+        applied_notes=len(picked["note_lines"]),
+        applied_activities=len(picked["activities"]),
+        applied_fields=[f["field"] for f in picked["fields"]],
+        planned_next=planned,
+    )
+
+
+@router.post("/leads/{lead_id}/chat-import/{import_id}/undo", response_model=RainmakerLeadResponse)
+async def chat_import_undo(
+    lead_id: uuid.UUID,
+    import_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> RainmakerLeadResponse:
+    """Kehrt **genau diesen** protokollierten Lauf um — einmalig.
+
+    Nimmt bewusst keine Aktivitäts-IDs an: sonst wäre das ein Löschwerkzeug, mit
+    dem sich die Rollen-Löschsperre umgehen ließe. Eine Mitarbeitendenrolle darf
+    nur den eigenen Lauf zurücknehmen (der Arbeitsbereich ist geteilt, die
+    Verantwortung nicht).
+    """
+    from app.models.lead_chat_import import LeadChatImport
+    from app.models.user import UserRole
+
+    lead = await _get_lead_or_404(lead_id, db)
+    row = (await db.execute(
+        select(LeadChatImport).where(LeadChatImport.id == import_id,
+                                     LeadChatImport.lead_id == lead.id)
+    )).scalar_one_or_none()
+    if row is None or row.applied_at is None:
+        raise HTTPException(status_code=404, detail="Kein übernommener Vorschlag zu diesem Lauf")
+    if row.reverted_at is not None:
+        raise HTTPException(status_code=409, detail="Dieser Lauf wurde schon zurückgenommen.")
+    if (current_user.role == UserRole.mitarbeiter and row.applied_by != current_user.id):
+        raise HTTPException(status_code=403, detail=(
+            "Diesen Import hat jemand anderes übernommen — nur die Person selbst "
+            "oder ein Konto mit Vollzugriff kann ihn zurücknehmen."))
+
+    snapshot = (row.applied or {}).get("snapshot") or {}
+
+    # Genau die erzeugten Aktivitäten entfernen (IDs aus dem eigenen Protokoll).
+    ids = [uuid.UUID(i) for i in snapshot.get("activity_ids") or []]
+    if ids:
+        await db.execute(
+            sa_delete(RainmakerActivity).where(
+                RainmakerActivity.id.in_(ids),
+                RainmakerActivity.lead_id == lead.id,   # doppelt gesichert
+            )
+        )
+
+    if "notes" in snapshot:
+        lead.notes = snapshot["notes"]
+    for name, old in (snapshot.get("fields") or {}).items():
+        if name == "employee_count":
+            setattr(lead, name, int(old) if old not in (None, "") else None)
+        elif name == "tags":
+            setattr(lead, name, old or None)
+        elif name == "status":
+            setattr(lead, name, RainmakerLeadStatus(old) if old else RainmakerLeadStatus.new)
+        else:
+            setattr(lead, name, old or None)
+    if "email" in (snapshot.get("fields") or {}):
+        lead.email_status = await _email_status_for(lead.email)
+
+    row.reverted_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(lead, attribute_names=["activities"])
+    return lead_response(lead)

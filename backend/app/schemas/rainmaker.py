@@ -184,6 +184,32 @@ class AiDiscoverResponse(BaseModel):
     notes: list[str] = []
 
 
+# --------------------------------------------------------------------------- #
+#  Chat-Import („Lead aus Chat aktualisieren")
+# --------------------------------------------------------------------------- #
+class ChatImportPreview(BaseModel):
+    """Vorschlag der KI — schreibt nichts. `import_id` identifiziert den Lauf;
+    `apply` bekommt nur Auswahl-Keys, die Werte kommen aus dem gespeicherten
+    Vorschlag (ein manipulierter Request kann so nichts Beliebiges setzen)."""
+    import_id: uuid.UUID
+    cached: bool = False
+    proposal: dict
+    run: AiRunCost
+    budget: AiBudget
+
+
+class ChatImportApplyRequest(BaseModel):
+    keys: list[str] = []
+
+
+class ChatImportResult(BaseModel):
+    applied_notes: int = 0
+    applied_activities: int = 0
+    applied_fields: list[str] = []
+    planned_next: bool = False
+    can_undo: bool = True
+
+
 class AiRunSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
