@@ -2,7 +2,7 @@ import uuid
 from datetime import date as DateType, datetime, time as TimeType
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.rainmaker_activity import (
     RainmakerActivityStatus,
@@ -182,6 +182,61 @@ class AiDiscoverResponse(BaseModel):
     run: AiRunCost
     budget: AiBudget
     notes: list[str] = []
+
+
+# --------------------------------------------------------------------------- #
+#  Lead-Erfassung aus Material („Aus Chat/Screenshot") — Entwürfe, kein Schreiben
+# --------------------------------------------------------------------------- #
+class IntakeActivityDraft(BaseModel):
+    type: RainmakerActivityType
+    due_date: DateType | None = None
+    notes: str | None = None
+
+
+class LeadIntakeDraft(RainmakerLeadBase):
+    """Ein Lead-Entwurf der KI. Die Duplikat-Felder setzt der SERVER, sie kommen
+    nicht vom Modell — beim Commit werden sie ignoriert."""
+    activities: list[IntakeActivityDraft] = []
+    evidence: str | None = None
+    confidence: float | None = None
+    unclear: list[str] = []
+    duplicate: bool = False
+    duplicate_reason: str | None = None       # "email" | "website" | "name"
+    existing_id: uuid.UUID | None = None
+    existing_company: str | None = None
+
+
+class LeadIntakeRequest(BaseModel):
+    """Material für einen Lauf. Text ODER mindestens ein Bild ist Pflicht."""
+    text: str = Field(default="", max_length=200_000)
+    hint: str = Field(default="", max_length=2_000)
+    # Data-URL oder nacktes Base64; der Router dekodiert und prüft Format/Größe.
+    images: list[str] = Field(default_factory=list, max_length=6)
+    model: str | None = None
+
+    @model_validator(mode="after")
+    def _needs_material(self):
+        if not self.text.strip() and not self.images:
+            raise ValueError("Bitte Text einfügen oder mindestens einen Screenshot anhängen.")
+        return self
+
+
+class LeadIntakeResponse(BaseModel):
+    leads: list[LeadIntakeDraft] = []
+    ignored: list[str] = []
+    cost: AiRunCost
+
+
+class LeadIntakeCommitRequest(BaseModel):
+    leads: list[LeadIntakeDraft]
+    force: bool = False                       # Duplikate trotzdem anlegen
+
+
+class LeadIntakeCommitResult(BaseModel):
+    created: int = 0
+    activities_created: int = 0
+    skipped_duplicates: int = 0
+    lead_ids: list[uuid.UUID] = []
 
 
 # --------------------------------------------------------------------------- #

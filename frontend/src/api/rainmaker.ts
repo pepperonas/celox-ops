@@ -31,6 +31,9 @@ import type {
   AiRunCost,
   AiBudget,
   AnalysisQueueStatus,
+  LeadIntakeDraft,
+  LeadIntakeResponse,
+  LeadIntakeCommitResult,
 } from '../types'
 
 export async function aiDiscoverPreview(brief: string, useWebSearch = false, model?: string, enrich = true): Promise<AiDiscoverResponse> {
@@ -364,4 +367,21 @@ export async function chatImportApply(
 
 export async function chatImportUndo(leadId: string, importId: string): Promise<void> {
   await api.post(`/rainmaker/leads/${leadId}/chat-import/${importId}/undo`)
+}
+
+// --- Lead-Erfassung aus Material („Aus Chat/Screenshot") ---
+export async function leadIntakePreview(payload: {
+  text: string; hint: string; images: string[]; model?: string
+}): Promise<LeadIntakeResponse> {
+  // Eigenes, hohes Timeout: sechs Screenshots brauchen 30–60 s. Der Default des
+  // Clients wuerde vorher abbrechen, obwohl das Backend noch rechnet.
+  const response = await api.post('/rainmaker/leads/intake', payload, { timeout: 300_000 })
+  return response.data
+}
+
+export async function leadIntakeCommit(
+  leads: LeadIntakeDraft[], force = false,
+): Promise<LeadIntakeCommitResult> {
+  const response = await api.post('/rainmaker/leads/intake/commit', { leads, force })
+  return response.data
 }

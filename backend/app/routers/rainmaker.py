@@ -40,6 +40,11 @@ from app.models.rainmaker_settings import RainmakerDreamMode, RainmakerSettings
 from app.models.rainmaker_template import RainmakerTemplate
 from app.schemas.rainmaker import (
     AiBudget,
+    LeadIntakeCommitRequest,
+    LeadIntakeCommitResult,
+    LeadIntakeDraft,
+    LeadIntakeRequest,
+    LeadIntakeResponse,
     ChatImportApplyRequest,
     ChatImportPreview,
     ChatImportResult,
@@ -859,6 +864,211 @@ async def ai_discover_preview(
         run=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur, **usage.as_dict()),
         budget=_budget_status(spent + cost_eur, budget_eur),
         notes=result.notes)
+
+
+# --------------------------------------------------------------------------- #
+#  Lead-Erfassung aus Material („Aus Chat/Screenshot")
+# --------------------------------------------------------------------------- #
+_INTAKE_IMAGE_MIME = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+_INTAKE_MAX_IMAGE_BYTES = 4 * 1024 * 1024
+
+
+def _decode_image(raw: str, index: int) -> dict:
+    """Data-URL oder nacktes Base64 → {media_type, b64}.
+
+    Format und Größe werden HIER geprüft, damit der Nutzer eine klare Meldung
+    bekommt (400/413) statt eines Provider-Fehlers nach 30 Sekunden Wartezeit.
+    """
+    import base64
+    import binascii
+
+    value = (raw or "").strip()
+    if not value:
+        raise HTTPException(status_code=400, detail=f"Screenshot {index}: leer.")
+
+    media_type = "image/png"
+    if value.startswith("data:"):
+        header, _, payload = value.partition(",")
+        if not payload:
+            raise HTTPException(status_code=400, detail=f"Screenshot {index}: unlesbare Data-URL.")
+        media_type = header[5:].split(";")[0].strip().lower() or "image/png"
+        value = payload
+    if media_type not in _INTAKE_IMAGE_MIME:
+        raise HTTPException(status_code=400, detail=(
+            f"Screenshot {index}: Format {media_type} wird nicht unterstützt "
+            f"(erlaubt: {', '.join(sorted(_INTAKE_IMAGE_MIME))})."))
+    try:
+        blob = base64.b64decode(value, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail=f"Screenshot {index}: kein gültiges Base64.")
+    if not blob:
+        raise HTTPException(status_code=400, detail=f"Screenshot {index}: leer.")
+    if len(blob) > _INTAKE_MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail=(
+            f"Screenshot {index} ist zu groß ({len(blob) // 1024} KB, "
+            f"max. {_INTAKE_MAX_IMAGE_BYTES // (1024 * 1024)} MB)."))
+    # Neu kodieren: der Provider bekommt garantiert kanonisches Base64.
+    return {"media_type": media_type, "b64": base64.b64encode(blob).decode()}
+
+
+async def _intake_vocabulary(db: AsyncSession) -> tuple[list[str], list[str]]:
+    """Eigene Targets und Tags als Vokabular für den Prompt — so übernimmt die KI
+    bestehende Facetten statt neue Synonyme zu erfinden (Filter bleiben nutzbar).
+    Nutzt den vorhandenen Zähler aus dem Autocomplete (owner-scoped)."""
+    from app.routers.suggestions import _own_counts
+    from app.services.lead_intake import MAX_VOCAB
+
+    def top(counts: dict) -> list[str]:
+        return [v for v, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))][:MAX_VOCAB]
+
+    return top(await _own_counts("target", db)), top(await _own_counts("tag", db))
+
+
+@router.post("/leads/intake", response_model=LeadIntakeResponse)
+async def lead_intake_preview(
+    data: LeadIntakeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LeadIntakeResponse:
+    """Wertet Material (Text und/oder Screenshots) aus und liefert Lead-ENTWÜRFE.
+
+    Legt nichts an. Rohmaterial wird nicht gespeichert — nur was der Nutzer im
+    zweiten Schritt bestätigt, landet in der Datenbank.
+    """
+    from app.models.app_settings import AppSettings
+    from app.services.ai_lead_agent import get_client
+    from app.services.ai_pricing import get_pricing
+    from pydantic import ValidationError
+
+    from app.services.business_time import today as business_today
+    from app.services.exchange_service import get_usd_eur_rate
+    from app.services.lead_intake import MAX_IMAGES, extract_leads
+
+    # Schlüssel des Arbeitsbereichs (kein globaler .env-Rückfall).
+    api_key = await require_anthropic_key(db)
+
+    app_row = (await db.execute(select(AppSettings).limit(1))).scalar_one_or_none()
+    model = data.model or (app_row.ai_model if app_row else DEFAULT_MODEL)
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_MODEL
+    budget_eur = float(app_row.ai_monthly_budget_eur) if app_row else 20.0
+    spent = await _ai_month_spent_eur(db)
+    if budget_eur > 0 and spent >= budget_eur:
+        raise HTTPException(status_code=402, detail=(
+            f"KI-Monatsbudget erreicht ({spent:.2f} € / {budget_eur:.2f} €). "
+            "Budget in den Einstellungen erhöhen."))
+
+    if len(data.images) > MAX_IMAGES:
+        raise HTTPException(status_code=413, detail=f"Zu viele Screenshots (max. {MAX_IMAGES}).")
+    images = [_decode_image(raw, i) for i, raw in enumerate(data.images, start=1)]
+
+    known_targets, known_tags = await _intake_vocabulary(db)
+    own_identity = ", ".join(p for p in (
+        settings.BUSINESS_NAME, settings.BUSINESS_OWNER,
+        settings.BUSINESS_EMAIL, settings.BUSINESS_WEB) if p)
+    brief = (f"Lead-Erfassung: {len(data.text)} Zeichen Text, {len(images)} Screenshot(s)"
+             + (f", Hinweis: {data.hint[:120]}" if data.hint.strip() else ""))
+
+    try:
+        result = await extract_leads(
+            ai=get_client(api_key), model=model, text=data.text, hint=data.hint,
+            images=images, own_identity=own_identity, known_targets=known_targets,
+            known_tags=known_tags, today=business_today())
+    except Exception as exc:  # noqa: BLE001
+        db.add(AiLeadRun(brief=brief[:2000], model=model, used_web_search=False,
+                         status="failed", error=str(exc)[:1000]))
+        await db.flush()
+        raise HTTPException(status_code=502, detail=f"KI-Auswertung fehlgeschlagen: {exc}")
+
+    cost_usd = result.usage.cost_with(await get_pricing(model))
+    cost_eur = round(cost_usd * await get_usd_eur_rate(), 4)
+    db.add(AiLeadRun(
+        brief=brief[:2000], model=model, used_web_search=False,
+        cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+        candidates_found=len(result.leads), status="ok", **result.usage.as_dict()))
+    await db.flush()
+
+    # Duplikat-Markierung gegen den Bestand (owner-scoped). Der Dialog wählt
+    # Duplikate nicht vor — angelegt wird nur mit ausdrücklichem force.
+    drafts: list[LeadIntakeDraft] = []
+    for lead in result.leads:
+        try:
+            draft = LeadIntakeDraft.model_validate(lead)
+        except ValidationError as exc:
+            # Ein unbrauchbarer Entwurf darf den ganzen Lauf nicht kippen.
+            result.ignored.append(
+                f"Entwurf verworfen ({lead.get('company') or 'ohne Firmenname'}): "
+                f"{exc.errors()[0].get('msg', 'Schemafehler')}")
+            continue
+        existing, reason = await find_duplicate_lead(
+            db, email=draft.email, website=draft.website, contact_name=draft.contact_name)
+        if existing is not None:
+            draft.duplicate = True
+            draft.duplicate_reason = reason
+            draft.existing_id = existing.id
+            draft.existing_company = existing.company
+        drafts.append(draft)
+
+    return LeadIntakeResponse(
+        leads=drafts, ignored=result.ignored,
+        cost=AiRunCost(model=model, cost_usd=round(cost_usd, 6), cost_eur=cost_eur,
+                       **result.usage.as_dict()))
+
+
+@router.post("/leads/intake/commit", response_model=LeadIntakeCommitResult)
+async def lead_intake_commit(
+    data: LeadIntakeCommitRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LeadIntakeCommitResult:
+    """Legt die bestätigten Entwürfe als Leads samt geplanten Aktionen an.
+
+    Kein KI-Call. Die Werte kommen aus dem Dialog — das ist hier unbedenklich,
+    weil nur NEUE Leads entstehen (dasselbe kann man über `POST /leads` von Hand).
+    Die Duplikat-Felder des Entwurfs werden ignoriert und serverseitig neu geprüft.
+    """
+    created = activities_created = skipped = 0
+    lead_ids: list[uuid.UUID] = []
+    mx_cache: dict = {}
+
+    for draft in data.leads:
+        payload = draft.model_dump(exclude={
+            "activities", "evidence", "confidence", "unclear",
+            "duplicate", "duplicate_reason", "existing_id", "existing_company",
+        })
+        if not data.force:
+            existing, _ = await find_duplicate_lead(
+                db, email=payload.get("email"), website=payload.get("website"),
+                contact_name=payload.get("contact_name"))
+            if existing is not None:
+                skipped += 1
+                continue
+
+        lead = RainmakerLead(**payload)
+        lead.email_status = await _email_status_for(payload.get("email"), mx_cache)
+        if not await _safe_flush_lead(db, lead):
+            # Race gegen einen parallelen Import (partieller Unique-Index).
+            skipped += 1
+            continue
+
+        for act in draft.activities:
+            db.add(RainmakerActivity(
+                lead_id=lead.id,
+                type=act.type,
+                status=RainmakerActivityStatus.planned,
+                due_date=act.due_date,
+                notes=(act.notes or "")[:2000] or None,
+            ))
+            activities_created += 1
+        created += 1
+        lead_ids.append(lead.id)
+
+    await db.flush()
+    # Website-Analyse anstoßen (filtert Social-/Profil-URLs selbst heraus).
+    if lead_ids:
+        await enqueue_company_websites(db, lead_ids)
+
+    return LeadIntakeCommitResult(
+        created=created, activities_created=activities_created,
+        skipped_duplicates=skipped, lead_ids=lead_ids)
 
 
 @router.get("/ai/usage", response_model=AiUsageResponse)

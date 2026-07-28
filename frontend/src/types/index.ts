@@ -663,6 +663,54 @@ export interface DiscoveredCandidate {
   enriched?: boolean
 }
 
+/** Ein Lead-Entwurf der KI-Erfassung aus Material („Aus Chat/Screenshot"). */
+export interface IntakeActivityDraft {
+  type: string
+  due_date: string | null
+  notes: string | null
+}
+
+export interface LeadIntakeDraft {
+  company: string
+  contact_name: string | null
+  role: string | null
+  decision_maker: string | null
+  employee_count: number | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  source: string | null
+  status: string
+  priority: string
+  value_estimate: number | null
+  tags: string[] | null
+  target: string | null
+  notes: string | null
+  activities: IntakeActivityDraft[]
+  evidence: string | null
+  confidence: number | null
+  unclear: string[]
+  // Serverseitig gesetzt — der Dialog waehlt Duplikate nicht vor.
+  duplicate: boolean
+  duplicate_reason: string | null
+  existing_id: string | null
+  existing_company: string | null
+}
+
+export interface LeadIntakeResponse {
+  leads: LeadIntakeDraft[]
+  ignored: string[]
+  cost: AiRunCost
+}
+
+export interface LeadIntakeCommitResult {
+  created: number
+  activities_created: number
+  skipped_duplicates: number
+  lead_ids: string[]
+}
+
 /** Stand der automatischen Website-Analyse (In-Process-Worker). */
 export interface AnalysisQueueStatus {
   queued: number

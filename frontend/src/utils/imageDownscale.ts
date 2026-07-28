@@ -72,3 +72,18 @@ export async function downscaleImage(file: File, maxEdge = MAX_EDGE_PX): Promise
     return file
   }
 }
+
+/**
+ * Wie `downscaleImage`, gibt aber eine JPEG-Data-URL zurück — für Endpoints, die
+ * Bilder als JSON erwarten (Lead-Erfassung) statt als multipart.
+ * Bei Fehlschlag `null`, damit der Aufrufer das Bild überspringen kann.
+ */
+export async function downscaleToDataUrl(file: File, maxEdge = MAX_EDGE_PX): Promise<string | null> {
+  const shrunk = await downscaleImage(file, maxEdge)
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(shrunk)
+  })
+}

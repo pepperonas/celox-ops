@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { toastWithUndo } from '../../utils/undoToast'
 import PageHeader from '../../components/PageHeader'
 import AnalysisQueueBadge from './AnalysisQueueBadge'
+import LeadIntakeModal from './LeadIntakeModal'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import PipelineNav from './PipelineNav'
@@ -45,6 +46,7 @@ export default function RainmakerPipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showDiscovery, setShowDiscovery] = useState(false)
+  const [showIntake, setShowIntake] = useState(false)
   // KI-Lead-Suche lebt global im Store (AiLeadHost rendert Dialog/Pill) → überlebt
   // Dialog-Schließen UND Seitenwechsel. Hier nur: Dialog öffnen + auf Import reagieren.
   const openAi = useAiLeadStore((st) => st.setOpen)
@@ -290,6 +292,10 @@ export default function RainmakerPipeline() {
             <button onClick={() => openAi(true)} className="btn-primary text-sm">
               ✨ KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
             </button>
+            <button onClick={() => setShowIntake(true)} className="btn-secondary text-sm"
+                    title="Chatverlauf, E-Mail oder Screenshots einwerfen — die KI macht Lead-Entwürfe daraus">
+              ✨ Aus Chat/Screenshot
+            </button>
             <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
               Leads finden
             </button>
@@ -454,6 +460,12 @@ export default function RainmakerPipeline() {
         <LinkedInImportModal
           onClose={() => setShowImport(false)}
           onImported={(created) => { setShowImport(false); handleImported(created) }}
+        />
+      )}
+      {showIntake && (
+        <LeadIntakeModal
+          onClose={() => setShowIntake(false)}
+          onImported={(created) => { setShowIntake(false); handleImported(created) }}
         />
       )}
       {showDiscovery && (
