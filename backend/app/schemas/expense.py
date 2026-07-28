@@ -61,6 +61,9 @@ class HostingerDraft(BaseModel):
     domain_confidence: str | None = None
     domain_delta_seconds: int | None = None
     domain_candidates: list[str] = []
+    # Bei `duplicate`: die Beschreibung, die schon in der Buchung steht. Weicht sie
+    # ab (z. B. noch „Domain .de"), kann sie nachgezogen werden.
+    imported_description: str | None = None
 
 
 class HostingerPreview(BaseModel):
@@ -84,3 +87,20 @@ class HostingerImportResult(BaseModel):
     skipped_duplicates: int = 0
     total: Decimal = Decimal("0")
     expense_ids: list[uuid.UUID] = []
+
+
+class HostingerRelabelChange(BaseModel):
+    external_ref: str
+    before: str
+    after: str
+
+
+class HostingerRelabelResult(BaseModel):
+    """Nachziehen von Beschreibung/Notiz bereits importierter Buchungen.
+
+    Betrag, Datum und Kategorie bleiben unangetastet — nur der Text, damit eine
+    Buchung „Domain .de" den inzwischen zugeordneten Namen bekommt.
+    """
+    updated: int = 0
+    unchanged: int = 0
+    changes: list[HostingerRelabelChange] = []

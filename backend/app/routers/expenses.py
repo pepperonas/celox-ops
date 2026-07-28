@@ -16,6 +16,8 @@ from app.schemas.expense import (
     HostingerImportRequest,
     HostingerImportResult,
     HostingerPreview,
+    HostingerRelabelChange,
+    HostingerRelabelResult,
 )
 
 router = APIRouter(
@@ -240,15 +242,24 @@ async def _save_links(db: AsyncSession, wanted: dict[str, str], valid: set[str],
 
 
 async def _mark_duplicates(db: AsyncSession, drafts: list[dict]) -> int:
-    """Schon importierte Zeiträume markieren (owner-scoped über external_ref)."""
+    """Schon importierte Zeiträume markieren (owner-scoped über external_ref).
+
+    Trägt bei Duplikaten zusätzlich die **gespeicherte** Beschreibung ein, damit
+    der Dialog zeigen kann, was sich am Text ändern würde — etwa wenn erst jetzt
+    eine Domain zugeordnet werden konnte.
+    """
     refs = [d["external_ref"] for d in drafts if d.get("external_ref")]
     if not refs:
         return 0
-    known = set((await db.execute(
-        select(Expense.external_ref).where(Expense.external_ref.in_(refs))
-    )).scalars().all())
+    rows = (await db.execute(
+        select(Expense.external_ref, Expense.description)
+        .where(Expense.external_ref.in_(refs))
+    )).all()
+    known = {ref: desc for ref, desc in rows}
     for draft in drafts:
-        draft["duplicate"] = draft.get("external_ref") in known
+        ref = draft.get("external_ref")
+        draft["duplicate"] = ref in known
+        draft["imported_description"] = known.get(ref)
     return sum(1 for d in drafts if d["duplicate"])
 
 
@@ -360,3 +371,74 @@ async def hostinger_import(
         created=len(created), skipped_duplicates=skipped,
         total=total_of([{"amount": str(e.amount)} for e in created]),
         expense_ids=[e.id for e in created])
+
+
+@router.post("/hostinger/relabel", response_model=HostingerRelabelResult)
+async def hostinger_relabel(
+    data: HostingerImportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> HostingerRelabelResult:
+    """Beschreibung und Notiz **bereits importierter** Buchungen nachziehen.
+
+    Nötig, weil der Import über `external_ref` idempotent ist: Zeilen, die noch
+    „Domain .de" heißen, würden bei einem erneuten Lauf übersprungen und nie den
+    inzwischen zugeordneten Domainnamen bekommen.
+
+    Angetastet werden **nur Text und Notiz** — Betrag, Datum und Kategorie sind
+    die Buchung selbst und bleiben unverändert. Läuft die Zuordnung später
+    korrigiert erneut, wird der Text einfach wieder richtiggestellt (das ist der
+    Rückweg; ein eigenes Undo wäre eine zweite Wahrheit).
+    """
+    from app.services.business_time import today as business_today
+    from app.services.hostinger import (
+        HostingerError,
+        build_drafts,
+        load_drafts,
+    )
+
+    wanted = {r for r in (data.refs or []) if r}
+    if not wanted:
+        raise HTTPException(status_code=422, detail="Keine Position ausgewählt.")
+
+    key = await _hostinger_key(db)
+    links = await _confirmed_links(db)
+    try:
+        result = await load_drafts(key, confirmed=links)
+    except HostingerError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    account = result.get("account") or {}
+    if data.domains:
+        saved = await _save_links(
+            db, data.domains, set(result.get("all_domains") or []),
+            {s.get("id") for s in account.get("subscriptions") or [] if isinstance(s, dict)})
+        if saved:
+            links = await _confirmed_links(db)
+            result = build_drafts(account.get("subscriptions") or [], today=business_today(),
+                                  domains=account.get("domains") or [],
+                                  vps=account.get("vps") or [], confirmed=links)
+
+    by_ref = {d["external_ref"]: d for d in result["drafts"] if d["external_ref"] in wanted}
+    if not by_ref:
+        return HostingerRelabelResult()
+
+    rows = (await db.execute(
+        select(Expense).where(Expense.external_ref.in_(list(by_ref)))
+    )).scalars().all()
+
+    changes: list[HostingerRelabelChange] = []
+    unchanged = 0
+    for row in rows:
+        draft = by_ref.get(row.external_ref)
+        if not draft:
+            continue
+        if row.description == draft["description"] and row.notes == draft["notes"]:
+            unchanged += 1
+            continue
+        changes.append(HostingerRelabelChange(
+            external_ref=row.external_ref, before=row.description,
+            after=draft["description"]))
+        row.description = draft["description"]
+        row.notes = draft["notes"]
+    await db.flush()
+    return HostingerRelabelResult(updated=len(changes), unchanged=unchanged, changes=changes)

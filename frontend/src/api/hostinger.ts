@@ -22,6 +22,8 @@ export interface HostingerDraft {
   domain_delta_seconds: number | null
   /** Alle Domains dieser TLD — Auswahl fuer eine Korrektur. */
   domain_candidates: string[]
+  /** Bei `duplicate`: die Beschreibung, die schon in der Buchung steht. */
+  imported_description: string | null
 }
 
 export interface HostingerPreview {
@@ -55,6 +57,28 @@ export async function hostingerImport(
   domains: Record<string, string> = {},
 ): Promise<HostingerImportResult> {
   const response = await api.post('/expenses/hostinger/import', { refs, domains },
+    { timeout: 60_000 })
+  return response.data
+}
+
+export interface HostingerRelabelResult {
+  updated: number
+  unchanged: number
+  changes: { external_ref: string; before: string; after: string }[]
+}
+
+/**
+ * Beschreibung/Notiz bereits importierter Buchungen nachziehen.
+ *
+ * Noetig, weil der Import ueber `external_ref` idempotent ist: eine Zeile, die
+ * noch „Domain .de" heisst, wuerde beim naechsten Lauf uebersprungen und nie den
+ * inzwischen zugeordneten Namen bekommen. Betrag, Datum und Kategorie bleiben.
+ */
+export async function hostingerRelabel(
+  refs: string[],
+  domains: Record<string, string> = {},
+): Promise<HostingerRelabelResult> {
+  const response = await api.post('/expenses/hostinger/relabel', { refs, domains },
     { timeout: 60_000 })
   return response.data
 }

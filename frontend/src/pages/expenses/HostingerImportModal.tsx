@@ -4,13 +4,14 @@
 // Rechnungs-Endpunkt. Übernommen wird deshalb der Ist-Stand: je aktivem Abo eine
 // wiederkehrende Ausgabe, datiert auf die letzte Abrechnung. Was übersprungen
 // wurde, steht sichtbar darunter; geschrieben wird nur, was angehakt ist.
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import Select from '../../components/Select'
 import {
   hostingerImport,
   hostingerPreview,
+  hostingerRelabel,
   type DomainConfidence,
   type HostingerDraft,
   type HostingerPreview as Preview,
@@ -97,22 +98,24 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [loading, saving, onClose])
 
-  useEffect(() => {
-    let alive = true
-    hostingerPreview()
-      .then((res) => {
-        if (!alive) return
-        setPreview(res)
-        // Schon importierte Zeiträume nicht vorwählen.
-        setPicked(new Set(res.drafts.filter((d) => !d.duplicate).map((d) => d.external_ref)))
-      })
-      .catch((err) => {
-        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        if (alive) setError(detail || 'Die Hostinger-Abfrage ist fehlgeschlagen.')
-      })
-      .finally(() => { if (alive) setLoading(false) })
-    return () => { alive = false }
+  const load = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    try {
+      const res = await hostingerPreview()
+      setPreview(res)
+      // Schon importierte Zeiträume nicht vorwählen.
+      setPicked(new Set(res.drafts.filter((d) => !d.duplicate).map((d) => d.external_ref)))
+      setFixes({})
+      setError(null)
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(detail || 'Die Hostinger-Abfrage ist fehlgeschlagen.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => { void load() }, [load])
 
   const toggle = (ref: string) => setPicked((prev) => {
     const next = new Set(prev)
@@ -150,6 +153,26 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
   const needCheck = drafts.filter((d) => d.category === 'domain'
     && !fixes[d.subscription_id || '']
     && domainHint(d.domain_confidence, d.domain_delta_seconds).check).length
+  // Bereits importierte Buchungen, deren gespeicherter Text vom aktuellen abweicht
+  // (typisch: „Domain .de", bevor die Zuordnung möglich war).
+  const stale = drafts.filter((d) => d.duplicate && d.imported_description
+    && d.imported_description !== d.description)
+
+  const relabel = async () => {
+    if (saving || stale.length === 0) return
+    setSaving(true)
+    try {
+      const res = await hostingerRelabel(stale.map((d) => d.external_ref), fixes)
+      toast.success(`${res.updated} Buchung${res.updated === 1 ? '' : 'en'} umbenannt.`)
+      onImported()
+      await load()
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Umbenennen fehlgeschlagen.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-md-fade">
@@ -236,6 +259,13 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                               bereits importiert
                             </span>
                           )}
+                          {d.duplicate && d.imported_description
+                           && d.imported_description !== d.description && (
+                            <div className="text-[10px] text-text-muted mt-0.5">
+                              gebucht als „{d.imported_description}" → wird
+                              „{d.description}"
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
                           {d.category === 'domain' ? <DomainCell
@@ -307,6 +337,13 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
           <button onClick={onClose} className="btn-secondary" disabled={saving}>
             Abbrechen
           </button>
+          {stale.length > 0 && (
+            <button onClick={relabel} className="btn-secondary" disabled={saving}
+                    title="Ändert nur Beschreibung und Notiz — Betrag, Datum und
+                           Kategorie bleiben unverändert.">
+              {saving ? 'Arbeite…' : `${stale.length} umbenennen`}
+            </button>
+          )}
           {preview && drafts.length > 0 && (
             <button onClick={run} className="btn-primary" disabled={picked.size === 0 || saving}>
               {saving ? 'Übernehme…' : `${picked.size} übernehmen`}
