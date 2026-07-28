@@ -6,7 +6,7 @@ describe('validateEmail', () => {
     expect(validateEmail('')).toBeNull()
   })
   it('accepts a valid address', () => {
-    expect(validateEmail('martin@celox.io')).toBeNull()
+    expect(validateEmail('martin.pfeffer@celox.io')).toBeNull()
   })
   it('rejects a missing domain dot', () => {
     expect(validateEmail('martin@celox')).not.toBeNull()
