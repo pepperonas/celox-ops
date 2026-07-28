@@ -14,9 +14,9 @@
 <p align="center">
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-53.165-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-951_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-668-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-54.133-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-992_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-709-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-283-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
@@ -111,14 +111,14 @@ System verlässt, ist als Test festgenagelt — nicht als Kommentar.
 <!-- loc-table:begin -->
 | Bereich | Zeilen | Dateien |
 |---|---:|---:|
-| Backend (Python) | 23.280 | 133 |
-| Frontend (TS/TSX) | 27.779 | 164 |
-| Betrieb (Shell/SQL) | 464 | 19 |
+| Backend (Python) | 23.840 | 134 |
+| Frontend (TS/TSX) | 28.168 | 166 |
+| Betrieb (Shell/SQL) | 483 | 21 |
 | PDF-Vorlagen (Jinja) | 1.642 | 5 |
-| **Anwendungscode** | **53.165** | |
-| Tests (Backend) | 6.502 | 51 |
+| **Anwendungscode** | **54.133** | |
+| Tests (Backend) | 6.830 | 52 |
 | Tests (Frontend) | 2.066 | 38 |
-| **Testcode** | **8.568** | |
+| **Testcode** | **8.896** | |
 <!-- loc-table:end -->
 
 Die Zahlen in dieser Tabelle und in den Badges oben sind **gemessen, nicht
@@ -283,6 +283,16 @@ Einnahmen-Überschuss-Rechnung mit CSV-Export und Monatsbericht-PDF, Live-Wechse
 (EZB-Referenzkurs über die Frankfurter-API, mit Cache und Plausibilitätsgrenzen), sowie
 ein iCal-Feed für Fristen und Termine.
 
+- **Hostinger-Kostenimport**: laufende Kosten für VPS und Domains per API-Key
+  übernehmen — Vorschau, Auswahl, dann schreiben. Die API liefert Verträge, keine
+  Belege, also wird der Ist-Stand je aktivem Abo übernommen und auf die letzte
+  Abrechnung datiert; vergangene Perioden werden nicht hochgerechnet. Der VPS ist über
+  die Abo-ID exakt zuordenbar (Plan, Hostname, IP); Domains sind es nicht — dort steht
+  ein generischer Name plus das TLD-Portfolio in den Notizen, mit dem ausdrücklichen
+  Hinweis, dass die API die Zuordnung nicht hergibt. Ein Zeitraum kann durch eine
+  Referenz je Abo und Datum nicht zweimal gebucht werden, und was übersprungen wurde,
+  steht mit Grund im Dialog.
+
 ### Dokumente & Compliance
 
 Zehn Rechtsdokument-Vorlagen mit Kundenplatzhaltern und digitaler Signatur, ZIP-Download
@@ -365,9 +375,9 @@ werden — und prüft die Rolle gegen die Datenbank, nicht gegen einen JWT-Claim
 ## Qualitätssicherung
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-53.165-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-951_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-668-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-54.133-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-992_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-709-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-283-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 

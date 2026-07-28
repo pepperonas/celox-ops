@@ -4,7 +4,7 @@
 // Rechnungs-Endpunkt. Übernommen wird deshalb der Ist-Stand: je aktivem Abo eine
 // wiederkehrende Ausgabe, datiert auf die letzte Abrechnung. Was übersprungen
 // wurde, steht sichtbar darunter; geschrieben wird nur, was angehakt ist.
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import {
@@ -140,10 +140,12 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Key gehört auf das Fragment: es ist das Listenelement, nicht
+                      die <tr> darin. Sonst warnt React und verliert beim
+                      Auf-/Zuklappen der Notizen die Zeilenidentität. */}
                   {drafts.map((d) => (
-                    <>
-                      <tr key={d.external_ref}
-                          onClick={() => !d.duplicate && toggle(d.external_ref)}
+                    <Fragment key={d.external_ref}>
+                      <tr onClick={() => !d.duplicate && toggle(d.external_ref)}
                           className={`border-t border-border ${d.duplicate
                             ? 'opacity-50' : 'cursor-pointer hover:bg-surface-container'}`}>
                         <td className="px-3 py-1.5">
@@ -186,7 +188,7 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                         </td>
                       </tr>
                       {openNotes === d.external_ref && d.notes && (
-                        <tr key={`${d.external_ref}-notes`} className="border-t border-border">
+                        <tr className="border-t border-border">
                           <td />
                           <td colSpan={5} className="px-2 pb-2 pt-0">
                             <pre className="text-[11px] text-text-muted whitespace-pre-wrap
@@ -194,7 +196,7 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                   {drafts.length === 0 && (
                     <tr><td colSpan={6} className="px-3 py-6 text-center text-sm text-text-muted">
