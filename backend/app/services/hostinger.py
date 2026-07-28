@@ -366,13 +366,52 @@ def _ago(seconds: int | None) -> str:
     return f"{round(seconds / 86400)} Tage"
 
 
-def external_ref(sub: dict, billed_on: date) -> str:
-    """Herkunftsschlüssel: Abo + Abrechnungszeitraum. Rein.
+def period_bucket(sub: dict, billed_on: date) -> str:
+    """Abrechnungszeitraum als Schlüsselbestandteil. Rein.
 
-    Enthält das Datum, damit die Verlängerung im nächsten Jahr als **neue**
-    Ausgabe importiert werden kann — derselbe Zeitraum aber nie zweimal.
+    **Bewusst nicht der exakte Tag.** Hostinger richtet Verlängerungstermine
+    nachträglich aus (belegt: ein Abo mit Registrierung 2025-08-29 und nächster
+    Abrechnung 2027-07-31). `last_billed_on` rechnet daraus zurück — verschiebt
+    sich der Termin um drei Tage, ergäbe ein tagesgenauer Schlüssel für **denselben
+    Zeitraum** einen anderen Wert, und der nächste Import würde die Ausgabe ein
+    zweites Mal buchen.
+
+    Die Periode ist das fachlich richtige Raster: ein Jahresabo wird höchstens
+    einmal pro Kalenderjahr abgerechnet, ein Monatsabo höchstens einmal pro Monat.
+    Kürzere Perioden (Woche/Tag) behalten den Tag, dort ist er die Periode.
     """
-    return f"{REF_PREFIX}:{sub.get('id') or 'unbekannt'}:{billed_on.isoformat()}"
+    unit = (sub.get("billing_period_unit") or "month").lower().rstrip("s")
+    if unit == "year":
+        return f"{billed_on.year}"
+    if unit == "month":
+        return f"{billed_on.year}-{billed_on.month:02d}"
+    return billed_on.isoformat()
+
+
+def external_ref(sub: dict, billed_on: date) -> str:
+    """Herkunftsschlüssel: Abo + Abrechnungsperiode. Rein.
+
+    Die Verlängerung in der nächsten Periode ist ein **neuer** Schlüssel und darf
+    gebucht werden; dieselbe Periode nie zweimal — auch dann nicht, wenn Hostinger
+    den Termin um ein paar Tage verschiebt (siehe `period_bucket`).
+    """
+    return f"{REF_PREFIX}:{sub.get('id') or 'unbekannt'}:{period_bucket(sub, billed_on)}"
+
+
+def migrated_ref(old_ref: str, unit: str) -> str | None:
+    """Alter, tagesgenauer Schlüssel → neuer Periodenschlüssel. Rein.
+
+    Für die Einmal-Umstellung bestehender Buchungen. `None`, wenn der Wert nicht
+    dem alten Muster entspricht (dann bleibt die Zeile unangetastet — ein
+    zerschossener Herkunftsschlüssel wäre schlimmer als ein alter).
+    """
+    match = re.match(rf"^{REF_PREFIX}:([^:]+):(\d{{4}})-(\d{{2}})-(\d{{2}})$", old_ref or "")
+    if not match:
+        return None
+    sub_id, year, month, day = match.groups()
+    bucket = period_bucket({"billing_period_unit": unit},
+                           date(int(year), int(month), int(day)))
+    return f"{REF_PREFIX}:{sub_id}:{bucket}"
 
 
 def to_expense(sub: dict, *, today: date,
@@ -560,6 +599,7 @@ def total_of(drafts: list[dict]) -> Decimal:
 __all__ = [
     "SAME_ORDER_SECONDS", "HostingerError", "VENDOR", "build_drafts", "build_notes",
     "category_for", "describe", "domain_tld", "external_ref", "fetch_account",
-    "last_billed_on", "load_drafts", "match_domains", "parse_price_cents",
-    "period_label", "shift_back", "tld_of", "to_expense", "total_of",
+    "last_billed_on", "load_drafts", "match_domains", "migrated_ref",
+    "parse_price_cents", "period_bucket", "period_label", "shift_back", "tld_of",
+    "to_expense", "total_of",
 ]

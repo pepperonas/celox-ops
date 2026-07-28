@@ -25,7 +25,9 @@ from app.services.hostinger import (
     fetch_account,
     last_billed_on,
     match_domains,
+    migrated_ref,
     parse_price_cents,
+    period_bucket,
     period_label,
     shift_back,
     tld_of,
@@ -341,11 +343,42 @@ class TestDomainMatching:
 class TestIdempotency:
     def test_ref_contains_subscription_and_period(self):
         ref = external_ref(DOMAIN_SUB, date(2026, 7, 4))
-        assert ref == "hostinger:AzqPS1VOB92asAHDO:2026-07-04"
+        assert ref == "hostinger:AzqPS1VOB92asAHDO:2026"
 
     def test_same_period_yields_the_same_ref(self):
         assert external_ref(DOMAIN_SUB, date(2026, 7, 4)) == \
                external_ref(dict(DOMAIN_SUB), date(2026, 7, 4))
+
+    def test_a_shifted_renewal_date_is_still_the_same_period(self):
+        """DER GRUND für den Periodenschlüssel: Hostinger richtet
+        Verlängerungstermine nachträglich aus. Ein tagesgenauer Schlüssel hätte
+        denselben Zeitraum ein zweites Mal gebucht."""
+        assert external_ref(DOMAIN_SUB, date(2026, 7, 4)) == \
+               external_ref(DOMAIN_SUB, date(2026, 7, 31))
+        # Auch über einen Monatswechsel hinweg, solange es dasselbe Jahr ist.
+        assert external_ref(DOMAIN_SUB, date(2026, 7, 4)) == \
+               external_ref(DOMAIN_SUB, date(2026, 8, 2))
+
+    def test_monthly_subscriptions_bucket_per_month(self):
+        """Ein Monatsabo MUSS jeden Monat buchbar sein — sonst fehlte der VPS."""
+        assert external_ref(VPS_SUB, date(2026, 7, 15)) == "hostinger:AzqS7AUfmguhR1qqg:2026-07"
+        assert external_ref(VPS_SUB, date(2026, 7, 15)) == external_ref(VPS_SUB, date(2026, 7, 18))
+        assert external_ref(VPS_SUB, date(2026, 7, 15)) != external_ref(VPS_SUB, date(2026, 8, 15))
+
+    def test_short_periods_keep_the_day(self):
+        weekly = {**VPS_SUB, "billing_period_unit": "week"}
+        assert period_bucket(weekly, date(2026, 7, 15)) == "2026-07-15"
+
+    def test_migration_maps_old_day_refs_onto_periods(self):
+        assert migrated_ref("hostinger:ABC:2026-07-04", "year") == "hostinger:ABC:2026"
+        assert migrated_ref("hostinger:ABC:2026-07-04", "month") == "hostinger:ABC:2026-07"
+        assert migrated_ref("hostinger:ABC:2026-07-04", "day") == "hostinger:ABC:2026-07-04"
+
+    def test_migration_leaves_unknown_shapes_alone(self):
+        """Ein zerschossener Herkunftsschlüssel wäre schlimmer als ein alter."""
+        assert migrated_ref("hostinger:ABC:2026", "year") is None
+        assert migrated_ref("irgendwas", "year") is None
+        assert migrated_ref("", "year") is None
 
     def test_restoring_a_deleted_expense_keeps_its_origin(self):
         """Eine gelöschte importierte Ausgabe wird per „Rückgängig" neu angelegt.
@@ -369,6 +402,12 @@ class TestIdempotency:
         derselbe Zeitraum nicht zweimal."""
         assert external_ref(DOMAIN_SUB, date(2026, 7, 4)) != \
                external_ref(DOMAIN_SUB, date(2027, 7, 4))
+
+    def test_each_subscription_has_its_own_key_space(self):
+        """Vier .de-Abos am selben Tag abgerechnet — die Abo-ID trennt sie."""
+        a = external_ref({**DOMAIN_SUB, "id": "A"}, date(2026, 7, 4))
+        b = external_ref({**DOMAIN_SUB, "id": "B"}, date(2026, 7, 4))
+        assert a != b
 
 
 # --------------------------------------------------------------------------- #
