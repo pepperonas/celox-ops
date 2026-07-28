@@ -314,8 +314,16 @@ async def delete_pagespeed_result(
     if entry.pdf_path and os.path.exists(entry.pdf_path):
         os.remove(entry.pdf_path)
 
+    # Härtung: der Bulk-DELETE läuft NICHT durch die Tenancy-Events (die filtern
+    # nur SELECTs). Bisher schützte allein der gescopte Select oben — richtig, aber
+    # in einem anderen Statement: wer den Guard verschiebt oder entfernt, hätte
+    # unbemerkt ein bereichsübergreifendes Löschen. Deshalb den Eigentümer hier
+    # ausdrücklich mitfiltern, statt sich auf den Vorgänger zu verlassen.
     await db.execute(
-        delete(PagespeedResult).where(PagespeedResult.id == uuid.UUID(result_id))
+        delete(PagespeedResult).where(
+            PagespeedResult.id == uuid.UUID(result_id),
+            PagespeedResult.owner_id == entry.owner_id,
+        )
     )
     await db.commit()
 
