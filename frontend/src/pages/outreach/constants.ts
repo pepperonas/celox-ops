@@ -61,6 +61,18 @@ export function restoreCategory(raw: string | null | undefined): string {
 }
 
 /**
+ * Ist die Favoriten-Sektion aufgeklappt? **Standard: ja.**
+ *
+ * Nur ein ausdrückliches „0" klappt sie zu. Andersherum (nur „1" öffnet) wären
+ * die Favoriten für jeden, der noch keinen Zustand gespeichert hat, beim ersten
+ * Laden verschwunden — also für alle bisherigen Nutzer. Der Test hält diese
+ * Richtung fest.
+ */
+export function restoreFavoritesOpen(raw: string | null | undefined): boolean {
+  return raw !== '0'
+}
+
+/**
  * Zwei Achsen in einer Rubrikenliste: WANN im Verkaufsprozess (`anlass`) und WAS
  * verkauft wird (`angebot`). Vorher standen beide in einer Reihe — man musste
  * jedes Label lesen, um zu erkennen, welche Art Filter man anklickt.

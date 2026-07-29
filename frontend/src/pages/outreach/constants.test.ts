@@ -8,6 +8,7 @@ import {
   isOfferCategory,
   restoreCategory,
   restoreChannel,
+  restoreFavoritesOpen,
   PLACEHOLDERS,
 } from './constants'
 
@@ -60,6 +61,18 @@ describe('constants Integrität', () => {
     for (const kaputt of [null, undefined, '', 'entfernte_rubrik', 'Kaltakquise']) {
       expect(restoreCategory(kaputt)).toBe('all')
     }
+  })
+
+  it('die Favoriten-Sektion ist standardmäßig aufgeklappt', () => {
+    // Richtung ist wichtig: Nur ein ausdrückliches „0" klappt zu. Wäre es
+    // umgekehrt (nur „1" öffnet), wären die Favoriten für jeden ohne
+    // gespeicherten Zustand beim ersten Laden verschwunden — also für alle
+    // bisherigen Nutzer.
+    for (const ohneZustand of [null, undefined, '']) {
+      expect(restoreFavoritesOpen(ohneZustand)).toBe(true)
+    }
+    expect(restoreFavoritesOpen('1')).toBe(true)
+    expect(restoreFavoritesOpen('0')).toBe(false)
   })
 
   it('jede echte Rubrik lässt sich wiederherstellen', () => {

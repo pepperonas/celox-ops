@@ -13,7 +13,8 @@ import {
   deleteOutreachTemplate,
 } from '../../api/outreach'
 import {
-  CATEGORIES, CATEGORY_AXIS, CHANNELS, restoreCategory, restoreChannel,
+  CATEGORIES, CATEGORY_AXIS, CHANNELS,
+  restoreCategory, restoreChannel, restoreFavoritesOpen,
 } from './constants'
 import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
@@ -28,6 +29,7 @@ const SEED_FLAG = 'outreach-seed-checked'
 // Suchbegriff sähe nach dem Laden wie ein leerer Vorlagenbestand aus.
 const CHANNEL_KEY = 'akquise-channel'
 const CATEGORY_KEY = 'akquise-category'
+const FAVORITES_OPEN_KEY = 'akquise-favorites-open'
 
 export default function Outreach() {
   const [all, setAll] = useState<OutreachTemplate[]>([])
@@ -43,6 +45,9 @@ export default function Outreach() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<OutreachTemplate | null>(null)
   const [seeding, setSeeding] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(
+    () => restoreFavoritesOpen(localStorage.getItem(FAVORITES_OPEN_KEY)),
+  )
   // Verkäufer dürfen Vorlagen lesen und kopieren, aber nicht ändern. Der Server
   // lehnt Schreibzugriffe ohnehin ab (403) — hier verschwinden die Knöpfe, damit
   // niemand ins Leere klickt.
@@ -71,6 +76,9 @@ export default function Outreach() {
   }, [])
 
   useEffect(() => { localStorage.setItem(CHANNEL_KEY, channel) }, [channel])
+  useEffect(() => {
+    localStorage.setItem(FAVORITES_OPEN_KEY, favoritesOpen ? '1' : '0')
+  }, [favoritesOpen])
   useEffect(() => {
     // „Alle Rubriken" ist der Standard und braucht keinen Eintrag — so bleibt der
     // Speicher leer, solange nichts gefiltert ist.
@@ -207,13 +215,36 @@ export default function Outreach() {
         </>
       ) : (
         <>
-          {/* Favoriten (kanalübergreifend, oben) */}
+          {/* Favoriten (kanalübergreifend, oben) — einklappbar, Zustand überlebt
+              den Reload. Die Anzahl steht im Kopf, damit die zugeklappte Sektion
+              noch etwas aussagt statt nur zu verschwinden. */}
           {favorites.length > 0 && (
             <section className="mb-6">
-              <h2 className="text-sm font-semibold text-text mb-2"><Icon name="star" size={15} filled className="mr-1.5 -mt-0.5" />Favoriten</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {favorites.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
-              </div>
+              <button
+                onClick={() => setFavoritesOpen((v) => !v)}
+                aria-expanded={favoritesOpen}
+                className="md-state flex items-center gap-1.5 text-sm font-semibold text-text
+                           rounded-md px-2 py-1 -ml-2 mb-2"
+              >
+                <Icon
+                  name="chevronRight"
+                  size={16}
+                  className={`transition-transform duration-short ease-spring ${
+                    favoritesOpen ? 'rotate-90' : ''
+                  }`}
+                />
+                <Icon name="star" size={15} filled />
+                Favoriten
+                <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-2
+                                 rounded-full bg-surface-2 text-text-muted text-xs font-semibold">
+                  {favorites.length}
+                </span>
+              </button>
+              {favoritesOpen && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {favorites.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
+                </div>
+              )}
             </section>
           )}
 
