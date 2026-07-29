@@ -17,6 +17,14 @@ interface Props {
    * doppelt vorgelesen werden.
    */
   label?: string
+  /**
+   * Strichbreite überschreiben — NUR für dekorative Großdarstellungen
+   * (Hintergrund-Wasserzeichen). Die automatische Skalierung ist auf Lesbarkeit
+   * bei Bedien-Größen ausgelegt: Bei 100 px ergibt sie ~5 px echten Strich, was
+   * als Wasserzeichen klobig wirkt. Für ein Bedien-Icon nicht setzen — dort ist
+   * die einheitliche optische Breite der Sinn der Sache.
+   */
+  strokeWidth?: number
 }
 
 /**
@@ -32,14 +40,16 @@ interface Props {
  * seines Kontextes und funktioniert in jedem Theme-Token — genau das, was ein
  * Emoji nicht kann.
  */
-export default function Icon({ name, size = 20, filled, className = '', label }: Props) {
+export default function Icon({
+  name, size = 20, filled, className = '', label, strokeWidth,
+}: Props) {
   const def = ICONS[name]
   if (!def) return null
   const useSolid = Boolean(filled && def.solid)
   const els = useSolid ? def.solid! : def.outline
   // 2 dp bei 24 px Kantenlänge, leicht angehoben für kleine und gesenkt für
   // große Darstellungen (Näherung der opsz-Achse).
-  const stroke = Math.round((2 * (24 / size) ** 0.35) * 100) / 100
+  const stroke = strokeWidth ?? Math.round((2 * (24 / size) ** 0.35) * 100) / 100
 
   return (
     <svg

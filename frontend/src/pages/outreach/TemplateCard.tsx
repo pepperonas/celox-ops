@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { animate as anime } from 'animejs'
 import type { OutreachTemplate } from '../../types'
-import { CATEGORY_LABEL, CHANNEL_LABEL, isOfferCategory } from './constants'
+import {
+  CATEGORY_LABEL, CHANNEL_ICON, CHANNEL_LABEL, CHANNEL_WATERMARK_WEIGHT, isOfferCategory,
+} from './constants'
 import { CARD_COLORS, cardColor, colorToStore } from './cardColors'
 import Icon from '../../components/Icon'
 import { cubic, DUR, EASE, prefersReducedMotion, T } from '../../utils/motionTokens'
@@ -102,12 +104,35 @@ export default function TemplateCard({
       }}
       onDragOver={(e) => { if (draggable) e.preventDefault() }}
       onDrop={(e) => { if (draggable) { e.preventDefault(); onDropOnCard?.() } }}
-      className={`border rounded-card flex flex-col transition-all duration-short
-                  hover:shadow-elev-1 ${farbe.card}`}
+      className={`relative overflow-hidden border rounded-card flex flex-col
+                  transition-all duration-short hover:shadow-elev-1 ${farbe.card}`}
     >
+      {/* Kanal-Wasserzeichen: Umschlag, LinkedIn-Marke oder Hörer — auch in der
+          zugeklappten Karte sichtbar, damit man den Kanal am Bild erkennt.
+          Dekoration, deshalb `aria-hidden` (die Kanal-Pille in der Favoritenliste
+          bleibt die lesbare Information) und `pointer-events-none`.
+
+          Anker OBEN RECHTS, nicht mittig: Beim Aufklappen wächst die Karte nach
+          unten — eine mittige Grafik würde mitwandern. Ragt bewusst über die Kante
+          hinaus (`overflow-hidden` am Rahmen schneidet sie ab), sonst sieht es aus
+          wie ein verlorenes Icon statt wie ein Wasserzeichen.
+
+          Die Deckkraft ist je Kanal optisch ausgeglichen (s.
+          CHANNEL_WATERMARK_WEIGHT) — gleiche Zahl hieße nicht gleiche Wirkung. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-3 -right-2 z-0 text-text rotate-[-14deg]"
+        style={{ opacity: 0.07 * CHANNEL_WATERMARK_WEIGHT[t.channel] }}
+      >
+        <Icon name={CHANNEL_ICON[t.channel]} size={104} strokeWidth={1} />
+      </span>
+
       {/* Kopf = Schalter. Ein <button> über die volle Breite, damit auch Tastatur
           und Screenreader auf-/zuklappen können. */}
-      <div className="flex items-start gap-1 p-3 pb-2">
+      {/* `relative` auf allen Inhaltsblöcken: Ein positioniertes Element (das
+          Wasserzeichen) malt über nicht positionierte Geschwister — der Text läge
+          sonst DARUNTER. Ohne Offsets ändert `relative` am Layout nichts. */}
+      <div className="relative flex items-start gap-1 p-3 pb-2">
         {draggable && (
           <span className="md-state w-7 h-8 grid place-items-center rounded-lg cursor-grab
                            text-text-muted/60 shrink-0"
@@ -171,7 +196,7 @@ export default function TemplateCard({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={T.spatialFast}
-            className="overflow-hidden"
+            className="relative overflow-hidden"
           >
             <div className="px-3 pb-2">
               <p className="text-sm text-text-muted whitespace-pre-wrap break-words">{text}</p>
@@ -188,7 +213,7 @@ export default function TemplateCard({
       {/* Farbauswahl — erscheint nur auf Anforderung, damit sieben Punkte nicht
           dauerhaft in jeder Karte sitzen. */}
       {colorOpen && mayEdit && (
-        <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+        <div className="relative px-3 pb-2 flex flex-wrap gap-1.5">
           {CARD_COLORS.map((c) => (
             <button
               key={c.key}
@@ -203,7 +228,8 @@ export default function TemplateCard({
         </div>
       )}
 
-      <div className="flex items-center gap-1 px-3 py-2 mt-auto border-t border-border/60">
+      <div className="relative flex items-center gap-1 px-3 py-2 mt-auto
+                      border-t border-border/60">
         {/* Kopier-Bestätigung: Der Knopf zeigt kurz einen Haken. Die Aktion läuft
             sofort — die Animation hängt hinterher, nie davor. */}
         <button

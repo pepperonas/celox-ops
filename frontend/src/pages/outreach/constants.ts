@@ -1,10 +1,48 @@
+import type { IconName } from '../../components/icons/catalog'
 import type { OutreachCategory, OutreachChannel } from '../../types'
 
-export const CHANNELS: { value: OutreachChannel; label: string; icon: string }[] = [
-  { value: 'email', label: 'E-Mail', icon: 'mail' },
-  { value: 'linkedin', label: 'LinkedIn', icon: 'briefcase' },
-  { value: 'phone', label: 'Telefon', icon: 'phone' },
+export const CHANNELS: { value: OutreachChannel; label: string }[] = [
+  { value: 'email', label: 'E-Mail' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'phone', label: 'Telefon' },
 ]
+
+/**
+ * Grafik je Kanal — Umschlag, LinkedIn-Marke, Hörer.
+ *
+ * Totaler Record: Ein neuer Kanal ohne Grafik ist ein Compile-Fehler und kann
+ * nicht stillschweigend ohne auskommen (gleiches Muster wie `CATEGORY_AXIS`).
+ * `IconName` statt `string`, damit ein Tippfehler auffällt — `Icon` rendert bei
+ * unbekanntem Namen `null`, der Fehler wäre also unsichtbar.
+ *
+ * Ersetzt das frühere `icon`-Feld auf `CHANNELS`: Das wurde nirgends gerendert,
+ * trug für LinkedIn fälschlich `briefcase`, und der Test prüfte nur, dass
+ * überhaupt eine Zeichenkette dastand.
+ */
+export const CHANNEL_ICON: Record<OutreachChannel, IconName> = {
+  email: 'mail',
+  linkedin: 'linkedin',
+  phone: 'phone',
+}
+
+/**
+ * Optischer Ausgleich für das Hintergrund-Wasserzeichen auf der Vorlagen-Karte.
+ *
+ * Gleiche Deckkraft heißt NICHT gleiche Wirkung: Gemessen an der Strichlänge im
+ * 24er-Raster tragen die drei Zeichen unterschiedlich viel Farbe — LinkedIn 99,
+ * Umschlag 85, Hörer 62 Einheiten. Das LinkedIn-Zeichen umschließt zusätzlich eine
+ * Fläche und wirkt dadurch noch schwerer. Mit einem einheitlichen Wert wirkte es
+ * aufdringlich und der Hörer blass (im Browser nebeneinander gesehen).
+ *
+ * Die Werte sind am Bild gewählt, nicht aus einer Formel — eine erfundene Formel
+ * wäre nur ein Anstrich für dieselbe Augenentscheidung. Die Messung erklärt, WARUM
+ * ein Ausgleich nötig ist; die Größe des Ausgleichs entscheidet der Blick.
+ */
+export const CHANNEL_WATERMARK_WEIGHT: Record<OutreachChannel, number> = {
+  email: 1,
+  linkedin: 0.78,
+  phone: 1.2,
+}
 
 export const CHANNEL_LABEL: Record<OutreachChannel, string> = {
   email: 'E-Mail',

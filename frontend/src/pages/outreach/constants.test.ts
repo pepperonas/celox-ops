@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { ICONS } from '../../components/icons/catalog'
 import {
   brancheFromTags,
   CATEGORIES,
+  CHANNEL_ICON,
   CATEGORY_AXIS,
   CATEGORY_LABEL,
   CHANNELS,
@@ -37,7 +39,7 @@ describe('constants Integrität', () => {
   })
   it('3 Kanäle mit Icon + Label', () => {
     expect(CHANNELS.map((c) => c.value)).toEqual(['email', 'linkedin', 'phone'])
-    expect(CHANNELS.every((c) => c.icon && c.label)).toBe(true)
+    expect(CHANNELS.every((c) => c.label)).toBe(true)
   })
   it('Platzhalter-Keys sind eindeutig und enthalten die Kern-Platzhalter', () => {
     const keys = PLACEHOLDERS.map((p) => p.key)
@@ -132,5 +134,24 @@ describe('constants Integrität', () => {
     // die Nachricht ginge mit einem sichtbaren {{platzhalter}} raus.
     const fromLead = PLACEHOLDERS.filter((p) => p.fromLead).map((p) => p.key).sort()
     expect(fromLead).toEqual(['branche', 'firma', 'mitarbeiter', 'name'])
+  })
+})
+
+describe('CHANNEL_ICON', () => {
+  it('jeder Kanal hat eine Grafik', () => {
+    // Totaler Record: Ein neuer Kanal ohne Eintrag ist schon ein Compile-Fehler.
+    // Dieser Test hält die Werte — dass der Record VOLLSTÄNDIG zu CHANNELS passt.
+    for (const c of CHANNELS) {
+      expect(CHANNEL_ICON[c.value], `${c.value} braucht eine Grafik`).toBeTruthy()
+    }
+    expect(Object.keys(CHANNEL_ICON).sort()).toEqual(CHANNELS.map((c) => c.value).sort())
+  })
+
+  it('die Namen existieren wirklich im Katalog', () => {
+    // Der eigentliche Punkt: `Icon` rendert bei unbekanntem Namen `null` — ein
+    // Tippfehler wäre also unsichtbar, die Karte einfach ohne Wasserzeichen.
+    for (const name of Object.values(CHANNEL_ICON)) {
+      expect(ICONS[name], `${name} fehlt im Icon-Katalog`).toBeTruthy()
+    }
   })
 })

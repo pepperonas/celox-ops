@@ -268,6 +268,26 @@ export const ICONS: Record<string, IconDef> = {
       p('M8 17.2V21.2L12.4 17.2'),
     ],
   },
+  /**
+   * LinkedIn — gerundetes Quadrat mit „in".
+   *
+   * Die Plattform-Marke, nicht ein abstrakter Netzwerk-Graph: Ihre Nachbarn sind
+   * ebenfalls wörtlich (Umschlag, Hörer), ein Graph wäre der einzige abstrakte im
+   * Trio. Als Strichzeichnung gehalten statt als gefülltes Original, damit sie im
+   * Haus-Stil bleibt (2 dp, `currentColor`) — erkennbar bleibt sie trotzdem.
+   *
+   * Nur absolute Pfad-Kommandos: Der Rasterprüfer liest Zahlen als Koordinaten,
+   * ein relatives `c` würde ihm Deltas unterschieben.
+   */
+  linkedin: {
+    outline: [
+      r(2.8, 2.8, 18.4, 18.4, 4.5),
+      c(8.3, 8.3, 0.6),                       // Punkt des i
+      l(8.3, 11.2, 8.3, 16.6),                // Stamm des i
+      l(12.5, 16.6, 12.5, 11.2),              // linker Stamm des n
+      p('M12.5 13.4C12.5 11.8 13.8 11 15.2 11.2 16.6 11.5 17.3 12.6 17.3 14.1V16.6'),
+    ],
+  },
   /** Telefon (war 📞). */
   phone: {
     outline: [
