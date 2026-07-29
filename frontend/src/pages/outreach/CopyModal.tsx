@@ -11,6 +11,7 @@ import { fuzzyRank } from '../../utils/fuzzy'
 import { PLACEHOLDERS, PLACEHOLDER_LABEL, brancheFromTags } from './constants'
 import AutocompleteInput from '../../components/AutocompleteInput'
 import PhoneGuide from './PhoneGuide'
+import Icon from '../../components/Icon'
 
 interface Props {
   template: OutreachTemplate
@@ -67,7 +68,7 @@ export default function CopyModal({ template, onClose, onCopied }: Props) {
     const ok = await copyText(text)
     if (!ok) { toast.error('Kopieren nicht möglich.'); return }
     if (missing.length > 0) {
-      toast(`Kopiert – aber ${missing.length} Platzhalter noch offen: ${missing.map((k) => PLACEHOLDER_LABEL[k] || k).join(', ')}`, { icon: '⚠️' })
+      toast(`Kopiert – aber ${missing.length} Platzhalter noch offen: ${missing.map((k) => PLACEHOLDER_LABEL[k] || k).join(', ')}`, { icon: <Icon name="warning" size={18} /> })
     } else {
       toast.success(`${label} in Zwischenablage kopiert ✓`)
     }

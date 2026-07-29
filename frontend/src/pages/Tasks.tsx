@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import type { Task } from '../types'
 import TodoList from '../components/TodoList'
 import PageHeader from '../components/PageHeader'
+import Icon from '../components/Icon'
 
 const categoryLabels: Record<string, string> = {
   overdue_invoice: 'Überfällige Rechnung',
@@ -68,7 +69,7 @@ export default function Tasks() {
       const res = await api.post('/invoices/generate-recurring')
       const created = res.data as unknown[]
       if (created.length === 0) {
-        toast('Keine fälligen Vertragsrechnungen vorhanden', { icon: 'ℹ️' })
+        toast('Keine fälligen Vertragsrechnungen vorhanden', { icon: <Icon name="info" size={18} /> })
       } else {
         toast.success(`${created.length} Vertragsrechnung${created.length > 1 ? 'en' : ''} erstellt`)
       }

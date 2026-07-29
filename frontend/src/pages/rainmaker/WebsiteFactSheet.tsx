@@ -2,6 +2,8 @@
 // (meta.signals) kompakt und aufklappbar. Rein präsentational — die Fakten kommen
 // unverändert aus `website_signals.extract_signals` im Backend.
 
+import Icon from '../../components/Icon'
+
 interface Tracker { name: string; risk: string }
 interface Signals {
   meta?: {
@@ -65,7 +67,8 @@ export default function WebsiteFactSheet({ signals }: { signals: Signals | undef
         <span className="text-[10px] text-text-muted">
           {[tech.cms?.[0], tech.frameworks?.[0], tech.cdn?.[0]].filter(Boolean).join(' · ') || 'Details'}
         </span>
-        <span className="text-text-muted text-[10px] transition-transform group-open:rotate-90">▶</span>
+        <Icon name="chevronRight" size={12}
+              className="text-text-muted transition-transform group-open:rotate-90" />
       </summary>
 
       <div className="px-3 pb-3 grid md:grid-cols-2 gap-x-6 gap-y-4 text-xs">

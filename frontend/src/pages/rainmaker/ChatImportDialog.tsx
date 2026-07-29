@@ -17,6 +17,7 @@ import type { RainmakerLead } from '../../types'
 import { ACTIVITY_TYPE_LABELS } from './constants'
 import { downscaleImage, isAcceptedImage, MAX_EDGE_PX } from '../../utils/imageDownscale'
 import { toastWithUndo } from '../../utils/undoToast'
+import Icon from '../../components/Icon'
 
 const MAX_IMAGES = 6
 const eur = (n: number) =>
@@ -148,7 +149,7 @@ export default function ChatImportDialog({ lead, onClose, onApplied }: Props) {
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files) }}
       >
-        <h3 className="text-lg font-semibold text-text mb-1">✨ Aus Chat aktualisieren</h3>
+        <h3 className="text-lg font-semibold text-text mb-1"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat aktualisieren</h3>
         <p className="text-xs text-text-muted mb-4">
           Verlauf einfügen und/oder Screenshots ablegen. Die KI schlägt vor —{' '}
           <strong className="text-text">geschrieben wird nur, was du anhakst</strong>.

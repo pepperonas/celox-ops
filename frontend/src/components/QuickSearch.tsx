@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import Icon from './Icon'
+import type { IconName } from './icons/catalog'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 
@@ -19,13 +21,13 @@ const typeLabel: Record<SearchHit['type'], string> = {
   action: 'Aktion',
 }
 
-const typeIcon: Record<SearchHit['type'], string> = {
-  customer: '👤',
-  invoice: '🧾',
-  order: '📋',
-  contract: '📄',
-  lead: '🎯',
-  action: '⚡',
+const typeIcon: Record<SearchHit['type'], IconName> = {
+  customer: 'user',
+  invoice: 'receipt',
+  order: 'clipboard',
+  contract: 'document',
+  lead: 'target',
+  action: 'bolt',
 }
 
 // Static action shortcuts — match against query, prepend to results
@@ -173,7 +175,7 @@ export default function QuickSearch() {
                 i === selected ? 'bg-surface-2' : 'hover:bg-surface-2/50'
               }`}
             >
-              <span className="text-lg flex-shrink-0">{typeIcon[hit.type]}</span>
+              <Icon name={typeIcon[hit.type]} size={20} className="flex-shrink-0 text-text-muted" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-text truncate">{hit.title}</p>
                 {hit.subtitle && (

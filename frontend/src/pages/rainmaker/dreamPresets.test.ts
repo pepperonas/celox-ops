@@ -3,6 +3,7 @@ import {
   DREAM_PRESETS, DREAM_MILESTONES, presetByKey,
   euroToKm, evPerContact, monthsEarlier,
 } from './dreamPresets'
+import { ICON_NAMES } from '../../components/icons/catalog'
 
 describe('DREAM_PRESETS', () => {
   it('has unique keys and a custom option', () => {
@@ -11,10 +12,10 @@ describe('DREAM_PRESETS', () => {
     expect(keys).toContain('custom')
   })
 
-  it('every preset has a positive price, emoji, tagline and specs', () => {
+  it('every preset has a positive price, icon, tagline and specs', () => {
     for (const p of DREAM_PRESETS) {
       expect(p.price).toBeGreaterThan(0)
-      expect(p.emoji.length).toBeGreaterThan(0)
+      expect(ICON_NAMES).toContain(p.icon)   // Icon muss im Katalog existieren
       expect(p.tagline.length).toBeGreaterThan(0)
       expect(p.specs.length).toBeGreaterThan(0)
       expect(p.colors).toHaveLength(2)

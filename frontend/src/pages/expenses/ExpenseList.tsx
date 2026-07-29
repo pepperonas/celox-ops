@@ -16,6 +16,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
 import Select from '../../components/Select'
+import Icon from '../../components/Icon'
 
 const categoryOptions: { value: string; label: string }[] = [
   { value: '', label: 'Alle Kategorien' },
@@ -296,8 +297,7 @@ export default function ExpenseList() {
             onClick={(ev) => { ev.stopPropagation(); setDeleteId(e.id) }}
             className="md-state w-11 h-11 sm:w-8 sm:h-8 grid place-items-center rounded-full
                        text-text-muted hover:text-danger"
-          >
-            🗑
+          ><Icon name="trash" size={16} className="mr-1 -mt-0.5" />
           </button>
         ),
       } satisfies Column<Expense>] : []),

@@ -10,6 +10,8 @@ import {
   DREAM_PRESETS, DREAM_MILESTONES, presetByKey,
   euroToKm, monthsEarlier,
 } from './dreamPresets'
+import Icon from '../../components/Icon'
+import type { IconName } from '../../components/icons/catalog'
 
 // Normalized (Number()-coerced) view of the API response.
 interface Dream {
@@ -83,7 +85,7 @@ function buildScenarios(d: Dream): Scenario[] {
 
   const pool: Scenario[] = [
     {
-      icon: '📞', title: `${calls} Anrufe heute`, gain: calls * d.evUnit,
+      icon: 'phone' as IconName, title: `${calls} Anrufe heute`, gain: calls * d.evUnit,
       note: 'Auch wenn alle Nein sagen — die Statistik zahlt trotzdem aufs Auto ein.',
     },
     {
@@ -91,27 +93,27 @@ function buildScenarios(d: Dream): Scenario[] {
       note: `Bei ${d.contactsPerWin} Kontakten pro Abschluss ist jedes Nein ein bezahlter Schritt zum nächsten Ja.`,
     },
     {
-      icon: '🤝', title: 'Ein Vor-Ort-Termin', gain: wVisit * d.evUnit,
+      icon: 'appointment' as IconName, title: 'Ein Vor-Ort-Termin', gain: wVisit * d.evUnit,
       note: `Zählt ${wVisit}× so viel wie ein Anruf — Präsenz schlägt Pixel.`,
     },
     {
-      icon: '🏆', title: `Ein Abschluss à ${formatCurrency(deal)}`, gain: deal * rate,
+      icon: 'trophy' as IconName, title: `Ein Abschluss à ${formatCurrency(deal)}`, gain: deal * rate,
       note: `${formatCurrency(deal * rate)} in den Traum-Topf = ${fmtKm(euroToKm(deal * rate))} km Fahrstrecke.`,
     },
     {
-      icon: '📬', title: `${mails} Akquise-Mails raus`, gain: mails * wEmail * d.evUnit,
+      icon: 'send' as IconName, title: `${mails} Akquise-Mails raus`, gain: mails * wEmail * d.evUnit,
       note: 'Der leise Weg: weniger wert pro Stück, aber skalierbar.',
     },
     {
-      icon: '🔁', title: 'Ein konsequentes Follow-up', gain: wFollow * d.evUnit,
+      icon: 'repeat' as IconName, title: 'Ein konsequentes Follow-up', gain: wFollow * d.evUnit,
       note: 'Die meisten Deals sterben am Nicht-Nachfassen, nicht am Nein.',
     },
     {
-      icon: '🔥', title: `${weeks === 1 ? 'Eine Woche' : 'Zwei Wochen'} lang 5 Anrufe/Tag`, gain: weeks * 5 * 5 * d.evUnit,
+      icon: 'flame' as IconName, title: `${weeks === 1 ? 'Eine Woche' : 'Zwei Wochen'} lang 5 Anrufe/Tag`, gain: weeks * 5 * 5 * d.evUnit,
       note: `${weeks * 25} Kontakte — statistisch ${(weeks * 25 / d.contactsPerWin).toLocaleString('de-DE', { maximumFractionDigits: 1 })} neue Kunden.`,
     },
     {
-      icon: '🚀', title: `Retainer-Kunde à ${formatCurrency(3000)}/Monat, 12 Monate`, gain: 36000 * rate,
+      icon: 'rocket' as IconName, title: `Retainer-Kunde à ${formatCurrency(3000)}/Monat, 12 Monate`, gain: 36000 * rate,
       note: `Ein einziger Dauerkunde = ${fmtKm(euroToKm(36000 * rate))} km Richtung Ziel.`,
     },
   ]
@@ -223,7 +225,7 @@ export default function RainmakerDreamGoal() {
       >
         <div className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-            <div className="text-6xl sm:text-7xl leading-none drop-shadow-lg select-none">{preset.emoji}</div>
+            <Icon name={preset.icon} size={76} className="drop-shadow-lg" />
             <div className="flex-1 min-w-0">
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{dream.goalName}</h2>
               <p className="text-white/70 text-sm mt-1">{preset.tagline}</p>
@@ -248,7 +250,7 @@ export default function RainmakerDreamGoal() {
                 const reached = dream.pct >= m.at
                 return (
                   <div key={m.at} className="absolute -translate-x-1/2 text-center" style={{ left: `${m.at * 100}%`, top: 0 }}>
-                    <div className={`text-lg leading-none transition-all duration-long ${reached ? 'scale-110' : 'opacity-35 grayscale'}`}>{m.icon}</div>
+                    <div className={`transition-all duration-long ${reached ? 'scale-110' : 'opacity-35'}`}><Icon name={m.icon} size={20} /></div>
                     <div className={`text-[9px] mt-0.5 whitespace-nowrap ${reached ? 'text-white' : 'text-white/40'} hidden sm:block`}>{m.label}</div>
                   </div>
                 )
@@ -264,7 +266,7 @@ export default function RainmakerDreamGoal() {
               {/* the car drives the road */}
               <div className="absolute bottom-0.5 -translate-x-1/2 text-xl transition-all duration-long ease-emphasized select-none"
                 style={{ left: `calc(${Math.max(pctDisplay, 1.5)}% )` }}>
-                <span className="inline-block -scale-x-100">{preset.emoji}</span>
+                <Icon name={preset.icon} size={18} className="inline-block -scale-x-100 -mt-0.5" />
               </div>
             </div>
             <div className="flex justify-between text-[11px] text-white/70 mt-2 tabular-nums">
@@ -284,7 +286,7 @@ export default function RainmakerDreamGoal() {
           ) : (
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-300 inline-block" /> Aus bezahlten Rechnungen ({formatCurrency(dream.invoicesPaid)} × {dream.ratePct} %): <strong className="tabular-nums">{formatCurrency(dream.invoicesEv)}</strong></span>
           )}
-          <button onClick={() => setShowConfig((v) => !v)} className="ml-auto text-white/70 hover:text-white transition-colors">⚙️ Ziel & Annahmen</button>
+          <button onClick={() => setShowConfig((v) => !v)} className="ml-auto text-white/70 hover:text-white transition-colors"><Icon name="sliders" size={16} className="mr-1 -mt-0.5" /> Ziel & Annahmen</button>
         </div>
       </div>
 
@@ -323,14 +325,13 @@ export default function RainmakerDreamGoal() {
           onClick={() => { setScenarios(buildScenarios(dream)); setQuoteIdx((quoteIdx + 1) % QUOTES.length) }}
           className="md-state text-xs text-text-muted hover:text-text px-3 py-1.5 rounded-full"
           title="Neue Konstellationen würfeln"
-        >
-          🎲 Neu mischen
+        ><Icon name="dice" size={16} className="mr-1 -mt-0.5" /> Neu mischen
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 md-stagger">
         {scenarios.map((s, i) => (
           <div key={`${s.title}-${i}`} className="card !py-4 flex gap-3 items-start hover:shadow-elev-2 transition-shadow duration-medium">
-            <div className="text-2xl leading-none select-none">{s.icon}</div>
+            <div className="select-none"><Icon name={s.icon} size={26} /></div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2 flex-wrap">
                 <span className="text-sm font-medium text-text">{s.title}</span>
@@ -387,7 +388,7 @@ export default function RainmakerDreamGoal() {
               <button key={p.key} type="button"
                 onClick={() => setCfg({ ...cfg, key: p.key, price: p.key === cfg.key ? cfg.price : p.price, name: p.key === 'custom' ? cfg.name : p.name })}
                 className={`text-left rounded-lg p-3 border transition-all duration-short ${cfg.key === p.key ? 'border-accent bg-accent/10' : 'border-border bg-surface-high hover:border-text-muted'}`}>
-                <div className="text-2xl leading-none mb-1.5">{p.emoji}</div>
+                <div className="mb-1.5"><Icon name={p.icon} size={28} /></div>
                 <div className="text-xs font-medium text-text leading-tight">{p.name}</div>
                 <div className="text-[10px] text-text-muted mt-0.5 tabular-nums">{formatCurrency(p.price)}</div>
               </button>

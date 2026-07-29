@@ -46,8 +46,64 @@ Hero-Spannung: `.shape-hero` (asymmetrisch 28/8/28/8) — sparsam, lenkt aufs He
 `.md-title-emph` (680, opsz 24 — KPI-/Hero-Zahlen). Sentence case überall,
 keine Uppercase-Micro-Labels.
 
+## Icons: eigener Satz, keine Emojis
+
+**Regel: In der Oberfläche steht kein Emoji.** Emojis sind Schrift, keine Icons —
+sie kommen in der Systemfarbe (ignorieren also jedes Theme-Token), sehen auf macOS,
+Windows und Android unterschiedlich aus, tragen keine Strichbreite und kein Raster,
+und der Screenreader liest ihren Unicode-Namen („Bündel Geldscheine") statt der
+Bedeutung in dieser App. Dasselbe gilt für schriftabhängige Glyphen, die als Icon
+missbraucht werden: `▲ ▼ ▸ ▾ ▶ ⓘ ℹ ◷`.
+
+**Der Satz** liegt in `src/components/icons/catalog.ts` (Icons als **Daten**),
+benutzt wird er über `<Icon name="…" />`. Gezeichnet ist er auf dem
+Material-Raster — recherchiert, nicht geschätzt:
+
+- **24×24 mit 2 dp Rand**, also **Live-Area 20×20** (Koordinaten 2…22).
+- **2 dp Strichbreite** überall — Kurven, Winkel, innen wie außen. `Icon` skaliert
+  sie mit der Größe (Näherung der `opsz`-Achse), damit ein Icon bei 16 px nicht
+  fett und bei 40 px nicht dünn wirkt.
+- Keylines Kreis ⌀20 · Quadrat 18×18 · Rechteck 20×16 / 16×20 — daran orientieren
+  sich die Grundformen, damit alle Icons **optisch** gleich groß wirken.
+- **Runde Enden und Verbindungen** (`round`): bewusste Wahl fürs Expressive-Scheme,
+  das durchgehend große Radien nutzt. Scharfe Enden wirkten daneben fremd.
+- **Farbe immer `currentColor`** — das Icon erbt die Textfarbe seines Kontextes und
+  funktioniert damit in jedem Token.
+- **Zustand über die Füllung** (MD3-`fill`-Achse): `<Icon name="star" filled={…} />`
+  nutzt die `solid`-Fassung. Nur Farbe wäre der schwächere Zustandswechsel.
+
+**Neues Icon anlegen:** in `catalog.ts` eintragen (Live-Area einhalten), dann
+`<Icon name="…" />`. **Kein `A`-Bogen in Pfaden** — bei einem Bogen liegt der
+Scheitel nicht in den Koordinaten, damit wäre die Rasterprüfung keine echte
+Schranke; Bézier-Kurven liegen garantiert in der Hülle ihrer Kontrollpunkte. Runde
+Ecken kommen über `rx` am Rechteck.
+
+**Zwei Tests halten das:** `catalog.test.ts` rechnet für jedes Icon nach, dass es in
+der Live-Area liegt, sie ausnutzt, ungefähr zentriert ist und keinen Bogen benutzt;
+`noEmoji.test.ts` durchsucht `src/` (über `import.meta.glob`, damit kein
+`@types/node` nötig ist) nach Bildzeichen.
+
+**Bewusst erlaubt bleiben:**
+- Typografische Zeichen **im Satz**: `→ ↑ ↓ ✓ ✕ · …`. Im Fließtext sind das
+  Schriftzeichen; ein SVG dazwischen bräche die Grundlinie. Als eigenständige
+  Schaltfläche werden sie trotzdem Icons.
+- `⌘` als Tastensymbol, `−` als Minuszeichen, `•` als Aufzählungspunkt.
+- Emojis in **Kommentaren** (dokumentieren, welches Emoji ein Icon ersetzt hat) und
+  in **Testfixtures** (`clipboard.test.ts` prüft mit ihnen Unicode-Grenzen).
+
+**Wo kein SVG stehen kann**, entfällt das Zeichen ersatzlos: `title`-Attribute,
+Toast-**Texte** und Dropdown-Option-Labels sind Strings. Ein Toast-**Icon** dagegen
+nimmt einen ReactNode: `toast('…', { icon: <Icon name="warning" size={18} /> })`.
+
+**Barrierefreiheit:** `Icon` setzt standardmäßig `aria-hidden` — ein Icon neben Text
+darf nicht doppelt vorgelesen werden. Ist das Icon die **einzige** Information
+(Icon-Button), braucht der Knopf ein `aria-label`/`title`; alternativ `label` am
+Icon. Beim Ersetzen eines Emojis prüfen, ob dessen Bedeutung vorher der einzige
+Hinweis war — sonst verschlechtert der Umbau die Zugänglichkeit.
+
 ## Pflicht-Komponenten (kein natives Äquivalent verwenden)
 
+- **Icon = `components/Icon.tsx`** mit einem Namen aus `icons/catalog.ts` — **nie ein Emoji** (Begründung und Raster oben).
 - **Dropdown = `components/Select.tsx`, NIEMALS `<select>`.** Ein natives Select
   öffnet das OS-Popup und ignoriert Theme/Radien/Motion — im dunklen Theme wirkt
   es wie ein Fremdkörper. `Select` rendert die Liste per `createPortal` an

@@ -16,6 +16,7 @@ import { createTodo } from '../../api/todos'
 import Select from '../../components/Select'
 import { formatCurrency } from '../../utils/formatters'
 import type { TodoPriority } from '../../types'
+import Icon from '../../components/Icon'
 
 const PRIORITY_OPTIONS = [
   { value: 'niedrig', label: 'Niedrig' },
@@ -164,8 +165,7 @@ export default function TodoSuggestionsDialog({
                 disabled={saving}
                 className="md-state ml-auto text-accent rounded-xs px-1"
                 title="Erneut ableiten, ohne Zwischenspeicher — kostet einen KI-Aufruf"
-              >
-                ✨ Neu ableiten
+              ><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Neu ableiten
               </button>
             </div>
 

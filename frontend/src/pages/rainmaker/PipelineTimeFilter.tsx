@@ -18,7 +18,7 @@ const PRESETS: { key: TimePreset; label: string }[] = [
   { key: 'today', label: 'Heute' },
   { key: '24h', label: '24 Std' },
   { key: '7d', label: '7 Tage' },
-  { key: 'lastImport', label: '✦ Letzter Import' },
+  { key: 'lastImport', label: 'Letzter Import' },
   { key: 'custom', label: 'Eigen…' },
 ]
 

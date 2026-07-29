@@ -5,6 +5,7 @@ import { PRIORITY_LABELS, PRIORITY_TONE } from './constants'
 import { sourceBadge } from './leadSources'
 import { cityLabel, type LeadSort } from './leadSort'
 import { WebScoreBadge } from './WebsiteAnalysisPanel'
+import Icon from '../../components/Icon'
 
 /** Generische Import-/Automatik-Tags sind keine Branche. */
 const GENERIC_TAGS = new Set(['discovery', 'rainmaker', 'linkedin', 'ki-recherche'])
@@ -55,7 +56,7 @@ function LeadCardBase({
             className="leading-none text-sm hover:scale-110 transition-transform"
             style={{ color: lead.pinned ? '#e0a500' : 'var(--c-text-muted, #888)' }}
           >
-            {lead.pinned ? '★' : '☆'}
+            <Icon name="star" size={15} filled={lead.pinned} />
           </button>
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_TONE[lead.priority]}`}>
             {PRIORITY_LABELS[lead.priority]}
@@ -67,20 +68,19 @@ function LeadCardBase({
           {lead.contact_name && <span className="truncate">{lead.contact_name}</span>}
           {lead.employee_count != null && (
             <span className="shrink-0 tabular-nums" title={`${lead.employee_count.toLocaleString('de-DE')} Mitarbeiter`}>
-              · 👥 {lead.employee_count.toLocaleString('de-DE')}
+              · <Icon name="users" size={13} className="mx-0.5" />{lead.employee_count.toLocaleString('de-DE')}
             </span>
           )}
         </div>
       )}
       {sortMode === 'region' && cityLabel(lead.address) && (
-        <div className="text-xs text-text-muted mb-1.5 truncate" title={lead.address ?? undefined}>
-          📍 {cityLabel(lead.address)}
+        <div className="text-xs text-text-muted mb-1.5 truncate" title={lead.address ?? undefined}><Icon name="pin" size={16} className="mr-1 -mt-0.5" /> {cityLabel(lead.address)}
         </div>
       )}
       {lead.target && (
         <div className="mb-1.5">
           <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium truncate max-w-full"
-                title={`Target: ${lead.target}`}>🎯 {lead.target}</span>
+                title={`Target: ${lead.target}`}><Icon name="target" size={16} className="mr-1 -mt-0.5" /> {lead.target}</span>
         </div>
       )}
       {branche && (
@@ -94,7 +94,9 @@ function LeadCardBase({
           {(() => { const b = sourceBadge(lead.source); return (
             <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded"
                   style={{ backgroundColor: b.color + '22', color: b.color }}
-                  title={`Quelle: ${lead.source || 'Manuell'}`}>{b.label}</span>
+                  title={`Quelle: ${lead.source || 'Manuell'}`}>
+              {b.icon && <Icon name={b.icon} size={11} className="mr-0.5 -mt-0.5" />}{b.label}
+            </span>
           ) })()}
           <WebScoreBadge score={lead.web_score} rating={lead.web_rating} hasCritical={lead.web_has_critical}
                          analyzedAt={lead.web_analyzed_at} compact />
@@ -103,7 +105,7 @@ function LeadCardBase({
           ) : null}
         </div>
         {lead.needs_next_action && (
-          <span className="shrink-0 text-danger text-[10px] font-semibold">⚠ kein Schritt</span>
+          <span className="shrink-0 text-danger text-[10px] font-semibold"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> kein Schritt</span>
         )}
       </div>
     </div>

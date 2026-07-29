@@ -11,6 +11,7 @@ import { getRainmakerToday } from '../../api/rainmaker'
 import { formatCurrency } from '../../utils/formatters'
 import type { RainmakerActivity, RainmakerTodayResponse } from '../../types'
 import { ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_ICONS, PRIORITY_TONE, PRIORITY_LABELS } from './constants'
+import Icon from '../../components/Icon'
 
 export default function RainmakerToday() {
   const navigate = useAppNavigate()
@@ -76,8 +77,7 @@ export default function RainmakerToday() {
           {data.rotting.length > 0 && (
             <div className="mb-6 rounded-card border-2 border-danger/50 bg-danger/10 overflow-hidden">
               <div className="px-5 py-3 border-b border-danger/30">
-                <p className="text-sm font-bold text-danger">
-                  ⚠️ {data.rotting.length} Lead{data.rotting.length !== 1 ? 's' : ''} ohne nächsten Schritt
+                <p className="text-sm font-bold text-danger"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> {data.rotting.length} Lead{data.rotting.length !== 1 ? 's' : ''} ohne nächsten Schritt
                 </p>
                 <p className="text-xs text-text-muted mt-0.5">Plane einen Schritt, bevor sie versanden.</p>
               </div>
@@ -101,20 +101,20 @@ export default function RainmakerToday() {
           {data.queue.length === 0 ? (
             data.total_leads === 0 ? (
               <div className="card text-center py-16">
-                <div className="text-4xl mb-3">🌱</div>
+                <div className="text-4xl mb-3"><Icon name="sprout" size={16} className="mr-1 -mt-0.5" /></div>
                 <p className="text-text font-medium">Noch keine Leads</p>
                 <p className="text-text-muted text-sm mt-1 mb-4">Leg deinen ersten Lead an und plane den ersten Schritt.</p>
                 <button onClick={() => navigate('/rainmaker/leads/neu')} className="btn-primary">Ersten Lead anlegen</button>
               </div>
             ) : data.progress.done_today > 0 ? (
               <div className="card text-center py-16">
-                <div className="text-4xl mb-3">🎉</div>
+                <div className="text-4xl mb-3"><Icon name="celebrate" size={16} className="mr-1 -mt-0.5" /></div>
                 <p className="text-text font-medium">Alles erledigt für heute</p>
                 <p className="text-text-muted text-sm mt-1">Keine offenen fälligen Akquise-Aktionen mehr.</p>
               </div>
             ) : (
               <div className="card text-center py-16">
-                <div className="text-4xl mb-3">📭</div>
+                <div className="text-4xl mb-3"><Icon name="inboxEmpty" size={16} className="mr-1 -mt-0.5" /></div>
                 <p className="text-text font-medium">Heute nichts fällig</p>
                 <p className="text-text-muted text-sm mt-1 mb-4">Kein geplanter Schritt für heute — Zeit, proaktiv zu akquirieren?</p>
                 <button onClick={() => navigate('/rainmaker/pipeline')} className="btn-secondary">Zur Pipeline</button>

@@ -12,6 +12,7 @@ import TodoRefPicker, { type TodoRef } from './TodoRefPicker'
 import TodoEditModal from './TodoEditModal'
 import type { Todo, TodoPriority } from '../types'
 import Select from '../components/Select'
+import Icon from './Icon'
 
 const PRIORITY_DOT: Record<TodoPriority, string> = {
   hoch: 'bg-danger',
@@ -243,7 +244,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
           <p className="text-text-muted text-sm">
             {todos.length === 0
               ? 'Noch keine To-dos — trag oben ein, was ansteht.'
-              : '🎉 Alles erledigt.'}
+              : <><Icon name="celebrate" size={16} className="mr-1 -mt-0.5" />Alles erledigt.</>}
           </p>
         </div>
       ) : (
@@ -297,7 +298,7 @@ export default function TodoList({ customerId, leadId, hideHeading, onCountChang
                           )}
                           {refName && !scoped && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-text-muted truncate max-w-[180px]">
-                              {todo.customer_name ? '🏢' : '🎯'} {refName}
+                              <Icon name={todo.customer_name ? 'building' : 'target'} size={13} className="mr-1" />{refName}
                             </span>
                           )}
                           {todo.notes && <span className="text-xs text-text-muted truncate max-w-[240px]">{todo.notes}</span>}

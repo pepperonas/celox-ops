@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { OutreachTemplate } from '../../types'
 import { CATEGORY_LABEL, CHANNEL_LABEL } from './constants'
+import Icon from '../../components/Icon'
 
 interface Props {
   template: OutreachTemplate
@@ -37,7 +38,7 @@ export default function TemplateCard({ template, showChannel, onCopy, onEdit, on
           className="shrink-0 text-lg leading-none hover:scale-110 transition-transform"
           style={{ color: t.is_favorite ? '#e0a500' : 'var(--c-text-muted, #888)' }}
         >
-          {t.is_favorite ? '★' : '☆'}
+          <Icon name="star" size={16} filled={t.is_favorite} />
         </button>
       </div>
 

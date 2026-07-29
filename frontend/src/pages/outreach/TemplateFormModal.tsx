@@ -67,7 +67,7 @@ export default function TemplateFormModal({ template, initialChannel, onClose, o
               <Select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value as OutreachChannel)}
-                options={CHANNELS.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }))}
+                options={CHANNELS.map((c) => ({ value: c.value, label: c.label }))}
               />
             </div>
             <div>

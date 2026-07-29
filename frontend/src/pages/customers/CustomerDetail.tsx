@@ -29,6 +29,7 @@ import { formatDate, formatCurrency, formatRelativeTime } from '../../utils/form
 import { filenameFromDisposition } from '../../utils/downloadName'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 import Select from '../../components/Select'
+import Icon from '../../components/Icon'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -423,8 +424,7 @@ export default function CustomerDetail() {
         <>
           <div className="flex justify-end mb-3">
             <button onClick={() => setShowTodoAi(true)} className="btn-secondary text-sm"
-                    title="Aufgaben aus den vorliegenden Kundendaten ableiten — Vorschau, du entscheidest">
-              ✨ To-dos vorschlagen
+                    title="Aufgaben aus den vorliegenden Kundendaten ableiten — Vorschau, du entscheidest"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> To-dos vorschlagen
             </button>
           </div>
           {/* key-Bump laedt die Liste neu, nachdem Vorschlaege uebernommen wurden. */}

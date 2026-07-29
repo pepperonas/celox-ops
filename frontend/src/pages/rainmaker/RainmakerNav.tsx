@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
+import Icon from '../../components/Icon'
 
 const items = [
   { to: '/rainmaker', label: 'Heute', end: true },
-  { to: '/rainmaker/traumziel', label: '🏁 Traumziel', end: false },
+  { to: '/rainmaker/traumziel', label: 'Traumziel', icon: 'finishFlag' as const, end: false },
   { to: '/rainmaker/statistik', label: 'Statistik', end: false },
   { to: '/rainmaker/einstellungen', label: 'Einstellungen', end: false },
 ]
@@ -24,6 +25,7 @@ export default function RainmakerNav() {
             }`
           }
         >
+          {item.icon && <Icon name={item.icon} size={16} className="mr-1.5 -mt-0.5" />}
           {item.label}
         </NavLink>
       ))}

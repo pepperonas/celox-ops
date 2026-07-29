@@ -34,6 +34,7 @@ import {
 } from './constants'
 import CompleteActionModal from './CompleteActionModal'
 import AddActivityModal from './AddActivityModal'
+import Icon from '../../components/Icon'
 
 function mapsHref(address: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
@@ -224,7 +225,7 @@ export default function RainmakerLeadDetail() {
             className="text-xl leading-none hover:scale-110 transition-transform"
             style={{ color: lead.pinned ? '#e0a500' : 'var(--c-text-muted, #888)' }}
           >
-            {lead.pinned ? '★' : '☆'}
+            <Icon name="star" size={18} filled={lead.pinned} />
           </button>
           {lead.customer_id ? (
             <button onClick={() => navigate(`/kunden/${lead.customer_id}`)} className="btn-secondary">→ Kunde ansehen</button>
@@ -232,8 +233,7 @@ export default function RainmakerLeadDetail() {
             <button onClick={() => navigate(`/kunden/neu?fromLead=${lead.id}`)} className="btn-primary">Als Kunde anlegen</button>
           )}
           <button onClick={() => setShowChatImport(true)} className="btn-secondary"
-                  title="Chat-Verlauf oder Screenshots einwerfen — die KI schlägt Notizen, Aktivitäten und Stammdaten vor">
-            ✨ Aus Chat aktualisieren
+                  title="Chat-Verlauf oder Screenshots einwerfen — die KI schlägt Notizen, Aktivitäten und Stammdaten vor"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat aktualisieren
           </button>
           <button onClick={() => navigate(`/pipeline/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
           {mayDelete && <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>}
@@ -320,7 +320,7 @@ export default function RainmakerLeadDetail() {
             ) : isClosed ? (
               <p className="text-text-muted text-sm">Lead abgeschlossen — kein nächster Schritt nötig.</p>
             ) : (
-              <p className="text-danger font-semibold text-sm">⚠ Kein nächster Schritt — Lead droht zu versanden</p>
+              <p className="text-danger font-semibold text-sm"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> Kein nächster Schritt — Lead droht zu versanden</p>
             )}
           </div>
           <div className="flex gap-2 shrink-0">
@@ -349,8 +349,7 @@ export default function RainmakerLeadDetail() {
               <span
                 title="Target — Pitch-Winkel / Pain"
                 className="text-xs px-3 py-1 rounded-full bg-accent/15 text-accent font-medium"
-              >
-                🎯 {lead.target}
+              ><Icon name="target" size={16} className="mr-1 -mt-0.5" /> {lead.target}
               </span>
             )}
             {lead.tags?.map((t) => <span key={t} className="text-xs px-3 py-1 rounded-full bg-surface-high text-text-muted">{t}</span>)}

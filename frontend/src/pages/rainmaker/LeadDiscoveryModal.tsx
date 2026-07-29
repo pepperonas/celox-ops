@@ -8,6 +8,7 @@ import {
   type BatchCandidate,
 } from './discoveryBatch'
 import CandidateFacts, { PrivacyDot } from './CandidateFacts'
+import Icon from '../../components/Icon'
 
 interface Props {
   onClose: () => void
@@ -233,7 +234,9 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
               {combos.map((c, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-text-muted">
-                    {c.status === 'done' ? '✓' : c.status === 'running' ? '◷' : c.status === 'error' ? '✕' : '·'}{' '}
+                    {c.status === 'running'
+                      ? <Icon name="clock" size={13} />
+                      : c.status === 'done' ? '✓' : c.status === 'error' ? '✕' : '·'}{' '}
                     {LABEL[c.segment] || c.segment} · {c.location}
                   </span>
                   <span className={c.status === 'error' ? 'text-danger' : 'text-text-muted'}>
@@ -253,8 +256,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
               <span className="text-text"><strong>{candidates.length}</strong> Firmen</span>
               <span className="text-success text-xs" title="Nur Firmen mit erreichbarer Website (Live-Check); OSM zusätzlich mit E-Mail. Keine Karteileichen.">✓ geprüft</span>
               {candidates.some((c) => c.enriched) && (
-                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen).">
-                  ✦ angereichert
+                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen)."><Icon name="spark" size={16} className="mr-1 -mt-0.5" /> angereichert
                 </span>
               )}
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
@@ -296,7 +298,7 @@ export default function LeadDiscoveryModal({ onClose, onImported }: Props) {
                         {c.website ? c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : (c.phone || '–')}
                       </td>
                       <td className="px-2 py-1.5 text-text-muted truncate max-w-[150px]">
-                        {c.email ? <span className="text-success">✉ {c.email}</span> : <span className="opacity-50">–</span>}
+                        {c.email ? <span className="text-success"><Icon name="mail" size={16} className="mr-1 -mt-0.5" /> {c.email}</span> : <span className="opacity-50">–</span>}
                       </td>
                       <td className="px-2 py-1.5 text-[10px]">
                         {c.duplicate && (

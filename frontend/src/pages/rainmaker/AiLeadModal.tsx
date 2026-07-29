@@ -7,6 +7,7 @@ import { emailStatusInfo } from './emailStatus'
 import CandidateFacts, { PrivacyDot } from './CandidateFacts'
 import { matchBriefs } from './briefSuggestions'
 import type { AiLeadRun } from './aiLeadRun'
+import Icon from '../../components/Icon'
 
 interface Props {
   run: AiLeadRun
@@ -101,12 +102,12 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
       <div className="fixed inset-0" onClick={() => { if (!importing) onClose() }} />
       <div className="relative bg-surface-high rounded-xl shadow-elev-3 p-7 max-w-[900px] w-full mx-4 animate-modal-in max-h-[88vh] flex flex-col">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-text">✨ KI-Lead-Suche</h3>
+          <h3 className="text-lg font-semibold text-text"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Lead-Suche</h3>
           {res && (
             <span className="text-xs text-text-muted" title="Kosten dieses Laufs (aus der API-Nutzung berechnet)">
               Lauf: <strong className="text-text">{eur(res.run.cost_eur)}</strong>
               {' · '}Budget übrig: {eur(res.budget.remaining_eur)}
-              {res.budget.warn && <span className="text-warning"> ⚠</span>}
+              {res.budget.warn && <span className="text-warning"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /></span>}
             </span>
           )}
         </div>
@@ -186,8 +187,7 @@ export default function AiLeadModal({ run, onClose, onDiscard, onImported }: Pro
               <span className="text-success text-xs">✓ geprüft</span>
               {dupCount > 0 && <span className="text-text-muted">· {dupCount} bereits als Lead</span>}
               {res.candidates.some((c) => c.enriched) && (
-                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen).">
-                  ✦ angereichert
+                <span className="text-xs text-text-muted" title="Aus einem Abruf der Startseite: Kurzbeschreibung, Technik, Social-Profile und Datenschutz-Ampel (Punkt vor dem Firmennamen)."><Icon name="spark" size={16} className="mr-1 -mt-0.5" /> angereichert
                 </span>
               )}
               <span className="ml-auto text-text-muted text-xs">{selected.size} ausgewählt</span>

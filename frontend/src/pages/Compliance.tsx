@@ -11,6 +11,7 @@ import {
 } from '../api/compliance'
 import { getDocumentTemplates, generateDocument, type DocumentTemplate } from '../api/documents'
 import { downloadAttachment } from '../api/attachments'
+import Icon from '../components/Icon'
 
 const CATEGORY_LABELS: Record<string, string> = {
   datenschutz: 'Datenschutz',
@@ -173,8 +174,7 @@ export default function Compliance() {
           </div>
 
           {visible.length === 0 ? (
-            <div className="bg-surface border border-border rounded-card p-8 text-center text-success text-sm">
-              🎉 Alle Kunden haben alle Pflichtdokumente unterschrieben vorliegen.
+            <div className="bg-surface border border-border rounded-card p-8 text-center text-success text-sm"><Icon name="celebrate" size={16} className="mr-1 -mt-0.5" /> Alle Kunden haben alle Pflichtdokumente unterschrieben vorliegen.
             </div>
           ) : (
             <div className="space-y-4">

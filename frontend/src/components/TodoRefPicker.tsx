@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { getCustomers } from '../api/customers'
 import { createRainmakerLead, getRainmakerLeads } from '../api/rainmaker'
 import { comboboxKeydown, type ComboboxState } from '../utils/comboboxReducer'
+import Icon from './Icon'
 
 export interface TodoRef {
   customer_id: string | null
@@ -189,7 +190,9 @@ export default function TodoRefPicker({ value, onChange, compact = false, disabl
               }`}
             >
               <span aria-hidden>
-                {opt.kind === 'customer' ? '🏢' : opt.kind === 'lead' ? '🎯' : '＋'}
+                {opt.kind === 'create-lead'
+                    ? <span aria-hidden="true">+</span>
+                    : <Icon name={opt.kind === 'customer' ? 'building' : 'target'} size={14} />}
               </span>
               <span className="truncate text-text">{opt.kind === 'create-lead' ? `Neuer Lead: ${opt.label}` : opt.label}</span>
               <span className="ml-auto text-xs shrink-0">{opt.hint}</span>

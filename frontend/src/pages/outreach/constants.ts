@@ -1,9 +1,9 @@
 import type { OutreachCategory, OutreachChannel } from '../../types'
 
 export const CHANNELS: { value: OutreachChannel; label: string; icon: string }[] = [
-  { value: 'email', label: 'E-Mail', icon: '📧' },
-  { value: 'linkedin', label: 'LinkedIn', icon: '💼' },
-  { value: 'phone', label: 'Telefon', icon: '📞' },
+  { value: 'email', label: 'E-Mail', icon: 'mail' },
+  { value: 'linkedin', label: 'LinkedIn', icon: 'briefcase' },
+  { value: 'phone', label: 'Telefon', icon: 'phone' },
 ]
 
 export const CHANNEL_LABEL: Record<OutreachChannel, string> = {

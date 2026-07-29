@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { enqueueMissingAnalyses, getAnalysisQueue } from '../../api/rainmaker'
 import type { AnalysisQueueStatus } from '../../types'
+import Icon from '../../components/Icon'
 
 const FAST_MS = 8000
 const SLOW_MS = 60000
@@ -74,11 +75,10 @@ export default function AnalysisQueueBadge({ onFinished }: { onFinished?: () => 
       title={status.enabled
         ? 'Analysiert alle Leads mit Website, die noch keine Analyse haben (kostenlos).'
         : 'Auto-Analyse ist in den Einstellungen aus — hier trotzdem einmalig nachziehen.'}
-    >
-      🌐 {busy ? 'reiht ein…' : 'Websites analysieren'}
+    ><Icon name="globe" size={16} className="mr-1 -mt-0.5" /> {busy ? 'reiht ein…' : 'Websites analysieren'}
       {status.error > 0 && (
         <span className="text-danger" title={`${status.error} Analyse(n) fehlgeschlagen`}>
-          · {status.error} ⚠
+          · <Icon name="warning" size={13} className="ml-0.5" />{status.error}
         </span>
       )}
     </button>

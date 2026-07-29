@@ -10,6 +10,7 @@ import { leadIntakeCommit, leadIntakePreview } from '../../api/rainmaker'
 import type { LeadIntakeDraft, LeadIntakeResponse } from '../../types'
 import { downscaleToDataUrl, isAcceptedImage, MAX_EDGE_PX } from '../../utils/imageDownscale'
 import { ACTIVITY_TYPE_LABELS, STATUS_LABELS } from './constants'
+import Icon from '../../components/Icon'
 
 const MAX_IMAGES = 6
 const eur = (n: number) =>
@@ -161,7 +162,7 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
         onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files) }}
       >
         <div className="flex items-baseline justify-between gap-3 mb-1">
-          <h3 className="text-lg font-semibold text-text">✨ Aus Chat/Screenshot</h3>
+          <h3 className="text-lg font-semibold text-text"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat/Screenshot</h3>
           {res && (
             <span className="text-xs text-text-muted" title="Kosten dieses Laufs">
               {eur(res.cost.cost_eur)}
@@ -334,15 +335,14 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
                         {STATUS_LABELS[d.status as keyof typeof STATUS_LABELS] || d.status}
                       </span>
                       {d.target && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-surface text-accent">
-                          🎯 {d.target}
+                        <span className="px-1.5 py-0.5 rounded-full bg-surface text-accent"><Icon name="target" size={16} className="mr-1 -mt-0.5" /> {d.target}
                         </span>
                       )}
                       {d.value_estimate != null && d.value_estimate !== '' && (
                         <span className="px-1.5 py-0.5 rounded-full bg-surface text-text"
                               title="Genannter Betrag (Budget/Angebotssumme)">
                           {/* Decimal kommt als String — erst durch Number(). */}
-                          💰 {Number(d.value_estimate).toLocaleString('de-DE')} €
+                          <Icon name="coins" size={13} className="mr-1" />{Number(d.value_estimate).toLocaleString('de-DE')} €
                         </span>
                       )}
                       {d.confidence != null && (
@@ -417,7 +417,7 @@ export default function LeadIntakeModal({ onClose, onImported }: Props) {
               <div className="rounded-md border border-border">
                 <button onClick={() => setShowIgnored((v) => !v)}
                         className="w-full text-left px-3 py-2 text-xs text-text-muted md-state">
-                  {showIgnored ? '▾' : '▸'} Nicht übernommen ({res.ignored.length})
+                  <Icon name={showIgnored ? 'chevronDown' : 'chevronRight'} size={13} className="mr-1" />Nicht übernommen ({res.ignored.length})
                 </button>
                 {showIgnored && (
                   <ul className="px-3 pb-2 space-y-0.5">

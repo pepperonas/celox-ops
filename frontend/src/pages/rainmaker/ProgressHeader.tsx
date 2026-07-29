@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RainmakerProgress } from '../../types'
+import Icon from '../../components/Icon'
 
 interface Props {
   progress: RainmakerProgress
@@ -49,7 +50,9 @@ export default function ProgressHeader({ progress }: Props) {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-text">
-            {met ? 'Tagespensum geschafft 🎉' : `Noch ${daily_quota - done_today} bis zum Pensum`}
+            {met
+          ? <>Tagespensum geschafft<Icon name="celebrate" size={15} className="ml-1.5 -mt-0.5" /></>
+          : `Noch ${daily_quota - done_today} bis zum Pensum`}
           </p>
           <p className="text-xs text-text-muted mt-0.5">Akquise-Aktionen heute erledigt</p>
         </div>
@@ -59,12 +62,14 @@ export default function ProgressHeader({ progress }: Props) {
       <div className="flex items-center gap-8 sm:gap-6 shrink-0">
         <div className="text-center">
           <div className="text-2xl md-title-emph tabular-nums leading-none" style={{ color: current_streak > 0 ? '#e9c46a' : 'var(--text-muted)' }}>
-            {current_streak > 0 ? `🔥${current_streak}` : '–'}
+            {current_streak > 0
+            ? <><Icon name="flame" size={16} filled className="-mt-0.5" />{current_streak}</>
+            : '–'}
           </div>
           <div className="text-[10px] text-text-muted mt-1 whitespace-nowrap" title="Streak zählt Werktage (Mo–Fr); Wochenenden brechen ihn nicht">
             Streak · längste {longest_streak}
           </div>
-          <div className="text-[10px] text-text-muted mt-0.5 whitespace-nowrap" title="Freeze-Tage puffern verpasste Werktage">🧊 {freeze_remaining} Freeze{freeze_remaining !== 1 ? 's' : ''}</div>
+          <div className="text-[10px] text-text-muted mt-0.5 whitespace-nowrap" title="Freeze-Tage puffern verpasste Werktage"><Icon name="snowflake" size={16} className="mr-1 -mt-0.5" /> {freeze_remaining} Freeze{freeze_remaining !== 1 ? 's' : ''}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl md-title-emph tabular-nums leading-none text-accent">{total_points}</div>

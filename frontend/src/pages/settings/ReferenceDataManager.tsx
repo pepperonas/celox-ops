@@ -9,6 +9,7 @@ import {
   createRefValue, deleteRefValue, getRefFields, getRefValues, renameRefValue,
   type RefField, type RefValue,
 } from '../../api/referenceValues'
+import Icon from '../../components/Icon'
 
 /**
  * Zentrale Verwaltung feldbezogener Referenzwerte/Tags (Phase B2). Werte je Feld
@@ -122,9 +123,9 @@ export default function ReferenceDataManager() {
                     {manageable && (
                       <>
                         <button onClick={() => setRenaming(v)} title="Umbenennen"
-                                className="w-8 h-8 grid place-items-center rounded-md md-state text-text-muted hover:text-text">✏️</button>
+                                className="w-8 h-8 grid place-items-center rounded-md md-state text-text-muted hover:text-text"><Icon name="pencil" size={16} className="mr-1 -mt-0.5" /></button>
                         <button onClick={() => setDeleting(v)} title="Löschen"
-                                className="w-8 h-8 grid place-items-center rounded-md md-state text-danger">🗑️</button>
+                                className="w-8 h-8 grid place-items-center rounded-md md-state text-danger"><Icon name="trash" size={16} className="mr-1 -mt-0.5" /></button>
                       </>
                     )}
                   </div>

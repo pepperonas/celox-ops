@@ -18,6 +18,7 @@ import {
 } from '../../api/hostinger'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { domainHint, shortDescription } from '../../utils/hostingerDomain'
+import Icon from '../../components/Icon'
 
 const CATEGORY_LABEL: Record<string, string> = {
   hosting: 'Hosting', domain: 'Domain', software: 'Software', lizenz: 'Lizenz',
@@ -292,7 +293,7 @@ export default function HostingerImportModal({ onClose, onImported }: Props) {
                               title="Details zum Abo"
                               className="md-state w-6 h-6 grid place-items-center rounded-full
                                          text-text-muted hover:text-text text-xs">
-                              {openNotes === d.external_ref ? '▴' : 'ⓘ'}
+                              <Icon name={openNotes === d.external_ref ? 'chevronUp' : 'info'} size={14} />
                             </button>
                           )}
                         </td>

@@ -8,6 +8,7 @@ import PipelineNav from './PipelineNav'
 import { getDuplicates, mergeDuplicatesBatch } from '../../api/rainmaker'
 import type { DuplicateGroup, DuplicateMember } from '../../types'
 import { buildBatchSummary, type BatchSummary, type GroupSel } from './batchSummary'
+import Icon from '../../components/Icon'
 
 const REASON: Record<string, { label: string; cls: string; safe: boolean }> = {
   same_person: { label: 'Dieselbe Person', cls: 'text-danger', safe: true },
@@ -66,7 +67,7 @@ function GroupCard({ group, sel, onInclude, onKeeper, onToggleDup, onDismiss }: 
         <label className="flex items-center gap-2 cursor-pointer min-w-0">
           <input type="checkbox" checked={sel.included} onChange={(e) => onInclude(e.target.checked)} className="shrink-0" />
           <span className={`text-sm font-semibold ${info.cls} truncate`}>{info.label}</span>
-          {!info.safe && <span className="text-[10px] text-warning shrink-0">⚠ prüfen</span>}
+          {!info.safe && <span className="text-[10px] text-warning shrink-0"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> prüfen</span>}
           <span className="text-xs text-text-muted shrink-0">· {Math.round(group.score * 100)}% · {group.members.length} Leads</span>
         </label>
         <button onClick={onDismiss} className="text-xs text-text-muted hover:text-text shrink-0">Kein Duplikat</button>
@@ -103,14 +104,12 @@ function ConfirmDialog({ summary, onConfirm, onCancel, busy }: {
           <li>· <strong className="text-text">{summary.activityCount}</strong> Aktivität{summary.activityCount === 1 ? '' : 'en'} werden auf den Behalten-Lead übernommen</li>
         </ul>
         {summary.colleagueCount > 0 && (
-          <div className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2 mb-3">
-            ⚠ {summary.colleagueCount} Gruppe{summary.colleagueCount === 1 ? '' : 'n'} mit verschiedenen Ansprechpartnern
+          <div className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2 mb-3"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> {summary.colleagueCount} Gruppe{summary.colleagueCount === 1 ? '' : 'n'} mit verschiedenen Ansprechpartnern
             („Kollegen"/ähnliche Namen) sind dabei — bitte sicher sein, dass das wirklich dieselbe Firma ist.
           </div>
         )}
         {summary.overlaps && (
-          <div className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2 mb-3">
-            ⚠ Ein Lead kommt in mehreren gewählten Gruppen vor — diese Gruppen werden übersprungen.
+          <div className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2 mb-3"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> Ein Lead kommt in mehreren gewählten Gruppen vor — diese Gruppen werden übersprungen.
           </div>
         )}
         <p className="text-xs text-text-muted mb-4">Diese Aktion kann nicht rückgängig gemacht werden.</p>
@@ -215,7 +214,7 @@ export default function Duplicates() {
         + (r.moved_activities > 0 ? ` · ${r.moved_activities} Aktivitäten übernommen` : '')
         + (r.failed.length > 0 ? ` · ${r.failed.length} übersprungen` : '') + '.')
       if (r.failed.length > 0) {
-        toast(r.failed.map((f) => `„${f.company}": ${f.reason}`).join('\n'), { icon: '⚠', duration: 6000 })
+        toast(r.failed.map((f) => `„${f.company}": ${f.reason}`).join('\n'), { icon: <Icon name="warning" size={18} />, duration: 6000 })
       }
       await load()
     } catch {
@@ -250,7 +249,7 @@ export default function Duplicates() {
       {groups === null && !checking && <p className="text-text-muted text-sm py-8 text-center">Lade…</p>}
       {groups !== null && visible.length === 0 && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-2">🎉</div>
+          <div className="text-4xl mb-2"><Icon name="celebrate" size={16} className="mr-1 -mt-0.5" /></div>
           <p className="text-text-muted">Keine Duplikate gefunden.</p>
           <button onClick={() => load(true)} disabled={checking} className="btn-secondary text-sm mt-4 disabled:opacity-50">
             {checking ? 'Prüfe…' : 'Erneut prüfen'}
@@ -285,7 +284,7 @@ export default function Duplicates() {
 
           <p className="text-xs text-text-muted mb-3">
             E-Mail/Website sind bereits eindeutig — dies sind Firmennamen-Treffer. „Kollegen"/ähnliche Namen
-            sind bewusst nicht vorausgewählt (⚠). Beim Zusammenführen bleibt ein Lead, die anderen werden
+            sind bewusst nicht vorausgewählt. Beim Zusammenführen bleibt ein Lead, die anderen werden
             gelöscht, Aktivitäten wandern mit.
           </p>
 

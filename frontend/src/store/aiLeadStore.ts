@@ -1,3 +1,5 @@
+import { createElement } from 'react'
+import Icon from '../components/Icon'
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
 import { aiDiscoverPreview } from '../api/rainmaker'
@@ -51,7 +53,7 @@ export const useAiLeadStore = create<AiLeadState>((set, get) => ({
     try {
       const r = await aiDiscoverPreview(brief.trim(), useWeb)
       set({ res: r, open: true }) // bei Fertigstellung wieder in den Vordergrund
-      if (r.candidates.length === 0) toast('Keine passenden Treffer.', { icon: '🔍' })
+      if (r.candidates.length === 0) toast('Keine passenden Treffer.', { icon: createElement(Icon, { name: 'search', size: 18 }) })
     } catch (err: unknown) {
       const e = err as { response?: { status?: number; data?: { detail?: string } } }
       toast.error(e?.response?.data?.detail || 'KI-Suche fehlgeschlagen.')

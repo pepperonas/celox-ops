@@ -23,6 +23,7 @@ import PipelineTimeFilter, { DEFAULT_TIME_FILTER, type TimeFilterValue } from '.
 import Select from '../../components/Select'
 import { LEAD_SORT_OPTIONS, sortColumn, type LeadSort } from './leadSort'
 import { presetWindow, detectLastImportWindow, inWindow, toMs } from './timeFilter'
+import Icon from '../../components/Icon'
 
 const TIME_FILTER_KEY = 'rm-pipeline-timefilter'
 const SOURCE_FILTER_KEY = 'rm-pipeline-sourcefilter'
@@ -134,7 +135,7 @@ export default function RainmakerPipeline() {
     fetchLeads()
     if (created > 0) {
       patchTimeFilter({ preset: 'lastImport', field: 'created' })
-      toast('Filter: gerade importierte Leads · „Alle" zum Zurücksetzen', { icon: '✦' })
+      toast('Filter: gerade importierte Leads · „Alle" zum Zurücksetzen', { icon: <Icon name="spark" size={18} /> })
     }
   }, [fetchLeads, patchTimeFilter])
 
@@ -289,12 +290,10 @@ export default function RainmakerPipeline() {
         subtitle={`${leads.length} Leads`}
         actions={
           <>
-            <button onClick={() => openAi(true)} className="btn-primary text-sm">
-              ✨ KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
+            <button onClick={() => openAi(true)} className="btn-primary text-sm"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
             </button>
             <button onClick={() => setShowIntake(true)} className="btn-secondary text-sm"
-                    title="Chatverlauf, E-Mail oder Screenshots einwerfen — die KI macht Lead-Entwürfe daraus">
-              ✨ Aus Chat/Screenshot
+                    title="Chatverlauf, E-Mail oder Screenshots einwerfen — die KI macht Lead-Entwürfe daraus"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat/Screenshot
             </button>
             <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
               Leads finden
@@ -342,7 +341,7 @@ export default function RainmakerPipeline() {
       {/* Target-Filter: eine Chip pro vorkommendem Target + „Alle" (nur wenn Targets gesetzt sind). */}
       {targetChips.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-xs text-text-muted mr-1">🎯 Target:</span>
+          <span className="text-xs text-text-muted mr-1"><Icon name="target" size={16} className="mr-1 -mt-0.5" /> Target:</span>
           <button
             onClick={() => setTargetFilter(null)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors duration-short ${
@@ -373,7 +372,7 @@ export default function RainmakerPipeline() {
           {([
             { key: null, label: 'Alle' },
             { key: 'deliverable', label: `✓ Zustellbar (${emailCounts.deliverable})` },
-            { key: 'problem', label: `⚠ Problem (${emailCounts.problem})` },
+            { key: 'problem', label: `Problem (${emailCounts.problem})` },
           ] as const).map(({ key, label }) => (
             <button
               key={label}
@@ -401,7 +400,7 @@ export default function RainmakerPipeline() {
               ? { borderColor: '#e0a500', backgroundColor: '#e0a50026', color: 'var(--c-text,#eee)' }
               : { borderColor: 'var(--c-border,#333)', color: 'var(--c-text-muted,#888)' }}
           >
-            {favOnly ? '★' : '☆'} Favoriten ({pinnedCount})
+            <Icon name="star" size={13} filled={favOnly} className="mr-1 -mt-0.5" />Favoriten ({pinnedCount})
           </button>
         </div>
       )}

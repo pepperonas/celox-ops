@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { draftLeadEmail, sendLeadEmail } from '../../api/rainmaker'
 import type { RainmakerLead } from '../../types'
+import Icon from '../../components/Icon'
 
 interface Props {
   lead: RainmakerLead
@@ -90,8 +91,7 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
         <div className="flex items-start justify-between gap-3 mb-1">
           <h3 className="text-lg font-semibold text-text">E-Mail an {lead.company}</h3>
           {product && (
-            <span className="text-xs px-2 py-1 rounded-full bg-accent/15 text-accent shrink-0" title="Von der KI empfohlenes Produkt">
-              🎯 {product}
+            <span className="text-xs px-2 py-1 rounded-full bg-accent/15 text-accent shrink-0" title="Von der KI empfohlenes Produkt"><Icon name="target" size={16} className="mr-1 -mt-0.5" /> {product}
             </span>
           )}
         </div>
@@ -141,7 +141,7 @@ export default function LeadEmailDialog({ lead, onClose, onSent }: Props) {
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => generate(true)} disabled={drafting || sending} className="btn-secondary text-sm">
-                {drafting ? '…' : '✨ KI neu vorschlagen'}
+                {drafting ? '…' : <><Icon name="sparkle" size={15} className="mr-1 -mt-0.5" />KI neu vorschlagen</>}
               </button>
               {cost && <span className="text-[11px] text-text-muted">{cost}</span>}
               <div className="ml-auto flex gap-2">

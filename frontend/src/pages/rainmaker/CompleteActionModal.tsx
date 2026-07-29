@@ -23,7 +23,7 @@ interface Props {
 const TYPE_OPTIONS = Object.keys(ACTIVITY_TYPE_LABELS) as RainmakerActivityType[]
 const OUTCOME_OPTIONS = Object.keys(OUTCOME_LABELS) as RainmakerOutcome[]
 const CLOSE_OPTIONS: { value: RainmakerLeadStatus; label: string }[] = [
-  { value: 'won', label: 'Gewonnen 🎉' },
+  { value: 'won', label: 'Gewonnen' },
   { value: 'lost', label: 'Verloren' },
   { value: 'dormant', label: 'Ruhend' },
 ]

@@ -16,6 +16,7 @@ import { CATEGORIES, CHANNELS } from './constants'
 import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
+import Icon from '../../components/Icon'
 
 const SEED_FLAG = 'outreach-seed-checked'
 
@@ -151,7 +152,7 @@ export default function Outreach() {
           {/* Favoriten (kanalübergreifend, oben) */}
           {favorites.length > 0 && (
             <section className="mb-6">
-              <h2 className="text-sm font-semibold text-text mb-2">★ Favoriten</h2>
+              <h2 className="text-sm font-semibold text-text mb-2"><Icon name="star" size={15} filled className="mr-1.5 -mt-0.5" />Favoriten</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {favorites.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
               </div>
@@ -161,7 +162,7 @@ export default function Outreach() {
           {/* Kanal-Tabs */}
           <div className="mb-4 overflow-x-auto">
             <SegmentedButtons
-              options={CHANNELS.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }))}
+              options={CHANNELS.map((c) => ({ value: c.value, label: c.label }))}
               value={channel}
               onChange={setChannel}
             />

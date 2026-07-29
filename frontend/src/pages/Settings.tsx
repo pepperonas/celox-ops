@@ -18,6 +18,7 @@ import { changeOwnPassword, getMyIcalToken, getMe, init2fa, enable2fa, disable2f
 import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse, RainmakerSettings } from '../types'
 import Select from '../components/Select'
 import ReferenceDataManager from './settings/ReferenceDataManager'
+import Icon from '../components/Icon'
 
 interface TrackerConfig {
   base_url: string
@@ -625,7 +626,8 @@ export default function Settings() {
         {/* Anleitung */}
         <button onClick={() => setPlacesGuideOpen((o) => !o)}
                 className="text-sm text-accent hover:underline underline-offset-2">
-          {placesGuideOpen ? '▾ Anleitung ausblenden' : '▸ Wie erstelle ich einen Key?'}
+          <Icon name={placesGuideOpen ? 'chevronDown' : 'chevronRight'} size={14} className="mr-1" />
+          {placesGuideOpen ? 'Anleitung ausblenden' : 'Wie erstelle ich einen Key?'}
         </button>
         {placesGuideOpen && (
           <div className="mt-3 text-sm text-text-muted space-y-2 border-l-2 border-border pl-4">
@@ -648,7 +650,7 @@ export default function Settings() {
 
       {/* Hostinger: Kostenimport (VPS, Domains) */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
-        <h3 className="text-sm font-semibold text-text mb-1">🖥️ Hostinger (Kostenimport)</h3>
+        <h3 className="text-sm font-semibold text-text mb-1"><Icon name="server" size={16} className="mr-1 -mt-0.5" /> Hostinger (Kostenimport)</h3>
         <p className="text-text-muted text-sm mb-4">
           Mit einem Hostinger-API-Key lassen sich die laufenden VPS- und Domain-Kosten unter
           „Ausgaben" übernehmen — je aktivem Abo eine wiederkehrende Ausgabe, datiert auf die
@@ -699,7 +701,7 @@ export default function Settings() {
 
       {/* Automatische Website-Analyse (kostenlos — kein PageSpeed, keine KI) */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
-        <h3 className="text-sm font-semibold text-text mb-1">🌐 Automatische Website-Analyse</h3>
+        <h3 className="text-sm font-semibold text-text mb-1"><Icon name="globe" size={16} className="mr-1 -mt-0.5" /> Automatische Website-Analyse</h3>
         <p className="text-text-muted text-sm mb-4">
           Analysiert die Website jedes neu importierten oder angelegten Leads im Hintergrund
           (Datenschutz, SEO, Technik, Performance) und hinterlegt Score plus Ampel an der
@@ -720,7 +722,7 @@ export default function Settings() {
 
       {/* KI-Zugang: eigener Anthropic-Key pro Arbeitsbereich */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
-        <h3 className="text-sm font-semibold text-text mb-1">🔑 KI-Zugang (Anthropic)</h3>
+        <h3 className="text-sm font-semibold text-text mb-1"><Icon name="key" size={16} className="mr-1 -mt-0.5" /> KI-Zugang (Anthropic)</h3>
         <p className="text-text-muted text-sm mb-4">
           Alle KI-Funktionen (Lead-Suche, Mailentwurf, Chat-Import, Website-Tiefenanalyse)
           laufen über <strong className="text-text">deinen eigenen API-Key</strong> — die Nutzung
@@ -787,10 +789,10 @@ export default function Settings() {
 
       {/* KI-Lead-Suche */}
       <div className="bg-surface border border-border rounded-card p-5 mb-6">
-        <h3 className="text-sm font-semibold text-text mb-1">✨ KI-Lead-Suche</h3>
+        <h3 className="text-sm font-semibold text-text mb-1"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Lead-Suche</h3>
         <p className="text-text-muted text-sm mb-4">
           Freitext-Brief → Claude recherchiert, verifiziert (Website + E-Mail) und rankt Leads
-          (Rainmaker → Pipeline → „✨ KI-Leads"). Der Anthropic-API-Key liegt server-seitig in der
+          (Rainmaker → Pipeline → „KI-Leads"). Der Anthropic-API-Key liegt server-seitig in der
           <span className="font-mono"> .env</span>.
         </p>
 
@@ -843,7 +845,7 @@ export default function Settings() {
               <span title="Preise werden dynamisch aus einer gepflegten Tabelle geladen; „Fallback“ = hinterlegte Konstanten.">
                 Preise: {aiUsage.pricing_source === 'live' ? <span className="text-success">live ✓</span> : 'Fallback'}
               </span>
-              {aiUsage.budget.warn && <span className="text-warning">⚠ Budget zu ≥80 % verbraucht</span>}
+              {aiUsage.budget.warn && <span className="text-warning"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> Budget zu ≥80 % verbraucht</span>}
             </div>
             {aiUsage.recent.length > 0 && (
               <div className="mt-3 border-t border-border pt-2 space-y-1">

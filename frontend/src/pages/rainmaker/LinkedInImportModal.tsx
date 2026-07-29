@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { previewLinkedInImport, importLinkedInLeads } from '../../api/rainmaker'
 import type { LinkedInPreviewRow } from '../../types'
 import { STATUS_LABELS } from './constants'
+import Icon from '../../components/Icon'
 
 interface Props {
   onClose: () => void
@@ -200,8 +201,9 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
               {uploading
                 ? 'Wird gelesen…'
                 : dragOver
-                  ? '📥 Loslassen zum Hochladen'
-                  : '📦 Export-ZIP oder Connections.csv hierher ziehen — oder klicken'}
+                  ? <><Icon name="inbox" size={18} className="mr-1.5 -mt-0.5" />Loslassen zum Hochladen</>
+                  : <><Icon name="package" size={18} className="mr-1.5 -mt-0.5" />
+                      Export-ZIP oder Connections.csv hierher ziehen — oder klicken</>}
             </button>
             <p className="text-[11px] text-text-muted mt-3">
               Hinweis: E-Mail-Adressen sind nur enthalten, wenn der Kontakt den Export erlaubt hat (meist leer).
@@ -230,7 +232,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                 </button>
               ))}
               <span className="text-xs text-text-muted">
-                {msgCount > 0 && <>💬 {msgCount} im Gespräch · </>}
+                {msgCount > 0 && <><Icon name="chat" size={16} className="mr-1 -mt-0.5" /> {msgCount} im Gespräch · </>}
                 {dupCount > 0 && <>{dupCount} bereits vorhanden</>}
               </span>
               <input
@@ -272,7 +274,7 @@ export default function LinkedInImportModal({ onClose, onImported }: Props) {
                         <td className="px-2 py-1.5 text-text-muted truncate max-w-[160px]">{r.position || '–'}</td>
                         <td className="px-2 py-1.5 text-xs text-text-muted whitespace-nowrap">
                           {STATUS_LABELS[r.status]}
-                          {r.message_count > 0 && <span className="ml-1" title={`${r.message_count} Nachrichten`}>💬{r.message_count}</span>}
+                          {r.message_count > 0 && <span className="ml-1" title={`${r.message_count} Nachrichten`}><Icon name="chat" size={12} />{r.message_count}</span>}
                         </td>
                         <td className="px-2 py-1.5 text-[10px]">
                           {r.duplicate && (

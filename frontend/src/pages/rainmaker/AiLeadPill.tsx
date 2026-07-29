@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import type { AiLeadRun } from './aiLeadRun'
+import Icon from '../../components/Icon'
 
 /**
  * Minimiertes Overlay der KI-Lead-Suche: erscheint, wenn der Dialog geschlossen
@@ -32,7 +33,8 @@ export default function AiLeadPill({
           : <span className="inline-block w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin shrink-0" />}
         <span className="flex flex-col items-start leading-tight">
           <span className="text-sm text-text font-medium">
-            {done ? '✨ KI-Recherche fertig' : '✨ KI-Recherche läuft…'}
+            <Icon name="sparkle" size={15} className="mr-1.5 -mt-0.5" />
+      {done ? 'KI-Recherche fertig' : 'KI-Recherche läuft…'}
           </span>
           <span className="text-[11px] text-text-muted">
             {done ? `${count ?? 0} Treffer` : run.phaseLabels[run.phase]}

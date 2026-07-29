@@ -8,6 +8,7 @@ import {
   PRIORITY_ORDER, ratingLabel, scoreColor, scoreTrend, SEVERITY_COLORS,
 } from './webScore'
 import WebsiteFactSheet from './WebsiteFactSheet'
+import Icon from '../../components/Icon'
 
 const PS_LABELS: Record<string, string> = {
   performance: 'Performance', accessibility: 'Barrierefreiheit',
@@ -92,8 +93,7 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
           <div className="flex flex-wrap gap-2 justify-center">
             <button onClick={() => runAnalyze()} className="btn-primary text-sm">Website analysieren</button>
             <button onClick={() => runAnalyze({ deep: true, pagespeed: true })} className="btn-secondary text-sm"
-              title="Zusätzlich KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)">
-              ✨ Tiefenanalyse
+              title="Zusätzlich KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Tiefenanalyse
             </button>
           </div>
         )}
@@ -125,18 +125,18 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
               {ratingLabel(a.rating)}
             </span>
             {a.has_critical && (
-              <span className="text-xs font-semibold text-danger" title="Kritische Probleme gefunden">⚠ Kritisch</span>
+              <span className="text-xs font-semibold text-danger" title="Kritische Probleme gefunden"><Icon name="warning" size={16} className="mr-1 -mt-0.5" /> Kritisch</span>
             )}
             {trend.dir !== 'flat' && (
               <span className="text-xs font-medium" style={{ color: trend.dir === 'up' ? '#22c55e' : '#ef4444' }}
                 title="Veränderung gegenüber der Voranalyse">
-                {trend.dir === 'up' ? '▲' : '▼'} {Math.abs(trend.delta)}
+                <Icon name={trend.dir === 'up' ? 'trendUp' : 'trendDown'} size={13} className="mr-0.5" />{Math.abs(trend.delta)}
               </span>
             )}
           </div>
           <p className="text-xs text-text-muted mt-1"
              title={`Gesamtscore = gewichtetes Mittel der bewerteten Kategorien: ${formula}`}>
-            {analyzedAt}{env?.history_count ? ` · ${env.history_count} Analyse${env.history_count > 1 ? 'n' : ''}` : ''} · v{a.analysis_version} · ⓘ gewichtet
+            {analyzedAt}{env?.history_count ? ` · ${env.history_count} Analyse${env.history_count > 1 ? 'n' : ''}` : ''} · v{a.analysis_version} · <Icon name="info" size={12} className="mx-0.5" />gewichtet
           </p>
           {a.technologies.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -149,8 +149,7 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
         <div className="flex flex-col gap-1.5">
           <button onClick={() => runAnalyze()} className="btn-secondary text-sm">Neu analysieren</button>
           <button onClick={() => runAnalyze({ deep: true, pagespeed: true })} className="btn-secondary text-sm"
-            title="Technik + KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)">
-            ✨ Tiefenanalyse
+            title="Technik + KI-Qualitätsbewertung + Google PageSpeed (kostet Tokens, dauert länger)"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Tiefenanalyse
           </button>
         </div>
       </div>
@@ -196,10 +195,11 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
                   <span className="text-[10px] font-semibold shrink-0"
                         style={{ color: d > 0 ? '#22c55e' : '#ef4444' }}
                         title="Veränderung gegenüber der vorherigen Analyse">
-                    {d > 0 ? '▲' : '▼'}{Math.abs(d)}
+                    <Icon name={d > 0 ? 'trendUp' : 'trendDown'} size={12} />{Math.abs(d)}
                   </span>
                 )}
-                <span className="text-text-muted text-[10px] shrink-0 transition-transform group-open:rotate-90">▶</span>
+                <Icon name="chevronRight" size={12}
+                      className="text-text-muted shrink-0 transition-transform group-open:rotate-90" />
               </summary>
               <div className="px-2.5 pb-2.5 pt-0.5">
                 {c.findings.length === 0 ? (
@@ -304,7 +304,7 @@ export default function WebsiteAnalysisPanel({ leadId, website, onAnalyzed }: {
       {a.ai_review && (
         <div className="mb-5 rounded-md border border-accent/30 bg-accent/5 p-3">
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">✨ KI-Qualitätsbewertung</p>
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wide"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Qualitätsbewertung</p>
             <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded"
               style={{ backgroundColor: scoreColor(a.ai_review.score) + '22', color: scoreColor(a.ai_review.score) }}>
               {a.ai_review.score}/100
@@ -389,8 +389,7 @@ export function WebScoreBadge({ score, rating, hasCritical, analyzedAt, compact 
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded
                        bg-surface-container text-text-muted"
-            title="Website noch nicht analysiert">
-        🌐 <span className="opacity-70">n. a.</span>
+            title="Website noch nicht analysiert"><Icon name="globe" size={16} className="mr-1 -mt-0.5" /> <span className="opacity-70">n. a.</span>
       </span>
     )
   }
@@ -401,8 +400,7 @@ export function WebScoreBadge({ score, rating, hasCritical, analyzedAt, compact 
   return (
     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded"
       style={{ backgroundColor: color + '22', color }}
-      title={`Website-Score ${score}/100 · ${ratingLabel(rating)}${when ? ` · zuletzt geprüft ${when}` : ''}${hasCritical ? ' · kritische Probleme' : ''}`}>
-      🌐 {score}{hasCritical ? ' ⚠' : ''}{!compact && rating ? ` · ${ratingLabel(rating)}` : ''}
+      title={`Website-Score ${score}/100 · ${ratingLabel(rating)}${when ? ` · zuletzt geprüft ${when}` : ''}${hasCritical ? ' · kritische Probleme' : ''}`}><Icon name="globe" size={16} className="mr-1 -mt-0.5" /> {score}{hasCritical && <Icon name="warning" size={12} className="ml-0.5" />}{!compact && rating ? ` · ${ratingLabel(rating)}` : ''}
     </span>
   )
 }
