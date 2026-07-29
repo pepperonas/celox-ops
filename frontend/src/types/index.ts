@@ -991,6 +991,8 @@ export interface OutreachTemplate {
   notes: string | null
   sort_order: number
   is_favorite: boolean
+  /** Palette-Schlüssel der Karten-Farbe (s. pages/outreach/cardColors.ts). */
+  color: string | null
   usage_count: number
   created_at: string
   updated_at: string
@@ -1005,6 +1007,7 @@ export interface OutreachTemplateCreate {
   notes?: string | null
   sort_order?: number
   is_favorite?: boolean
+  color?: string | null
 }
 
 export type OutreachTemplateUpdate = Partial<OutreachTemplateCreate>

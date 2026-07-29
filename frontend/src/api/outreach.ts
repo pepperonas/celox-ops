@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  OutreachChannel,
   OutreachTemplate,
   OutreachTemplateCreate,
   OutreachTemplateUpdate,
@@ -40,3 +41,13 @@ export async function seedOutreachTemplates(): Promise<OutreachTemplate[]> {
   const res = await api.post('/outreach/templates/seed')
   return res.data
 }
+
+/**
+ * Setzt die Reihenfolge eines Kanals. Bewusst die vollständige ID-Liste: ein
+ * Bulk-Setzen ist atomar, während einzelne PUTs zur Hälfte scheitern und die
+ * Liste halb sortiert hinterlassen könnten.
+ */
+export const reorderOutreachTemplates = async (
+  channel: OutreachChannel, ids: string[],
+): Promise<OutreachTemplate[]> =>
+  (await api.post<OutreachTemplate[]>('/outreach/templates/reorder', { channel, ids })).data

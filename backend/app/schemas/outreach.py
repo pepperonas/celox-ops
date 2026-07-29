@@ -15,6 +15,8 @@ class OutreachTemplateBase(BaseModel):
     notes: str | None = None
     sort_order: int = 0
     is_favorite: bool = False
+    # Palette-Schlüssel, nicht Farbwert (s. Modell). None = neutral.
+    color: str | None = None
 
 
 class OutreachTemplateCreate(OutreachTemplateBase):
@@ -30,6 +32,7 @@ class OutreachTemplateUpdate(BaseModel):
     notes: str | None = None
     sort_order: int | None = None
     is_favorite: bool | None = None
+    color: str | None = None
 
 
 class OutreachTemplateResponse(OutreachTemplateBase):
@@ -39,3 +42,15 @@ class OutreachTemplateResponse(OutreachTemplateBase):
     usage_count: int
     created_at: datetime
     updated_at: datetime
+
+
+class OutreachReorder(BaseModel):
+    """Neue Reihenfolge eines Kanals als vollständige ID-Liste.
+
+    Bewusst die ganze Liste und nicht „verschiebe X hinter Y": Der Client kennt
+    die Zielordnung ohnehin, und ein Bulk-Setzen ist atomar. Einzelne PUTs pro
+    Karte wären N Requests und könnten zur Hälfte scheitern.
+    """
+
+    channel: OutreachChannel
+    ids: list[uuid.UUID]

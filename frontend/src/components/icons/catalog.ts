@@ -443,6 +443,19 @@ export const ICONS: Record<string, IconDef> = {
   trendDown: { outline: [p('M3.4 8.2 9.4 14.2 13.4 10.2 20.6 17.4'), p('M15.4 17.4H20.6V12.2')] },
   /** Läuft noch (war ◷). */
   clock: { outline: [c(12, 12, 9.2), p('M12 6.8V12L16 14.4')] },
+  // Schließen: symmetrisches Kreuz. Als eigenständige Schaltfläche braucht es ein
+  // Icon — ein typografisches ✕ wäre schriftabhängig (Regel in frontend-m3e.md).
+  close: { outline: [l(4.8, 4.8, 19.2, 19.2), l(19.2, 4.8, 4.8, 19.2)] },
+  // Ziehpunkt: sechs Punkte in zwei Spalten, wie Materials `drag_indicator`. Die
+  // Kreise werden gestrichelt gezeichnet (Strich 2 auf Radius 1) — das ergibt
+  // optisch den vollen Punkt, ohne eine gefüllte Fassung zu brauchen.
+  drag: {
+    outline: [
+      c(9, 5.5, 1), c(15, 5.5, 1),
+      c(9, 12, 1), c(15, 12, 1),
+      c(9, 18.5, 1), c(15, 18.5, 1),
+    ],
+  },
 }
 
 /** Alle Icon-Namen — für Tests und Typisierung. */

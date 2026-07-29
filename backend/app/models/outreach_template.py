@@ -53,7 +53,16 @@ class OutreachTemplate(OwnedMixin, Base):
     subject: Mapped[str | None] = mapped_column(String(500), nullable=True)  # nur E-Mail
     body: Mapped[str] = mapped_column(Text, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)           # interne Hinweise
+    # Reihenfolge JE KANAL (nicht je Rubrik): die Rubriken-Chips filtern nur eine
+    # Sicht auf dieselbe Liste. Pro Filterkombination getrennte Positionen wären
+    # verwirrend — eine Karte erschiene in „Alle Rubriken" und in ihrer Rubrik mit
+    # zwei unabhängigen Plätzen. Gesetzt über `POST /templates/reorder`.
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Freie Einfärbung der Karte (wie Google Keep) — Schlüssel aus einer festen
+    # Palette, nicht ein Farbwert: die konkreten Töne kommen aus den Theme-Tokens
+    # im Frontend und dürfen sich ändern, ohne die Daten anzufassen.
+    # NULL = neutral. Migration: scripts/add_outreach_card_style.sql.
+    color: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_favorite: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )

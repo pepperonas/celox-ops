@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_admin
@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.outreach_template import OutreachTemplate
 from app.models.user import User, UserRole
 from app.schemas.outreach import (
+    OutreachReorder,
     OutreachTemplateCreate,
     OutreachTemplateResponse,
     OutreachTemplateUpdate,
@@ -55,8 +56,13 @@ async def list_templates(
 ) -> list[OutreachTemplateResponse]:
     """Alle Templates des Owners (plain list, die UI filtert client-seitig).
     Optionale Serverfilter: channel, category, q (Volltext über Titel/Betreff/Body)."""
+    # Eine Reihenfolge JE KANAL: nach `sort_order` sortiert, nicht nach Rubrik
+    # gruppiert. Die Rubriken-Chips filtern client-seitig; würde hier nach
+    # `category` vorsortiert, könnte der Nutzer eine Karte nie über eine
+    # Rubrikgrenze hinweg nach oben ziehen. `title` bleibt als Tiebreaker für
+    # Altbestände mit gleichen Werten.
     query = select(OutreachTemplate).order_by(
-        OutreachTemplate.category, OutreachTemplate.sort_order, OutreachTemplate.title
+        OutreachTemplate.sort_order, OutreachTemplate.title
     )
     if channel:
         query = query.where(OutreachTemplate.channel == channel)
@@ -136,15 +142,76 @@ async def seed_templates(db: AsyncSession = Depends(get_db)) -> list[OutreachTem
         OutreachTemplate.channel, OutreachTemplate.category, OutreachTemplate.title
     ))).all()
     existing = {(_v(ch), _v(cat), title) for ch, cat, title in rows}
+    # Nachträge hinten anhängen: `default_templates()` nummeriert je (Kanal,
+    # Rubrik) ab 0 — übernähme man das, landeten neue Vorlagen mitten in einer
+    # bestehenden, selbst sortierten Liste. Deshalb ab dem aktuellen Maximum des
+    # jeweiligen Kanals weiterzählen.
+    next_order: dict[str, int] = {}
+    for ch, in (await db.execute(select(OutreachTemplate.channel).distinct())).all():
+        maxi = (await db.execute(
+            select(func.max(OutreachTemplate.sort_order))
+            .where(OutreachTemplate.channel == ch)
+        )).scalar_one()
+        next_order[_v(ch)] = (maxi or -1) + 1
+
     added = 0
     for t in missing_templates(existing):
+        t = dict(t)
+        ch = t["channel"]
+        t["sort_order"] = next_order.get(ch, 0)
+        next_order[ch] = t["sort_order"] + 1
         db.add(OutreachTemplate(**t))
         added += 1
     if added:
         await db.flush()
     rows = (await db.execute(
         select(OutreachTemplate).order_by(
-            OutreachTemplate.category, OutreachTemplate.sort_order, OutreachTemplate.title
+            OutreachTemplate.sort_order, OutreachTemplate.title
         )
     )).scalars().all()
     return [OutreachTemplateResponse.model_validate(t) for t in rows]
+
+
+@router.post("/templates/reorder", response_model=list[OutreachTemplateResponse],
+             dependencies=[Depends(require_admin)])
+async def reorder_templates(
+    data: OutreachReorder, db: AsyncSession = Depends(get_db),
+) -> list[OutreachTemplateResponse]:
+    """Setzt die Reihenfolge eines Kanals auf die übergebene ID-Liste.
+
+    Nimmt bewusst die **vollständige** Liste des Kanals: ein Bulk-Setzen ist
+    atomar, während N einzelne PUTs zur Hälfte scheitern könnten und die Liste in
+    einem halb sortierten Zustand hinterließen.
+
+    Unbekannte IDs werden ignoriert (nicht als Fehler): Die Liste kommt aus einer
+    Ansicht, die zwischenzeitlich veraltet sein kann — eine gelöschte Vorlage darf
+    das Sortieren der übrigen nicht verhindern. IDs eines anderen Kanals oder
+    eines fremden Arbeitsbereichs werden verworfen, nicht umgehängt: Sortieren
+    darf keine Vorlage in einen anderen Kanal verschieben.
+    """
+    rows = (await db.execute(
+        select(OutreachTemplate).where(OutreachTemplate.channel == data.channel)
+    )).scalars().all()
+    by_id = {t.id: t for t in rows}
+
+    position = 0
+    for tid in data.ids:
+        tpl = by_id.pop(tid, None)
+        if tpl is None:
+            continue
+        tpl.sort_order = position
+        position += 1
+    # Nicht genannte Vorlagen desselben Kanals hinten anhängen, in ihrer bisherigen
+    # Ordnung — sonst behielten sie alte Werte und mischten sich zwischen die neu
+    # nummerierten.
+    for tpl in sorted(by_id.values(), key=lambda t: (t.sort_order, t.title)):
+        tpl.sort_order = position
+        position += 1
+
+    await db.flush()
+    result = (await db.execute(
+        select(OutreachTemplate).order_by(
+            OutreachTemplate.sort_order, OutreachTemplate.title
+        )
+    )).scalars().all()
+    return [OutreachTemplateResponse.model_validate(t) for t in result]

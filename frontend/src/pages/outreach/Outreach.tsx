@@ -8,10 +8,13 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import type { OutreachChannel, OutreachTemplate } from '../../types'
 import {
   getOutreachTemplates,
+  reorderOutreachTemplates,
   seedOutreachTemplates,
   updateOutreachTemplate,
   deleteOutreachTemplate,
 } from '../../api/outreach'
+import { applyVisibleOrder, moveBy, moveItem, orderIds } from './cardOrder'
+import SpeakingCardDialog from './SpeakingCardDialog'
 import {
   CATEGORIES, CATEGORY_AXIS, CHANNELS,
   restoreCategory, restoreChannel, restoreFavoritesOpen,
@@ -42,6 +45,9 @@ export default function Outreach() {
   )
   const [search, setSearch] = useState('')
   const [copying, setCopying] = useState<OutreachTemplate | null>(null)
+  const [speaking, setSpeaking] = useState<OutreachTemplate | null>(null)
+  // Index der gezogenen Karte innerhalb der SICHTBAREN Liste (s. applyVisibleOrder).
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<OutreachTemplate | null>(null)
   const [seeding, setSeeding] = useState(false)
@@ -132,6 +138,34 @@ export default function Outreach() {
     }
   }
 
+  const setColor = async (t: OutreachTemplate, color: string | null) => {
+    setAll((prev) => prev.map((x) => (x.id === t.id ? { ...x, color } : x)))
+    try {
+      await updateOutreachTemplate(t.id, { color })
+    } catch {
+      toast.error('Farbe konnte nicht gespeichert werden.')
+      setAll((prev) => prev.map((x) => (x.id === t.id ? { ...x, color: t.color } : x)))
+    }
+  }
+
+  /**
+   * Speichert eine neue Reihenfolge. Gezogen wird in der gefilterten Ansicht, die
+   * Reihenfolge gilt aber je Kanal — `applyVisibleOrder` setzt die sichtbaren
+   * Karten auf ihre bisherigen Plätze zurück und lässt die übrigen unberührt.
+   */
+  const persistOrder = async (neueSicht: OutreachTemplate[]) => {
+    const kanalVoll = all.filter((x) => x.channel === channel)
+    const neuVoll = applyVisibleOrder(kanalVoll, neueSicht)
+    const andere = all.filter((x) => x.channel !== channel)
+    setAll([...andere, ...neuVoll])          // optimistisch
+    try {
+      setAll(await reorderOutreachTemplates(channel, orderIds(neuVoll)))
+    } catch {
+      toast.error('Reihenfolge konnte nicht gespeichert werden.')
+      setAll([...andere, ...kanalVoll])
+    }
+  }
+
   const bumpUsage = (id: string) =>
     setAll((prev) => prev.map((x) => (x.id === id ? { ...x, usage_count: x.usage_count + 1 } : x)))
 
@@ -166,6 +200,8 @@ export default function Outreach() {
     onEdit: (t: OutreachTemplate) => { setEditing(t); setFormOpen(true) },
     onToggleFavorite: toggleFavorite,
     onDelete: remove,
+    onSpeak: setSpeaking,
+    onColor: setColor,
     mayEdit,
   }
 
@@ -209,7 +245,7 @@ export default function Outreach() {
         // ---- Suchansicht: flach, kanalübergreifend ----
         <>
           <p className="text-xs text-text-muted mb-3">{searchResults.length} Treffer für „{search}"</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
             {searchResults.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
           </div>
         </>
@@ -241,7 +277,7 @@ export default function Outreach() {
                 </span>
               </button>
               {favoritesOpen && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                   {favorites.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
                 </div>
               )}
@@ -280,8 +316,28 @@ export default function Outreach() {
           {channelTemplates.length === 0 ? (
             <p className="text-center py-12 text-text-muted text-sm">Keine Vorlagen in dieser Rubrik.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {channelTemplates.map((t) => <TemplateCard key={t.id} template={t} {...cardHandlers} />)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              {channelTemplates.map((t, i) => (
+                <TemplateCard
+                  key={t.id}
+                  template={t}
+                  {...cardHandlers}
+                  draggable={mayEdit}
+                  onDragStartCard={() => setDragFrom(i)}
+                  onDropOnCard={() => {
+                    if (dragFrom === null || dragFrom === i) return
+                    void persistOrder(moveItem(channelTemplates, dragFrom, i))
+                    setDragFrom(null)
+                  }}
+                  onMoveBy={mayEdit
+                    ? (karte, delta) => {
+                      const von = channelTemplates.findIndex((x) => x.id === karte.id)
+                      if (von < 0) return
+                      void persistOrder(moveBy(channelTemplates, von, delta))
+                    }
+                    : undefined}
+                />
+              ))}
             </div>
           )}
         </>
@@ -294,6 +350,9 @@ export default function Outreach() {
 
       {copying && (
         <CopyModal template={copying} onClose={() => setCopying(null)} onCopied={bumpUsage} />
+      )}
+      {speaking && (
+        <SpeakingCardDialog template={speaking} onClose={() => setSpeaking(null)} />
       )}
       {formOpen && (
         <TemplateFormModal
