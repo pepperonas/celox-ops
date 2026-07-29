@@ -24,6 +24,7 @@ import asyncio
 from sqlalchemy import select
 
 from app.database import async_session_factory
+from app.models import registry  # noqa: F401  — vollständige Metadata, s. Modul-Docstring
 from app.models.outreach_template import OutreachChannel, OutreachTemplate
 from app.services.email_signature import LEGACY_TEMPLATE_SIGNATURE, SIGNATURE
 

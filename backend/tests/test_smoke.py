@@ -29,6 +29,76 @@ def test_all_routers_import():
     ])
 
 
+def test_model_registry_is_complete():
+    """`app/models/registry.py` muss JEDES Modell-Modul importieren.
+
+    Die Registry ist die eine Zeile, mit der Wartungsskripte vollständige
+    `Base.metadata` bekommen. Fehlt dort ein neues Modell, kippt der Nutzen
+    still: Die Skripte laufen weiter, bis eines genau dieses Modell braucht.
+    """
+    import pkgutil
+    import re
+
+    import app.models
+    from app.models import registry
+
+    on_disk = {
+        m.name for m in pkgutil.iter_modules(app.models.__path__)
+        if m.name != "registry"
+    }
+    src = open(registry.__file__, encoding="utf-8").read()
+    imported = set(re.findall(r"^from app\.models import (\w+)", src, re.M))
+    assert on_disk - imported == set(), (
+        f"in registry.py fehlen: {sorted(on_disk - imported)}"
+    )
+
+
+def test_each_script_resolves_its_foreign_keys_alone():
+    """Jedes Wartungsskript muss seine Fremdschlüssel AUS SICH HERAUS auflösen
+    können — jedes in einem eigenen Interpreter geprüft.
+
+    Grund: Ein Skript, das nur sein eigenes Modell importiert, lässt
+    `owner_id → users` unauflösbar. Der Trockenlauf (nur SELECT) läuft noch
+    durch, und erst der schreibende Lauf stirbt mit `NoReferencedTableError` —
+    also genau dann, wenn man ihn braucht. Live passiert
+    (`update_outreach_signature`, 2026-07-29).
+
+    Zwei Dinge waren an der ersten Fassung dieses Tests falsch, beide durch einen
+    Mutationstest gefunden:
+    1. `configure_mappers()` ist die falsche Zwangsfunktion — Fremdschlüssel
+       werden erst beim Zugriff auf `ForeignKey.column` aufgelöst (Flush/DDL),
+       nicht bei der Mapper-Konfiguration.
+    2. Alle Skripte in EINEM Prozess zu importieren macht den Test blind: ein
+       beliebiges anderes Skript importiert `User`, damit ist die globale
+       Registry gefüllt und das Leck unsichtbar. Deshalb ein Subprozess je
+       Skript (~0,7 s, kein DB-Zugriff).
+    """
+    import pkgutil
+    import subprocess
+    import sys
+
+    import app.scripts
+
+    names = sorted(m.name for m in pkgutil.iter_modules(app.scripts.__path__))
+    assert len(names) >= 5, f"Skripte nicht gefunden: {names}"
+
+    code = (
+        "import app.scripts.{name}\n"
+        "from app.models.customer import Base\n"
+        "[fk.column for t in Base.metadata.tables.values() for fk in t.foreign_keys]\n"
+    )
+    broken: list[str] = []
+    for name in names:
+        proc = subprocess.run(
+            [sys.executable, "-c", code.format(name=name)],
+            capture_output=True, text=True, timeout=120,
+        )
+        if proc.returncode != 0:
+            last = (proc.stderr.strip().splitlines() or ["?"])[-1]
+            broken.append(f"{name}: {last}")
+    assert not broken, "Skripte mit unauflösbaren Fremdschlüsseln:\n" + "\n".join(broken)
+
+
 def test_jwt_token_create_verify():
     from app.auth import create_access_token, verify_token
     token = create_access_token({"sub": "test-user"})
