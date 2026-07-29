@@ -7,6 +7,13 @@ interface FilterChipsProps {
   options: ChipOption[]
   value: string
   onChange: (value: string) => void
+  /**
+   * Tönt die INAKTIVEN Chips im Akzent — markiert eine zweite Filter-Achse in
+   * einer eigenen Reihe (s. Outreach: Anlass vs. Angebot). Der aktive Chip
+   * bleibt gefüllt wie sonst, damit die Auswahl nie mehrdeutig wird: gefüllt
+   * schlägt getönt.
+   */
+  accent?: boolean
 }
 
 const check = (
@@ -21,7 +28,7 @@ const check = (
  * and shows a leading check. Ideal for >5 options where segmented buttons
  * would be too wide.
  */
-export default function FilterChips({ options, value, onChange }: FilterChipsProps) {
+export default function FilterChips({ options, value, onChange, accent }: FilterChipsProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => {
@@ -34,7 +41,9 @@ export default function FilterChips({ options, value, onChange }: FilterChipsPro
             className={`md-state inline-flex items-center gap-1.5 px-4 h-8 rounded-lg text-xs font-medium transition-all duration-short ease-spring ${
               active
                 ? 'bg-md-secondary-container text-on-secondary-container'
-                : 'text-text-muted border border-border hover:text-text'
+                : accent
+                  ? 'text-accent/80 border border-accent/40 hover:text-accent'
+                  : 'text-text-muted border border-border hover:text-text'
             }`}
           >
             {active && check}

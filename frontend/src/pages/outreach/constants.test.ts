@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   brancheFromTags,
   CATEGORIES,
+  CATEGORY_AXIS,
   CATEGORY_LABEL,
   CHANNELS,
+  isOfferCategory,
   PLACEHOLDERS,
 } from './constants'
 
@@ -41,6 +43,32 @@ describe('constants Integrität', () => {
       expect(keys).toContain(k)
     }
   })
+  it('jede Rubrik liegt auf genau einer Achse — keine fällt aus der Leiste', () => {
+    // Die Filterleiste rendert zwei Reihen, gefiltert nach CATEGORY_AXIS. Eine
+    // Rubrik ohne Achse wäre unsichtbar: ihre Vorlagen ließen sich nicht mehr
+    // filtern. Der Record ist total, TS fängt Fehlendes — dieser Test fängt den
+    // Fall, dass die Ableitung der Reihen selbst nicht mehr alles abdeckt.
+    const axisKeys = Object.keys(CATEGORY_AXIS).sort()
+    const chipKeys = CATEGORIES.map((c) => c.value as string).sort()
+    expect(axisKeys).toEqual(chipKeys)
+    const anlass = CATEGORIES.filter((c) => CATEGORY_AXIS[c.value] === 'anlass')
+    const angebot = CATEGORIES.filter((c) => CATEGORY_AXIS[c.value] === 'angebot')
+    expect(anlass.length + angebot.length).toBe(CATEGORIES.length)
+    expect(anlass.length).toBeGreaterThan(0)
+    expect(angebot.length).toBeGreaterThan(0)
+  })
+
+  it('die drei Produktlinien zählen als Angebot, die Phasen nicht', () => {
+    for (const c of ['datenschutz_dsms', 'portal_assessment', 'bcsbook_zeit',
+                     'security_audit', 'ki_automatisierung'] as const) {
+      expect(isOfferCategory(c), `${c} sollte ein Angebot sein`).toBe(true)
+    }
+    for (const c of ['kaltakquise', 'followup', 'reaktivierung', 'empfehlung',
+                     'angebot_nachfassen'] as const) {
+      expect(isOfferCategory(c), `${c} ist ein Anlass, kein Angebot`).toBe(false)
+    }
+  })
+
   it('nur name/firma/branche/mitarbeiter sind aus dem Lead befüllbar', () => {
     // Die Liste ist absichtlich eng: Jeder Eintrag braucht eine Entsprechung in
     // CopyModal (Lead-Feld → Platzhalter). Ein Key ohne Mapping bliebe leer und

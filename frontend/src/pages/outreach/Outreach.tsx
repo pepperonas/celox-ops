@@ -12,7 +12,7 @@ import {
   updateOutreachTemplate,
   deleteOutreachTemplate,
 } from '../../api/outreach'
-import { CATEGORIES, CHANNELS } from './constants'
+import { CATEGORIES, CATEGORY_AXIS, CHANNELS } from './constants'
 import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
@@ -107,7 +107,15 @@ export default function Outreach() {
     [all, channel, category],
   )
 
-  const categoryChips = [{ value: 'all', label: 'Alle' }, ...CATEGORIES.map((c) => ({ value: c.value, label: c.label }))]
+  // Zwei Achsen, zwei Reihen (s. CATEGORY_AXIS in constants.ts). „Alle" gehört
+  // zu KEINER der beiden und steht deshalb in einer eigenen Zeile ohne Label —
+  // unter der Beschriftung „Anlass" gelesen hieße es „alle Anlässe", zeigt aber
+  // auch die Angebote.
+  const resetChip = [{ value: 'all', label: 'Alle Rubriken' }]
+  const occasionChips = CATEGORIES.filter((c) => CATEGORY_AXIS[c.value] === 'anlass')
+    .map((c) => ({ value: c.value as string, label: c.label }))
+  const offerChips = CATEGORIES.filter((c) => CATEGORY_AXIS[c.value] === 'angebot')
+    .map((c) => ({ value: c.value as string, label: c.label }))
 
   const cardHandlers = {
     onCopy: setCopying,
@@ -168,9 +176,24 @@ export default function Outreach() {
             />
           </div>
 
-          {/* Rubriken-Filter */}
-          <div className="mb-4">
-            <FilterChips options={categoryChips} value={category} onChange={setCategory} />
+          {/* Rubriken-Filter: Anlass (wann) und Angebot (was) getrennt. Jede
+              Reihe kennt nur ihre Optionen — die aktive Auswahl leuchtet daher
+              automatisch nur in der Reihe, zu der sie gehört. */}
+          <div className="mb-4 space-y-2">
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+              {/* Leerer Spacer in Label-Breite: hält die Chips aller drei Zeilen
+                  auf einer Kante, ohne dem Reset eine Achse anzudichten. */}
+              <span className="shrink-0 w-14" aria-hidden="true" />
+              <FilterChips options={resetChip} value={category} onChange={setCategory} />
+            </div>
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+              <span className="text-[11px] text-text-muted shrink-0 pt-2 w-14">Anlass</span>
+              <FilterChips options={occasionChips} value={category} onChange={setCategory} />
+            </div>
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+              <span className="text-[11px] text-text-muted shrink-0 pt-2 w-14">Angebot</span>
+              <FilterChips options={offerChips} value={category} onChange={setCategory} accent />
+            </div>
           </div>
 
           {channelTemplates.length === 0 ? (

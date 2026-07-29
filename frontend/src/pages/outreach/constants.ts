@@ -31,6 +31,39 @@ export const CATEGORY_LABEL: Record<OutreachCategory, string> = Object.fromEntri
   CATEGORIES.map((c) => [c.value, c.label]),
 ) as Record<OutreachCategory, string>
 
+/**
+ * Zwei Achsen in einer Rubrikenliste: WANN im Verkaufsprozess (`anlass`) und WAS
+ * verkauft wird (`angebot`). Vorher standen beide in einer Reihe — man musste
+ * jedes Label lesen, um zu erkennen, welche Art Filter man anklickt.
+ *
+ * Bewusst nach Achse getrennt, NICHT nach „neu": eine Neuheiten-Ecke verfällt
+ * mit dem vierten Produkt, und Security-Check/KI-Automatisierung sind längst
+ * Angebote — sie stünden auf der falschen Seite. Unterscheidungstest: Sagt das
+ * Label, WAS verkauft wird? Dann `angebot`.
+ *
+ * Der Record ist total — eine neue Rubrik ohne Achse ist ein Compile-Fehler und
+ * kann damit nicht stillschweigend aus der Filterleiste fallen.
+ */
+export const CATEGORY_AXIS: Record<OutreachCategory, 'anlass' | 'angebot'> = {
+  kaltakquise: 'anlass',
+  followup: 'anlass',
+  reaktivierung: 'anlass',
+  empfehlung: 'anlass',
+  angebot_nachfassen: 'anlass',
+  ki_automatisierung: 'angebot',
+  security_audit: 'angebot',
+  security_upsell: 'angebot',
+  datenschutz_dsms: 'angebot',
+  portal_assessment: 'angebot',
+  bcsbook_zeit: 'angebot',
+}
+
+/** Verkauft diese Rubrik ein konkretes Angebot? Steuert den Akzent-Ton in der
+ *  Chip-Reihe UND die Rubrik-Pille auf der Karte — aus einer Quelle, damit die
+ *  beiden nicht auseinanderlaufen. */
+export const isOfferCategory = (c: OutreachCategory): boolean =>
+  CATEGORY_AXIS[c] === 'angebot'
+
 // Platzhalter-Katalog: Reihenfolge im Formular, Label + Beispiel, und ob er
 // automatisch aus einem Rainmaker-Lead befüllt werden kann.
 export interface PlaceholderMeta {

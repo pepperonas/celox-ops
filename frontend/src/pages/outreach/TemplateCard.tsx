@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { OutreachTemplate } from '../../types'
-import { CATEGORY_LABEL, CHANNEL_LABEL } from './constants'
+import { CATEGORY_LABEL, CHANNEL_LABEL, isOfferCategory } from './constants'
 import Icon from '../../components/Icon'
 
 interface Props {
@@ -22,7 +22,15 @@ export default function TemplateCard({ template, showChannel, onCopy, onEdit, on
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-text-muted">{CATEGORY_LABEL[t.category]}</span>
+            {/* Angebots-Rubriken tragen den Akzent — dieselbe Tönung wie ihre
+                Chip-Reihe. Bewusst NUR die Pille, nicht die ganze Karte: die
+                Rubrik steht hier ohnehin schon, ein Karten-Tint wäre dieselbe
+                Information ein zweites Mal. */}
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              isOfferCategory(t.category)
+                ? 'bg-accent/10 text-accent'
+                : 'bg-surface-container text-text-muted'
+            }`}>{CATEGORY_LABEL[t.category]}</span>
             {showChannel && <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-text-muted">{CHANNEL_LABEL[t.channel]}</span>}
             {t.usage_count > 0 && <span className="text-[10px] text-text-muted" title="So oft kopiert">↗ {t.usage_count}×</span>}
           </div>
