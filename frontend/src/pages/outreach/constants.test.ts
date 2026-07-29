@@ -6,6 +6,8 @@ import {
   CATEGORY_LABEL,
   CHANNELS,
   isOfferCategory,
+  restoreCategory,
+  restoreChannel,
   PLACEHOLDERS,
 } from './constants'
 
@@ -43,6 +45,33 @@ describe('constants Integrität', () => {
       expect(keys).toContain(k)
     }
   })
+  it('gespeicherte Auswahl wird beim Laden geprüft (Stale-Guard)', () => {
+    // Kanal und Rubrik überleben einen Reload. Ein Wert, den es nicht mehr gibt,
+    // würde die Liste dauerhaft leer filtern — der erste Eindruck wäre „meine
+    // Vorlagen sind weg". Deshalb fällt Unbekanntes auf den Standard zurück.
+    expect(restoreChannel('phone')).toBe('phone')
+    expect(restoreChannel('linkedin')).toBe('linkedin')
+    for (const kaputt of [null, undefined, '', 'fax', 'EMAIL', 'email ']) {
+      expect(restoreChannel(kaputt)).toBe('email')
+    }
+
+    expect(restoreCategory('bcsbook_zeit')).toBe('bcsbook_zeit')
+    expect(restoreCategory('all')).toBe('all')
+    for (const kaputt of [null, undefined, '', 'entfernte_rubrik', 'Kaltakquise']) {
+      expect(restoreCategory(kaputt)).toBe('all')
+    }
+  })
+
+  it('jede echte Rubrik lässt sich wiederherstellen', () => {
+    // Sonst würde ein Filter beim Reload still auf „Alle" zurückfallen.
+    for (const c of CATEGORIES) {
+      expect(restoreCategory(c.value)).toBe(c.value)
+    }
+    for (const c of CHANNELS) {
+      expect(restoreChannel(c.value)).toBe(c.value)
+    }
+  })
+
   it('die Reihenfolge der Chip-Reihen ist festgelegt', () => {
     // CATEGORIES ist die Anzeigereihenfolge, nicht bloß eine Menge. Bei den
     // Angeboten stehen die drei eigenen Produkte vorn — wer eine Rubrik ergänzt,

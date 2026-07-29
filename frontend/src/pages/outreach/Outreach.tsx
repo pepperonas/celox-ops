@@ -12,7 +12,9 @@ import {
   updateOutreachTemplate,
   deleteOutreachTemplate,
 } from '../../api/outreach'
-import { CATEGORIES, CATEGORY_AXIS, CHANNELS } from './constants'
+import {
+  CATEGORIES, CATEGORY_AXIS, CHANNELS, restoreCategory, restoreChannel,
+} from './constants'
 import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
@@ -21,12 +23,21 @@ import { useAuthStore } from '../../store/authStore'
 import { canEditOutreachTemplates } from '../../utils/permissions'
 
 const SEED_FLAG = 'outreach-seed-checked'
+// Kanal und Rubrik überleben Reload und Zurück-Navigation — gleiches Muster wie
+// die Pipeline-Filter. Die Suche bleibt bewusst flüchtig: ein wiederhergestellter
+// Suchbegriff sähe nach dem Laden wie ein leerer Vorlagenbestand aus.
+const CHANNEL_KEY = 'akquise-channel'
+const CATEGORY_KEY = 'akquise-category'
 
 export default function Outreach() {
   const [all, setAll] = useState<OutreachTemplate[]>([])
   const [loading, setLoading] = useState(true)
-  const [channel, setChannel] = useState<OutreachChannel>('email')
-  const [category, setCategory] = useState<string>('all')
+  const [channel, setChannel] = useState<OutreachChannel>(
+    () => restoreChannel(localStorage.getItem(CHANNEL_KEY)),
+  )
+  const [category, setCategory] = useState<string>(
+    () => restoreCategory(localStorage.getItem(CATEGORY_KEY)),
+  )
   const [search, setSearch] = useState('')
   const [copying, setCopying] = useState<OutreachTemplate | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -58,6 +69,14 @@ export default function Outreach() {
       setLoading(false)
     })()
   }, [])
+
+  useEffect(() => { localStorage.setItem(CHANNEL_KEY, channel) }, [channel])
+  useEffect(() => {
+    // „Alle Rubriken" ist der Standard und braucht keinen Eintrag — so bleibt der
+    // Speicher leer, solange nichts gefiltert ist.
+    if (category === 'all') localStorage.removeItem(CATEGORY_KEY)
+    else localStorage.setItem(CATEGORY_KEY, category)
+  }, [category])
 
   // Zieht fehlende Standard-Vorlagen nach — additiv je Vorlage, nicht je Rubrik.
   // Nötig, weil neue Serien innerhalb einer bestehenden Rubrik den

@@ -43,6 +43,24 @@ export const CATEGORY_LABEL: Record<OutreachCategory, string> = Object.fromEntri
 ) as Record<OutreachCategory, string>
 
 /**
+ * Gespeicherte Auswahl beim Laden prüfen — Stale-Guard.
+ *
+ * Kanal und Rubrik überleben einen Reload (localStorage). Ein Wert, den es nicht
+ * mehr gibt — umbenannte Rubrik, entfernter Kanal, von Hand veränderter
+ * Speicher — würde die Liste sonst dauerhaft leer filtern; der erste Eindruck
+ * wäre „meine Vorlagen sind weg". Deshalb fällt Unbekanntes auf den Standard
+ * zurück. Rein, damit es geprüft ist.
+ */
+export function restoreChannel(raw: string | null | undefined): OutreachChannel {
+  return CHANNELS.some((c) => c.value === raw) ? (raw as OutreachChannel) : 'email'
+}
+
+export function restoreCategory(raw: string | null | undefined): string {
+  if (raw === 'all') return 'all'
+  return CATEGORIES.some((c) => c.value === raw) ? (raw as string) : 'all'
+}
+
+/**
  * Zwei Achsen in einer Rubrikenliste: WANN im Verkaufsprozess (`anlass`) und WAS
  * verkauft wird (`angebot`). Vorher standen beide in einer Reihe — man musste
  * jedes Label lesen, um zu erkennen, welche Art Filter man anklickt.
