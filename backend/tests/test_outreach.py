@@ -17,8 +17,9 @@ def test_at_least_three_per_channel_category():
 
 def test_total_count_and_enums_valid():
     seeds = default_templates()
-    # 3 Kanäle × 11 Rubriken × 3 = 99
-    assert len(seeds) == 99
+    # 8 Alt-Rubriken × 3 Kanäle × 3 = 72; die 3 Produktlinien haben eine zweite
+    # E-Mail-/LinkedIn-Serie (wärmerer Ton) → je 6+6+3 = 15, also 45.
+    assert len(seeds) == 117
     for t in seeds:
         assert t["channel"] in CHANNELS
         assert t["category"] in CATEGORIES
@@ -209,3 +210,56 @@ def test_sort_order_is_zero_based_per_group():
         groups.setdefault((t["channel"], t["category"]), []).append(t["sort_order"])
     for key, orders in groups.items():
         assert sorted(orders) == list(range(len(orders))), f"sort_order Lücke bei {key}"
+
+
+def test_missing_templates_is_additive_per_template():
+    """Der Nachtrag muss je VORLAGE arbeiten, nicht je Rubrik.
+
+    Vorher war der Seed rubrikbasiert: existierte die Rubrik, wurde nichts mehr
+    ergänzt. Eine zweite Serie innerhalb einer bestehenden Rubrik hätte einen
+    Arbeitsbereich damit nie erreicht — der Text stünde im Code und nirgends in
+    der Anwendung.
+    """
+    from app.services.outreach_seed import missing_templates, template_key
+
+    alle = default_templates()
+    assert missing_templates(set()) == alle          # leerer Bereich → alles
+    assert missing_templates({template_key(t) for t in alle}) == []   # voll → nichts
+
+    # Eine bestehende Rubrik darf den Nachtrag NICHT blockieren: hier ist nur die
+    # erste Vorlage der Rubrik vorhanden, die übrigen müssen kommen.
+    eine = next(t for t in alle if t["category"] == "bcsbook_zeit")
+    fehlend = missing_templates({template_key(eine)})
+    assert len(fehlend) == len(alle) - 1
+    assert any(t["category"] == "bcsbook_zeit" for t in fehlend)
+
+
+def test_each_product_line_has_two_series_per_written_channel():
+    """Je Produktlinie 6 E-Mails und 6 LinkedIn-Nachrichten (zwei Serien mit
+    unterschiedlichem Register), Telefon bleibt bei 3 Leitfäden."""
+    seeds = default_templates()
+    for cat in NEW_LINES:
+        for channel, erwartet in (("email", 6), ("linkedin", 6), ("phone", 3)):
+            n = sum(1 for t in seeds if t["category"] == cat and t["channel"] == channel)
+            assert n == erwartet, f"{cat}/{channel}: {n} statt {erwartet}"
+
+
+def test_titles_are_unique_within_channel_and_category():
+    """Der Titel ist der Nachtrag-Schlüssel — zwei gleiche Titel in einer Rubrik
+    würden dazu führen, dass eine Vorlage nie ergänzt wird."""
+    seen: set[tuple[str, str, str]] = set()
+    for t in default_templates():
+        key = (t["channel"], t["category"], t["title"])
+        assert key not in seen, f"Doppelter Titel: {key}"
+        seen.add(key)
+
+
+def test_linkedin_messages_stay_short():
+    """LinkedIn-Konvention: ≤60 Wörter. Längere Direktnachrichten werden
+    zugeklappt und gar nicht gelesen."""
+    zu_lang = [
+        (t["title"], len(t["body"].split()))
+        for t in default_templates()
+        if t["channel"] == "linkedin" and len(t["body"].split()) > 60
+    ]
+    assert zu_lang == []

@@ -13,7 +13,7 @@ from app.schemas.outreach import (
     OutreachTemplateResponse,
     OutreachTemplateUpdate,
 )
-from app.services.outreach_seed import default_templates
+from app.services.outreach_seed import missing_templates
 
 # Lesen: Admin UND Verkäufer (die Vorlagen sind das Werkzeug des Vertriebs).
 # Schreiben: nur Admin — deshalb hängt `require_admin` an den einzelnen
@@ -123,18 +123,23 @@ async def mark_copied(template_id: UUID, db: AsyncSession = Depends(get_db)) -> 
 @router.post("/templates/seed", response_model=list[OutreachTemplateResponse],
              dependencies=[Depends(require_admin)])
 async def seed_templates(db: AsyncSession = Depends(get_db)) -> list[OutreachTemplateResponse]:
-    """Legt fehlende Standard-Rubriken an — idempotent und **additiv**: fehlt eine
-    ganze Rubrik (z. B. eine neu ergänzte Linie), wird nur diese nachgezogen; das
-    fügt bestehenden Nutzern neue Vorlagen zu, ohne Duplikate."""
-    existing_cats = {
-        (c.value if hasattr(c, "value") else c)
-        for c in (await db.execute(select(OutreachTemplate.category).distinct())).scalars().all()
-    }
+    """Legt fehlende Standard-Vorlagen an — idempotent und **additiv je Vorlage**.
+
+    Früher lief das pro Rubrik: existierte die Rubrik, wurde nichts mehr ergänzt.
+    Eine zweite Serie innerhalb einer bestehenden Rubrik hätte einen
+    Arbeitsbereich damit nie erreicht (s. `missing_templates`).
+    """
+    def _v(x):
+        return x.value if hasattr(x, "value") else x
+
+    rows = (await db.execute(select(
+        OutreachTemplate.channel, OutreachTemplate.category, OutreachTemplate.title
+    ))).all()
+    existing = {(_v(ch), _v(cat), title) for ch, cat, title in rows}
     added = 0
-    for t in default_templates():
-        if t["category"] not in existing_cats:
-            db.add(OutreachTemplate(**t))
-            added += 1
+    for t in missing_templates(existing):
+        db.add(OutreachTemplate(**t))
+        added += 1
     if added:
         await db.flush()
     rows = (await db.execute(

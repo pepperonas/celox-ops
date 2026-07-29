@@ -378,6 +378,130 @@ Ich habe ein Werkzeug gebaut, das die Vorschläge aus der tatsächlichen Arbeit 
 Zwei Wochen Pilot mit drei bis fünf Freiwilligen — danach entscheiden Sie an Ihren eigenen Zahlen. Passt das?""",
        subject="{{firma}}: Stimmen Ihre Projektkosten wirklich?",
        notes="Warmkontakt: BCS-Nutzung ist bekannt, also direkt auf die Datenqualität. Datenschutz-Einwand vorweggenommen."),
+
+    # ======================================================================= #
+    #  Zweite Serie je Produktlinie (2026-07-29): wärmerer Ton.
+    #
+    #  Die erste Serie arbeitet mit Druck (Auskunftsersuchen, Nachweispflicht,
+    #  Kostenrechnung). Diese hier verkauft die ZUSAMMENARBEIT: erreichbar,
+    #  transparent, ohne Bindung, aus eigener Praxis. Gleiche Länge, gleiche
+    #  Regeln (ein Anker, kein eigener Preis, Frage am Ende) — anderer Register.
+    #  Wer auf die erste Serie nicht reagiert, reagiert manchmal auf diese.
+    # ======================================================================= #
+
+    # ---- Datenschutz & DSB: Erreichbarkeit ----
+    _t("email", "datenschutz_dsms", "Ein Mensch, kein Ticketsystem (KMU-GF)",
+       """{{anrede}} {{name}},
+
+Datenschutz wird meistens erst dann konkret, wenn etwas passiert. Ein Laptop weg, eine Mail an den falschen Verteiler, eine Anfrage von einem ehemaligen Mitarbeiter.
+
+In diesem Moment zählt nur eines: dass Sie jemanden erreichen, der die Sache kennt und Ihnen sagt, was jetzt zu tun ist.
+
+Genau das ist mein Angebot. Ich übernehme die Rolle des externen Datenschutzbeauftragten für {{firma}} — und im Ernstfall telefonieren Sie mit mir, nicht mit einer Hotline. Ich betreue bewusst wenige Mandate, damit das so bleibt.
+
+Wollen wir zwanzig Minuten sprechen und schauen, ob das für Sie passt?""",
+       subject="Wen rufen Sie an, wenn bei {{firma}} etwas passiert?",
+       notes="Verkauft die Erreichbarkeit, nicht die Pflicht. „Bewusst wenige Mandate“ ist echte Positionierung und begründet, warum es persönlich bleibt."),
+    _t("email", "datenschutz_dsms", "Sie sehen jederzeit, wo Sie stehen",
+       """{{anrede}} {{name}},
+
+fast jeder Betrieb hat irgendwo einen Ordner zum Datenschutz. Was kaum jemand hat: eine Antwort auf die Frage, wo man gerade steht.
+
+Bei mir ist genau das der Kern. Nach dem Erstgespräch steht Ihr Grundgerüst — Verarbeitungsverzeichnis, Schutzmaßnahmen, Löschkonzept. Danach sehen Sie jederzeit eine Liste: was ist dran, bis wann, mit wie viel Aufwand. Kein Jahresbericht, der im Regal altert.
+
+Das nimmt dem Thema den Schrecken. Sie müssen Datenschutz nicht verstehen — Sie müssen sehen können, dass er läuft.
+
+Darf ich Ihnen das in zwanzig Minuten zeigen?""",
+       subject="{{firma}}: Datenschutz, den Sie auf einer Seite sehen",
+       notes="Nutzen ist Überblick, nicht Absicherung. Zielt auf Leute, die das Thema als Blindflug erleben."),
+    _t("email", "datenschutz_dsms", "Sie riskieren ein Gespräch",
+       """{{anrede}} {{name}},
+
+ich weiß, wie sich so eine Anfrage anfühlt: noch ein Dienstleister, noch ein Vertrag, noch etwas, das man später schwer loswird.
+
+Deshalb mache ich es andersherum. Das Erstgespräch kostet nichts und verpflichtet zu nichts. Wenn wir zusammenarbeiten, läuft es zwölf Monate und ist danach monatlich kündbar. Ihre Daten können Sie jederzeit vollständig exportieren — Sie bleiben an niemandem hängen.
+
+Sie riskieren also ein Gespräch. Wenn ich Ihnen darin nichts Nützliches sagen kann, haben Sie zwanzig Minuten verloren und ich einen ehrlichen Hinweis gegeben.
+
+Passt Ihnen diese oder nächste Woche?""",
+       subject="Unverbindlich anfangen — und jederzeit wieder heraus",
+       notes="Risikoumkehr aus der Produktseite (Erstgespräch kostenlos, monatlich kündbar, Datenexport). Nennt den Einwand zuerst, statt ihn abzuwarten."),
+
+    # ---- Assessments (Portal): Team, Nachweis, Branche ----
+    _t("email", "portal_assessment", "Schulung ohne Zeigefinger (Team)",
+       """{{anrede}} {{name}},
+
+die meisten Sicherheitsschulungen fühlen sich für Mitarbeitende wie eine Ermahnung an. Entsprechend groß ist die Begeisterung.
+
+Meine sind anders gebaut: kurze Module im Browser, jederzeit unterbrechbar, mit einem Wissenscheck am Ende und einem Zertifikat auf den eigenen Namen. Niemand wird vorgeführt, niemand sitzt einen halben Tag im Schulungsraum.
+
+Sie sehen in der Übersicht, wer durch ist. Und Ihre Leute nehmen etwas mit, das sie am nächsten Tag anwenden können.
+
+Ich schalte Ihnen einen Kurs zum Ausprobieren frei — wollen Sie hineinschauen?""",
+       subject="Sicherheitsschulung, die Ihr Team nicht als Strafe empfindet",
+       notes="Der eigentliche Widerstand kommt aus dem Team, nicht von der Leitung. Verkauft Akzeptanz."),
+    _t("email", "portal_assessment", "Wenn ein Kunde nach Sicherheit fragt",
+       """{{anrede}} {{name}},
+
+diese Frage kommt inzwischen häufiger: von Kunden in Ausschreibungen, von Versicherern, manchmal aus dem eigenen Beirat. Unangenehm ist sie vor allem dann, wenn man nur antworten kann, dass man schon viel tue.
+
+Mit einem Assessment haben Sie eine andere Antwort. Fünfundzwanzig Minuten online, sechs Bereiche, angelehnt an den BSI-CyberRisikoCheck — am Ende ein Reifegrad, eine nach Dringlichkeit sortierte Maßnahmenliste und ein Nachweis als PDF.
+
+Das ist eine Standortbestimmung, keine Zertifizierung. Aber es ist etwas, das Sie vorlegen können.
+
+Soll ich Ihnen den kostenlosen Drei-Minuten-Check schicken, damit Sie den Aufbau sehen?""",
+       subject="Wenn ein Kunde fragt, wie sicher {{firma}} ist",
+       notes="Nutzen ist Sprechfähigkeit gegenüber Dritten. Die Grenze „keine Zertifizierung“ steht im Text — nicht entfernen."),
+    _t("email", "portal_assessment", "Kurse mit dem eigenen Arbeitstag ({{branche}})",
+       """{{anrede}} {{name}},
+
+allgemeine Sicherheitsschulungen scheitern oft am selben Punkt: Die Beispiele haben nichts mit dem eigenen Arbeitstag zu tun. Dann hakt man sie ab und vergisst sie.
+
+Deshalb gibt es bei mir eigene Kurse für einzelne Branchen — Arztpraxis, Kanzlei, Hotel, Pflegedienst, Einzelhandel, Immobilien, Bar- und Clubbetrieb, Sicherheitsdienst. Mit den Situationen, die dort wirklich vorkommen.
+
+Für {{branche}} schauen wir gemeinsam, was passt. Und wenn es keinen passenden Kurs gibt, sage ich Ihnen das ebenso deutlich.
+
+Zwanzig Minuten, um es durchzugehen?""",
+       subject="{{branche}}: Schulungen, in denen sich Ihre Leute wiedererkennen",
+       notes="Belegt Branchennähe mit den real existierenden Kursen. Das Angebot, auch abzusagen, macht den Rest glaubwürdig."),
+
+    # ---- bcsbook: Akzeptanz, Pilot, Herkunft ----
+    _t("email", "bcsbook_zeit", "Werkzeug statt Aufpasser (Team)",
+       """{{anrede}} {{name}},
+
+wenn Zeiterfassung automatisch wird, ist die erste Reaktion im Team fast immer dieselbe: Werde ich jetzt überwacht?
+
+Die Frage ist berechtigt, und deshalb ist mein Werkzeug so gebaut, dass die Antwort ehrlich nein lautet. Es läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät und speichert keine Zugangsdaten. Es bucht nichts ohne Bestätigung. Und es gibt keine Auswertung, die bei der Leitung landet.
+
+Was Ihre Leute stattdessen bekommen: Der Tag steht schon da, wenn sie das Fenster öffnen. Prüfen, bestätigen, fertig — gebucht wird in Ihr vorhandenes Projektron BCS.
+
+Wenn das bei Ihnen im Einsatz ist, würde ich zwei Wochen Pilot mit drei bis fünf Freiwilligen vorschlagen. Erfassen Sie Ihre Projektzeiten in BCS?""",
+       subject="Zeiterfassung, gegen die sich Ihr Team nicht wehrt",
+       notes="Nimmt den stärksten Einwand als Aufhänger. Alle vier Aussagen sind belegbare Produkteigenschaften — nichts davon beschönigen."),
+    _t("email", "bcsbook_zeit", "Beweis vor Kauf: der Pilot",
+       """{{anrede}} {{name}},
+
+ich verkaufe lieber nach dem Beweis als davor. Also machen wir es umgekehrt.
+
+Wenn {{firma}} Projektzeiten in Projektron BCS erfasst: Wir nehmen drei bis fünf Freiwillige und lassen mein Werkzeug zwei Wochen mitlaufen. Es leitet die Buchungen aus der Arbeit ab, die ohnehin entsteht — Commits, IDE-Aktivität, Ticket-Updates — und legt sie zur Bestätigung vor.
+
+Danach legen wir die Timesheets von vorher und nachher nebeneinander. Kommt nichts dabei heraus, haben Sie es schwarz auf weiß und wir hören auf.
+
+Die Einrichtung dauert rund zwei Minuten pro Person. Wen hätten Sie dafür im Kopf?""",
+       subject="Zwei Wochen, drei Leute, dann entscheiden Ihre Zahlen",
+       notes="Der Abschluss fragt nach NAMEN, nicht nach Erlaubnis — das ist der konkretere nächste Schritt. „Wir hören auf“ nimmt den Druck raus."),
+    _t("email", "bcsbook_zeit", "Aus eigener Praxis entstanden",
+       """{{anrede}} {{name}},
+
+kurz, warum es dieses Werkzeug überhaupt gibt: Ich habe jahrelang selbst Zeiten in Projektron BCS nachgetragen und es jeden Freitag gehasst. Also habe ich das Erinnern der Software überlassen.
+
+Das merkt man dem Ergebnis an. Es ist kein Produkt vom Reißbrett, sondern eines, das den Alltag kennt — Buchungsblöcke von fünfzehn Minuten, Vorschläge aus echter Arbeit, ein Klick zum Bestätigen.
+
+Und wenn bei {{firma}} etwas anders läuft als bei mir, landet der Änderungswunsch direkt beim Entwickler. Das bin ich.
+
+Zwanzig Minuten, und ich zeige es Ihnen. Erfassen Sie Ihre Projektzeiten in BCS?""",
+       subject="Ich habe das Werkzeug gebaut, weil ich es selbst brauchte",
+       notes="Herkunft als Beweis für Alltagsnähe; der direkte Draht zum Entwickler ist ein Vorteil, den kein Anbieter mit Support-Ebene hat."),
 ]
 
 
@@ -471,6 +595,29 @@ _LINKEDIN = [
        "{{anrede}} {{name}}, 15 Minuten Nachtragen am Tag sind bei 220 Tagen und 60 € internem Vollkostensatz rund 3.300 € pro Person und Jahr. Teurer ist, was auf dem falschen Projekt landet. Mein Werkzeug bucht in Ihr vorhandenes Projektron BCS. Zwei Wochen Pilot, dann Ihre eigenen Zahlen?"),
     _t("linkedin", "bcsbook_zeit", "Projektkosten stimmen? (Bestandskunde)",
        "{{anrede}} {{name}}, Sie buchen in BCS — stimmen Ihre Projektkosten wirklich? Geschätzte Blöcke landen oft auf dem falschen Projekt, die Tagessumme stimmt trotzdem. Mein Werkzeug leitet die Vorschläge aus der echten Arbeit ab, lokal und ohne gespeicherte Zugangsdaten. Pilot mit 3–5 Freiwilligen?"),
+
+    # ---- Zweite Serie, wärmerer Ton (s. Kommentar im E-Mail-Block) ----
+    _t("linkedin", "datenschutz_dsms", "Erreichbarkeit im Ernstfall",
+       "{{anrede}} {{name}}, Datenschutz wird meist erst konkret, wenn etwas passiert — Laptop weg, Mail an den falschen Verteiler. Dann zählt, dass Sie jemanden erreichen, der die Sache kennt. Ich übernehme die DSB-Rolle für {{firma}} und betreue bewusst wenige Mandate. Zwanzig Minuten unverbindlich?",
+       notes="≤60 Wörter. Verkauft Erreichbarkeit statt Pflicht."),
+    _t("linkedin", "datenschutz_dsms", "Fristenliste statt Jahresbericht",
+       "{{anrede}} {{name}}, fast jeder Betrieb hat einen Datenschutz-Ordner. Was fehlt, ist die Antwort, wo man gerade steht. Bei mir sehen Sie jederzeit eine Fristenliste statt eines Jahresberichts — nach dem Erstgespräch steht das Grundgerüst bereits. Darf ich Ihnen das kurz zeigen?"),
+    _t("linkedin", "datenschutz_dsms", "Ohne Bindung anfangen",
+       "{{anrede}} {{name}}, ich weiß, wie sich so eine Anfrage anfühlt: noch ein Vertrag, den man schwer loswird. Bei mir ist das Erstgespräch kostenlos, die Laufzeit danach monatlich kündbar, der Datenexport jederzeit möglich. Sie riskieren ein Gespräch — sollen wir?"),
+
+    _t("linkedin", "portal_assessment", "Schulung ohne Zeigefinger",
+       "{{anrede}} {{name}}, Sicherheitsschulungen fühlen sich für Teams oft wie eine Ermahnung an. Meine sind kurze Browser-Module mit Wissenscheck und Zertifikat — niemand sitzt einen halben Tag im Schulungsraum. Sie sehen, wer durch ist. Soll ich Ihnen einen Kurs zum Ausprobieren freischalten?"),
+    _t("linkedin", "portal_assessment", "Antwort auf die Sicherheitsfrage",
+       "{{anrede}} {{name}}, Kunden und Versicherer fragen zunehmend, wie sicher {{firma}} aufgestellt ist. Mit einem Assessment beantworten Sie das in einer Minute: Reifegrad, sortierte Maßnahmen, Nachweis als PDF. Eine Standortbestimmung, keine Zertifizierung. Soll ich Ihnen den kostenlosen Kurz-Check schicken?"),
+    _t("linkedin", "portal_assessment", "Branchenkurs statt Allgemeinplätze",
+       "{{anrede}} {{name}}, allgemeine Sicherheitsschulungen scheitern daran, dass die Beispiele nichts mit dem Arbeitstag zu tun haben. Für {{branche}} gibt es bei mir einen eigenen Kurs mit Situationen, die dort wirklich vorkommen. Passt keiner, sage ich es Ihnen. Kurz durchgehen?"),
+
+    _t("linkedin", "bcsbook_zeit", "Kein Aufpasser",
+       "{{anrede}} {{name}}, bei automatischer Zeiterfassung fragt jedes Team zuerst, ob es überwacht wird. Ehrliche Antwort bei meinem Werkzeug: nein. Es läuft lokal, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung — gebucht wird in Ihr vorhandenes Projektron BCS. Arbeitet {{firma}} mit BCS?"),
+    _t("linkedin", "bcsbook_zeit", "Beweis vor Kauf",
+       "{{anrede}} {{name}}, ich verkaufe lieber nach dem Beweis als davor. Wenn {{firma}} in Projektron BCS bucht: zwei Wochen Pilot mit drei bis fünf Freiwilligen, danach vergleichen wir die Timesheets. Kommt nichts dabei heraus, hören wir auf. Wen hätten Sie im Kopf?"),
+    _t("linkedin", "bcsbook_zeit", "Aus eigener Praxis",
+       "{{anrede}} {{name}}, ich habe jahrelang selbst Zeiten in Projektron BCS nachgetragen und es jeden Freitag gehasst — daraus ist mein Werkzeug entstanden. Kein Produkt vom Reißbrett; Änderungswünsche landen direkt beim Entwickler. Zwanzig Minuten, und ich zeige es Ihnen — erfassen Sie Zeiten in BCS?"),
 ]
 
 
@@ -970,6 +1117,27 @@ Ich habe ein Werkzeug gebaut, das die Vorschläge aus der echten Arbeit ableitet
 Zwei Wochen, drei bis fünf Freiwillige, danach entscheiden Sie an Ihren Zahlen. Wollen wir das beim nächsten Termin ansetzen?""",
        notes="Warmkontakt: BCS ist bekannt, also direkt auf Datenqualität statt auf Zeitersparnis. Die Kalkulations-Folge ist das stärkste Argument bei Projektgeschäft."),
 ]
+
+
+def template_key(t: dict) -> tuple[str, str, str]:
+    """Identität einer Standard-Vorlage: Kanal + Rubrik + Titel."""
+    return (t["channel"], t["category"], t["title"])
+
+
+def missing_templates(existing: set[tuple[str, str, str]]) -> list[dict]:
+    """Welche Standard-Vorlagen fehlen im Bestand? Rein + testbar.
+
+    Vorher war der Seed **pro Rubrik** additiv: Existierte eine Rubrik, wurde
+    nichts mehr ergänzt. Eine zweite Serie innerhalb einer bestehenden Rubrik
+    hätte einen Arbeitsbereich damit nie erreicht — sie wäre im Code gestanden
+    und nirgends sichtbar gewesen.
+
+    Bewusst titelbasiert: Eine bewusst gelöschte Standard-Vorlage kommt bei einem
+    ausdrücklichen Seed-Lauf also zurück. Das ist der Preis dafür, dass Nachträge
+    ankommen — und ein bewusster: Der Lauf wird von Hand ausgelöst und meldet, was
+    er ergänzt hat.
+    """
+    return [t for t in default_templates() if template_key(t) not in existing]
 
 
 def default_templates() -> list[dict]:

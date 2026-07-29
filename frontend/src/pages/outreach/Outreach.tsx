@@ -41,8 +41,10 @@ export default function Outreach() {
     (async () => {
       try {
         let items = await getOutreachTemplates()
-        // Erstbesuch (leer) ODER neue Rubrik-Linie fehlt → einmalig (pro Session)
-        // additiv nachziehen. Der Seed-Endpoint fügt nur fehlende Rubriken hinzu.
+        // Erstbesuch (leer) ODER eine ganze Rubrik fehlt → einmalig pro Session
+        // nachziehen. Der Endpunkt ergänzt inzwischen je EINZELNE Vorlage; eine
+        // neue Serie innerhalb bestehender Rubriken löst diesen Automatismus
+        // aber nicht aus — dafür gibt es den Knopf „Vorlagen ergänzen“.
         const cats = new Set(items.map((t) => t.category))
         const missingLine = CATEGORIES.some((c) => !cats.has(c.value))
         if ((items.length === 0 || missingLine) && !sessionStorage.getItem(SEED_FLAG)) {
@@ -57,11 +59,20 @@ export default function Outreach() {
     })()
   }, [])
 
+  // Zieht fehlende Standard-Vorlagen nach — additiv je Vorlage, nicht je Rubrik.
+  // Nötig, weil neue Serien innerhalb einer bestehenden Rubrik den
+  // Arbeitsbereich sonst nie erreichen (der Auto-Seed prüft nur auf fehlende
+  // Rubriken). Bestehende Vorlagen inkl. Favoriten/Zähler bleiben unangetastet.
   const runSeed = async () => {
     setSeeding(true)
+    const vorher = all.length
     try {
-      setAll(await seedOutreachTemplates())
-      toast.success('Vorlagen geladen.')
+      const items = await seedOutreachTemplates()
+      setAll(items)
+      const neu = items.length - vorher
+      toast.success(neu > 0
+        ? `${neu} Vorlage${neu === 1 ? '' : 'n'} ergänzt.`
+        : 'Alle Standard-Vorlagen sind vorhanden.')
     } catch {
       toast.error('Laden fehlgeschlagen.')
     }
@@ -133,7 +144,16 @@ export default function Outreach() {
 
   return (
     <div className="pb-24">
-      <PageHeader title="Nachrichten-Vorlagen" subtitle={`${all.length} Akquise-Vorlagen · IT-Security first`} />
+      <PageHeader
+        title="Nachrichten-Vorlagen"
+        subtitle={`${all.length} Akquise-Vorlagen · IT-Security first`}
+        actions={mayEdit && all.length > 0 ? (
+          <button onClick={runSeed} disabled={seeding} className="btn-secondary text-sm"
+                  title="Fehlende Standard-Vorlagen nachziehen — bestehende bleiben unverändert">
+            {seeding ? 'Prüfe…' : 'Vorlagen ergänzen'}
+          </button>
+        ) : undefined}
+      />
 
       {/* Suche (kanalübergreifend) */}
       <div className="mb-4">
