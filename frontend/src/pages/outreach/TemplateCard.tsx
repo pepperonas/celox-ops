@@ -10,9 +10,11 @@ interface Props {
   onEdit: (t: OutreachTemplate) => void
   onToggleFavorite: (t: OutreachTemplate) => void
   onDelete: (t: OutreachTemplate) => void
+  /** false = Nur-Lese-Ansicht (Verkäufer): Bearbeiten/Löschen entfallen. */
+  mayEdit?: boolean
 }
 
-export default function TemplateCard({ template, showChannel, onCopy, onEdit, onToggleFavorite, onDelete }: Props) {
+export default function TemplateCard({ template, showChannel, onCopy, onEdit, onToggleFavorite, onDelete, mayEdit = true }: Props) {
   const [expanded, setExpanded] = useState(false)
   const t = template
   const preview = t.body.replace(/^##\s+/gm, '').trim()
@@ -62,8 +64,12 @@ export default function TemplateCard({ template, showChannel, onCopy, onEdit, on
         <button onClick={() => onCopy(t)} className="btn-primary !py-2 flex-1 justify-center">
           Kopieren
         </button>
-        <button onClick={() => onEdit(t)} className="btn-secondary !py-2 !px-3" title="Bearbeiten">Bearbeiten</button>
-        <button onClick={() => onDelete(t)} className="btn-secondary !py-2 !px-3 !text-danger" title="Löschen">Löschen</button>
+        {mayEdit && (
+          <>
+            <button onClick={() => onEdit(t)} className="btn-secondary !py-2 !px-3" title="Bearbeiten">Bearbeiten</button>
+            <button onClick={() => onDelete(t)} className="btn-secondary !py-2 !px-3 !text-danger" title="Löschen">Löschen</button>
+          </>
+        )}
       </div>
     </div>
   )

@@ -42,41 +42,86 @@ def is_destructive(method: str, path: str) -> bool:
 
 
 class PermissionsMiddleware(BaseHTTPMiddleware):
+    """Prüft zwei Dinge in EINEM Nutzer-Lookup:
+
+    1. Destruktives für nicht-destruktive Rollen (Verbot, s. o.).
+    2. Die Erlaubnisliste für zugeschnittene Rollen (`role_scope`, deny-by-default).
+
+    Die zweite Prüfung braucht den Lookup bei **jedem** `/api/`-Request — anders
+    als bei (1) reicht der Rollen-Claim aus dem Token hier nicht: Wer gerade zum
+    Verkäufer herabgestuft wurde, behielte mit einem alten Token bis zu 24 h
+    volle Rechte. Ein indizierter SELECT auf `username` pro Request ist der Preis
+    dafür; `get_current_user` macht ohnehin schon einen.
+    """
+
     async def dispatch(self, request: Request, call_next):  # noqa: ANN001
-        if not is_destructive(request.method, request.url.path):
+        path = request.url.path
+        method = request.method
+        destructive = is_destructive(method, path)
+        # Für die Erlaubnisliste interessiert jeder API-Aufruf. CORS-Preflights
+        # tragen keinen Authorization-Header und müssen durch.
+        relevant = destructive or (path.startswith("/api/") and method != "OPTIONS")
+        if not relevant:
             return await call_next(request)
 
         auth = request.headers.get("authorization", "")
         if not auth.startswith("Bearer "):
             return await call_next(request)   # unauthentifiziert → Auth-Kette antwortet
 
+        from sqlalchemy import select
+
+        from app.auth import verify_token
+        from app.database import async_session_factory
+        from app.middleware.role_scope import DENY_MESSAGE as SCOPE_DENY
+        from app.middleware.role_scope import allowed_for_role
+        from app.models.user import NON_DESTRUCTIVE_ROLES, User
+
+        # Token unlesbar/abgelaufen → durchlassen; die Auth-Kette der Route
+        # antwortet gleich mit 401. Hier zusätzlich 403 zu senden würde einen
+        # abgelaufenen Login als Rechteproblem darstellen.
         try:
-            from sqlalchemy import select
-
-            from app.auth import verify_token
-            from app.database import async_session_factory
-            from app.models.user import NON_DESTRUCTIVE_ROLES, User
-
             payload = verify_token(auth.split(" ", 1)[1])
-            username = payload.get("sub")
-            if not username:
-                return await call_next(request)
+        except Exception:
+            logger.debug("Token unlesbar — Rollenprüfung übersprungen", exc_info=True)
+            return await call_next(request)
+        username = payload.get("sub")
+        if not username:
+            return await call_next(request)
 
+        # Der Lookup selbst darf NICHT fail-open sein. Kann die Rolle nicht
+        # festgestellt werden (DB weg, Verbindungsfehler), wäre ein Durchlassen
+        # eine stille Rechteausweitung: ein Verkäufer bekäme die ganze App.
+        # Deshalb 503 statt „weiter" — ehrlich und geschlossen.
+        try:
             async with async_session_factory() as session:
                 user = (
                     await session.execute(select(User).where(User.username == username))
                 ).scalar_one_or_none()
-
-            if user and user.role in NON_DESTRUCTIVE_ROLES:
-                logger.info(
-                    "Destruktive Aktion blockiert: %s %s (Nutzer %s, Rolle %s)",
-                    request.method, request.url.path, username,
-                    getattr(user.role, "value", user.role),
-                )
-                return JSONResponse(status_code=403, content={"detail": DENY_MESSAGE})
         except Exception:
-            # Ungültiges Token o. Ä. — die reguläre Auth-Kette der Route
-            # antwortet gleich mit 401; hier nicht zusätzlich blockieren.
-            logger.debug("Rollenprüfung übersprungen", exc_info=True)
+            logger.exception("Rollenprüfung nicht möglich — Request abgewiesen: %s %s",
+                             method, path)
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "Rechteprüfung derzeit nicht möglich. Bitte erneut versuchen."},
+            )
+
+        if user is None:
+            return await call_next(request)   # unbekannter Nutzer → 401 von der Route
+
+        role_value = getattr(user.role, "value", user.role)
+
+        if not allowed_for_role(role_value, method, path):
+            logger.info(
+                "Ausserhalb des Rollen-Zuschnitts blockiert: %s %s (Nutzer %s, Rolle %s)",
+                method, path, username, role_value,
+            )
+            return JSONResponse(status_code=403, content={"detail": SCOPE_DENY})
+
+        if destructive and user.role in NON_DESTRUCTIVE_ROLES:
+            logger.info(
+                "Destruktive Aktion blockiert: %s %s (Nutzer %s, Rolle %s)",
+                method, path, username, role_value,
+            )
+            return JSONResponse(status_code=403, content={"detail": DENY_MESSAGE})
 
         return await call_next(request)

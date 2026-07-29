@@ -1,5 +1,5 @@
 import { useAuthStore } from '../store/authStore'
-import { canDelete } from '../utils/permissions'
+import { canDelete, isScopedRole } from '../utils/permissions'
 import Toggle from '../components/Toggle'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -36,7 +36,12 @@ const TEMPLATE_CATEGORIES = [
 ]
 
 export default function Settings() {
-  const mayDelete = canDelete(useAuthStore((st) => st.role))
+  const role = useAuthStore((st) => st.role)
+  const mayDelete = canDelete(role)
+  // Verkäufer sehen hier NUR ihr Konto (Passwort, 2FA). Alles darunter gehört
+  // zum Arbeitsbereich des Inhabers; die zugehörigen Endpunkte sind für sie
+  // ohnehin gesperrt (role_scope.py) und würden nur Fehler erzeugen.
+  const scoped = isScopedRole(role)
   const [config, setConfig] = useState<TrackerConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -62,11 +67,15 @@ export default function Settings() {
   const [twofaBusy, setTwofaBusy] = useState(false)
 
   useEffect(() => {
-    getMyIcalToken()
-      .then((t) => setIcalUrl(`${window.location.origin}/api/ical?token=${t}`))
-      .catch(() => {})
+    // Der iCal-Feed zeigt Rechnungsfristen und Vertragstermine — nichts, was ein
+    // Verkäufer sehen darf. Für ihn wird er gar nicht erst angefordert.
+    if (!scoped) {
+      getMyIcalToken()
+        .then((t) => setIcalUrl(`${window.location.origin}/api/ical?token=${t}`))
+        .catch(() => {})
+    }
     getMe().then((m) => setTwofaEnabled(m.totp_enabled)).catch(() => {})
-  }, [])
+  }, [scoped])
 
   const handleStart2fa = async () => {
     setTwofaBusy(true)
@@ -243,12 +252,13 @@ export default function Settings() {
   const loadAiUsage = () => { getAiUsage().then(setAiUsage).catch(() => {}) }
 
   useEffect(() => {
+    if (scoped) return          // s. `scoped` oben — keine Arbeitsbereichs-Daten
     loadConfig()
     loadTemplates()
     getSettings().then(applySettings).catch(() => {})
     getRainmakerSettings().then(setRmSettings).catch(() => {})
     loadAiUsage()
-  }, [])
+  }, [scoped])
 
   const handleSaveAi = async () => {
     setAiSaving(true)
@@ -473,6 +483,7 @@ export default function Settings() {
         )}
       </div>
 
+      {!scoped && (<>
       {/* Kalender-Abo (iCal) */}
       {icalUrl && (
         <div className="bg-surface border border-border rounded-card p-5 mb-6">
@@ -1063,6 +1074,7 @@ TOKEN_TRACKER_ADMIN_KEY=dein-key-hier`}
           </div>
         )}
       </div>
+      </>)}
     </div>
   )
 }

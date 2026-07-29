@@ -17,6 +17,8 @@ import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
 import Icon from '../../components/Icon'
+import { useAuthStore } from '../../store/authStore'
+import { canEditOutreachTemplates } from '../../utils/permissions'
 
 const SEED_FLAG = 'outreach-seed-checked'
 
@@ -30,6 +32,10 @@ export default function Outreach() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<OutreachTemplate | null>(null)
   const [seeding, setSeeding] = useState(false)
+  // Verkäufer dürfen Vorlagen lesen und kopieren, aber nicht ändern. Der Server
+  // lehnt Schreibzugriffe ohnehin ab (403) — hier verschwinden die Knöpfe, damit
+  // niemand ins Leere klickt.
+  const mayEdit = canEditOutreachTemplates(useAuthStore((st) => st.role))
 
   useEffect(() => {
     (async () => {
@@ -122,6 +128,7 @@ export default function Outreach() {
     onEdit: (t: OutreachTemplate) => { setEditing(t); setFormOpen(true) },
     onToggleFavorite: toggleFavorite,
     onDelete: remove,
+    mayEdit,
   }
 
   return (
@@ -143,9 +150,13 @@ export default function Outreach() {
       ) : all.length === 0 ? (
         <div className="text-center py-16 text-text-muted">
           <p className="mb-4">Noch keine Vorlagen.</p>
-          <button onClick={runSeed} disabled={seeding} className="btn-primary">
-            {seeding ? 'Lade…' : 'Standard-Vorlagen laden'}
-          </button>
+          {mayEdit ? (
+            <button onClick={runSeed} disabled={seeding} className="btn-primary">
+              {seeding ? 'Lade…' : 'Standard-Vorlagen laden'}
+            </button>
+          ) : (
+            <p className="text-sm">Der Kontoinhaber legt die Vorlagen an.</p>
+          )}
         </div>
       ) : searchResults ? (
         // ---- Suchansicht: flach, kanalübergreifend ----
@@ -207,7 +218,9 @@ export default function Outreach() {
       )}
 
       {/* Footer kommt app-weit aus Layout (<AppFooter/>, Jahr dynamisch) */}
-      <Fab onClick={() => { setEditing(null); setFormOpen(true) }} label="Neues Template" />
+      {mayEdit && (
+        <Fab onClick={() => { setEditing(null); setFormOpen(true) }} label="Neues Template" />
+      )}
 
       {copying && (
         <CopyModal template={copying} onClose={() => setCopying(null)} onCopied={bumpUsage} />

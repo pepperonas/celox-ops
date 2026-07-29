@@ -2,7 +2,7 @@ import Linkified from '../../components/Linkified'
 import LeadEmailDialog from './LeadEmailDialog'
 import ChatImportDialog from './ChatImportDialog'
 import { getTodos } from '../../api/todos'
-import { canDelete } from '../../utils/permissions'
+import { canDelete, canSendEmail, canUsePaidAi } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
 import Select from '../../components/Select'
 import { useCallback, useEffect, useState } from 'react'
@@ -53,7 +53,10 @@ export default function RainmakerLeadDetail() {
   const [nextTodo, setNextTodo] = useState<Todo | null>(null)
   const [showEmail, setShowEmail] = useState(false)
   const [showChatImport, setShowChatImport] = useState(false)
-  const mayDelete = canDelete(useAuthStore((st) => st.role))
+  const role = useAuthStore((st) => st.role)
+  const mayDelete = canDelete(role)
+  const maySend = canSendEmail(role)
+  const mayRunTools = canUsePaidAi(role)
 
   const togglePin = async () => {
     if (!lead) return
@@ -227,14 +230,19 @@ export default function RainmakerLeadDetail() {
           >
             <Icon name="star" size={18} filled={lead.pinned} />
           </button>
-          {lead.customer_id ? (
+          {/* Kundenakte und KI-Erfassung gehören dem Bereichs-Inhaber: der
+              Kundenbereich liegt außerhalb des Verkäufer-Zuschnitts, und der
+              Chat-Import kostet Geld aus SEINEM Budget. */}
+          {mayRunTools && (lead.customer_id ? (
             <button onClick={() => navigate(`/kunden/${lead.customer_id}`)} className="btn-secondary">→ Kunde ansehen</button>
           ) : (
             <button onClick={() => navigate(`/kunden/neu?fromLead=${lead.id}`)} className="btn-primary">Als Kunde anlegen</button>
+          ))}
+          {mayRunTools && (
+            <button onClick={() => setShowChatImport(true)} className="btn-secondary"
+                    title="Chat-Verlauf oder Screenshots einwerfen — die KI schlägt Notizen, Aktivitäten und Stammdaten vor"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat aktualisieren
+            </button>
           )}
-          <button onClick={() => setShowChatImport(true)} className="btn-secondary"
-                  title="Chat-Verlauf oder Screenshots einwerfen — die KI schlägt Notizen, Aktivitäten und Stammdaten vor"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat aktualisieren
-          </button>
           <button onClick={() => navigate(`/pipeline/leads/${lead.id}/bearbeiten`)} className="btn-secondary">Bearbeiten</button>
           {mayDelete && <button onClick={() => setShowDelete(true)} className="btn-danger">Löschen</button>}
         </div>
@@ -248,7 +256,7 @@ export default function RainmakerLeadDetail() {
             Anrufen
           </a>
         )}
-        {lead.email && (
+        {lead.email && maySend && (
           <button onClick={() => setShowEmail(true)} className="btn-secondary !py-2.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={ACTIVITY_TYPE_ICONS.email} /></svg>
             Mailen
@@ -365,7 +373,10 @@ export default function RainmakerLeadDetail() {
 
       {/* To-dos zum Lead — bewusst getrennt von den Akquise-Aktivitäten:
           keine Punkte, nicht in der Heute-Queue, einfach was zu tun ist. */}
-      {id && (
+      {/* Für Verkäufer ausgeblendet: `/api/todos` liegt außerhalb ihres
+          Zuschnitts. Ihr Werkzeug für den nächsten Schritt sind die
+          Akquise-Aktivitäten darunter — die brauchen sie ohnehin. */}
+      {id && mayRunTools && (
         <div className="bg-surface-container border border-border rounded-card p-6 mb-6">
           <h3 className="text-sm font-semibold text-text mb-4">To-dos</h3>
           <TodoList leadId={id} hideHeading />

@@ -48,6 +48,7 @@ const RainmakerLeadForm = lazy(() => import('./pages/rainmaker/LeadForm'))
 const RainmakerLeadDetail = lazy(() => import('./pages/rainmaker/LeadDetail'))
 const RainmakerStatistics = lazy(() => import('./pages/rainmaker/Statistics'))
 const RainmakerDuplicates = lazy(() => import('./pages/rainmaker/Duplicates'))
+const LeadSupervision = lazy(() => import('./pages/rainmaker/LeadSupervision'))
 const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
 
 export default function App() {
@@ -80,6 +81,7 @@ export default function App() {
           {/* Pipeline = eigenständige Akquise (Lead-Gewinnung + Nachverfolgung) */}
           <Route path="/pipeline" element={<RainmakerPipeline />} />
           <Route path="/pipeline/duplikate" element={<RainmakerDuplicates />} />
+          <Route path="/pipeline/papierkorb" element={<LeadSupervision />} />
           <Route path="/pipeline/leads/neu" element={<RainmakerLeadForm />} />
           <Route path="/pipeline/leads/:id" element={<RainmakerLeadDetail />} />
           <Route path="/pipeline/leads/:id/bearbeiten" element={<RainmakerLeadForm />} />

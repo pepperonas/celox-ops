@@ -12,6 +12,8 @@ import PipelineNav from './PipelineNav'
 import LinkedInImportModal from './LinkedInImportModal'
 import LeadDiscoveryModal from './LeadDiscoveryModal'
 import { useAiLeadStore } from '../../store/aiLeadStore'
+import { useAuthStore } from '../../store/authStore'
+import { canUsePaidAi } from '../../utils/permissions'
 import { getRainmakerLeads, updateRainmakerLead } from '../../api/rainmaker'
 import type { RainmakerLead, RainmakerLeadStatus } from '../../types'
 import { PIPELINE_STATUSES, STATUS_LABELS, STATUS_COLORS } from './constants'
@@ -281,6 +283,8 @@ export default function RainmakerPipeline() {
     if (leads.length && favOnly && pinnedCount === 0) setFavOnly(false)
   }, [leads.length, favOnly, pinnedCount])
 
+  const mayRunTools = canUsePaidAi(useAuthStore((st) => st.role))
+
   if (loading) return <LoadingIndicator />
 
   return (
@@ -290,20 +294,28 @@ export default function RainmakerPipeline() {
         subtitle={`${leads.length} Leads`}
         actions={
           <>
-            <button onClick={() => openAi(true)} className="btn-primary text-sm"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
-            </button>
-            <button onClick={() => setShowIntake(true)} className="btn-secondary text-sm"
-                    title="Chatverlauf, E-Mail oder Screenshots einwerfen — die KI macht Lead-Entwürfe daraus"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat/Screenshot
-            </button>
-            <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
-              Leads finden
-            </button>
-            <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
-              LinkedIn-Import
-            </button>
-            {/* Stand der automatischen Website-Analyse; nach dem Durchlauf werden
-                die Leads neu geladen, damit die frischen Scores sichtbar sind. */}
-            <AnalysisQueueBadge onFinished={fetchLeads} />
+            {/* Recherche, Erfassung aus Material und Massen-Importe bleiben beim
+                Bereichs-Inhaber: Die KI-Läufe kosten Geld aus SEINEM Budget, und
+                ein Import legt in einem Zug hunderte Leads an. Der Server lehnt
+                die Routen für zugeschnittene Rollen ohnehin ab (role_scope.py). */}
+            {mayRunTools && (
+              <>
+                <button onClick={() => openAi(true)} className="btn-primary text-sm"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> KI-Leads{aiRunning && !aiOpen ? ' · läuft…' : ''}
+                </button>
+                <button onClick={() => setShowIntake(true)} className="btn-secondary text-sm"
+                        title="Chatverlauf, E-Mail oder Screenshots einwerfen — die KI macht Lead-Entwürfe daraus"><Icon name="sparkle" size={16} className="mr-1 -mt-0.5" /> Aus Chat/Screenshot
+                </button>
+                <button onClick={() => setShowDiscovery(true)} className="btn-secondary text-sm">
+                  Leads finden
+                </button>
+                <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">
+                  LinkedIn-Import
+                </button>
+                {/* Stand der automatischen Website-Analyse; nach dem Durchlauf werden
+                    die Leads neu geladen, damit die frischen Scores sichtbar sind. */}
+                <AnalysisQueueBadge onFinished={fetchLeads} />
+              </>
+            )}
           </>
         }
       />

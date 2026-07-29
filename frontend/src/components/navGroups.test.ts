@@ -86,3 +86,43 @@ describe('toggleCollapsed', () => {
     expect(toggleCollapsed(['B'], 'A')).toEqual(['B', 'A'])
   })
 })
+
+// --- Erlaubnisliste zugeschnittener Rollen (Verkäufer) ---
+describe('buildNavGroups mit Erlaubnisliste', () => {
+  const items = [
+    { to: '/', label: 'Dashboard' },
+    { to: '/pipeline', label: 'Pipeline' },
+    { to: '/kunden', label: 'Kunden' },
+    { to: '/akquise', label: 'Nachrichten-Vorlagen', adminOnly: true },
+    { to: '/benutzer', label: 'Benutzer', adminOnly: true },
+  ]
+  const meta = [
+    { title: 'Leads & Akquise', paths: ['/pipeline', '/akquise'] },
+    { title: 'Kunden & Aufträge', paths: ['/kunden'] },
+    { title: 'System', paths: ['/benutzer'] },
+  ]
+
+  it('zeigt nur die erlaubten Pfade — auch das Dashboard fällt weg', () => {
+    const { dashboard, groups } = buildNavGroups(items, meta, false, ['/pipeline', '/akquise'])
+    expect(dashboard).toBeUndefined()
+    expect(groups.map((g) => g.title)).toEqual(['Leads & Akquise'])
+    expect(groups[0].items.map((i) => i.to)).toEqual(['/pipeline', '/akquise'])
+  })
+
+  it('die Erlaubnisliste schlägt adminOnly', () => {
+    // „Nachrichten-Vorlagen" ist adminOnly, ein Verkäufer ist kein Admin — soll
+    // den Eintrag aber ausdrücklich sehen. Müssten beide Regeln gelten, wäre er
+    // unsichtbar.
+    const { groups } = buildNavGroups(items, meta, false, ['/akquise'])
+    expect(groups.flatMap((g) => g.items.map((i) => i.to))).toEqual(['/akquise'])
+  })
+
+  it('ohne Liste bleibt das alte Verhalten unverändert', () => {
+    const asAdmin = buildNavGroups(items, meta, true)
+    expect(asAdmin.dashboard?.to).toBe('/')
+    expect(asAdmin.groups.flatMap((g) => g.items.map((i) => i.to)))
+      .toEqual(['/pipeline', '/akquise', '/kunden', '/benutzer'])
+    const asUser = buildNavGroups(items, meta, false, null)
+    expect(asUser.groups.flatMap((g) => g.items.map((i) => i.to))).toEqual(['/pipeline', '/kunden'])
+  })
+})

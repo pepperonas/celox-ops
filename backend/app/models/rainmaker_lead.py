@@ -116,6 +116,16 @@ class RainmakerLead(OwnedMixin, Base):
     website_norm: Mapped[str | None] = mapped_column(
         Text, Computed(_WEBSITE_NORM_SQL, persisted=True), nullable=True
     )
+    # Papierkorb: Löschen markiert nur. Der Lead verschwindet sofort aus allen
+    # Ansichten (die Tenancy-Events filtern ihn aus, s. tenancy.py), bleibt aber
+    # TRASH_RETENTION_DAYS wiederherstellbar; danach räumt der Cron auf.
+    # Migration: scripts/add_lead_soft_delete.sql — VOR dem Deploy einspielen.
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    deleted_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -134,12 +144,19 @@ class RainmakerLead(OwnedMixin, Base):
     __table_args__ = (
         # Pro Owner: keine zwei Leads mit gleicher E-Mail bzw. gleicher Website.
         # Partiell (nur wo der Schlüssel gesetzt ist) → viele NULLs bleiben erlaubt.
+        #
+        # `deleted_at IS NULL` gehört zwingend in die Bedingung: Ein Lead im
+        # Papierkorb würde sonst den Wiederimport derselben Firma für immer
+        # blockieren — mit einer Fehlermeldung über einen Datensatz, den der
+        # Nutzer nirgends sieht.
         Index(
             "uq_rainmaker_lead_owner_email", "owner_id", "email_norm",
-            unique=True, postgresql_where=text("email_norm IS NOT NULL"),
+            unique=True,
+            postgresql_where=text("email_norm IS NOT NULL AND deleted_at IS NULL"),
         ),
         Index(
             "uq_rainmaker_lead_owner_website", "owner_id", "website_norm",
-            unique=True, postgresql_where=text("website_norm IS NOT NULL"),
+            unique=True,
+            postgresql_where=text("website_norm IS NOT NULL AND deleted_at IS NULL"),
         ),
     )

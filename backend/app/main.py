@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import timedelta
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
@@ -40,6 +41,7 @@ from app.models.lead_chat_import import LeadChatImport
 from app.models.lead_website_analysis import LeadWebsiteAnalysis
 from app.models.hostinger_link import HostingerDomainLink
 from app.models.customer_todo_suggestion import CustomerTodoSuggestion
+from app.models.lead_change_log import LeadChangeLog
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -56,7 +58,7 @@ set_owned_models([
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
     LeadWebsiteAnalysis, LeadAnalysisJob, LeadChatImport, HostingerDomainLink,
-    CustomerTodoSuggestion,
+    CustomerTodoSuggestion, LeadChangeLog,
 ])
 install_tenancy_events()
 
@@ -87,6 +89,32 @@ async def run_cron() -> None:
                 except Exception:
                     await db.rollback()
                     logger.exception("Cron: Fehler bei Überprüfung überfälliger Rechnungen")
+
+                # Papierkorb aufräumen: Leads, die länger als
+                # TRASH_RETENTION_DAYS gelöscht sind, endgültig entfernen.
+                # Global (ohne ContextVar) über alle Arbeitsbereiche — wie die
+                # Überfälligkeits-Prüfung. Das DELETE läuft NICHT durch die
+                # Tenancy-Events (Bulk), der Filter steht deshalb explizit da.
+                try:
+                    from sqlalchemy import delete as _delete
+
+                    from app.models.rainmaker_lead import RainmakerLead as _Lead
+                    from app.models.user import TRASH_RETENTION_DAYS as _keep
+                    from app.services.business_time import now as _now
+
+                    cutoff = _now() - timedelta(days=_keep)
+                    res = await db.execute(
+                        _delete(_Lead).where(
+                            _Lead.deleted_at.is_not(None), _Lead.deleted_at < cutoff
+                        )
+                    )
+                    await db.commit()
+                    if res.rowcount:
+                        logger.info("Cron: %d Leads endgültig aus dem Papierkorb entfernt",
+                                    res.rowcount)
+                except Exception:
+                    await db.rollback()
+                    logger.exception("Cron: Fehler beim Aufräumen des Lead-Papierkorbs")
 
                 # Per-user cron tasks (multi-tenant): rainmaker reminder + auto-recurring invoices.
                 try:

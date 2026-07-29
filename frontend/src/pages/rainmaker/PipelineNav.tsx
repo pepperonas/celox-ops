@@ -1,15 +1,22 @@
 import { NavLink } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { canAdministerLeads } from '../../utils/permissions'
 
 const items = [
-  { to: '/pipeline', label: 'Pipeline', end: true },
-  { to: '/pipeline/duplikate', label: 'Duplikate', end: false },
+  { to: '/pipeline', label: 'Pipeline', end: true, ownerOnly: false },
+  { to: '/pipeline/duplikate', label: 'Duplikate', end: false, ownerOnly: true },
+  // Aufsicht: nur für den Bereichs-Inhaber. Für einen Verkäufer wäre der
+  // Papierkorb kein Sicherheitsnetz, sondern ein Zwischenschritt beim Löschen.
+  { to: '/pipeline/papierkorb', label: 'Papierkorb', end: false, ownerOnly: true },
 ]
 
 /** MD3 pill sub-navigation für die Pipeline (Akquise). */
 export default function PipelineNav() {
+  const role = useAuthStore((s) => s.role)
+  const visible = items.filter((i) => !i.ownerOnly || canAdministerLeads(role))
   return (
     <div className="flex gap-1 mb-5 p-1 rounded-full bg-surface-high w-fit">
-      {items.map((item) => (
+      {visible.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

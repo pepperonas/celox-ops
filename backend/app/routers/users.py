@@ -7,8 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, hash_password, require_admin, verify_password
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import ROLES_REQUIRING_WORKSPACE, User, UserRole
 from app.schemas.user import PasswordChange, PasswordSet, UserCreate, UserResponse, UserUpdate
+
+# Nur für Fehlermeldungen — die Enum-Werte bleiben ASCII (Repo-Regel).
+ROLE_LABELS = {
+    UserRole.admin: "Admin",
+    UserRole.user: "Benutzer",
+    UserRole.mitarbeiter: "Mitarbeiter",
+    UserRole.verkaeufer: "Verkäufer",
+}
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -24,15 +32,17 @@ def _to_response(u: User, works_for_username: str | None = None) -> UserResponse
 async def _validate_works_for(
     role: UserRole, works_for_id, db: AsyncSession, self_id=None
 ):
-    """Mitarbeitende brauchen einen Arbeitsbereich; andere Rollen dürfen keinen
-    haben. Der Chef muss existieren, aktiv und selbst kein Mitarbeiter sein
-    (keine Ketten) und darf nicht der Nutzer selbst sein."""
-    if role != UserRole.mitarbeiter:
+    """Mitarbeitende und Verkäufer brauchen einen Arbeitsbereich; andere Rollen
+    dürfen keinen haben. Der Chef muss existieren, aktiv und selbst kein
+    Mitarbeiter/Verkäufer sein (keine Ketten) und darf nicht der Nutzer selbst
+    sein."""
+    if role not in ROLES_REQUIRING_WORKSPACE:
         return None
     if not works_for_id:
         raise HTTPException(
             status_code=422,
-            detail="Für die Rolle „Mitarbeiter“ muss ein Arbeitsbereich (works_for_id) gewählt werden.",
+            detail=f"Für die Rolle „{ROLE_LABELS[role]}“ muss ein Arbeitsbereich "
+                   "(works_for_id) gewählt werden.",
         )
     if self_id and works_for_id == self_id:
         raise HTTPException(status_code=422, detail="Ein Nutzer kann nicht für sich selbst arbeiten.")
@@ -42,7 +52,8 @@ async def _validate_works_for(
     if boss.works_for_id is not None:
         raise HTTPException(
             status_code=422,
-            detail="Der gewählte Nutzer ist selbst Mitarbeiter — verschachtelte Arbeitsbereiche sind nicht möglich.",
+            detail="Der gewählte Nutzer arbeitet selbst in einem fremden Bereich — "
+                   "verschachtelte Arbeitsbereiche sind nicht möglich.",
         )
     return boss
 

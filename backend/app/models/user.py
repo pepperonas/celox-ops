@@ -16,10 +16,36 @@ class UserRole(str, enum.Enum):
     # dort alles anlegen/bearbeiten, aber nichts löschen oder zusammenführen.
     # Die Sperre sitzt serverseitig in middleware/permissions.py.
     mitarbeiter = "mitarbeiter"
+    # Vertrieb: arbeitet IM Arbeitsbereich eines anderen und sieht dort NUR die
+    # Pipeline (Leads) plus die Akquise-Vorlagen lesend. Darf Leads anlegen,
+    # ändern und löschen — Löschen wirkt aber als Papierkorb (umkehrbar) und ist
+    # pro Tag gedeckelt. Kein E-Mail-Versand, keine kostenpflichtigen
+    # KI-Funktionen. Der Zuschnitt steht als Erlaubnisliste in
+    # `middleware/role_scope.py` (deny-by-default).
+    verkaeufer = "verkaeufer"
 
 
 # Rollen ohne destruktive Rechte (kein DELETE, kein Merge).
+# `verkaeufer` steht hier bewusst NICHT: Löschen ist ausdrücklich erlaubt, aber
+# umkehrbar (Papierkorb) und gedeckelt. Ein Verbot wäre die falsche Antwort —
+# Leads aussortieren ist Kernarbeit im Vertrieb.
 NON_DESTRUCTIVE_ROLES = {UserRole.mitarbeiter}
+
+# Rollen, die auf eine Erlaubnisliste beschränkt sind (deny-by-default).
+SCOPED_ROLES = {UserRole.verkaeufer}
+
+# Rollen, die zwingend in einem fremden Arbeitsbereich arbeiten (works_for_id
+# ist Pflicht) — sonst hätten sie einen leeren eigenen Bereich und die Rolle
+# wäre sinnlos.
+ROLES_REQUIRING_WORKSPACE = {UserRole.mitarbeiter, UserRole.verkaeufer}
+
+# Wie viele Leads darf ein Verkäufer pro Geschäftstag in den Papierkorb legen?
+# Begrenzt eine Serie von Irrtümern (oder ein Skript), ohne normale Arbeit zu
+# behindern: 10 Aussortierungen am Tag sind viel, 200 sind ein Unfall.
+VERKAEUFER_DAILY_DELETE_CAP = 10
+
+# Wie lange bleibt ein weich gelöschter Lead wiederherstellbar?
+TRASH_RETENTION_DAYS = 30
 
 
 class User(Base):
@@ -66,11 +92,22 @@ class User(Base):
 def may_manage_api_keys(user) -> bool:
     """Darf dieser Nutzer die API-Schlüssel des Arbeitsbereichs ändern?
 
-    Nein für Mitarbeitende: sie arbeiten IM Bereich ihres Inhabers und nutzen
-    dessen Schlüssel (und dessen Abrechnung). Ihn austauschen oder entfernen wäre
-    eine Entscheidung über fremdes Geld.
+    Nein für Mitarbeitende und Verkäufer: sie arbeiten IM Bereich ihres Inhabers
+    und nutzen dessen Schlüssel (und dessen Abrechnung). Ihn austauschen oder
+    entfernen wäre eine Entscheidung über fremdes Geld.
     """
-    return getattr(user, "role", None) != UserRole.mitarbeiter
+    return getattr(user, "role", None) not in {UserRole.mitarbeiter, UserRole.verkaeufer}
+
+
+def may_administer_leads(user) -> bool:
+    """Darf dieser Nutzer den Papierkorb und das Änderungsprotokoll verwalten —
+    also Löschungen zurückholen, endgültig entfernen und Änderungen zurücknehmen?
+
+    Nur der Bereichs-Inhaber (bzw. ein Admin). Die Aufsicht über die Arbeit eines
+    Verkäufers darf nicht bei ihm selbst liegen; sonst wäre der Papierkorb kein
+    Sicherheitsnetz, sondern ein Zwischenschritt beim Löschen.
+    """
+    return getattr(user, "role", None) in {UserRole.admin, UserRole.user}
 
 
 def workspace_owner_id(user: "User") -> uuid.UUID:

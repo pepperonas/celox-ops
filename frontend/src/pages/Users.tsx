@@ -7,6 +7,11 @@ import { useAuthStore } from '../store/authStore'
 import DeleteDialog from '../components/DeleteDialog'
 import Select from '../components/Select'
 
+// Rollen, die IM Bereich eines anderen arbeiten — sie brauchen zwingend einen
+// Arbeitsbereich. Spiegelt ROLES_REQUIRING_WORKSPACE im Backend; ohne die
+// Angabe lehnt der Server mit 422 ab.
+const WORKSPACE_ROLES = new Set(['mitarbeiter', 'verkaeufer'])
+
 export default function Users() {
   const me = useAuthStore((s) => s.username)
   const [users, setUsers] = useState<AppUser[]>([])
@@ -31,7 +36,7 @@ export default function Users() {
     if (form.password.length < 8) { toast.error('Passwort min. 8 Zeichen.'); return }
     setSaving(true)
     try {
-      await createUser({ username: form.username.trim(), password: form.password, email: form.email.trim() || null, role: form.role, works_for_id: form.role === 'mitarbeiter' ? form.works_for_id || null : null })
+      await createUser({ username: form.username.trim(), password: form.password, email: form.email.trim() || null, role: form.role, works_for_id: WORKSPACE_ROLES.has(form.role) ? form.works_for_id || null : null })
       toast.success('Benutzer angelegt.')
       setShowForm(false)
       setForm({ username: '', password: '', email: '', role: 'user', works_for_id: '' })
@@ -121,11 +126,12 @@ export default function Users() {
               options={[
                 { value: 'user', label: 'Benutzer (eigener Bereich)' },
                 { value: 'mitarbeiter', label: 'Mitarbeiter (fremder Bereich, kein Löschen)' },
+                { value: 'verkaeufer', label: 'Verkäufer (nur Pipeline, Löschen mit Papierkorb)' },
                 { value: 'admin', label: 'Admin' },
               ]}
             />
           </div>
-          {form.role === 'mitarbeiter' && (
+          {WORKSPACE_ROLES.has(form.role) && (
             <div>
               <label className="block text-xs text-text-muted mb-1">Arbeitet im Bereich von</label>
               <Select
@@ -171,6 +177,7 @@ export default function Users() {
               options={[
                 { value: 'user', label: 'Benutzer' },
                 { value: 'mitarbeiter', label: 'Mitarbeiter' },
+                { value: 'verkaeufer', label: 'Verkäufer' },
                 { value: 'admin', label: 'Admin' },
               ]}
             />

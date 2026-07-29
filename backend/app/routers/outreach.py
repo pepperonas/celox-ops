@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.auth import get_current_user, require_admin
 from app.database import get_db
 from app.models.outreach_template import OutreachTemplate
+from app.models.user import User, UserRole
 from app.schemas.outreach import (
     OutreachTemplateCreate,
     OutreachTemplateResponse,
@@ -14,13 +15,25 @@ from app.schemas.outreach import (
 )
 from app.services.outreach_seed import default_templates
 
-# Admin-only Modul (owner-scoped über die Tenancy-Events; require_admin setzt den
-# current_owner_id via get_current_user).
+# Lesen: Admin UND Verkäufer (die Vorlagen sind das Werkzeug des Vertriebs).
+# Schreiben: nur Admin — deshalb hängt `require_admin` an den einzelnen
+# mutierenden Routen statt am Router.
+#
+# `get_current_user` bleibt am Router, damit `current_owner_id` für JEDE Route
+# gesetzt ist. Ohne das liefen die Selects ungescopet (Tenancy-Invariante).
 router = APIRouter(
     prefix="/api/outreach",
     tags=["outreach"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(get_current_user)],
 )
+
+
+async def _require_template_reader(current_user: User = Depends(get_current_user)) -> User:
+    """Lesen dürfen Admin und Verkäufer. Die übrigen Rollen bleiben ausgeschlossen
+    wie bisher (das Modul war vollständig admin-only)."""
+    if current_user.role not in {UserRole.admin, UserRole.verkaeufer}:
+        raise HTTPException(status_code=403, detail="Adminrechte erforderlich")
+    return current_user
 
 
 async def _get_or_404(template_id: UUID, db: AsyncSession) -> OutreachTemplate:
@@ -32,7 +45,8 @@ async def _get_or_404(template_id: UUID, db: AsyncSession) -> OutreachTemplate:
     return tpl
 
 
-@router.get("/templates", response_model=list[OutreachTemplateResponse])
+@router.get("/templates", response_model=list[OutreachTemplateResponse],
+            dependencies=[Depends(_require_template_reader)])
 async def list_templates(
     channel: str | None = None,
     category: str | None = None,
@@ -59,7 +73,8 @@ async def list_templates(
     return [OutreachTemplateResponse.model_validate(t) for t in rows]
 
 
-@router.post("/templates", response_model=OutreachTemplateResponse,
+@router.post("/templates", dependencies=[Depends(require_admin)],
+             response_model=OutreachTemplateResponse,
              status_code=status.HTTP_201_CREATED)
 async def create_template(
     data: OutreachTemplateCreate, db: AsyncSession = Depends(get_db),
@@ -71,7 +86,8 @@ async def create_template(
     return OutreachTemplateResponse.model_validate(tpl)
 
 
-@router.put("/templates/{template_id}", response_model=OutreachTemplateResponse)
+@router.put("/templates/{template_id}", response_model=OutreachTemplateResponse,
+            dependencies=[Depends(require_admin)])
 async def update_template(
     template_id: UUID, data: OutreachTemplateUpdate, db: AsyncSession = Depends(get_db),
 ) -> OutreachTemplateResponse:
@@ -83,14 +99,18 @@ async def update_template(
     return OutreachTemplateResponse.model_validate(tpl)
 
 
-@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_admin)])
 async def delete_template(template_id: UUID, db: AsyncSession = Depends(get_db)) -> None:
     tpl = await _get_or_404(template_id, db)
     await db.delete(tpl)
     await db.flush()
 
 
-@router.post("/templates/{template_id}/copied", response_model=OutreachTemplateResponse)
+# Kopierzähler: die EINZIGE Schreiboperation, die ein Verkäufer hier auslösen
+# darf — sie ändert keinen Inhalt, nur die Statistik „wie oft benutzt".
+@router.post("/templates/{template_id}/copied", response_model=OutreachTemplateResponse,
+             dependencies=[Depends(_require_template_reader)])
 async def mark_copied(template_id: UUID, db: AsyncSession = Depends(get_db)) -> OutreachTemplateResponse:
     """Zählt eine Nutzung (Copy) hoch — für spätere Auswertung, welche Templates konvertieren."""
     tpl = await _get_or_404(template_id, db)
@@ -100,7 +120,8 @@ async def mark_copied(template_id: UUID, db: AsyncSession = Depends(get_db)) -> 
     return OutreachTemplateResponse.model_validate(tpl)
 
 
-@router.post("/templates/seed", response_model=list[OutreachTemplateResponse])
+@router.post("/templates/seed", response_model=list[OutreachTemplateResponse],
+             dependencies=[Depends(require_admin)])
 async def seed_templates(db: AsyncSession = Depends(get_db)) -> list[OutreachTemplateResponse]:
     """Legt fehlende Standard-Rubriken an — idempotent und **additiv**: fehlt eine
     ganze Rubrik (z. B. eine neu ergänzte Linie), wird nur diese nachgezogen; das

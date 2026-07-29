@@ -71,10 +71,24 @@ async def db_engine():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def sessionmaker(db_engine):
+async def sessionmaker(db_engine, monkeypatch):
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
-    return async_sessionmaker(db_engine, expire_on_commit=False)
+    factory = async_sessionmaker(db_engine, expire_on_commit=False)
+
+    # Die Rechte-Middleware (`middleware/permissions.py`) öffnet ihre EIGENE
+    # Session — sie hängt nicht an `get_db` und lässt sich deshalb nicht über
+    # `dependency_overrides` umbiegen. Ohne diesen Patch zeigte sie im Test auf
+    # die konfigurierte `DATABASE_URL` (im Container `db:5432`, hier nicht
+    # erreichbar) und die Rollenprüfung fiel still aus: ein Verkäufer bekam im
+    # Test HTTP 200 auf `/api/customers`, obwohl die Regel korrekt war.
+    #
+    # Der Patch ist also nicht Kosmetik, sondern die Voraussetzung dafür, dass die
+    # Middleware in den Integrationstests überhaupt geprüft wird.
+    import app.database as _db
+
+    monkeypatch.setattr(_db, "async_session_factory", factory, raising=True)
+    return factory
 
 
 @pytest_asyncio.fixture(scope="function")

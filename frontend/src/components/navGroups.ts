@@ -27,16 +27,27 @@ export function isItemActive(pathname: string, to: string): boolean {
 
 /**
  * Baut aus der flachen Item-Liste + Gruppen-Metadaten die sichtbaren Gruppen
- * (Admin-Filter angewendet, leere Gruppen entfernt) und das einzelne Dashboard.
+ * (Rollen-Filter angewendet, leere Gruppen entfernt) und das einzelne Dashboard.
+ *
+ * `allowedPaths` ist die Erlaubnisliste zugeschnittener Rollen (z. B. Verkäufer):
+ * ist sie gesetzt, bleibt NUR was darin steht — inklusive des Dashboards, das
+ * sonst als Einzeleintrag oben durchrutschen würde.
  */
 export function buildNavGroups<T extends NavItem>(
   items: T[],
   meta: NavGroupMeta[],
   isAdmin: boolean,
+  allowedPaths?: string[] | null,
 ): { dashboard: T | undefined; groups: NavGroup<T>[] } {
-  const canSee = (i: NavItem) => !i.adminOnly || isAdmin
+  const allow = allowedPaths ? new Set(allowedPaths) : null
+  // Bei einer zugeschnittenen Rolle entscheidet AUSSCHLIESSLICH die
+  // Erlaubnisliste. Sonst müsste jeder Eintrag zwei Regeln erfüllen, und
+  // „Nachrichten-Vorlagen" (adminOnly) wäre für Verkäufer unsichtbar, obwohl sie
+  // ihn ausdrücklich sehen sollen.
+  const canSee = (i: NavItem) => (allow ? allow.has(i.to) : !i.adminOnly || isAdmin)
   const byPath = new Map(items.map((i) => [i.to, i]))
-  const dashboard = byPath.get('/')
+  const dashboardItem = byPath.get('/')
+  const dashboard = dashboardItem && canSee(dashboardItem) ? dashboardItem : undefined
   const groups = meta
     .map((g) => ({
       title: g.title,

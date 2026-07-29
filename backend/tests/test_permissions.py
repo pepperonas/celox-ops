@@ -47,13 +47,40 @@ class TestWorkspaceResolution:
 
 
 class TestRoles:
-    def test_three_roles_exist(self):
-        assert {r.value for r in UserRole} == {"admin", "user", "mitarbeiter"}
+    def test_four_roles_exist(self):
+        assert {r.value for r in UserRole} == {"admin", "user", "mitarbeiter", "verkaeufer"}
 
     def test_only_mitarbeiter_is_non_destructive(self):
+        # `verkaeufer` steht bewusst NICHT hier: Löschen ist erlaubt, aber
+        # umkehrbar (Papierkorb) und gedeckelt. Ein Verbot wäre die falsche
+        # Antwort — Leads aussortieren ist Kernarbeit im Vertrieb.
         assert NON_DESTRUCTIVE_ROLES == {UserRole.mitarbeiter}
         assert UserRole.admin not in NON_DESTRUCTIVE_ROLES
         assert UserRole.user not in NON_DESTRUCTIVE_ROLES
+        assert UserRole.verkaeufer not in NON_DESTRUCTIVE_ROLES
+
+    def test_scoped_and_workspace_roles(self):
+        from app.models.user import ROLES_REQUIRING_WORKSPACE, SCOPED_ROLES
+
+        assert SCOPED_ROLES == {UserRole.verkaeufer}
+        # Beide Rollen arbeiten IM Bereich eines anderen — ohne works_for_id
+        # hätten sie einen leeren eigenen Bereich und die Rolle wäre sinnlos.
+        assert ROLES_REQUIRING_WORKSPACE == {UserRole.mitarbeiter, UserRole.verkaeufer}
+
+    def test_api_keys_and_supervision_are_owner_only(self):
+        from types import SimpleNamespace
+
+        from app.models.user import may_administer_leads, may_manage_api_keys
+
+        for role in (UserRole.mitarbeiter, UserRole.verkaeufer):
+            u = SimpleNamespace(role=role)
+            assert not may_manage_api_keys(u), f"{role} darf keine Schlüssel tauschen"
+            # Die Aufsicht über die eigene Arbeit wäre kein Sicherheitsnetz.
+            assert not may_administer_leads(u), f"{role} darf keine Aufsicht führen"
+        for role in (UserRole.admin, UserRole.user):
+            u = SimpleNamespace(role=role)
+            assert may_manage_api_keys(u)
+            assert may_administer_leads(u)
 
     def test_role_value_fits_column(self):
         # Spalte ist VARCHAR(20) — längerer Wert würde beim Insert knallen

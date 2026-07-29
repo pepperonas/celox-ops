@@ -7,6 +7,7 @@ import AppFooter from './AppFooter'
 import AiLeadHost from './AiLeadHost'
 import { buildNavGroups, isGroupOpen, isItemActive, toggleCollapsed, type NavGroupMeta } from './navGroups'
 import { getRainmakerLeads } from '../api/rainmaker'
+import { navPathsForRole } from '../utils/permissions'
 
 const navItems = [
   {
@@ -219,7 +220,9 @@ export default function Layout() {
   })
 
   // Sichtbare Items (Admin-Filter), nach Gruppen aufgebaut (pure Helfer in navGroups.ts).
-  const { dashboard, groups } = buildNavGroups(navItems, NAV_GROUPS_META, role === 'admin')
+  const { dashboard, groups } = buildNavGroups(
+    navItems, NAV_GROUPS_META, role === 'admin', navPathsForRole(role),
+  )
   const mainRef = useRef<HTMLElement>(null)
   useScrollRestoration(mainRef)
 

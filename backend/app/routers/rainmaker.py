@@ -134,7 +134,22 @@ from app.services.rainmaker_service import (
     priority_weight,
     register_completion,
 )
-from app.services.business_time import day_start_utc, today as business_today
+from app.services.business_time import day_start_utc, now, today as business_today
+from app.middleware.role_scope import is_scoped
+from app.models.lead_change_log import LeadChangeLog
+from app.models.user import (
+    TRASH_RETENTION_DAYS,
+    VERKAEUFER_DAILY_DELETE_CAP,
+    may_administer_leads,
+)
+from app.services.lead_supervision import (
+    TRACKED_FIELDS,
+    cap_message,
+    delete_cap_left,
+    diff_fields,
+    revert_plan,
+)
+from app.tenancy import soft_deleted_visible
 
 router = APIRouter(
     prefix="/api/rainmaker",
@@ -222,6 +237,212 @@ async def _get_lead_or_404(lead_id: uuid.UUID, db: AsyncSession) -> RainmakerLea
     return lead
 
 
+# --------------------------------------------------------------------------- #
+#  Aufsicht: Papierkorb + Änderungsprotokoll
+# --------------------------------------------------------------------------- #
+
+def _role_of(user: User) -> str:
+    return getattr(user.role, "value", str(user.role))
+
+
+def _snapshot(lead: RainmakerLead) -> dict:
+    """Die protokollierten Felder als einfaches dict — Grundlage für den Diff."""
+    return {field: getattr(lead, field, None) for field in TRACKED_FIELDS}
+
+
+async def _log_change(
+    db: AsyncSession, lead: RainmakerLead, user: User, action: str, changes: dict
+) -> None:
+    """Protokollzeile anlegen. Firmenname und Benutzername werden mitkopiert,
+    damit der Eintrag lesbar bleibt, wenn Lead oder Konto später verschwinden
+    (beide FKs sind ON DELETE SET NULL)."""
+    db.add(LeadChangeLog(
+        lead_id=lead.id,
+        lead_company=(lead.company or "—")[:255],
+        actor_id=user.id,
+        actor_username=user.username[:150],
+        actor_role=_role_of(user)[:20],
+        action=action,
+        changes=changes,
+    ))
+
+
+async def _require_lead_admin(user: User) -> None:
+    if not may_administer_leads(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Papierkorb und Änderungsprotokoll verwaltet der Kontoinhaber.",
+        )
+
+
+@router.get("/leads/trash")
+async def list_trash(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Was im Papierkorb liegt, mit Rest-Frist. Nur für den Bereichs-Inhaber:
+    Die Aufsicht über die Arbeit eines Verkäufers darf nicht bei ihm selbst
+    liegen, sonst wäre der Papierkorb bloß ein Zwischenschritt beim Löschen."""
+    await _require_lead_admin(current_user)
+    with soft_deleted_visible():
+        rows = (await db.execute(
+            select(RainmakerLead)
+            .where(RainmakerLead.deleted_at.is_not(None))
+            .order_by(RainmakerLead.deleted_at.desc())
+            .limit(500)
+        )).scalars().all()
+        actor_ids = {r.deleted_by_id for r in rows if r.deleted_by_id}
+        actors: dict[uuid.UUID, str] = {}
+        if actor_ids:
+            actors = {
+                u.id: u.username
+                for u in (await db.execute(
+                    select(User).where(User.id.in_(actor_ids))
+                )).scalars().all()
+            }
+    return {
+        "retention_days": TRASH_RETENTION_DAYS,
+        "items": [{
+            "id": str(r.id),
+            "company": r.company,
+            "contact_name": r.contact_name,
+            "status": getattr(r.status, "value", r.status),
+            "deleted_at": r.deleted_at.isoformat() if r.deleted_at else None,
+            "deleted_by": actors.get(r.deleted_by_id),
+            "days_left": max(0, TRASH_RETENTION_DAYS - (now() - r.deleted_at).days)
+            if r.deleted_at else 0,
+        } for r in rows],
+    }
+
+
+@router.post("/leads/{lead_id}/restore", response_model=RainmakerLeadResponse)
+async def restore_lead(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RainmakerLeadResponse:
+    """Holt einen Lead aus dem Papierkorb zurück.
+
+    Kann an den Unique-Indizes scheitern: Wurde dieselbe Firma nach dem Löschen
+    neu importiert, existiert der Schlüssel wieder. Das wird als Konflikt
+    gemeldet statt mit einem 500 zu enden — der Nutzer soll wissen, dass es
+    bereits einen aktuellen Lead dazu gibt.
+    """
+    await _require_lead_admin(current_user)
+    with soft_deleted_visible():
+        lead = (await db.execute(
+            select(RainmakerLead).where(RainmakerLead.id == lead_id)
+        )).scalar_one_or_none()
+        if lead is None:
+            raise HTTPException(status_code=404, detail="Lead nicht gefunden")
+        if lead.deleted_at is None:
+            raise HTTPException(status_code=409, detail="Dieser Lead liegt nicht im Papierkorb.")
+        lead.deleted_at = None
+        lead.deleted_by_id = None
+        await _log_change(db, lead, current_user, "restore", {})
+        try:
+            await db.flush()
+        except IntegrityError:
+            await db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Zu dieser Firma gibt es inzwischen wieder einen aktiven Lead — "
+                       "der gelöschte lässt sich deshalb nicht zurückholen.",
+            ) from None
+        await db.refresh(lead)
+        return lead_response(lead)
+
+
+@router.delete("/leads/{lead_id}/purge", status_code=status.HTTP_204_NO_CONTENT)
+async def purge_lead(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Entfernt einen Lead aus dem Papierkorb endgültig. Kein Undo."""
+    await _require_lead_admin(current_user)
+    with soft_deleted_visible():
+        lead = (await db.execute(
+            select(RainmakerLead).where(RainmakerLead.id == lead_id)
+        )).scalar_one_or_none()
+        if lead is None:
+            raise HTTPException(status_code=404, detail="Lead nicht gefunden")
+        if lead.deleted_at is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Nur Leads aus dem Papierkorb können endgültig entfernt werden.",
+            )
+        await db.delete(lead)
+
+
+@router.get("/lead-changes")
+async def list_lead_changes(
+    limit: int = Query(100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    """Letzte Änderungen zugeschnittener Rollen, jüngste zuerst."""
+    await _require_lead_admin(current_user)
+    rows = (await db.execute(
+        select(LeadChangeLog).order_by(LeadChangeLog.created_at.desc()).limit(limit)
+    )).scalars().all()
+    return [{
+        "id": str(r.id),
+        "lead_id": str(r.lead_id) if r.lead_id else None,
+        "lead_company": r.lead_company,
+        "actor": r.actor_username,
+        "actor_role": r.actor_role,
+        "action": r.action,
+        "changes": r.changes or {},
+        "reverted_at": r.reverted_at.isoformat() if r.reverted_at else None,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    } for r in rows]
+
+
+@router.post("/lead-changes/{change_id}/revert")
+async def revert_lead_change(
+    change_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Nimmt EINEN protokollierten Änderungssatz zurück.
+
+    Nur Felder, die noch auf dem protokollierten neuen Wert stehen, werden
+    zurückgesetzt — sonst würde die Rücknahme fremde, neuere Arbeit
+    stillschweigend überschreiben. Übersprungene Felder werden benannt.
+
+    Einmalig: `reverted_at` verhindert, dass ein zweiter Klick denselben Satz
+    erneut anwendet.
+    """
+    await _require_lead_admin(current_user)
+    entry = (await db.execute(
+        select(LeadChangeLog).where(LeadChangeLog.id == change_id)
+    )).scalar_one_or_none()
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Protokolleintrag nicht gefunden")
+    if entry.reverted_at is not None:
+        raise HTTPException(status_code=409, detail="Dieser Vorgang wurde schon zurückgenommen.")
+    if entry.action != "update" or not entry.changes:
+        raise HTTPException(
+            status_code=409,
+            detail="Nur Änderungen lassen sich zurücknehmen — "
+                   "für Löschungen ist der Papierkorb zuständig.",
+        )
+    if entry.lead_id is None:
+        raise HTTPException(status_code=409, detail="Der zugehörige Lead existiert nicht mehr.")
+
+    lead = await _get_lead_or_404(entry.lead_id, db)
+    apply, conflicts = revert_plan(entry.changes, _snapshot(lead))
+    for field, value in apply.items():
+        setattr(lead, field, value)
+    entry.reverted_at = now()
+    await db.flush()
+    return {
+        "reverted_fields": sorted(apply),
+        "skipped_fields": sorted(conflicts),
+    }
+
+
 @router.get("/leads/{lead_id}", response_model=RainmakerLeadResponse)
 async def get_lead(
     lead_id: uuid.UUID,
@@ -271,14 +492,23 @@ async def update_lead(
     lead_id: uuid.UUID,
     data: RainmakerLeadUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> RainmakerLeadResponse:
     lead = await _get_lead_or_404(lead_id, db)
     update_data = data.model_dump(exclude_unset=True)
+    # Vorher-Werte NUR für zugeschnittene Rollen mitschreiben (s. _log_change):
+    # Änderungen des Inhabers zu protokollieren wäre Rauschen in genau der Liste,
+    # in der er die Arbeit anderer prüfen will.
+    before = _snapshot(lead) if is_scoped(_role_of(current_user)) else None
     for key, value in update_data.items():
         setattr(lead, key, value)
     # E-Mail geändert → Qualitätsurteil neu berechnen
     if "email" in update_data:
         lead.email_status = await _email_status_for(lead.email)
+    if before is not None:
+        changed = diff_fields(before, _snapshot(lead))
+        if changed:
+            await _log_change(db, lead, current_user, "update", changed)
     await db.flush()
     await db.refresh(lead)
     return lead_response(lead)
@@ -288,9 +518,36 @@ async def update_lead(
 async def delete_lead(
     lead_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> None:
+    """Legt den Lead in den Papierkorb — für ALLE Rollen derselbe Weg.
+
+    Bewusst ein Codepfad statt „Verkäufer weich, Inhaber hart": weniger
+    Fehlerfläche, und ein Papierkorb nützt dem Inhaber genauso. Endgültig
+    entfernen geht über `/leads/{id}/purge`, automatisch nach
+    TRASH_RETENTION_DAYS durch den Cron.
+    """
     lead = await _get_lead_or_404(lead_id, db)
-    await db.delete(lead)
+
+    # Tagesdeckel nur für zugeschnittene Rollen. Er begrenzt eine Serie von
+    # Irrtümern; für den Inhaber wäre er nur ein Hindernis im eigenen Bestand.
+    if is_scoped(_role_of(current_user)):
+        # Der Papierkorb ist normalerweise ausgefiltert — für DIESE Zählung
+        # müssen die gelöschten Zeilen sichtbar sein, sonst wäre `used` immer 0
+        # und der Deckel würde nie greifen.
+        with soft_deleted_visible():
+            used = (await db.execute(
+                select(func.count()).select_from(RainmakerLead).where(
+                    RainmakerLead.deleted_by_id == current_user.id,
+                    RainmakerLead.deleted_at >= day_start_utc(business_today()),
+                )
+            )).scalar_one()
+        if delete_cap_left(used, VERKAEUFER_DAILY_DELETE_CAP) == 0:
+            raise HTTPException(status_code=429, detail=cap_message(VERKAEUFER_DAILY_DELETE_CAP))
+
+    lead.deleted_at = now()
+    lead.deleted_by_id = current_user.id
+    await _log_change(db, lead, current_user, "delete", {})
 
 
 @router.post("/leads/verify-emails")
