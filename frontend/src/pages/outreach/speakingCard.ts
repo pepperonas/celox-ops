@@ -128,20 +128,63 @@ export function stichworte(satz: string, max = 8): string[] {
     return wort.length >= 4 && !FUELLWOERTER.has(klein)
   }
 
+  /**
+   * Was beim Kürzen überleben MUSS: Abkürzungen, Zahlen, Platzhalter-Lücken.
+   *
+   * Ohne diesen Vorrang schnitt die Obergrenze bei einem langen Satz genau das
+   * Wichtigste weg — im Einstieg des bcsbook-Leitfadens fiel „BCS" heraus, weil
+   * es das siebte Wort war. Ein Substantiv kann man im Gespräch umschreiben, eine
+   * Produktbezeichnung oder eine Eurozahl nicht.
+   */
+  const vorrang = (wort: string): boolean =>
+    /\d/.test(wort) || /^\[\w+\]$/.test(wort) || /^[A-ZÄÖÜ0-9]{2,}$/.test(wort)
+
   const sammeln = (nurGross: boolean): string[] => {
-    const out: string[] = []
+    const kandidaten: string[] = []
     for (const wort of woerter) {
       if (!brauchbar(wort)) continue
       if (nurGross && !/^[A-ZÄÖÜ[\d]/.test(wort)) continue
-      if (out.some((w) => w.toLowerCase() === wort.toLowerCase())) continue
-      out.push(wort)
-      if (out.length >= max) break
+      if (kandidaten.some((w) => w.toLowerCase() === wort.toLowerCase())) continue
+      kandidaten.push(wort)
     }
-    return out
+    if (kandidaten.length <= max) return kandidaten
+    // Nach Rang auswählen, danach zurück in die Satzreihenfolge sortieren —
+    // gesprochen wird entlang des Satzes, nicht entlang der Wichtigkeit.
+    return kandidaten
+      .map((wort, index) => ({ wort, index, rang: vorrang(wort) ? 0 : 1 }))
+      .sort((a, b) => a.rang - b.rang || a.index - b.index)
+      .slice(0, max)
+      .sort((a, b) => a.index - b.index)
+      .map((x) => x.wort)
   }
 
   const substantive = sammeln(true)
   return substantive.length >= 2 ? substantive : sammeln(false)
+}
+
+/**
+ * Stichworte eines ganzen Abschnitts — mit einem Kontingent JE SATZ.
+ *
+ * Ein gemeinsamer Topf nach dem Prinzip „wer zuerst kommt" hat einen Fehler: Wird
+ * ein Abschnitt länger, frisst der Anfang das Kontingent und die Aussage am Ende
+ * fällt weg. Genau das passierte beim überarbeiteten bcsbook-Leitfaden — die neue
+ * Kernaussage (Anwesenheit, Kalender, Gerüst) stand im vierten Satz und
+ * verschwand.
+ *
+ * Also: Jeder Satz bekommt seinen Anteil, mindestens zwei. Die Satzreihenfolge
+ * bleibt erhalten — man spricht entlang des Abschnitts, nicht entlang einer
+ * Auswahl.
+ */
+export function abschnittsStichworte(saetze: string[], cap = 12): string[] {
+  if (saetze.length === 0) return []
+  const quote = Math.max(2, Math.ceil(cap / saetze.length))
+  const out: string[] = []
+  for (const satz of saetze) {
+    for (const w of stichworte(satz, quote)) {
+      if (!out.some((x) => x.toLowerCase() === w.toLowerCase())) out.push(w)
+    }
+  }
+  return out.slice(0, cap)
 }
 
 /**
@@ -208,7 +251,7 @@ function schritteAusAbsaetzen(bloecke: string[]): SpeakingStep[] {
       titel: i === bloecke.length - 1 && bloecke.length > 1
         ? 'Abschluss'
         : namen[i] ?? `Schritt ${i + 1}`,
-      stichworte: stichworte(saetze.join(' '), 8),
+      stichworte: abschnittsStichworte(saetze, 8),
       saetze: saetze.map(lueckenText),
     }
   })
@@ -256,12 +299,11 @@ export function buildSpeakingCard(body: string): SpeakingCard {
       // Ein Abschnitt, der NUR Einwände enthielt, wird kein Schritt — sonst
       // stünde ein leerer Kasten im Ablauf.
       if (saetze.length === 0 && !hinweis) continue
-      // Stichworte über den GANZEN Abschnitt sammeln, nicht mit einem Budget je
-      // Satz: sonst frisst der Begrüßungssatz die Plätze und das Kernwort am
-      // Ende des Abschnitts fällt weg (live an einem Leitfaden gesehen).
+      // Kontingent je Satz (s. abschnittsStichworte): ein gemeinsamer Topf ließ
+      // den Anfang alles fressen — die Kernaussage im vierten Satz fiel weg.
       schritte.push({
         titel: kopf.trim(),
-        stichworte: stichworte(saetze.join(' '), 10),
+        stichworte: abschnittsStichworte(saetze, 14),
         saetze: saetze.map(lueckenText),
         ...(hinweis ? { hinweis } : {}),
       })

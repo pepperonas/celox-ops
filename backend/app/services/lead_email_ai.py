@@ -12,7 +12,7 @@ from app.services.email_signature import SIGNATURE as _SIGNATURE
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
 # verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
-PROMPT_VERSION = "7"
+PROMPT_VERSION = "8"
 
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
@@ -45,12 +45,18 @@ IT-Sicherheit, Datenschutz, Prozessautomatisierung.
 Zeiterfassungs-Pflicht/BAG, Projektabrechnung)
 Angebot: bcsbook — unser eigenes Produkt: automatische, aktivitätsbasierte
 Zeiterfassung, die direkt in ein VORHANDENES Projektron BCS bucht (ersetzt/führt
-BCS NICHT ein, sondern automatisiert das lästige Erfassen). Erkennt im
-Hintergrund die reale Arbeit (Git-Commits, IDE-/Editor-Aktivität, KI-CLI-
-Sitzungen, Azure-DevOps-Tickets; für Nicht-Entwickler eine Anwesenheits-
-Erkennung), bündelt sie in 15-Minuten-Blöcke je Projekt und bucht nach kurzer
-Bestätigung automatisch in BCS. Aus 5–10 Handbuchungen/Tag wird „F5 → prüfen →
-buchen".
+BCS NICHT ein, sondern automatisiert das lästige Erfassen).
+WICHTIG — nicht als Entwicklerwerkzeug verkaufen: Grundlage sind zwei Quellen,
+die es in JEDEM Betrieb gibt. (a) Anwesenheit (idle-/sperr-bewusst) gibt dem Tag
+ein Gerüst: Start, Pausen, Ende. (b) Der Kalender wird über eine veröffentlichte
+ICS-Adresse gelesen (Outlook/M365, Google, iCloud, Nextcloud — keine Azure-AD-
+Registrierung, keine Admin-Freigabe) und per Regel je Projekt zugeordnet, sodass
+Besprechungen samt Projekt schon drinstehen. Damit trägt es Projektleitung,
+Beratung und Verwaltung genauso. NUR ALS ZUGABE erwähnen: Wo Git-Commits,
+IDE-/Editor-Aktivität (WakaTime), KI-CLI-Sitzungen oder Azure-DevOps-Tickets
+vorhanden sind, steht das Projekt sogar automatisch dran.
+Gebündelt wird in 15-Minuten-Blöcke je Projekt, gebucht nach kurzer Bestätigung.
+Aus 5–10 Handbuchungen/Tag wird „prüfen → bestätigen".
 Nutzen: ~15–20 Min/Tag je Mitarbeitendem gespart (BAG-Pflicht wird reibungslos
 statt lästig); höhere Datenqualität (reale Aktivität statt Abend-Schätzung →
 sauberere Projektabrechnung); jede Buchung wird gegen BCS verifiziert; läuft rein

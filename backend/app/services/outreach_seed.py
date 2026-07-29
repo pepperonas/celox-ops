@@ -343,7 +343,9 @@ Zeiterfassung scheitert selten am Willen. Sie scheitert am Zeitpunkt: Gebucht wi
 
 Was dann entsteht, ist Rekonstruktion aus dem Gedächtnis. Und was geschätzt ist, landet auf dem falschen Projekt — falsch gebucht heißt falsch abgerechnet, und es fällt niemandem auf.
 
-Ich habe dafür ein Werkzeug gebaut. Es liest die Spuren, die bei Ihren Leuten ohnehin entstehen: Commits, IDE-Aktivität, Ticket-Updates. Daraus macht es 15-Minuten-Blöcke pro Projekt und legt sie als Vorschlag vor. Ihr Team prüft und bestätigt — gebucht wird in Ihr vorhandenes Projektron BCS.
+Ich habe dafür ein Werkzeug gebaut, und zwar nicht nur für Entwickler. Es braucht zwei Dinge, die es überall gibt: Der Rechner weiß, wann gearbeitet wurde. Der Kalender weiß, mit wem. Daraus entsteht der Tag als Gerüst — Start, Pausen, Ende, und die Besprechungen stehen schon mit dem richtigen Projekt drin.
+
+Ihre Leute prüfen, ergänzen, bestätigen: ein Klick statt einer Rekonstruktion. Gebucht wird in 15-Minuten-Blöcken in Ihr vorhandenes Projektron BCS. Wo Repositories oder Tickets im Spiel sind, kommt die Zuordnung sogar von allein.
 
 Vorausgesetzt, {{firma}} arbeitet mit BCS: Ist das so?
 
@@ -361,7 +363,9 @@ Bei {{mitarbeiter}} Mitarbeitenden können Sie das selbst überschlagen.
 
 Der zweite Posten ist unsichtbar und größer: Geschätzte Zeiten landen auf dem falschen Projekt. Diese Fehlbuchungen fallen im Controlling nie auf, weil die Tagessumme stimmt.
 
-Mein Werkzeug bucht in Ihr vorhandenes Projektron BCS — aus Commits, IDE-Aktivität und Ticket-Updates, in 15-Minuten-Blöcken, nach Bestätigung durch den Mitarbeiter.
+Wichtig für Ihre Rechnung: Das gilt pro Person, die bucht — nicht pro Entwickler. Die Viertelstunde geht fürs Nachtragen weg, und das trifft Projektleitung, Beratung und Verwaltung genauso.
+
+Mein Werkzeug baut den Tag aus Anwesenheit und Kalender vor und bucht ihn nach Bestätigung in Ihr vorhandenes Projektron BCS.
 
 Zwei Wochen Pilot mit drei bis fünf Leuten, dann sehen Sie Ihre eigenen Zahlen. Wollen wir das aufsetzen?""",
        subject="Was das Nachtragen bei {{firma}} im Jahr kostet",
@@ -373,7 +377,9 @@ Sie erfassen Zeiten in Projektron BCS. Dann kennen Sie beides: das Nachtragen am
 
 Das Zweite ist das teurere. Falsche Zuordnung heißt falsche Projektkosten — und damit falsche Kalkulation beim nächsten Angebot.
 
-Ich habe ein Werkzeug gebaut, das die Vorschläge aus der tatsächlichen Arbeit ableitet: Commits, IDE-Aktivität, Tickets. Es läuft lokal bei Ihren Leuten, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung.
+Ich habe ein Werkzeug gebaut, das den Tag vorbaut statt ihn erinnern zu lassen: Anwesenheit gibt Start, Pausen und Ende, der Kalender bringt die Besprechungen samt Projekt mit. Das gilt für alle Rollen, nicht nur für Entwickler.
+
+Es läuft lokal bei Ihren Leuten, speichert keine Zugangsdaten, erfasst nichts im Leerlauf oder bei gesperrtem Bildschirm und bucht nichts ohne Bestätigung.
 
 Zwei Wochen Pilot mit drei bis fünf Freiwilligen — danach entscheiden Sie an Ihren eigenen Zahlen. Passt das?""",
        subject="{{firma}}: Stimmen Ihre Projektkosten wirklich?",
@@ -471,9 +477,9 @@ Zwanzig Minuten, um es durchzugehen?""",
 
 wenn Zeiterfassung automatisch wird, ist die erste Reaktion im Team fast immer dieselbe: Werde ich jetzt überwacht?
 
-Die Frage ist berechtigt, und deshalb ist mein Werkzeug so gebaut, dass die Antwort ehrlich nein lautet. Es läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät und speichert keine Zugangsdaten. Es bucht nichts ohne Bestätigung. Und es gibt keine Auswertung, die bei der Leitung landet.
+Die Frage ist berechtigt, und deshalb ist mein Werkzeug so gebaut, dass die Antwort ehrlich nein lautet. Es läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät und speichert keine Zugangsdaten. Im Leerlauf und bei gesperrtem Bildschirm wird nichts erfasst — sonst landete die Mittagspause auf einem Projekt. Es bucht nichts ohne Bestätigung, und es gibt keine Auswertung, die bei der Leitung landet.
 
-Was Ihre Leute stattdessen bekommen: Der Tag steht schon da, wenn sie das Fenster öffnen. Prüfen, bestätigen, fertig — gebucht wird in Ihr vorhandenes Projektron BCS.
+Was Ihre Leute stattdessen bekommen: Der Tag steht schon da, wenn sie das Fenster öffnen — aus Anwesenheit und Kalender, für jede Rolle. Prüfen, bestätigen, fertig; gebucht wird in Ihr vorhandenes Projektron BCS.
 
 Wenn das bei Ihnen im Einsatz ist, würde ich zwei Wochen Pilot mit drei bis fünf Freiwilligen vorschlagen. Erfassen Sie Ihre Projektzeiten in BCS?""",
        subject="Zeiterfassung, gegen die sich Ihr Team nicht wehrt",
@@ -483,7 +489,7 @@ Wenn das bei Ihnen im Einsatz ist, würde ich zwei Wochen Pilot mit drei bis fü
 
 ich verkaufe lieber nach dem Beweis als davor. Also machen wir es umgekehrt.
 
-Wenn {{firma}} Projektzeiten in Projektron BCS erfasst: Wir nehmen drei bis fünf Freiwillige und lassen mein Werkzeug zwei Wochen mitlaufen. Es leitet die Buchungen aus der Arbeit ab, die ohnehin entsteht — Commits, IDE-Aktivität, Ticket-Updates — und legt sie zur Bestätigung vor.
+Wenn {{firma}} Projektzeiten in Projektron BCS erfasst: Wir nehmen drei bis fünf Freiwillige — gern gemischte Rollen — und lassen mein Werkzeug zwei Wochen mitlaufen. Es baut den Tag aus Anwesenheit und Kalender vor und legt ihn zur Bestätigung vor; wo Repositories oder Tickets vorhanden sind, steht das Projekt schon dran.
 
 Danach legen wir die Timesheets von vorher und nachher nebeneinander. Kommt nichts dabei heraus, haben Sie es schwarz auf weiß und wir hören auf.
 
@@ -495,7 +501,7 @@ Die Einrichtung dauert rund zwei Minuten pro Person. Wen hätten Sie dafür im K
 
 kurz, warum es dieses Werkzeug überhaupt gibt: Ich habe jahrelang selbst Zeiten in Projektron BCS nachgetragen und es jeden Freitag gehasst. Also habe ich das Erinnern der Software überlassen.
 
-Das merkt man dem Ergebnis an. Es ist kein Produkt vom Reißbrett, sondern eines, das den Alltag kennt — Buchungsblöcke von fünfzehn Minuten, Vorschläge aus echter Arbeit, ein Klick zum Bestätigen.
+Das merkt man dem Ergebnis an. Es ist kein Produkt vom Reißbrett, sondern eines, das den Alltag kennt — Buchungsblöcke von fünfzehn Minuten, ein Tag, der sich aus Anwesenheit und Kalender selbst vorbaut, ein Klick zum Bestätigen. Und weil im Betrieb nicht nur programmiert wird, trägt es auch Projektleitung und Beratung.
 
 Und wenn bei {{firma}} etwas anders läuft als bei mir, landet der Änderungswunsch direkt beim Entwickler. Das bin ich.
 
@@ -589,12 +595,12 @@ _LINKEDIN = [
 
     # ---- bcsbook ----
     _t("linkedin", "bcsbook_zeit", "Freitags erinnern (Teamleitung)",
-       "{{anrede}} {{name}}, arbeitet {{firma}} mit Projektron BCS? Dann kennen Sie das Nachtragen am Freitag. Ich habe ein Werkzeug gebaut, das die Buchungen aus Commits, IDE-Aktivität und Tickets vorschlägt — 15-Minuten-Blöcke, Ihr Team bestätigt nur. Zwei Wochen Pilot mit 3–5 Leuten?",
+       "{{anrede}} {{name}}, arbeitet {{firma}} mit Projektron BCS? Dann kennen Sie das Nachtragen am Freitag. Ich habe ein Werkzeug gebaut, das den Tag aus Anwesenheit und Kalender vorbaut — für alle Rollen, nicht nur Entwickler. 15-Minuten-Blöcke, Ihr Team bestätigt nur. Zwei Wochen Pilot mit 3–5 Leuten?",
        notes="BCS wird als Frage qualifiziert. Ohne BCS ist der Lead wertlos — das gehört in den ersten Satz."),
     _t("linkedin", "bcsbook_zeit", "3.300 € je Person (kaufm. Leitung)",
-       "{{anrede}} {{name}}, 15 Minuten Nachtragen am Tag sind bei 220 Tagen und 60 € internem Vollkostensatz rund 3.300 € pro Person und Jahr. Teurer ist, was auf dem falschen Projekt landet. Mein Werkzeug bucht in Ihr vorhandenes Projektron BCS. Zwei Wochen Pilot, dann Ihre eigenen Zahlen?"),
+       "{{anrede}} {{name}}, 15 Minuten Nachtragen am Tag sind bei 220 Tagen und 60 € Vollkostensatz rund 3.300 € pro Person und Jahr — pro Person, die bucht, nicht pro Entwickler. Teurer ist, was auf dem falschen Projekt landet. Mein Werkzeug baut den Tag aus Anwesenheit und Kalender vor und bucht in Ihr vorhandenes Projektron BCS. Zwei Wochen Pilot?"),
     _t("linkedin", "bcsbook_zeit", "Projektkosten stimmen? (Bestandskunde)",
-       "{{anrede}} {{name}}, Sie buchen in BCS — stimmen Ihre Projektkosten wirklich? Geschätzte Blöcke landen oft auf dem falschen Projekt, die Tagessumme stimmt trotzdem. Mein Werkzeug leitet die Vorschläge aus der echten Arbeit ab, lokal und ohne gespeicherte Zugangsdaten. Pilot mit 3–5 Freiwilligen?"),
+       "{{anrede}} {{name}}, Sie buchen in BCS — stimmen Ihre Projektkosten wirklich? Geschätzte Blöcke landen oft auf dem falschen Projekt, die Tagessumme stimmt trotzdem. Mein Werkzeug baut den Tag aus Anwesenheit und Kalender vor — für alle Rollen, lokal und ohne gespeicherte Zugangsdaten. Pilot mit 3–5 Freiwilligen?"),
 
     # ---- Zweite Serie, wärmerer Ton (s. Kommentar im E-Mail-Block) ----
     _t("linkedin", "datenschutz_dsms", "Erreichbarkeit im Ernstfall",
@@ -613,11 +619,11 @@ _LINKEDIN = [
        "{{anrede}} {{name}}, allgemeine Sicherheitsschulungen scheitern daran, dass die Beispiele nichts mit dem Arbeitstag zu tun haben. Für {{branche}} gibt es bei mir einen eigenen Kurs mit Situationen, die dort wirklich vorkommen. Passt keiner, sage ich es Ihnen. Kurz durchgehen?"),
 
     _t("linkedin", "bcsbook_zeit", "Kein Aufpasser",
-       "{{anrede}} {{name}}, bei automatischer Zeiterfassung fragt jedes Team zuerst, ob es überwacht wird. Ehrliche Antwort bei meinem Werkzeug: nein. Es läuft lokal, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung — gebucht wird in Ihr vorhandenes Projektron BCS. Arbeitet {{firma}} mit BCS?"),
+       "{{anrede}} {{name}}, bei automatischer Zeiterfassung fragt jedes Team zuerst, ob es überwacht wird. Ehrliche Antwort bei meinem Werkzeug: nein. Es läuft lokal, speichert keine Zugangsdaten, erfasst nichts im Leerlauf und bucht nichts ohne Bestätigung — der Tag entsteht aus Anwesenheit und Kalender, gebucht wird in Ihr vorhandenes Projektron BCS. Arbeitet {{firma}} mit BCS?"),
     _t("linkedin", "bcsbook_zeit", "Beweis vor Kauf",
-       "{{anrede}} {{name}}, ich verkaufe lieber nach dem Beweis als davor. Wenn {{firma}} in Projektron BCS bucht: zwei Wochen Pilot mit drei bis fünf Freiwilligen, danach vergleichen wir die Timesheets. Kommt nichts dabei heraus, hören wir auf. Wen hätten Sie im Kopf?"),
+       "{{anrede}} {{name}}, ich verkaufe lieber nach dem Beweis als davor. Wenn {{firma}} in Projektron BCS bucht: zwei Wochen Pilot mit drei bis fünf Freiwilligen aus verschiedenen Rollen — der Tag baut sich aus Anwesenheit und Kalender selbst vor. Danach vergleichen wir die Timesheets. Wen hätten Sie im Kopf?"),
     _t("linkedin", "bcsbook_zeit", "Aus eigener Praxis",
-       "{{anrede}} {{name}}, ich habe jahrelang selbst Zeiten in Projektron BCS nachgetragen und es jeden Freitag gehasst — daraus ist mein Werkzeug entstanden. Kein Produkt vom Reißbrett; Änderungswünsche landen direkt beim Entwickler. Zwanzig Minuten, und ich zeige es Ihnen — erfassen Sie Zeiten in BCS?"),
+       "{{anrede}} {{name}}, ich habe jahrelang selbst Zeiten in Projektron BCS nachgetragen und es jeden Freitag gehasst — daraus ist mein Werkzeug entstanden: Der Tag baut sich aus Anwesenheit und Kalender selbst vor, für jede Rolle. Kein Produkt vom Reißbrett; Änderungswünsche landen direkt beim Entwickler. Zwanzig Minuten, und ich zeige es Ihnen — erfassen Sie Zeiten in BCS?"),
 ]
 
 
@@ -1061,25 +1067,31 @@ Zwanzig Minuten, dann wissen Sie, was fehlt. Sollen wir es einmal gemeinsam durc
     # ---- bcsbook ----
     _t("phone", "bcsbook_zeit", "Leitfaden Teamleitung / Projektleitung",
        """## Einstieg
-{{anrede}} {{name}}, Martin Pfeffer von celox.io. Eine Vorfrage, sonst verschwende ich Ihre Zeit: Erfasst {{firma}} die Projektzeiten in Projektron BCS?
-(Wenn nein: Danke, dann passt mein Werkzeug nicht — es bucht ausschließlich in BCS. Gespräch freundlich beenden.)
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Zwei Vorfragen, dann wissen wir beide, ob es sich lohnt: Erfasst {{firma}} die Projektzeiten in Projektron BCS? Und woran erkennt man bei Ihnen, an welchem Projekt jemand gearbeitet hat — am Kalender, an Tickets, an Repositories?
+(Wenn kein BCS: Danke, dann passt mein Werkzeug nicht — es bucht ausschließlich dorthin. Gespräch freundlich beenden.)
 
 ## Nutzenargument
-Dann kennen Sie das Bild: Freitagnachmittag, und jemand rekonstruiert acht Stunden aus dem Gedächtnis.
-Zeiterfassung scheitert selten am Willen, sondern am Zeitpunkt. Gebucht wird am Ende, wenn der Tag vorbei ist.
-Ich habe ein Werkzeug gebaut, das das umdreht. Es liest die Spuren, die bei Ihren Leuten ohnehin entstehen — Commits, IDE-Aktivität, Ticket-Updates — und legt fertige 15-Minuten-Blöcke pro Projekt als Vorschlag vor. Ihr Team prüft und bestätigt, gebucht wird in Ihr vorhandenes BCS.
-Der eigentliche Gewinn ist nicht die Viertelstunde. Es ist, dass die Stunden auf dem richtigen Projekt landen.
+Dann kennen Sie das Bild: Freitagnachmittag, acht Stunden aus dem Gedächtnis.
+Zeiterfassung scheitert nicht am Willen, sondern am Zeitpunkt — gebucht wird, wenn der Tag vorbei ist.
+Mein Werkzeug dreht das um, für alle Rollen: Der Rechner weiß, wann gearbeitet wurde, der Kalender weiß, mit wem.
+Daraus baut es den Tag als Gerüst — Start, Pausen, Ende, Besprechungen samt Projekt.
+Ihre Leute prüfen und bestätigen: ein Klick statt einer Rekonstruktion, gebucht in Ihr vorhandenes BCS.
+Wo Repositories oder Tickets im Spiel sind, steht das Projekt sogar schon dran.
+Der Gewinn ist nicht die Viertelstunde, sondern dass die Stunden auf dem richtigen Projekt landen.
 
 ## Einwandbehandlung
-- „Meine Leute wollen keine Überwachung.“ → Der wichtigste Punkt, und ich nehme ihn ernst. Das Werkzeug läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung. Es gibt keine Auswertung, die bei Ihnen landet.
+- „Meine Leute wollen keine Überwachung.“ → Der wichtigste Punkt, und ich nehme ihn ernst. Es läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung. Im Leerlauf und bei gesperrtem Bildschirm wird nichts erfasst — sonst würde die Mittagspause auf ein Projekt gebucht. Es gibt keine Auswertung, die bei Ihnen landet.
+- „Bei uns arbeitet fast niemand mit Git.“ → Genau deshalb ist das nicht die Grundlage. Anwesenheit hat jeder, einen Kalender auch — das trägt Projektleitung, Beratung und Verwaltung genauso. Die Entwickler-Quellen sind eine Zugabe für die, die sie haben.
+- „Woher soll es wissen, an welchem Projekt jemand war?“ → Aus dem Kalender, wenn im Termin der Kunde oder das Projekt steht — dafür genügt eine Regel pro Projekt. Wo nichts steht, schlägt es die Zeit vor und Ihr Mitarbeiter wählt das Projekt mit einem Klick. Wer will, kann zusätzlich erfassen lassen, welches Programm im Vordergrund war; das ist standardmäßig aus, private Anwendungen werden dabei entfernt statt umgebucht.
 - „Wir haben doch schon eine Zeiterfassung.“ → BCS ist das Ziel, nicht der Ersatz. Ich ändere nichts an Ihrem System, ich fülle es besser.
+- „Und wenn der Kalender nicht gepflegt ist?“ → Dann bleibt das Gerüst mit Start, Pausen und Ende — und das ist immer noch mehr als ein leeres Formular am Freitag.
 - „Darf man da überhaupt automatisiert reingehen?“ → Es läuft im Browser wie ein Mensch, über den normalen Login, ohne Eingriff in BCS. Es braucht keine Administratorrechte und keine Freigabe Ihrer IT-Abteilung.
 - „Was, wenn die Vorschläge falsch sind?“ → Dann korrigiert Ihr Mitarbeiter sie in Sekunden — das ist immer noch schneller als Erinnern. Und eine Fehlbuchung lässt sich zurücknehmen.
 - „Keine Zeit für ein Projekt.“ → Das ist auch keins. Einrichtung dauert rund zwei Minuten pro Person.
 
 ## Abschluss
-Mein Vorschlag: zwei Wochen Pilot mit drei bis fünf Freiwilligen. Danach vergleichen wir die Timesheets von vorher und nachher, und Sie entscheiden an Ihren eigenen Zahlen. Wen hätten Sie dafür im Kopf?""",
-       notes="Der Einstieg qualifiziert BCS und beendet das Gespräch sauber, wenn es fehlt — das spart beiden Seiten Zeit. Der Überwachungs-Einwand kommt zuerst, weil er der echte ist."),
+Mein Vorschlag: zwei Wochen Pilot mit drei bis fünf Freiwilligen — gern gemischt, jemand aus der Entwicklung und jemand aus der Projektleitung. Danach vergleichen wir die Timesheets von vorher und nachher. Wen hätten Sie dafür im Kopf?""",
+       notes="Zwei Qualifizierungsfragen im Einstieg: BCS (ohne das passt es nicht) UND das Projekt-Signal — das entscheidet, wie viel automatisch geht. Nutzen führt mit Anwesenheit + Kalender, weil in den meisten Betrieben die Mehrheit nicht programmiert; die Entwickler-Quellen sind die Zugabe. Der Git-Einwand steht drin, weil er nach dieser Erzählung sicher kommt. App-Erfassung NUR auf Nachfrage nennen, immer mit den Schutzregeln."),
     _t("phone", "bcsbook_zeit", "Leitfaden ROI (kaufmännische Leitung)",
        """## Einstieg
 {{anrede}} {{name}}, Martin Pfeffer, celox.io. Ich habe eine Rechnung für Sie, die Sie in einer Minute prüfen können — vorausgesetzt, {{firma}} bucht Zeiten in Projektron BCS. Ist das so?
@@ -1087,18 +1099,20 @@ Mein Vorschlag: zwei Wochen Pilot mit drei bis fünf Freiwilligen. Danach vergle
 ## Nutzenargument
 Dann rechnen wir. Das Nachtragen kostet pro Person etwa 15 Minuten am Tag. Bei 220 Buchungstagen und 60 Euro internem Vollkostensatz sind das 3.300 Euro pro Person und Jahr. Bei 50 Mitarbeitenden: 165.000 Euro.
 Sie halten 15 Minuten für hoch? Rechnen wir mit 5: dann bleiben 55.000 Euro. Die Größenordnung hält.
+Wichtig für Ihre Rechnung: Das gilt pro Person, die bucht — nicht pro Entwickler. Die Viertelstunde geht für das Nachtragen weg, und das trifft Projektleitung, Beratung und Verwaltung genauso.
 Der zweite Posten steht in keiner Statistik und ist der größere: Geschätzte Zeiten landen auf dem falschen Projekt. Das fällt nie auf, weil die Tagessumme stimmt — aber Ihre Projektkosten sind falsch, und damit kalkulieren Sie das nächste Angebot.
-Mein Werkzeug leitet die Buchungen aus der tatsächlichen Arbeit ab und legt sie zur Bestätigung vor. Gebucht wird in Ihr vorhandenes BCS.
+Mein Werkzeug baut den Tag aus Anwesenheit und Kalender vor und legt ihn zur Bestätigung vor. Gebucht wird in Ihr vorhandenes BCS.
 
 ## Einwandbehandlung
 - „Ihre Annahmen sind zu optimistisch.“ → Setzen Sie eigene ein. Nehmen Sie Ihren Stundensatz und Ihre Minuten — die Rechnung hat drei Faktoren, da gibt es nichts zu verstecken.
+- „Das rechnet sich nur bei Entwicklern.“ → Nein, die Rechnung hängt am Buchen, nicht am Programmieren. Und die Erfassung auch: Anwesenheit und Kalender hat jeder, Repositories nur ein Teil.
 - „Das ist eine IT-Entscheidung.“ → Der Nutzen ist kaufmännisch, deshalb rufe ich bei Ihnen an. Die IT muss nichts freigeben: keine Administratorrechte, kein Eingriff in BCS.
 - „Wir haben gerade andere Prioritäten.“ → Verstehe. Deshalb schlage ich keinen Rollout vor, sondern zwei Wochen mit drei Leuten. Das bindet niemanden.
-- „Und der Betriebsrat?“ → Berechtigt. Es gibt keine Auswertung für die Leitung: Das Werkzeug läuft lokal, der Mitarbeiter bestätigt jede Buchung. Ich stelle die Unterlagen für die Mitbestimmung gern zur Verfügung.
+- „Und der Betriebsrat?“ → Berechtigt. Es gibt keine Auswertung für die Leitung: Es läuft lokal, im Leerlauf und bei gesperrtem Bildschirm wird nichts erfasst, und der Mitarbeiter bestätigt jede Buchung. Ich stelle die Unterlagen für die Mitbestimmung gern zur Verfügung.
 
 ## Abschluss
-Zwei Wochen Pilot mit drei bis fünf Leuten, danach legen wir Ihre eigenen Zahlen nebeneinander. Wenn nichts dabei herauskommt, haben Sie es schwarz auf weiß. Sollen wir das aufsetzen?""",
-       notes="Zahlen = bcsbook-Broschüre (15 min · 220 Tage · 60 € Vollkostensatz). Betriebsrat vorwegnehmen — kommt bei dieser Zielgruppe fast immer."),
+Zwei Wochen Pilot mit drei bis fünf Leuten — nehmen Sie bewusst gemischte Rollen, dann sehen Sie beides. Danach legen wir Ihre eigenen Zahlen nebeneinander; kommt nichts dabei heraus, haben Sie es schwarz auf weiß. Sollen wir das aufsetzen?""",
+       notes="Zahlen = bcsbook-Broschüre (15 min · 220 Tage · 60 € Vollkostensatz). Der Satz „pro Person, die bucht“ ist entscheidend: sonst rechnet der Kunde die Zahl auf seine Entwicklerzahl herunter und sie schrumpft auf einen Bruchteil. Betriebsrat vorwegnehmen — kommt bei dieser Zielgruppe fast immer."),
     _t("phone", "bcsbook_zeit", "Leitfaden Datenqualität (Bestandskunde)",
        """## Einstieg
 {{anrede}} {{name}}, Martin Pfeffer. Sie buchen in BCS — eine Frage dazu: Wenn Sie in die Projektkosten des letzten Quartals schauen, würden Sie darauf ein Angebot kalkulieren?
@@ -1106,16 +1120,18 @@ Zwei Wochen Pilot mit drei bis fünf Leuten, danach legen wir Ihre eigenen Zahle
 ## Nutzenargument
 Die Tagessummen stimmen fast immer. Die Zuordnung nicht. Wer freitags acht Stunden rekonstruiert, verteilt sie plausibel — nicht richtig.
 Falsche Projektkosten heißen falsche Kalkulation beim nächsten Angebot. Das ist der Schaden, den niemand sieht.
-Ich habe ein Werkzeug gebaut, das die Vorschläge aus der echten Arbeit ableitet: Commits, IDE-Aktivität, Tickets. In 15-Minuten-Blöcken, mit Bestätigung, direkt in Ihr vorhandenes BCS.
+Ich habe ein Werkzeug gebaut, das den Tag vorbaut, statt ihn erinnern zu lassen: Anwesenheit gibt Start, Pausen und Ende, der Kalender bringt die Besprechungen samt Projekt mit. In 15-Minuten-Blöcken, mit Bestätigung, direkt in Ihr vorhandenes BCS.
+Das gilt für alle Rollen — und wo Repositories oder Tickets vorhanden sind, steht das Projekt sogar schon dran.
 
 ## Einwandbehandlung
 - „Unsere Leute buchen sauber.“ → Dann bestätigt der Pilot das, und Sie haben es belegt. Wenn nicht, wissen Sie es, bevor der nächste Auftrag kalkuliert ist.
 - „Wir haben das Thema durch.“ → Was gebucht wird, ist durch. Wo es hingebucht wird, meist nicht — genau da setze ich an.
-- „Wer sieht die Daten?“ → Nur der Mitarbeiter. Das Werkzeug läuft lokal, speichert keine Zugangsdaten und schickt nichts an mich oder an Sie.
+- „Bei den Nicht-Entwicklern wird das nichts.“ → Das ist genau die Gruppe, bei der am meisten geschätzt wird. Anwesenheit und Kalender hat jeder; bei denen ist der Gewinn größer, nicht kleiner.
+- „Wer sieht die Daten?“ → Nur der Mitarbeiter. Es läuft lokal, speichert keine Zugangsdaten, erfasst nichts im Leerlauf oder bei gesperrtem Bildschirm und schickt nichts an mich oder an Sie.
 
 ## Abschluss
-Zwei Wochen, drei bis fünf Freiwillige, danach entscheiden Sie an Ihren Zahlen. Wollen wir das beim nächsten Termin ansetzen?""",
-       notes="Warmkontakt: BCS ist bekannt, also direkt auf Datenqualität statt auf Zeitersparnis. Die Kalkulations-Folge ist das stärkste Argument bei Projektgeschäft."),
+Zwei Wochen, drei bis fünf Freiwillige aus verschiedenen Rollen, danach entscheiden Sie an Ihren Zahlen. Wollen wir das beim nächsten Termin ansetzen?""",
+       notes="Warmkontakt: BCS ist bekannt, also direkt auf Datenqualität statt auf Zeitersparnis. Die Kalkulations-Folge ist das stärkste Argument bei Projektgeschäft. Bei Nicht-Entwicklern wird MEHR geschätzt — das dreht den vermeintlichen Schwachpunkt zum Argument."),
 ]
 
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSpeakingCard, saetzeVon, stichworte } from './speakingCard'
+import { abschnittsStichworte, buildSpeakingCard, saetzeVon, stichworte } from './speakingCard'
 
 const LEITFADEN = `## Einstieg
 {{anrede}} {{name}}, Martin Pfeffer von celox.io. Erfasst {{firma}} die Projektzeiten in Projektron BCS?
@@ -222,5 +222,55 @@ describe('Anführungszeichen um den Einwand', () => {
       const [e] = buildSpeakingCard(`## A\n${zeile}`).einwaende
       expect(e.einwand).toBe('Zu teuer.')
     }
+  })
+})
+
+describe('abschnittsStichworte', () => {
+  it('gibt jedem Satz einen Anteil, nicht dem Anfang alles', () => {
+    // Ein gemeinsamer Topf nach „wer zuerst kommt" liess bei einem langen
+    // Abschnitt die Kernaussage am Ende wegfallen — live am ueberarbeiteten
+    // bcsbook-Leitfaden gesehen.
+    const saetze = [
+      'Erster Satz mit Alpha Beta Gamma Delta Epsilon.',
+      'Zweiter Satz mit Zeta Eta Theta.',
+      'Dritter Satz mit Kernaussage Kalender Gerüst.',
+    ]
+    const out = abschnittsStichworte(saetze, 9)
+    expect(out).toContain('Alpha')
+    expect(out).toContain('Zeta')
+    expect(out).toContain('Kernaussage')     // der letzte Satz kommt vor
+  })
+
+  it('behält die Satzreihenfolge', () => {
+    const out = abschnittsStichworte(['Alpha Beta.', 'Gamma Delta.'], 4)
+    expect(out.indexOf('Alpha')).toBeLessThan(out.indexOf('Gamma'))
+  })
+
+  it('respektiert die Obergrenze und verträgt einen leeren Abschnitt', () => {
+    expect(abschnittsStichworte([], 10)).toEqual([])
+    expect(abschnittsStichworte(['Alpha Beta Gamma Delta Epsilon Zeta Eta.'], 3))
+      .toHaveLength(3)
+  })
+})
+
+describe('Vorrang beim Kürzen', () => {
+  it('Abkürzungen und Zahlen überleben die Obergrenze', () => {
+    // Ohne Vorrang schnitt die Grenze bei einem langen Satz genau das
+    // Wichtigste weg: „BCS" war das siebte Wort und fiel heraus. Ein Substantiv
+    // kann man umschreiben, eine Produktbezeichnung nicht.
+    const satz = 'Erfasst die Firma Alpha Beta Gamma Delta Epsilon Zeta in Projektron BCS?'
+    const out = stichworte(satz, 5)
+    expect(out).toHaveLength(5)
+    expect(out).toContain('BCS')
+  })
+
+  it('auch Eurozahlen überleben', () => {
+    const satz = 'Alpha Beta Gamma Delta Epsilon Zeta Eta kostet 3.300 Euro jährlich.'
+    expect(stichworte(satz, 4)).toContain('3.300')
+  })
+
+  it('der Vorrang ändert die Reihenfolge nicht', () => {
+    const out = stichworte('Alpha Beta Gamma Delta Epsilon in BCS', 3)
+    expect(out[out.length - 1]).toBe('BCS')   // steht im Satz zuletzt
   })
 })

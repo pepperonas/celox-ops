@@ -14,10 +14,10 @@
 <p align="center">
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-60.021-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.286_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-902-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
-[![Vitest](https://img.shields.io/badge/Vitest-384-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-60.205-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.296_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-906-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Vitest](https://img.shields.io/badge/Vitest-390-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
 </p>
@@ -111,14 +111,14 @@ System verlässt, ist als Test festgenagelt — nicht als Kommentar.
 <!-- loc-table:begin -->
 | Bereich | Zeilen | Dateien |
 |---|---:|---:|
-| Backend (Python) | 26.707 | 146 |
-| Frontend (TS/TSX) | 31.122 | 181 |
+| Backend (Python) | 26.849 | 147 |
+| Frontend (TS/TSX) | 31.164 | 181 |
 | Betrieb (Shell/SQL) | 550 | 23 |
 | PDF-Vorlagen (Jinja) | 1.642 | 5 |
-| **Anwendungscode** | **60.021** | |
-| Tests (Backend) | 8.519 | 57 |
-| Tests (Frontend) | 3.012 | 45 |
-| **Testcode** | **11.531** | |
+| **Anwendungscode** | **60.205** | |
+| Tests (Backend) | 8.590 | 57 |
+| Tests (Frontend) | 3.062 | 45 |
+| **Testcode** | **11.652** | |
 <!-- loc-table:end -->
 
 Die Zahlen in dieser Tabelle und in den Badges oben sind **gemessen, nicht
@@ -382,10 +382,10 @@ werden — und prüft die Rolle gegen die Datenbank, nicht gegen einen JWT-Claim
 ## Qualitätssicherung
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-60.021-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.286_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-902-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
-[![Vitest](https://img.shields.io/badge/Vitest-384-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-60.205-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.296_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-906-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Vitest](https://img.shields.io/badge/Vitest-390-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
 ```bash

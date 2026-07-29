@@ -263,3 +263,74 @@ def test_linkedin_messages_stay_short():
         if t["channel"] == "linkedin" and len(t["body"].split()) > 60
     ]
     assert zu_lang == []
+
+
+def test_bcsbook_leads_with_the_general_case_not_with_git():
+    """Nicht jeder Betrieb programmiert.
+
+    Die erste Fassung argumentierte durchgehend mit Commits, IDE-Aktivität und
+    Ticket-Updates — bei einem Betrieb, in dem die Mehrheit nicht entwickelt,
+    verliert das die ersten dreißig Sekunden. Und es untergräbt die eigene
+    Rechnung: 3.300 € gelten PRO PERSON, nicht pro Entwickler.
+
+    Der allgemeine Weg (Anwesenheit gibt dem Tag ein Gerüst, der Kalender bringt
+    die Besprechungen samt Projekt mit) muss deshalb in JEDER bcsbook-Vorlage
+    stehen. Die Entwickler-Quellen sind die Zugabe.
+    """
+    ohne = []
+    for t in default_templates():
+        if t["category"] != "bcsbook_zeit":
+            continue
+        low = t["body"].lower()
+        if not ("anwesenheit" in low or "kalender" in low):
+            ohne.append(f'{t["channel"]}/{t["title"]}')
+    assert ohne == [], f"ohne allgemeinen Nutzen: {ohne}"
+
+
+def test_bcsbook_phone_answers_the_git_objection():
+    """Nach dieser Erzählung kommt der Einwand sicher — unbeantwortet wirkt er
+    wie ein Eingeständnis."""
+    for t in default_templates():
+        if t["category"] != "bcsbook_zeit" or t["channel"] != "phone":
+            continue
+        low = t["body"].lower()
+        assert "git" in low or "entwickler" in low, (
+            f"'{t['title']}' greift den Nicht-Entwickler-Einwand nicht auf"
+        )
+
+
+def test_bcsbook_privacy_promise_matches_the_code():
+    """Der Quellcode kann mehr versprechen als die erste Fassung behauptete:
+    `app-sampler.ts` erfasst NICHTS im Leerlauf oder bei gesperrtem Bildschirm
+    (sonst würde die Mittagspause auf ein Projekt gebucht), und die App-Erfassung
+    ist standardmäßig aus. Bei dem Einwand, an dem Abschlüsse sterben, gehört das
+    in den Text."""
+    joined = "\n".join(t["body"].lower() for t in default_templates()
+                       if t["category"] == "bcsbook_zeit")
+    assert "leerlauf" in joined
+    assert "gesperrt" in joined
+    # Die App-Erfassung wird bewusst NUR auf Nachfrage genannt — also genau
+    # einmal, im Telefonleitfaden, und dort mit den Schutzregeln.
+    phone = "\n".join(t["body"] for t in default_templates()
+                      if t["category"] == "bcsbook_zeit" and t["channel"] == "phone")
+    assert "standardmäßig aus" in phone
+
+
+def test_bcsbook_never_names_developer_sources_alone():
+    """Die eigentliche Invariante: Wo Entwickler-Signale genannt werden, muss der
+    allgemeine Weg daneben stehen.
+
+    Ein Text, der NUR Repositories und Tickets nennt, liest sich wie ein
+    Entwicklerwerkzeug — und lässt einen Betrieb mit zwanzig Beratern und drei
+    Programmierern sofort aussteigen.
+    """
+    dev = ("commits", "repositor", "ide-aktivität", "ticket", "wakatime")
+    allgemein = ("anwesenheit", "kalender")
+    for t in default_templates():
+        if t["category"] != "bcsbook_zeit":
+            continue
+        low = t["body"].lower()
+        if any(d in low for d in dev):
+            assert any(a in low for a in allgemein), (
+                f"'{t['title']}' nennt Entwickler-Quellen ohne den allgemeinen Weg"
+            )
