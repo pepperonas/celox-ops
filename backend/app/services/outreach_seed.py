@@ -242,6 +242,135 @@ Weil KI-Projekte im Mittelstand meist an der DSGVO scheitern: Ich bin zertifizie
 
 Starten wir mit einem Prozess-Audit (Festpreis {{audit_preis}}, {{audit_dauer}}) — Sie bekommen eine priorisierte Liste mit ROI in Euro. 15 Minuten für den Überblick?""",
        subject="Manuelle Dateneingabe bei {{firma}} — was kostet sie wirklich?"),
+
+    # ---- Datenschutz & DSB (datenschutz.celox.io) ----
+    # Aufhänger bewusst NICHT das Millionen-Bußgeld, sondern das
+    # Auskunftsersuchen — so positioniert das Produkt selbst (sections.ts HOOK),
+    # und es ist der Fall, der KMU tatsächlich trifft.
+    _t("email", "datenschutz_dsms", "Ein Ex-Mitarbeiter fragt (KMU-GF)",
+       """{{anrede}} {{name}},
+
+ein Gedankenspiel: Ein ehemaliger Mitarbeiter verlangt Auskunft über alle Daten, die {{firma}} über ihn gespeichert hat. Sie haben einen Monat.
+
+Die meisten Betriebe schaffen das nicht. Nicht aus Nachlässigkeit — es weiß nur niemand, wo alles liegt.
+
+Ich übernehme die Rolle des externen Datenschutzbeauftragten: Benennung, Meldung an die Aufsichtsbehörde, laufende Betreuung. Verarbeitungsverzeichnis, Schutzmaßnahmen und Löschkonzept stehen nach dem Erstgespräch vorausgefüllt — Sie ergänzen nur Ihre Angaben.
+
+Und wenn etwas passiert, erreichen Sie einen Menschen in Berlin. Kein Ticketsystem.
+
+Erstgespräch kostenlos und unverbindlich. Passt Ihnen diese oder nächste Woche?""",
+       subject="{{firma}}: Ein Ex-Mitarbeiter fragt seine Daten an — wie lange brauchen Sie?",
+       notes="Ehrlicher Aufhänger statt Angstmache. Keine Bußgeldsumme behauptet. Rolle + Grundgerüst + Ansprechpartner = die drei Säulen der Produktseite."),
+    _t("email", "datenschutz_dsms", "Ohne IT-Projekt (Verein/Kita/Praxis)",
+       """{{anrede}} {{name}},
+
+Vereine, Kitas und Praxen haben dasselbe Problem: Die Pflicht gilt, aber niemand hat Zeit für ein IT-Projekt.
+
+Deshalb arbeite ich mit fertigen Paketen für genau diese Fälle. Nach einem Gespräch steht das Grundgerüst — Verarbeitungsverzeichnis, Schutzmaßnahmen, Löschkonzept, Datenschutzhinweise. Sie füllen keine leeren Formulare aus.
+
+Was Sie danach in der Hand haben, ist kein Jahresbericht für den Ordner, sondern eine Liste: Was ist dran, bis wann, mit wie viel Aufwand.
+
+Ich nehme bewusst wenige Mandate an, damit das so bleibt. Erstgespräch kostenlos — wann passt es Ihnen?""",
+       subject="Datenschutz für {{firma}} — ohne IT-Projekt",
+       notes="Zielgruppe der Produktseite (Vereine/Kitas/Handwerk). „Bewusst wenige Mandate“ ist echte Positionierung, keine Floskel."),
+    _t("email", "datenschutz_dsms", "Die Rolle ist noch offen (Bestandskunde)",
+       """{{anrede}} {{name}},
+
+die Technik bei {{firma}} läuft. Ein Punkt ist noch offen: die Datenschutzrolle.
+
+Das passt zusammen. Wer die Systeme kennt, schreibt das Verarbeitungsverzeichnis in Stunden statt in Wochen. Und Ihre Schutzmaßnahmen sind längst umgesetzt — sie müssen nur dokumentiert sein, damit sie im Zweifel für Sie zählen.
+
+Ich übernehme die Benennung, melde sie der Aufsichtsbehörde und betreue laufend. Sie behalten einen Ansprechpartner statt zwei.
+
+Sollen wir das im nächsten Termin mitnehmen?""",
+       subject="Noch offen bei {{firma}}: der Datenschutzbeauftragte",
+       notes="Cross-Sell. Der Hebel: Systemkenntnis verkürzt die Dokumentation — echtes Argument, kein Rabatt."),
+
+    # ---- Assessments (portal.celox.io) ----
+    _t("email", "portal_assessment", "3 Minuten Standortbestimmung (KMU-GF)",
+       """{{anrede}} {{name}},
+
+die meisten Geschäftsführer wissen nicht, wo ihr Betrieb bei IT-Sicherheit steht. Nicht aus Desinteresse — es hat nur nie jemand strukturiert gefragt.
+
+Fangen Sie klein an: Es gibt einen anonymen Kurz-Check. Drei Minuten, kein Konto, kostenlos. Sie bekommen sofort eine Einordnung.
+
+Wollen Sie es genauer wissen, gibt es das vollständige Assessment: 25 Minuten, sechs Bereiche, angelehnt an den BSI-CyberRisikoCheck. Am Ende steht ein Reifegrad, eine nach Dringlichkeit sortierte Maßnahmenliste und ein Nachweis als PDF.
+
+Das ist eine Standortbestimmung, keine Zertifizierung — dafür ehrlich und in einer halben Stunde erledigt.
+
+Soll ich Ihnen den Link zum Kurz-Check schicken?""",
+       subject="3 Minuten, dann wissen Sie, wo {{firma}} steht",
+       notes="Kostenloser Kurz-Check als Türöffner (existiert wirklich, ohne Konto). Grenze „keine Zertifizierung“ steht im Text — nicht entfernen."),
+    _t("email", "portal_assessment", "Ihre Argumente als Auswertung (IT-Leitung)",
+       """{{anrede}} {{name}},
+
+Sie wissen wahrscheinlich genau, wo die Lücken sind. Ihr Problem ist ein anderes: es der Geschäftsführung so zu zeigen, dass Budget entsteht.
+
+Genau dafür sind die Assessments gebaut. Sieben Themen — IT-Sicherheit, DSGVO, Phishing, Ransomware, KI-Reifegrad, KI-Verordnung, Bewachungsgewerbe — je 20 bis 25 Minuten, online, unterbrechbar. Ergebnis: Reifegrad je Bereich, priorisierte Maßnahmen, PDF-Nachweis.
+
+Ihre Einschätzung steht damit nicht mehr als Bauchgefühl da, sondern als Auswertung entlang DIN SPEC 27076 und BSI IT-Grundschutz.
+
+Ich schalte Ihnen ein Assessment zum Ausprobieren frei. Welches Thema drückt bei {{firma}} am meisten?""",
+       subject="{{firma}}: Ihre Sicherheitslage auf einer Seite",
+       notes="Verbündeter statt Gegner: die IT-Leitung braucht Budget-Munition, kein Urteil über ihre Arbeit."),
+    _t("email", "portal_assessment", "Nachweis + Schulung aus einem Zugang (Bestandskunde)",
+       """{{anrede}} {{name}},
+
+zwei Fragen tauchen bei Kunden und Versicherern immer häufiger auf: Wo steht Ihre Sicherheit, und sind Ihre Leute geschult?
+
+Beides läuft über einen Zugang. Die Assessments liefern die Standortbestimmung samt Nachweis. Die Schulungen laufen im Browser, mit Wissenscheck und Zertifikat — inklusive Auffrischung nach 6, 12 oder 24 Monaten, an die das System automatisch erinnert.
+
+Im Dashboard sehen Sie, wer durch ist und wer nicht. Das ist der Teil, der bei einer Nachfrage zählt.
+
+Wollen Sie das für Ihr Team einmal durchsehen?""",
+       subject="Nachweis für {{firma}}: Assessment und Schulungen aus einem Zugang",
+       notes="Bestandskunden-Upsell. Wiederholungsintervalle + Erinnerung sind implementiert (Reminder-Job), keine Behauptung."),
+
+    # ---- bcsbook (Zeiterfassung in vorhandenes Projektron BCS) ----
+    # WICHTIG: bcsbook bucht in ein BESTEHENDES BCS. Der Einstieg qualifiziert
+    # das, statt es zu behaupten — sonst läuft die Ansprache ins Leere.
+    _t("email", "bcsbook_zeit", "Freitags acht Stunden erinnern (Teamleitung)",
+       """{{anrede}} {{name}},
+
+Zeiterfassung scheitert selten am Willen. Sie scheitert am Zeitpunkt: Gebucht wird am Ende, wenn der Tag schon vorbei ist.
+
+Was dann entsteht, ist Rekonstruktion aus dem Gedächtnis. Und was geschätzt ist, landet auf dem falschen Projekt — falsch gebucht heißt falsch abgerechnet, und es fällt niemandem auf.
+
+Ich habe dafür ein Werkzeug gebaut. Es liest die Spuren, die bei Ihren Leuten ohnehin entstehen: Commits, IDE-Aktivität, Ticket-Updates. Daraus macht es 15-Minuten-Blöcke pro Projekt und legt sie als Vorschlag vor. Ihr Team prüft und bestätigt — gebucht wird in Ihr vorhandenes Projektron BCS.
+
+Vorausgesetzt, {{firma}} arbeitet mit BCS: Ist das so?
+
+Wenn ja, schlage ich zwei Wochen Pilot mit drei bis fünf Leuten vor — danach vergleichen wir die Timesheets von vorher und nachher. Wen hätten Sie dafür im Kopf?""",
+       subject="{{firma}}: Wer bucht bei Ihnen freitags acht Stunden aus dem Gedächtnis?",
+       notes="Qualifiziert BCS im Text. Der zweite Schmerz (Fehlbuchung) ist der teurere — er verkauft besser als die Minuten."),
+    _t("email", "bcsbook_zeit", "3.300 € pro Person und Jahr (kaufmännische Leitung)",
+       """{{anrede}} {{name}},
+
+eine Rechnung, die Sie in einer Minute prüfen können.
+
+Das Nachtragen der Zeiten kostet pro Person rund 15 Minuten am Tag. Bei 220 Buchungstagen und 60 Euro internem Vollkostensatz sind das 3.300 Euro pro Person und Jahr. Bei 50 Mitarbeitenden: 165.000 Euro. Rechnen Sie konservativ mit 5 Minuten, bleiben 55.000 Euro — die Größenordnung hält.
+
+Bei {{mitarbeiter}} Mitarbeitenden können Sie das selbst überschlagen.
+
+Der zweite Posten ist unsichtbar und größer: Geschätzte Zeiten landen auf dem falschen Projekt. Diese Fehlbuchungen fallen im Controlling nie auf, weil die Tagessumme stimmt.
+
+Mein Werkzeug bucht in Ihr vorhandenes Projektron BCS — aus Commits, IDE-Aktivität und Ticket-Updates, in 15-Minuten-Blöcken, nach Bestätigung durch den Mitarbeiter.
+
+Zwei Wochen Pilot mit drei bis fünf Leuten, dann sehen Sie Ihre eigenen Zahlen. Wollen wir das aufsetzen?""",
+       subject="Was das Nachtragen bei {{firma}} im Jahr kostet",
+       notes="Zahlen aus der bcsbook-Broschüre (öffentlich, konservativ gerechnet). {{mitarbeiter}} vorher setzen — kommt aus dem Lead. Interner Vollkostensatz, KEINE Abrechnungsrate."),
+    _t("email", "bcsbook_zeit", "Sauberes Controlling (Bestandskunde)",
+       """{{anrede}} {{name}},
+
+Sie erfassen Zeiten in Projektron BCS. Dann kennen Sie beides: das Nachtragen am Freitag und die Blöcke, bei denen niemand mehr sicher weiß, auf welches Projekt sie gehören.
+
+Das Zweite ist das teurere. Falsche Zuordnung heißt falsche Projektkosten — und damit falsche Kalkulation beim nächsten Angebot.
+
+Ich habe ein Werkzeug gebaut, das die Vorschläge aus der tatsächlichen Arbeit ableitet: Commits, IDE-Aktivität, Tickets. Es läuft lokal bei Ihren Leuten, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung.
+
+Zwei Wochen Pilot mit drei bis fünf Freiwilligen — danach entscheiden Sie an Ihren eigenen Zahlen. Passt das?""",
+       subject="{{firma}}: Stimmen Ihre Projektkosten wirklich?",
+       notes="Warmkontakt: BCS-Nutzung ist bekannt, also direkt auf die Datenqualität. Datenschutz-Einwand vorweggenommen."),
 ]
 
 
@@ -308,6 +437,33 @@ _LINKEDIN = [
        "{{anrede}} {{name}}, wer sortiert bei {{firma}} den Posteingang? KI kann Mails erkennen, kategorisieren und in {{zielsystem}} routen — Sonderfälle bleiben beim Menschen. Als IHK-DSB baue ich das DSGVO-konform. Einstieg: Festpreis-Audit mit DSGVO-Check. Kurzer Call?"),
     _t("linkedin", "ki_automatisierung", "ROI-Winkel",
        "{{anrede}} {{name}}, manuelle Dateneingabe bei {{firma}} kostet real oft einen Mitarbeitertag pro Woche. Ich automatisiere sie mit KI — individuell, wartbar, DSGVO-konform (ich bin zertifizierter DSB + Dev). Prozess-Audit zum Festpreis als risikoarmer Start. 15 Minuten?"),
+
+    # ---- Datenschutz & DSB ----
+    _t("linkedin", "datenschutz_dsms", "Auskunftsersuchen (KMU-GF)",
+       "{{anrede}} {{name}}, kurze Frage zu {{firma}}: Wenn morgen ein Ex-Mitarbeiter Auskunft über seine Daten verlangt — wie lange bräuchten Sie? Die Frist ist ein Monat. Ich übernehme die Rolle des externen Datenschutzbeauftragten, Software und vorausgefülltes Grundgerüst inklusive. Erstgespräch kostenlos. 20 Minuten?",
+       notes="≤60 Wörter. Frage statt Behauptung — sie qualifiziert und öffnet gleichzeitig."),
+    _t("linkedin", "datenschutz_dsms", "Fertige Pakete (Verein/Kita)",
+       "{{anrede}} {{name}}, für Vereine, Kitas und Praxen habe ich fertige Datenschutz-Pakete — weil dort niemand ein IT-Projekt stemmen kann. Nach einem Gespräch steht das Grundgerüst; danach sehen Sie eine Fristenliste statt eines Aktenordners. Bewusst wenige Mandate. 20 Minuten unverbindlich?"),
+    _t("linkedin", "datenschutz_dsms", "Rolle noch offen (Bestandskunde)",
+       "{{anrede}} {{name}}, ein Punkt bei {{firma}} ist noch offen: die Datenschutzrolle. Ich kenne Ihre Systeme — das Verarbeitungsverzeichnis ist damit eine Frage von Stunden, nicht Wochen. Als benannter DSB übernehme ich auch die Meldung an die Aufsichtsbehörde. Im nächsten Termin mitnehmen?"),
+
+    # ---- Assessments (Portal) ----
+    _t("linkedin", "portal_assessment", "3-Minuten-Kurz-Check (KMU-GF)",
+       "{{anrede}} {{name}}, wissen Sie, wo {{firma}} bei IT-Sicherheit steht? Es gibt einen anonymen Kurz-Check: 3 Minuten, kein Konto, kostenlos. Wollen Sie es genauer wissen, folgt das Assessment in 25 Minuten — Reifegrad, priorisierte Maßnahmen, Nachweis als PDF. Soll ich den Link schicken?",
+       notes="Der kostenlose Check ist die niedrigste Hürde, die es gibt — und er existiert wirklich."),
+    _t("linkedin", "portal_assessment", "Budget-Munition (IT-Leitung)",
+       "{{anrede}} {{name}}, Sie wissen, wo die Lücken sind — schwierig ist, daraus Budget zu machen. Meine Assessments liefern genau das: Reifegrad je Bereich, priorisierte Maßnahmen, Auswertung entlang DIN SPEC 27076 und BSI IT-Grundschutz. Ich schalte Ihnen eines zum Ausprobieren frei. Welches Thema drückt?"),
+    _t("linkedin", "portal_assessment", "Nachweis + Schulung (Bestandskunde)",
+       "{{anrede}} {{name}}, Kunden und Versicherer fragen zunehmend zweierlei: Wo steht Ihre Sicherheit, und sind Ihre Leute geschult? Beides läuft bei mir über einen Zugang — Assessment mit Nachweis, Schulungen mit Zertifikat und automatischer Auffrischung. Einmal gemeinsam durchsehen?"),
+
+    # ---- bcsbook ----
+    _t("linkedin", "bcsbook_zeit", "Freitags erinnern (Teamleitung)",
+       "{{anrede}} {{name}}, arbeitet {{firma}} mit Projektron BCS? Dann kennen Sie das Nachtragen am Freitag. Ich habe ein Werkzeug gebaut, das die Buchungen aus Commits, IDE-Aktivität und Tickets vorschlägt — 15-Minuten-Blöcke, Ihr Team bestätigt nur. Zwei Wochen Pilot mit 3–5 Leuten?",
+       notes="BCS wird als Frage qualifiziert. Ohne BCS ist der Lead wertlos — das gehört in den ersten Satz."),
+    _t("linkedin", "bcsbook_zeit", "3.300 € je Person (kaufm. Leitung)",
+       "{{anrede}} {{name}}, 15 Minuten Nachtragen am Tag sind bei 220 Tagen und 60 € internem Vollkostensatz rund 3.300 € pro Person und Jahr. Teurer ist, was auf dem falschen Projekt landet. Mein Werkzeug bucht in Ihr vorhandenes Projektron BCS. Zwei Wochen Pilot, dann Ihre eigenen Zahlen?"),
+    _t("linkedin", "bcsbook_zeit", "Projektkosten stimmen? (Bestandskunde)",
+       "{{anrede}} {{name}}, Sie buchen in BCS — stimmen Ihre Projektkosten wirklich? Geschätzte Blöcke landen oft auf dem falschen Projekt, die Tagessumme stimmt trotzdem. Mein Werkzeug leitet die Vorschläge aus der echten Arbeit ab, lokal und ohne gespeicherte Zugangsdaten. Pilot mit 3–5 Freiwilligen?"),
 ]
 
 
@@ -633,6 +789,179 @@ Genau da setze ich mit KI an — Dokumente automatisch erfassen, prüfen und in 
 
 ## Abschluss
 Einstieg ist ein Festpreis-Audit ({{audit_preis}}, {{audit_dauer}}) mit ROI-Liste. 15 Minuten diese Woche?"""),
+
+    # ---- Datenschutz & DSB ----
+    _t("phone", "datenschutz_dsms", "Leitfaden Auskunftsersuchen (KMU-GF)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Ich bin externer Datenschutzbeauftragter. Eine Frage, dann wissen Sie, ob sich das Gespräch lohnt: Wer ist bei {{firma}} für Datenschutz zuständig?
+
+## Nutzenargument
+Der teure Fall ist nicht die Behörde, die klingelt. Es ist ein verärgerter Ex-Mitarbeiter, der Auskunft verlangt — dann haben Sie einen Monat, um sauber zu antworten.
+Ich übernehme die Rolle. Benennung, Meldung an die Aufsichtsbehörde, laufende Betreuung. Verarbeitungsverzeichnis, Schutzmaßnahmen und Löschkonzept stehen nach unserem Erstgespräch vorausgefüllt — Sie ergänzen nur Ihre Angaben.
+Und Sie sehen jederzeit eine Liste mit Fristen und Aufwand statt eines Jahresberichts, der im Ordner verstaubt.
+
+## Einwandbehandlung
+- „Das macht unser Steuerberater / unsere IT mit.“ → Beide sind keine Datenschutzbeauftragten. Das ist eine eigene gesetzliche Funktion, und sie muss der Aufsichtsbehörde gemeldet sein.
+- „Wir sind zu klein dafür.“ → Die Dokumentationspflicht hängt nicht an der Größe. Sobald Sie regelmäßig Personal- und Kundendaten verarbeiten, greift sie — auch unter 250 Beschäftigten.
+- „Wir hatten noch nie ein Problem.“ → Stimmt, Zufallskontrollen sind selten. Ausgelöst wird es fast immer durch eine Beschwerde oder eine Datenpanne. Und dann liegt die Beweislast bei Ihnen, nicht bei der Behörde.
+- „Wir machen das selbst.“ → Können Sie. Dann nehmen Sie aus dem Erstgespräch trotzdem die Liste mit, was fehlt — die kostet Sie nichts.
+- „Das ist mir zu teuer.“ → Erstgespräch kostet nichts. Danach zwölf Monate Laufzeit, dann monatlich kündbar, und Ihre Daten können Sie jederzeit vollständig exportieren. Sie binden sich an keinen Anbieter.
+
+## Abschluss
+Machen wir ein Erstgespräch, zwanzig Minuten, unverbindlich? Danach wissen Sie, was bei {{firma}} fehlt — unabhängig davon, wer es am Ende macht. Passt Ihnen diese oder nächste Woche?""",
+       notes="Aufhänger = Auskunftsersuchen, nicht Bußgeld (Positionierung der Produktseite: keine Angstmache). Der Einwand „machen wir selbst“ wird bewusst nicht bekämpft — die Gratis-Liste hält die Tür offen."),
+    _t("phone", "datenschutz_dsms", "Leitfaden Verein / Kita / Praxis",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer, celox.io. Ich betreue Vereine, Kitas und kleine Betriebe als externer Datenschutzbeauftragter. Zwei Minuten?
+
+## Nutzenargument
+Bei Ihnen ist niemand für Datenschutz freigestellt — deshalb bleibt es liegen. Verstehe ich.
+Deswegen arbeite ich mit fertigen Paketen für genau Ihre Art von Einrichtung. Nach einem Gespräch steht das Grundgerüst: Verarbeitungsverzeichnis, Schutzmaßnahmen, Löschkonzept, Datenschutzhinweise. Kein leeres Formular, das Sie ausfüllen müssen.
+Und wenn etwas passiert — Datenpanne, Elternanfrage, neue Software —, erreichen Sie einen Menschen in Berlin.
+
+## Einwandbehandlung
+- „Wir sind ein Verein, für uns gilt das nicht.“ → Sobald Mitglieder-, Personal- oder Gesundheitsdaten verarbeitet werden, gilt es. Die Rechtsform ändert daran nichts.
+- „Wir haben eine Vorlage aus dem Internet.“ → Gute Grundlage. Der Nachweis besteht aber nicht aus dem Dokument, sondern daraus, dass es zu Ihrer Wirklichkeit passt und aktuell ist.
+- „Uns fehlt das Geld.“ → Deshalb gibt es die Abstufung nach Größe und ein kostenloses Erstgespräch. Wenn es nicht passt, sage ich Ihnen das.
+- „Wir haben niemanden, der das pflegt.“ → Genau das ist der Punkt: Die Pflege ist meine Aufgabe, nicht Ihre. Sie ergänzen Angaben, ich führe nach.
+
+## Abschluss
+Ich nehme bewusst wenige Mandate an, damit die Betreuung persönlich bleibt. Zwanzig Minuten kostenloses Erstgespräch reichen — sollen wir schauen, ob es passt?""",
+       notes="Ton weicher als beim GF-Leitfaden — hier ist Überforderung das Hemmnis, nicht Haftungsangst."),
+    _t("phone", "datenschutz_dsms", "Leitfaden Cross-Sell (Bestandskunde)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer. Kurz zu einem Punkt, der bei {{firma}} noch offen ist: die Datenschutzrolle. Zwei Minuten?
+
+## Nutzenargument
+Ich kenne Ihre Systeme. Deshalb ist das Verarbeitungsverzeichnis bei Ihnen eine Frage von Stunden, nicht von Wochen — der Teil, an dem solche Projekte üblicherweise hängen bleiben.
+Ihre Schutzmaßnahmen sind längst umgesetzt. Sie sind nur nicht dokumentiert. Im Zweifel zählt aber genau die Dokumentation.
+Ich übernehme die Benennung, melde sie der Aufsichtsbehörde und betreue laufend. Sie behalten einen Ansprechpartner statt zwei.
+
+## Einwandbehandlung
+- „Wir haben schon einen externen DSB.“ → Dann bleibt es dabei. Fragen Sie ihn nur, wann Sie zuletzt eine Fristenliste gesehen haben — falls Sie stattdessen einen Jahresbericht bekommen, reden wir gern nochmal.
+- „Das brauchen wir gerade nicht.“ → In Ordnung. Der Auslöser ist meist eine Anfrage oder eine Ausschreibung. Wenn das kommt, ist es dringend — melden Sie sich dann einfach.
+- „Ist das nicht ein Interessenkonflikt, wenn Sie unsere IT machen?“ → Berechtigte Frage. Der DSB muss unabhängig prüfen können; bei den Systemen, die ich selbst gebaut habe, grenzen wir das ab. Das klären wir vor der Benennung schriftlich.
+
+## Abschluss
+Zwanzig Minuten genügen für die Bestandsaufnahme. Sollen wir das im nächsten regulären Termin dranhängen?""",
+       notes="Der Interessenkonflikt-Einwand ist fachlich richtig und wird nicht weggeredet — das schafft mehr Vertrauen als eine glatte Antwort."),
+
+    # ---- Assessments (Portal) ----
+    _t("phone", "portal_assessment", "Leitfaden Kurz-Check → Assessment (KMU-GF)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Eine einzige Frage: Wenn ich Sie jetzt fragen würde, wie gut {{firma}} gegen einen Angriff aufgestellt ist — hätten Sie eine belastbare Antwort oder ein Gefühl?
+
+## Nutzenargument
+Genau das ist der Normalfall, und es ist kein Vorwurf. Es hat nur nie jemand strukturiert gefragt.
+Fangen wir klein an: Es gibt einen anonymen Kurz-Check. Drei Minuten, kein Konto, kostenlos, sofortige Einordnung.
+Wenn Sie es genauer wissen wollen, folgt das vollständige Assessment: 25 Minuten, sechs Bereiche, angelehnt an den BSI-CyberRisikoCheck. Danach haben Sie einen Reifegrad, eine nach Dringlichkeit sortierte Maßnahmenliste und einen Nachweis als PDF.
+Wichtig, damit Sie es richtig einordnen: Das ist eine Standortbestimmung, keine Zertifizierung.
+
+## Einwandbehandlung
+- „Dafür haben wir eine IT-Firma.“ → Die betreibt Ihre Systeme. Ob die Organisation drumherum trägt — Zuständigkeiten, Notfall, Wiederherstellung —, prüft sie in der Regel nicht. Genau das fragt das Assessment ab.
+- „Keine Zeit.“ → 25 Minuten, online, unterbrechbar. Sie können den Kurz-Check in drei Minuten vorab machen und danach entscheiden.
+- „Bringt so ein Fragebogen überhaupt etwas?“ → Der Wert liegt in den Fragen. Die meisten Betriebe merken beim Ausfüllen selbst, wo es fehlt — noch bevor sie das Ergebnis sehen.
+- „Wir haben eine Cyber-Versicherung.“ → Gut. Versicherer verlangen zunehmend belegte Mindeststandards. Ein dokumentierter Reifegrad ist genau dieser Beleg.
+- „Und danach wollen Sie mir was verkaufen.“ → Der Kurz-Check ist kostenlos und anonym, da verkaufe ich Ihnen gar nichts. Was Sie mit dem Ergebnis machen, entscheiden Sie.
+
+## Abschluss
+Sie sehen in drei Minuten selbst, ob das Thema bei {{firma}} drückt. Soll ich Ihnen den Link zum kostenlosen Kurz-Check schicken?""",
+       notes="Türöffner ist der kostenlose Check, nicht der Termin — niedrigste Hürde. Die Grenze „keine Zertifizierung“ gehört ins Gespräch, nicht ins Kleingedruckte."),
+    _t("phone", "portal_assessment", "Leitfaden Budget-Munition (IT-Leitung)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer, celox.io. Ich rufe nicht an, um Ihnen zu erklären, wo Ihre Lücken sind — das wissen Sie besser als ich. Ich rufe an, weil daraus selten Budget wird. Zwei Minuten?
+
+## Nutzenargument
+Ihre Einschätzung steht in der Geschäftsführung als Bauchgefühl da. Ein Assessment macht daraus eine Auswertung: Reifegrad je Bereich, priorisierte Maßnahmen, entlang DIN SPEC 27076 und BSI IT-Grundschutz.
+Sieben Themen stehen bereit — IT-Sicherheit, DSGVO, Phishing, Ransomware, KI-Reifegrad, KI-Verordnung, Bewachungsgewerbe. Je 20 bis 25 Minuten, online, unterbrechbar.
+Das Ergebnis ist ein Dokument, das Sie in die Geschäftsführung tragen können, ohne sich rechtfertigen zu müssen.
+
+## Einwandbehandlung
+- „Wir haben eigene Checklisten.“ → Dann nutzen Sie das Assessment als externe Bestätigung. Die Wirkung nach oben ist eine andere, wenn es nicht aus der eigenen Abteilung kommt.
+- „Das stellt meine Arbeit in Frage.“ → Umgekehrt. Ein sauberer Reifegrad belegt, was Sie längst richtig machen — und benennt, was Ihnen an Budget fehlt.
+- „Wer sieht das Ergebnis?“ → Sie entscheiden. Sie können es auch erst selbst ansehen und danach freigeben.
+- „Wir sind mitten in einem anderen Projekt.“ → Umso besser: Die Maßnahmenliste ist nach Dringlichkeit sortiert. Sie können sie an Ihren Plan hängen statt einen neuen zu machen.
+
+## Abschluss
+Ich schalte Ihnen ein Assessment zum Ausprobieren frei — dann sehen Sie den Aufbau, bevor Sie irgendwem etwas vorlegen. Welches Thema drückt bei {{firma}} am meisten?""",
+       notes="Kernbotschaft: Verbündeter, nicht Prüfer. Der Einwand „stellt meine Arbeit in Frage“ ist hier der echte, unausgesprochene."),
+    _t("phone", "portal_assessment", "Leitfaden Schulungen & Wiederholung (Bestandskunde)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer. Zwei Fragen, die Ihnen Kunden und Versicherer künftig häufiger stellen werden: Wo steht Ihre Sicherheit, und sind Ihre Leute geschult? Zwei Minuten dazu?
+
+## Nutzenargument
+Beides läuft über einen Zugang. Die Assessments liefern die Standortbestimmung mit Nachweis. Die Schulungen laufen im Browser, mit Wissenscheck und Zertifikat — vom Passwort-Basiskurs bis zu Branchenkursen für Praxis, Kanzlei, Hotel, Pflege, Einzelhandel.
+Der Teil, der im Alltag zählt: Auffrischung nach 6, 12 oder 24 Monaten, an die das System automatisch erinnert. Und ein Dashboard, in dem Sie sehen, wer durch ist und wer nicht.
+Für die Geschäftsleitung gibt es ein eigenes Modul. Es deckt die drei vom BSI benannten Kernkompetenzen ab und dokumentiert die Teilnahme nachweisfähig.
+
+## Einwandbehandlung
+- „Wir haben letztes Jahr geschult.“ → Dann fehlt die Auffrischung, und genau die wird bei einer Nachfrage verlangt. Wer neu ist, hat außerdem nie geschult.
+- „Meine Leute haben keine Zeit für E-Learning.“ → Die Module sind kurz und einzeln abschließbar. Der Fortschritt wird ehrlich gemessen — Wegklicken zählt nicht als gelesen.
+- „Das machen wir in der Teamsitzung.“ → Gute Ergänzung, aber ohne Nachweis. Was nicht dokumentiert ist, gilt bei einer Prüfung als nicht geschehen.
+- „Muss die Geschäftsleitung wirklich selbst?“ → Diese Pflicht ist nicht delegierbar. Deshalb gibt es das Modul separat, mit Nachweis auf den Namen.
+
+## Abschluss
+Zwanzig Minuten, dann wissen Sie, was fehlt. Sollen wir es einmal gemeinsam durchsehen — mit Ihrer Mitarbeiterzahl und den Rollen, die es bei {{firma}} gibt?""",
+       notes="Chefsache-Formulierung ist bewusst genau so gewählt: „deckt die BSI-Kernkompetenzen ab und dokumentiert nachweisfähig“ — KEIN Erfüllungsversprechen für § 38 BSIG."),
+
+    # ---- bcsbook ----
+    _t("phone", "bcsbook_zeit", "Leitfaden Teamleitung / Projektleitung",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer von celox.io. Eine Vorfrage, sonst verschwende ich Ihre Zeit: Erfasst {{firma}} die Projektzeiten in Projektron BCS?
+(Wenn nein: Danke, dann passt mein Werkzeug nicht — es bucht ausschließlich in BCS. Gespräch freundlich beenden.)
+
+## Nutzenargument
+Dann kennen Sie das Bild: Freitagnachmittag, und jemand rekonstruiert acht Stunden aus dem Gedächtnis.
+Zeiterfassung scheitert selten am Willen, sondern am Zeitpunkt. Gebucht wird am Ende, wenn der Tag vorbei ist.
+Ich habe ein Werkzeug gebaut, das das umdreht. Es liest die Spuren, die bei Ihren Leuten ohnehin entstehen — Commits, IDE-Aktivität, Ticket-Updates — und legt fertige 15-Minuten-Blöcke pro Projekt als Vorschlag vor. Ihr Team prüft und bestätigt, gebucht wird in Ihr vorhandenes BCS.
+Der eigentliche Gewinn ist nicht die Viertelstunde. Es ist, dass die Stunden auf dem richtigen Projekt landen.
+
+## Einwandbehandlung
+- „Meine Leute wollen keine Überwachung.“ → Der wichtigste Punkt, und ich nehme ihn ernst. Das Werkzeug läuft lokal auf dem Rechner des Mitarbeiters, spricht nur mit dem eigenen Gerät, speichert keine Zugangsdaten und bucht nichts ohne Bestätigung. Es gibt keine Auswertung, die bei Ihnen landet.
+- „Wir haben doch schon eine Zeiterfassung.“ → BCS ist das Ziel, nicht der Ersatz. Ich ändere nichts an Ihrem System, ich fülle es besser.
+- „Darf man da überhaupt automatisiert reingehen?“ → Es läuft im Browser wie ein Mensch, über den normalen Login, ohne Eingriff in BCS. Es braucht keine Administratorrechte und keine Freigabe Ihrer IT-Abteilung.
+- „Was, wenn die Vorschläge falsch sind?“ → Dann korrigiert Ihr Mitarbeiter sie in Sekunden — das ist immer noch schneller als Erinnern. Und eine Fehlbuchung lässt sich zurücknehmen.
+- „Keine Zeit für ein Projekt.“ → Das ist auch keins. Einrichtung dauert rund zwei Minuten pro Person.
+
+## Abschluss
+Mein Vorschlag: zwei Wochen Pilot mit drei bis fünf Freiwilligen. Danach vergleichen wir die Timesheets von vorher und nachher, und Sie entscheiden an Ihren eigenen Zahlen. Wen hätten Sie dafür im Kopf?""",
+       notes="Der Einstieg qualifiziert BCS und beendet das Gespräch sauber, wenn es fehlt — das spart beiden Seiten Zeit. Der Überwachungs-Einwand kommt zuerst, weil er der echte ist."),
+    _t("phone", "bcsbook_zeit", "Leitfaden ROI (kaufmännische Leitung)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer, celox.io. Ich habe eine Rechnung für Sie, die Sie in einer Minute prüfen können — vorausgesetzt, {{firma}} bucht Zeiten in Projektron BCS. Ist das so?
+
+## Nutzenargument
+Dann rechnen wir. Das Nachtragen kostet pro Person etwa 15 Minuten am Tag. Bei 220 Buchungstagen und 60 Euro internem Vollkostensatz sind das 3.300 Euro pro Person und Jahr. Bei 50 Mitarbeitenden: 165.000 Euro.
+Sie halten 15 Minuten für hoch? Rechnen wir mit 5: dann bleiben 55.000 Euro. Die Größenordnung hält.
+Der zweite Posten steht in keiner Statistik und ist der größere: Geschätzte Zeiten landen auf dem falschen Projekt. Das fällt nie auf, weil die Tagessumme stimmt — aber Ihre Projektkosten sind falsch, und damit kalkulieren Sie das nächste Angebot.
+Mein Werkzeug leitet die Buchungen aus der tatsächlichen Arbeit ab und legt sie zur Bestätigung vor. Gebucht wird in Ihr vorhandenes BCS.
+
+## Einwandbehandlung
+- „Ihre Annahmen sind zu optimistisch.“ → Setzen Sie eigene ein. Nehmen Sie Ihren Stundensatz und Ihre Minuten — die Rechnung hat drei Faktoren, da gibt es nichts zu verstecken.
+- „Das ist eine IT-Entscheidung.“ → Der Nutzen ist kaufmännisch, deshalb rufe ich bei Ihnen an. Die IT muss nichts freigeben: keine Administratorrechte, kein Eingriff in BCS.
+- „Wir haben gerade andere Prioritäten.“ → Verstehe. Deshalb schlage ich keinen Rollout vor, sondern zwei Wochen mit drei Leuten. Das bindet niemanden.
+- „Und der Betriebsrat?“ → Berechtigt. Es gibt keine Auswertung für die Leitung: Das Werkzeug läuft lokal, der Mitarbeiter bestätigt jede Buchung. Ich stelle die Unterlagen für die Mitbestimmung gern zur Verfügung.
+
+## Abschluss
+Zwei Wochen Pilot mit drei bis fünf Leuten, danach legen wir Ihre eigenen Zahlen nebeneinander. Wenn nichts dabei herauskommt, haben Sie es schwarz auf weiß. Sollen wir das aufsetzen?""",
+       notes="Zahlen = bcsbook-Broschüre (15 min · 220 Tage · 60 € Vollkostensatz). Betriebsrat vorwegnehmen — kommt bei dieser Zielgruppe fast immer."),
+    _t("phone", "bcsbook_zeit", "Leitfaden Datenqualität (Bestandskunde)",
+       """## Einstieg
+{{anrede}} {{name}}, Martin Pfeffer. Sie buchen in BCS — eine Frage dazu: Wenn Sie in die Projektkosten des letzten Quartals schauen, würden Sie darauf ein Angebot kalkulieren?
+
+## Nutzenargument
+Die Tagessummen stimmen fast immer. Die Zuordnung nicht. Wer freitags acht Stunden rekonstruiert, verteilt sie plausibel — nicht richtig.
+Falsche Projektkosten heißen falsche Kalkulation beim nächsten Angebot. Das ist der Schaden, den niemand sieht.
+Ich habe ein Werkzeug gebaut, das die Vorschläge aus der echten Arbeit ableitet: Commits, IDE-Aktivität, Tickets. In 15-Minuten-Blöcken, mit Bestätigung, direkt in Ihr vorhandenes BCS.
+
+## Einwandbehandlung
+- „Unsere Leute buchen sauber.“ → Dann bestätigt der Pilot das, und Sie haben es belegt. Wenn nicht, wissen Sie es, bevor der nächste Auftrag kalkuliert ist.
+- „Wir haben das Thema durch.“ → Was gebucht wird, ist durch. Wo es hingebucht wird, meist nicht — genau da setze ich an.
+- „Wer sieht die Daten?“ → Nur der Mitarbeiter. Das Werkzeug läuft lokal, speichert keine Zugangsdaten und schickt nichts an mich oder an Sie.
+
+## Abschluss
+Zwei Wochen, drei bis fünf Freiwillige, danach entscheiden Sie an Ihren Zahlen. Wollen wir das beim nächsten Termin ansetzen?""",
+       notes="Warmkontakt: BCS ist bekannt, also direkt auf Datenqualität statt auf Zeitersparnis. Die Kalkulations-Folge ist das stärkste Argument bei Projektgeschäft."),
 ]
 
 

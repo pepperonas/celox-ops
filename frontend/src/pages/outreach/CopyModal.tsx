@@ -57,6 +57,7 @@ export default function CopyModal({ template, onClose, onCopied }: Props) {
       name: lead.contact_name?.trim() || v.name || FALLBACK_NAME,
       firma: lead.company || v.firma || '',
       branche: brancheFromTags(lead.tags) || v.branche || '',
+      mitarbeiter: lead.employee_count ? String(lead.employee_count) : v.mitarbeiter || '',
     }))
   }
 

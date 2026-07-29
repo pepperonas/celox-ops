@@ -22,6 +22,9 @@ export const CATEGORIES: { value: OutreachCategory; label: string }[] = [
   { value: 'empfehlung', label: 'Empfehlung' },
   { value: 'angebot_nachfassen', label: 'Angebot nachfassen' },
   { value: 'security_upsell', label: 'Security-Upsell' },
+  { value: 'datenschutz_dsms', label: 'Datenschutz & DSB' },
+  { value: 'portal_assessment', label: 'Assessments (Portal)' },
+  { value: 'bcsbook_zeit', label: 'bcsbook (Zeiterfassung)' },
 ]
 
 export const CATEGORY_LABEL: Record<OutreachCategory, string> = Object.fromEntries(
@@ -45,6 +48,10 @@ export const PLACEHOLDERS: PlaceholderMeta[] = [
   { key: 'risiko_branche', label: 'Branchen-Risiko', example: 'ein Ausfall der Auftragsverwaltung', fromLead: false },
   { key: 'aufhaenger', label: 'Aufhänger', example: 'die offene Backup-Lücke', fromLead: false },
   { key: 'zielsystem', label: 'Zielsystem', example: 'DATEV / ERP', fromLead: false },
+  // Mitarbeiterzahl: trägt die bcsbook-Rechnung (3.300 € pro Person und Jahr).
+  // Kommt aus dem Lead (employee_count) — eine ROI-Aussage ohne die echte Zahl
+  // ist eine Behauptung, mit ihr ein Angebot.
+  { key: 'mitarbeiter', label: 'Mitarbeiterzahl', example: '50', fromLead: true },
   { key: 'audit_preis', label: 'Audit-Preis', example: '1.490 €', fromLead: false },
   { key: 'audit_dauer', label: 'Audit-Dauer', example: '5 Werktage', fromLead: false },
 ]

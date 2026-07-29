@@ -11,7 +11,7 @@ from app.services.ai_pricing import Usage
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
 # verwirft automatisch alle gecachten Entwürfe (sonst kämen alte Texte zurück).
-PROMPT_VERSION = "6"
+PROMPT_VERSION = "7"
 
 # Absender-Fakten für den Prompt (Signatur/Positionierung). Bewusst hier, damit
 # der Prompt eine einzige Quelle hat.
@@ -60,12 +60,16 @@ statt lästig); höhere Datenqualität (reale Aktivität statt Abend-Schätzung 
 sauberere Projektabrechnung); jede Buchung wird gegen BCS verifiziert; läuft rein
 lokal/on-premise (nur 127.0.0.1, keine Cloud), nichts ohne Bestätigung, Einträge
 editier-/löschbar (kein Überwachungsgefühl).
-Anker (GENAU EINER, gerundet): ~20 Min/Tag je MA ≈ ⅓ Std; bei ~80 €/Std ≈
-~27 €/Tag je MA. Bei ~80 Mitarbeitenden grob ~2.000 €/Tag bzw. Größenordnung
-~45.000 €/Monat zurückgewonnener Arbeitszeit. Ist die Mitarbeiterzahl DES LEADS
-bekannt, rechne überschlägig auf DESSEN Größe hoch. Euro nur als „Größenordnung/
-Rechenbeispiel" („je nach Setup"), NIE garantiert; bevorzuge Stunden/Monatswert
-statt aufgeblähter Jahreszahl. KEINE generische BCS-„Einführung/Beratung".
+Anker (GENAU EINER) — dieselbe Rechnung wie die bcsbook-Broschüre, damit Mail und
+Broschüre beim gleichen Kunden nicht auseinandergehen: ~15 Min/Tag je MA, 220
+Buchungstage, ~60 €/Std INTERNER Vollkostensatz (KEINE Abrechnungsrate!) ≈
+~3.300 € je Person und Jahr; bei 50 MA ≈ ~165.000 €. Konservativ mit 5 Min/Tag
+bleiben ~55.000 € (50 MA) — die Größenordnung hält. Ist die Mitarbeiterzahl DES
+LEADS bekannt, rechne auf DESSEN Größe hoch. Euro nur als „Größenordnung/
+Rechenbeispiel", NIE garantiert. Zweiter, oft stärkerer Nutzen ohne Eurozahl:
+geschätzte Zeiten landen auf dem falschen Projekt — die Tagessumme stimmt, die
+Projektkosten nicht, und damit die nächste Kalkulation.
+KEINE generische BCS-„Einführung/Beratung".
 
 [2] SOFTWARE & WEB  (Targets: Individualsoftware, Legacy-Modernisierung, Ablösung
 Excel-Insellösung, Schnittstellen/Systemintegration, Projektmanagement-Software,

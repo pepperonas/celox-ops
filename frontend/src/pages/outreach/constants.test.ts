@@ -41,8 +41,11 @@ describe('constants Integrität', () => {
       expect(keys).toContain(k)
     }
   })
-  it('nur name/firma/branche sind aus dem Lead befüllbar', () => {
+  it('nur name/firma/branche/mitarbeiter sind aus dem Lead befüllbar', () => {
+    // Die Liste ist absichtlich eng: Jeder Eintrag braucht eine Entsprechung in
+    // CopyModal (Lead-Feld → Platzhalter). Ein Key ohne Mapping bliebe leer und
+    // die Nachricht ginge mit einem sichtbaren {{platzhalter}} raus.
     const fromLead = PLACEHOLDERS.filter((p) => p.fromLead).map((p) => p.key).sort()
-    expect(fromLead).toEqual(['branche', 'firma', 'name'])
+    expect(fromLead).toEqual(['branche', 'firma', 'mitarbeiter', 'name'])
   })
 })

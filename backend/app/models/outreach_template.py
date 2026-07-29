@@ -25,6 +25,12 @@ class OutreachCategory(str, enum.Enum):
     security_upsell = "security_upsell"
     security_audit = "security_audit"
     ki_automatisierung = "ki_automatisierung"
+    # Produktlinien mit eigener Argumentation (2026-07): DSMS/externer DSB,
+    # Portal-Assessments, bcsbook. Werte bleiben ≤ 20 Zeichen — die Spalte ist
+    # VARCHAR(20) (native_enum=False).
+    datenschutz_dsms = "datenschutz_dsms"
+    portal_assessment = "portal_assessment"
+    bcsbook_zeit = "bcsbook_zeit"
 
 
 class OutreachTemplate(OwnedMixin, Base):

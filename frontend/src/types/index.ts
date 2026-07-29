@@ -977,6 +977,9 @@ export type OutreachCategory =
   | 'security_upsell'
   | 'security_audit'
   | 'ki_automatisierung'
+  | 'datenschutz_dsms'
+  | 'portal_assessment'
+  | 'bcsbook_zeit'
 
 export interface OutreachTemplate {
   id: string
