@@ -51,3 +51,12 @@ export const reorderOutreachTemplates = async (
   channel: OutreachChannel, ids: string[],
 ): Promise<OutreachTemplate[]> =>
   (await api.post<OutreachTemplate[]>('/outreach/templates/reorder', { channel, ids })).data
+
+/**
+ * Reihenfolge innerhalb der Favoriten. Ohne Kanal — die Sektion ist
+ * kanalübergreifend und schreibt `favorite_order`, nicht `sort_order`.
+ */
+export const reorderOutreachFavorites = async (
+  ids: string[],
+): Promise<OutreachTemplate[]> =>
+  (await api.post<OutreachTemplate[]>('/outreach/templates/favorites/reorder', { ids })).data

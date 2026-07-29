@@ -52,6 +52,32 @@ export function applyVisibleOrder<T extends { id: string }>(
 // (Eine erste Fassung hatte dafür einen Helfer, dessen beide Zweige identisch
 // waren; er ist ersatzlos entfallen.)
 
+/**
+ * Sortiert die Favoriten-Sektion.
+ *
+ * Eigene Ordnung (`favorite_order`), weil die Sektion kanalübergreifend ist:
+ * `sort_order` zählt je Kanal ab 0, eine Telefonvorlage mit 0 und eine E-Mail mit
+ * 0 stünden dort also willkürlich nebeneinander.
+ *
+ * **Noch nicht einsortierte hängen hinten** (`favorite_order === null`): Ein neu
+ * gesetzter Stern soll eine bestehende Anordnung nicht durchmischen. Innerhalb
+ * beider Gruppen entscheidet der Titel — damit die Reihenfolge auch dann
+ * vorhersagbar ist, wenn noch nie gezogen wurde.
+ */
+export function sortFavorites<T extends { favorite_order: number | null; title: string }>(
+  list: T[],
+): T[] {
+  return [...list].sort((a, b) => {
+    const an = a.favorite_order === null
+    const bn = b.favorite_order === null
+    if (an !== bn) return an ? 1 : -1
+    if (!an && !bn && a.favorite_order !== b.favorite_order) {
+      return (a.favorite_order as number) - (b.favorite_order as number)
+    }
+    return a.title.localeCompare(b.title, 'de')
+  })
+}
+
 /** IDs in Reihenfolge — das, was der Server als neue Ordnung bekommt. */
 export function orderIds<T extends { id: string }>(list: T[]): string[] {
   return list.map((t) => t.id)

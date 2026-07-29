@@ -17,6 +17,8 @@ class OutreachTemplateBase(BaseModel):
     is_favorite: bool = False
     # Palette-Schlüssel, nicht Farbwert (s. Modell). None = neutral.
     color: str | None = None
+    # Reihenfolge innerhalb der Favoriten (kanalübergreifend, s. Modell).
+    favorite_order: int | None = None
 
 
 class OutreachTemplateCreate(OutreachTemplateBase):
@@ -33,6 +35,7 @@ class OutreachTemplateUpdate(BaseModel):
     sort_order: int | None = None
     is_favorite: bool | None = None
     color: str | None = None
+    favorite_order: int | None = None
 
 
 class OutreachTemplateResponse(OutreachTemplateBase):
@@ -53,4 +56,15 @@ class OutreachReorder(BaseModel):
     """
 
     channel: OutreachChannel
+    ids: list[uuid.UUID]
+
+
+class OutreachFavoriteReorder(BaseModel):
+    """Neue Reihenfolge der Favoriten als vollständige ID-Liste.
+
+    Ohne `channel`: Die Favoriten-Sektion ist kanalübergreifend. Sie schreibt
+    `favorite_order`, nicht `sort_order` — sonst würde ein Zug in den Favoriten
+    die Reihenfolge der Kanal-Listen mitverändern.
+    """
+
     ids: list[uuid.UUID]

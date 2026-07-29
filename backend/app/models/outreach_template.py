@@ -58,6 +58,13 @@ class OutreachTemplate(OwnedMixin, Base):
     # verwirrend — eine Karte erschiene in „Alle Rubriken" und in ihrer Rubrik mit
     # zwei unabhängigen Plätzen. Gesetzt über `POST /templates/reorder`.
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Reihenfolge INNERHALB der Favoriten — eine eigene Ordnung, weil die
+    # Favoriten-Sektion kanalübergreifend ist. `sort_order` zählt je Kanal ab 0;
+    # eine Telefonvorlage mit 0 und eine E-Mail mit 0 stünden dort also willkürlich
+    # nebeneinander. NULL = noch nicht einsortiert; solche Favoriten hängen hinten,
+    # damit ein neuer Stern die bestehende Anordnung nicht durchmischt.
+    # Migration: scripts/add_outreach_favorite_order.sql.
+    favorite_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Freie Einfärbung der Karte (wie Google Keep) — Schlüssel aus einer festen
     # Palette, nicht ein Farbwert: die konkreten Töne kommen aus den Theme-Tokens
     # im Frontend und dürfen sich ändern, ohne die Daten anzufassen.

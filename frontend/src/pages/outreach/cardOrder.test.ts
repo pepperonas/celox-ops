@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyVisibleOrder, moveBy, moveItem, orderIds } from './cardOrder'
+import { applyVisibleOrder, moveBy, moveItem, orderIds, sortFavorites } from './cardOrder'
 
 const ids = (list: { id: string }[]) => list.map((t) => t.id).join('')
 const liste = (s: string) => [...s].map((id) => ({ id }))
@@ -84,5 +84,46 @@ describe('applyVisibleOrder', () => {
 describe('orderIds', () => {
   it('liefert die IDs in Reihenfolge', () => {
     expect(orderIds(liste('CAB'))).toEqual(['C', 'A', 'B'])
+  })
+})
+
+describe('sortFavorites', () => {
+  const f = (title: string, favorite_order: number | null) => ({ title, favorite_order })
+
+  it('sortiert nach der eigenen Favoriten-Reihenfolge', () => {
+    // Eigene Ordnung, weil die Sektion kanalübergreifend ist: sort_order zählt je
+    // Kanal ab 0, geerbt stünden eine Telefon- und eine E-Mail-Vorlage mit 0
+    // willkürlich nebeneinander.
+    const out = sortFavorites([f('C', 2), f('A', 0), f('B', 1)])
+    expect(out.map((x) => x.title)).toEqual(['A', 'B', 'C'])
+  })
+
+  it('noch nicht einsortierte hängen hinten', () => {
+    // Ein neu gesetzter Stern darf eine bestehende Anordnung nicht durchmischen.
+    const out = sortFavorites([f('Neu', null), f('Alt', 0)])
+    expect(out.map((x) => x.title)).toEqual(['Alt', 'Neu'])
+  })
+
+  it('ohne jede Reihenfolge nach Titel — vorhersagbar statt willkürlich', () => {
+    const out = sortFavorites([f('Zeta', null), f('Alpha', null), f('Ärger', null)])
+    expect(out.map((x) => x.title)).toEqual(['Alpha', 'Ärger', 'Zeta'])
+  })
+
+  it('gleiche Nummer wird über den Titel entschieden', () => {
+    const out = sortFavorites([f('B', 3), f('A', 3)])
+    expect(out.map((x) => x.title)).toEqual(['A', 'B'])
+  })
+
+  it('Nummer 0 gilt als gesetzt, nicht als leer', () => {
+    // Klassischer Fehler: 0 ist falsy. Wäre die Prüfung `!favorite_order`, fiele
+    // der erste Favorit an das Ende der Liste.
+    const out = sortFavorites([f('Zweiter', null), f('Erster', 0)])
+    expect(out.map((x) => x.title)).toEqual(['Erster', 'Zweiter'])
+  })
+
+  it('lässt die Eingabeliste unverändert', () => {
+    const eingabe = [f('B', 1), f('A', 0)]
+    sortFavorites(eingabe)
+    expect(eingabe.map((x) => x.title)).toEqual(['B', 'A'])
   })
 })

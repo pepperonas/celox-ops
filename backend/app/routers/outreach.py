@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.outreach_template import OutreachTemplate
 from app.models.user import User, UserRole
 from app.schemas.outreach import (
+    OutreachFavoriteReorder,
     OutreachReorder,
     OutreachTemplateCreate,
     OutreachTemplateResponse,
@@ -206,6 +207,48 @@ async def reorder_templates(
     # nummerierten.
     for tpl in sorted(by_id.values(), key=lambda t: (t.sort_order, t.title)):
         tpl.sort_order = position
+        position += 1
+
+    await db.flush()
+    result = (await db.execute(
+        select(OutreachTemplate).order_by(
+            OutreachTemplate.sort_order, OutreachTemplate.title
+        )
+    )).scalars().all()
+    return [OutreachTemplateResponse.model_validate(t) for t in result]
+
+
+@router.post("/templates/favorites/reorder", response_model=list[OutreachTemplateResponse],
+             dependencies=[Depends(require_admin)])
+async def reorder_favorites(
+    data: OutreachFavoriteReorder, db: AsyncSession = Depends(get_db),
+) -> list[OutreachTemplateResponse]:
+    """Setzt die Reihenfolge INNERHALB der Favoriten.
+
+    Schreibt `favorite_order` und lässt `sort_order` unangetastet — ein Zug in den
+    Favoriten darf die Kanal-Listen nicht umsortieren.
+
+    Nur Vorlagen, die tatsächlich Favorit sind, werden nummeriert. Wird ein Stern
+    entfernt, bleibt die alte Nummer stehen; das ist gewollt: Kommt der Stern
+    zurück, sitzt die Vorlage wieder an ihrem Platz, statt hinten anzuhängen.
+    """
+    rows = (await db.execute(
+        select(OutreachTemplate).where(OutreachTemplate.is_favorite.is_(True))
+    )).scalars().all()
+    by_id = {t.id: t for t in rows}
+
+    position = 0
+    for tid in data.ids:
+        tpl = by_id.pop(tid, None)
+        if tpl is None:
+            continue          # gelöscht oder kein Favorit mehr — nicht als Fehler
+        tpl.favorite_order = position
+        position += 1
+    # Favoriten, die der Client nicht kannte (parallel gesetzter Stern), hinten
+    # anhängen statt mit alten Nummern zwischen die neuen zu mischen.
+    for tpl in sorted(by_id.values(),
+                      key=lambda t: (t.favorite_order is None, t.favorite_order or 0, t.title)):
+        tpl.favorite_order = position
         position += 1
 
     await db.flush()

@@ -8,12 +8,13 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import type { OutreachChannel, OutreachTemplate } from '../../types'
 import {
   getOutreachTemplates,
+  reorderOutreachFavorites,
   reorderOutreachTemplates,
   seedOutreachTemplates,
   updateOutreachTemplate,
   deleteOutreachTemplate,
 } from '../../api/outreach'
-import { applyVisibleOrder, moveBy, moveItem, orderIds } from './cardOrder'
+import { applyVisibleOrder, moveBy, moveItem, orderIds, sortFavorites } from './cardOrder'
 import SpeakingCardDialog from './SpeakingCardDialog'
 import {
   CATEGORIES, CATEGORY_AXIS, CHANNELS,
@@ -48,6 +49,7 @@ export default function Outreach() {
   const [speaking, setSpeaking] = useState<OutreachTemplate | null>(null)
   // Index der gezogenen Karte innerhalb der SICHTBAREN Liste (s. applyVisibleOrder).
   const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [favDragFrom, setFavDragFrom] = useState<number | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<OutreachTemplate | null>(null)
   const [seeding, setSeeding] = useState(false)
@@ -166,6 +168,22 @@ export default function Outreach() {
     }
   }
 
+  /** Speichert die Reihenfolge der Favoriten. Kein Zurückrechnen nötig — die
+   *  Sektion zeigt immer ALLE Favoriten, es gibt dort keinen Filter. */
+  const persistFavoriteOrder = async (neu: OutreachTemplate[]) => {
+    const vorher = all
+    setAll((prev) => prev.map((x) => {
+      const i = neu.findIndex((f) => f.id === x.id)
+      return i === -1 ? x : { ...x, favorite_order: i }
+    }))
+    try {
+      setAll(await reorderOutreachFavorites(orderIds(neu)))
+    } catch {
+      toast.error('Reihenfolge der Favoriten konnte nicht gespeichert werden.')
+      setAll(vorher)
+    }
+  }
+
   const bumpUsage = (id: string) =>
     setAll((prev) => prev.map((x) => (x.id === id ? { ...x, usage_count: x.usage_count + 1 } : x)))
 
@@ -179,7 +197,13 @@ export default function Outreach() {
     )
   }, [all, q])
 
-  const favorites = useMemo(() => all.filter((t) => t.is_favorite), [all])
+  // Favoriten haben ihre EIGENE Reihenfolge (favorite_order): die Sektion ist
+  // kanalübergreifend, sort_order zählt je Kanal ab 0 — geerbt stünden die Karten
+  // dort willkürlich.
+  const favorites = useMemo(
+    () => sortFavorites(all.filter((t) => t.is_favorite)),
+    [all],
+  )
   const channelTemplates = useMemo(
     () => all.filter((t) => t.channel === channel && (category === 'all' || t.category === category)),
     [all, channel, category],
@@ -278,7 +302,28 @@ export default function Outreach() {
               </button>
               {favoritesOpen && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-                  {favorites.map((t) => <TemplateCard key={t.id} template={t} showChannel {...cardHandlers} />)}
+                  {favorites.map((t, i) => (
+                    <TemplateCard
+                      key={t.id}
+                      template={t}
+                      showChannel
+                      {...cardHandlers}
+                      draggable={mayEdit}
+                      onDragStartCard={() => setFavDragFrom(i)}
+                      onDropOnCard={() => {
+                        if (favDragFrom === null || favDragFrom === i) return
+                        void persistFavoriteOrder(moveItem(favorites, favDragFrom, i))
+                        setFavDragFrom(null)
+                      }}
+                      onMoveBy={mayEdit
+                        ? (karte, delta) => {
+                          const von = favorites.findIndex((x) => x.id === karte.id)
+                          if (von < 0) return
+                          void persistFavoriteOrder(moveBy(favorites, von, delta))
+                        }
+                        : undefined}
+                    />
+                  ))}
                 </div>
               )}
             </section>
