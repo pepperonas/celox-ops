@@ -1,8 +1,18 @@
-// Sprechkarte: verdichtet eine Vorlage zu einem Gesprächsablauf.
+// Sprechkarte: verdichtet einen TELEFONLEITFADEN zu einem Gesprächsablauf.
+//
+// **Nur Telefon.** Bei E-Mail und LinkedIn schreibt man den Text, man spricht ihn
+// nicht — dort erübrigt sich die Karte, und der Knopf erscheint gar nicht.
 //
 // Zweck: im Gespräch NICHT vorlesen. Man braucht Halt, nicht Prosa — also je
-// Schritt ein paar Stichworte, an denen man selbst formuliert. Der ganze Satz
-// steht klein darunter, als Rettung, wenn der Faden reißt.
+// SATZ ein paar Stichworte, an denen man selbst formuliert, und den Satz selbst
+// klein daneben, als Rettung, wenn der Faden reißt.
+//
+// **Zwei Arten von Sätzen, und der Unterschied ist der Kern der Karte.** Den
+// Einstieg und jede Frage sagt man WÖRTLICH: Der erste Satz eines Kaltanrufs ist
+// der eine, den man nicht improvisiert, und eine umformulierte Frage wird
+// unpräzise. Alles dazwischen ist Argument — dort trägt das Stichwort, nicht der
+// Satz. Stichworte auf dem Einstieg wären reines Rauschen in der Sekunde, in der
+// man sie am wenigsten braucht.
 //
 // Bewusst mechanisch, ohne KI: Die Karte muss beim Klick sofort da sein und darf
 // nichts kosten — mitten im Telefonat ist kein Moment für eine Wartezeit oder
@@ -19,15 +29,50 @@ export interface Objection {
   antwort: string
   /** Stichworte der Antwort — das, was man tatsächlich sagt. */
   stichworte: string[]
+  /**
+   * Ein Wort als Sprungmarke, z. B. „Überwachung", „Git", „Betriebsrat".
+   *
+   * Ein Leitfaden hat bis zu acht Einwände. Im Gespräch muss man den richtigen in
+   * zwei Sekunden finden, und acht ausformulierte Zitate liest man dafür nicht —
+   * ein Wort erkennt man im Vorbeischauen.
+   */
+  label: string
+}
+
+/**
+ * Eine Sprechzeile: ein Satz mit seinen eigenen Stichworten.
+ *
+ * **Warum je Satz und nicht je Abschnitt.** Vorher lagen die Stichworte eines
+ * Abschnitts in EINER Reihe und die Sätze in einer zweiten Liste darunter. Am
+ * echten Leitfaden waren das 14 Wörter in einer Zeile — eine Wortwolke, aus der
+ * nicht hervorgeht, welches Stichwort zu welchem Satz gehört. Damit weiß man beim
+ * Sprechen nie, wo man ist. Gepaart ist beides eine Sprechlinie, an der man
+ * entlanggeht.
+ *
+ * Nebeneffekt: Das Kontingent-Problem entfällt strukturell. Ein gemeinsamer Topf
+ * ließ den Anfang alles fressen (die Kernaussage im vierten Satz fiel weg), was
+ * eine Quote je Satz reparieren musste — jetzt konkurrieren die Sätze nicht mehr.
+ */
+export interface SpeakingLine {
+  /** Der Satz. Bei `wortwoertlich` das, was man sagt; sonst die Rückfallebene. */
+  satz: string
+  /** Stichworte, an denen man formuliert. LEER, wenn der Satz wörtlich gehört. */
+  stichworte: string[]
+  /** Frage? Fragen sagt man wörtlich — umformuliert werden sie unpräzise. */
+  frage: boolean
 }
 
 export interface SpeakingStep {
   /** Überschrift des Schritts, z. B. „Einstieg". */
   titel: string
-  /** Stichworte in Reihenfolge der Sätze — die Sprechlinie. */
-  stichworte: string[]
-  /** Die Sätze selbst, klein darunter, als Rückfallebene. */
-  saetze: string[]
+  /** Die Sprechlinien in Satzreihenfolge. */
+  zeilen: SpeakingLine[]
+  /**
+   * Wörtlich sprechen statt improvisieren — gilt für den Einstieg. Der erste Satz
+   * eines Kaltanrufs entscheidet, ob es die nächsten zwei Minuten gibt; dort
+   * braucht man den Satz, nicht Stichworte.
+   */
+  wortwoertlich?: boolean
   /**
    * Regie-Anweisung in Klammern („Wenn nein: Gespräch freundlich beenden").
    * Bewusst getrennt: Das sagt man NICHT, das tut man. Im Sprechfluss gelesen
@@ -66,6 +111,23 @@ const FUELLWOERTER = new Set([
   'sind', 'so', 'soll', 'sollen', 'sondern', 'über', 'um', 'und', 'uns',
   'unser', 'unsere', 'vom', 'von', 'vor', 'war', 'waren', 'was', 'wenn',
   'werden', 'wie', 'wir', 'wird', 'wo', 'würde', 'zu', 'zum', 'zur',
+  // Frage- und Verneinungswörter. Sie stehen groß am Satzanfang und rutschten
+  // dadurch als „Substantiv" durch — auf einer Sprechmarke wäre „Woher" das
+  // Stichwort gewesen, obwohl es um „Projekt" geht.
+  'keine', 'keinen', 'keiner', 'kein', 'warum', 'weshalb', 'wieso', 'woher',
+  'wann', 'welche', 'welchem', 'welchen', 'welcher', 'wer', 'wen', 'wem',
+  'wessen', 'wohin', 'weswegen', 'wollen', 'will', 'darf', 'dürfen', 'muss',
+  'müssen', 'sollte', 'sollten', 'gerade', 'jemand', 'jemanden', 'meine',
+  'meinen', 'meiner',
+  // Pronominaladverbien und Satzverbinder. Sie stehen fast immer GROSS am
+  // Satzanfang und rutschten dadurch als „Substantiv" durch — im Nutzenargument
+  // war „Daraus" das erste Stichwort einer Zeile, in der es um „Gerüst" geht.
+  // Anders als bei den Sprungmarken kann man hier nicht einfach das erste Wort
+  // verwerfen: „Zeiterfassung scheitert nicht am Willen" beginnt mit dem
+  // Stichwort. Also die Wortart benennen, nicht die Position.
+  'daraus', 'dadurch', 'darin', 'dafür', 'dazu', 'dabei', 'danach', 'davor',
+  'deswegen', 'trotzdem', 'außerdem', 'zusätzlich', 'übrigens', 'bisher',
+  'genau', 'sonst', 'zudem', 'hätten', 'hatten', 'wären', 'würden', 'lassen',
 ])
 
 const PLATZHALTER_RE = /\{\{(\w+)\}\}/g
@@ -162,29 +224,41 @@ export function stichworte(satz: string, max = 8): string[] {
   return substantive.length >= 2 ? substantive : sammeln(false)
 }
 
+/** Endet der Satz mit einem Fragezeichen? */
+function istFrage(satz: string): boolean {
+  return /\?["„“”']*\s*$/.test(satz.trim())
+}
+
 /**
- * Stichworte eines ganzen Abschnitts — mit einem Kontingent JE SATZ.
+ * Sätze zu Sprechzeilen: je Satz eigene Stichworte.
  *
- * Ein gemeinsamer Topf nach dem Prinzip „wer zuerst kommt" hat einen Fehler: Wird
- * ein Abschnitt länger, frisst der Anfang das Kontingent und die Aussage am Ende
- * fällt weg. Genau das passierte beim überarbeiteten bcsbook-Leitfaden — die neue
- * Kernaussage (Anwesenheit, Kalender, Gerüst) stand im vierten Satz und
- * verschwand.
+ * **Leere Stichworte heißen: den Satz sprechen.** Drei Fälle:
+ *   · der Einstieg (`wortwoertlich`) — den improvisiert man nicht,
+ *   · jede Frage — umformuliert wird sie unpräzise,
+ *   · und ein Satz, aus dem sich nichts Brauchbares gewinnen lässt.
  *
- * Also: Jeder Satz bekommt seinen Anteil, mindestens zwei. Die Satzreihenfolge
- * bleibt erhalten — man spricht entlang des Abschnitts, nicht entlang einer
- * Auswahl.
+ * Der dritte Fall ist gemessen, nicht vermutet: Über alle 33 Leitfäden waren 45
+ * von 505 Stichworten kleingeschrieben — dort hatte der gröbere Rückfall gegriffen
+ * und lieferte „statt · fast · immer · kommt · sieht". Solcher Müll steht neben
+ * echten Stichworten und entwertet sie. Ein substantivarmer Satz („Dann rechnen
+ * wir.") lässt sich nicht verdichten, also bleibt er, wie er ist — das ist keine
+ * Notlösung, sondern die richtige Darstellung.
+ *
+ * Die Schwelle: mindestens zwei Stichworte, und mindestens eines muss ein
+ * Substantiv, eine Zahl oder eine Platzhalter-Lücke sein. Ein einzelnes Wort ist
+ * keine Sprechlinie, und eine Reihe aus Verben sagt weniger als der Satz selbst.
  */
-export function abschnittsStichworte(saetze: string[], cap = 12): string[] {
-  if (saetze.length === 0) return []
-  const quote = Math.max(2, Math.ceil(cap / saetze.length))
-  const out: string[] = []
-  for (const satz of saetze) {
-    for (const w of stichworte(satz, quote)) {
-      if (!out.some((x) => x.toLowerCase() === w.toLowerCase())) out.push(w)
+export function zeilenVon(saetze: string[], wortwoertlich = false): SpeakingLine[] {
+  return saetze.map((satz) => {
+    const frage = istFrage(satz)
+    const roh = frage || wortwoertlich ? [] : stichworte(satz, 6)
+    const traegt = roh.length >= 2 && roh.some((w) => /^[A-ZÄÖÜ[\d]/.test(w))
+    return {
+      satz: lueckenText(satz),
+      frage,
+      stichworte: traegt ? roh : [],
     }
-  }
-  return out.slice(0, cap)
+  })
 }
 
 /**
@@ -230,6 +304,115 @@ function alsEinwand(zeile: string): Objection | null {
     einwand: lueckenText(einwand),
     antwort: lueckenText(antwort),
     stichworte: stichworte(antwort, 7),
+    label: '',   // wird gesetzt, sobald alle Einwände bekannt sind (s. setzeLabels)
+  }
+}
+
+/** Satzzeichen und Anführungen am Rand weg — der Kern des Einwands. */
+function kern(einwand: string): string {
+  return einwand.replace(/^[„“”"']+/, '').replace(/[.?!…„“”"'\s]+$/, '')
+}
+
+/** Auf Wortgrenze kürzen. Ein mitten im Wort abgeschnittenes Label liest sich falsch. */
+function kuerze(text: string, max: number): string {
+  if (text.length <= max) return text
+  const schnitt = text.slice(0, max)
+  const luecke = schnitt.lastIndexOf(' ')
+  const basis = luecke > max * 0.5 ? schnitt.slice(0, luecke) : schnitt
+  return `${basis.replace(/[,;:]$/, '')}…`
+}
+
+/** Wie lang darf eine Marke sein, damit sie im Vorbeischauen erfassbar bleibt? */
+const MARKE_MAX = 30
+
+/**
+ * Sprungmarken für die Einwände: das, woran man im Gespräch erkennt, welchen
+ * Einwand man gerade hört.
+ *
+ * Ein Leitfaden hat bis zu acht Einwände. Den richtigen muss man in zwei Sekunden
+ * finden, und acht ausformulierte Zitate liest dafür niemand.
+ *
+ * **Vier Stufen, in dieser Reihenfolge — und die Reihenfolge ist die eigentliche
+ * Erkenntnis.** Der erste Entwurf nahm immer ein Einzelwort; über alle 33 Leitfäden
+ * gesehen war ein Drittel davon unbrauchbar („greift", „trifft", „Melde"), weil
+ * viele Einwände GAR KEIN Substantiv haben:
+ *
+ *   1. Das unterscheidende Substantiv, wenn es eins gibt: „Überwachung", „Git",
+ *      „Betriebsrat", „IT-Entscheidung". Ein Wort erkennt man schneller als einen
+ *      Satz — deshalb steht diese Stufe vor der nächsten, auch bei kurzen
+ *      Einwänden („Und der Betriebsrat?" wird „Betriebsrat", nicht „Und der …").
+ *   2. Sonst der Einwand selbst, wenn er kurz ist: „Zu teuer", „Wir sind zu klein",
+ *      „Ist das nötig?". Kürzer geht es nicht, und als Marke ist er perfekt.
+ *   3. Sonst ein langes Inhaltswort (ab 11 Zeichen): „automatisiert". Kurze Verben
+ *      sind hier bewusst ausgeschlossen — „geprüft" oder „machen" sagt nichts.
+ *   4. Sonst der gekürzte Einwand. Eine Phrase ist immer noch erkennbar, ein
+ *      zufälliges Verb nicht.
+ *
+ * Die Seltenheit auf Stufe 1 ist der Trick: „Kalender" steht in mehreren Einwänden
+ * und taugt deshalb nicht zum Unterscheiden, „Git" genau einmal.
+ */
+function setzeLabels(einwaende: Objection[]): void {
+  /**
+   * Wörter mit der Angabe, ob sie am SATZANFANG standen.
+   *
+   * Die Position muss aus dem Originalsatz kommen, nicht aus der gefilterten Liste:
+   * In „Unsere Kunden fragen das nicht." ist „Unsere" ein Füllwort — nach dem
+   * Filtern stünde „Kunden" auf Position 0 und wäre als Satzanfang verworfen
+   * worden. Die gute Marke „Kunden" wäre still verloren gegangen (beim Messen über
+   * alle 33 Leitfäden aufgefallen).
+   */
+  const woerterVon = (text: string): { wort: string; anfang: boolean }[] =>
+    text.split(/[\s—–]+/)
+      .map((w, i) => ({ wort: w.replace(/^[„“”"'(]+|[.,;:!?„“”"')]+$/g, ''), anfang: i === 0 }))
+      .filter(({ wort }) => wort.length >= 3 && !FUELLWOERTER.has(wort.toLowerCase()))
+
+  /**
+   * Am Satzanfang ist Großschreibung KEIN Hinweis auf ein Substantiv — Deutsch
+   * schreibt das erste Wort immer groß. Genau dort entstanden die vier falschen
+   * Marken „Bisher", „Melde", „Machen", „Läuft" (alles Verben und Adverbien).
+   *
+   * Verworfen wird das erste Wort deshalb als Substantiv-Kandidat, es sei denn, es
+   * trägt einen inneren Großbuchstaben oder eine Zahl: „NIS2", „IT-Firma",
+   * „Cyber-Versicherung" sind Eigennamen, unabhängig von der Position.
+   *
+   * Der Verzicht kostet nichts: Beide Rückfallstufen (kurzer Einwand, gekürzte
+   * Phrase) BEGINNEN mit genau diesem Wort — „Budget ist eingefroren…" führt das
+   * Budget also weiter vorn als eine Ein-Wort-Marke.
+   */
+  const eigenname = (wort: string): boolean => /[A-ZÄÖÜ0-9]/.test(wort.slice(1))
+
+  // In wie vielen Einwänden kommt ein Wort vor?
+  const haeufigkeit = new Map<string, number>()
+  for (const e of einwaende) {
+    for (const w of new Set(woerterVon(e.einwand).map((x) => x.wort.toLowerCase()))) {
+      haeufigkeit.set(w, (haeufigkeit.get(w) ?? 0) + 1)
+    }
+  }
+
+  // Seltenstes zuerst; bei Gleichstand das längere (spezifischer), dann das frühere
+  // — eine feste Ordnung, damit die Marke nicht zufällig wirkt.
+  const bestes = (woerter: { wort: string }[]): string | null => woerter
+    .map(({ wort }, index) => ({
+      wort,
+      index,
+      df: haeufigkeit.get(wort.toLowerCase()) ?? 1,
+      laenge: wort.length,
+    }))
+    .sort((a, b) => a.df - b.df || b.laenge - a.laenge || a.index - b.index)[0]?.wort ?? null
+
+  for (const e of einwaende) {
+    const woerter = woerterVon(e.einwand)
+    const text = kern(e.einwand)
+    // Großgeschrieben ab DREI Zeichen: „Git" ist der ganze Einwand, fiel aber bei
+    // einer Mindestlänge von 4 durch — und die Marke wurde „arbeitet". Dieselbe
+    // Falle wie damals bei „BCS". Kurze Funktionswörter (Und, Der, Was, Darf)
+    // fängt die Füllwortliste ab, dafür braucht es keine Längengrenze.
+    const substantiv = bestes(woerter.filter(({ wort, anfang }) =>
+      /^[A-ZÄÖÜ]/.test(wort) && wort.length >= 3 && (!anfang || eigenname(wort))))
+    if (substantiv) { e.label = substantiv; continue }
+    if (text.length <= MARKE_MAX) { e.label = text; continue }
+    const langesWort = bestes(woerter.filter(({ wort }) => wort.length >= 11))
+    e.label = langesWort ?? kuerze(text, MARKE_MAX - 6)
   }
 }
 
@@ -251,11 +434,20 @@ function schritteAusAbsaetzen(bloecke: string[]): SpeakingStep[] {
       titel: i === bloecke.length - 1 && bloecke.length > 1
         ? 'Abschluss'
         : namen[i] ?? `Schritt ${i + 1}`,
-      stichworte: abschnittsStichworte(saetze, 8),
-      saetze: saetze.map(lueckenText),
+      // Der erste Absatz IST der Einstieg, auch ohne Überschrift.
+      zeilen: zeilenVon(saetze, i === 0),
+      ...(i === 0 ? { wortwoertlich: true } : {}),
     }
   })
 }
+
+/**
+ * Abschnitte, die man wörtlich spricht. Alle 33 Leitfäden im Bestand beginnen mit
+ * `## Einstieg`; die Alternativen stehen für selbst geschriebene Vorlagen. Bewusst
+ * am Titel erkannt und nicht an der Position: Ein Leitfaden, der mit „## Ziel des
+ * Gesprächs" anfängt, hätte sonst eine Notiz an sich selbst als Sprechtext.
+ */
+const EINSTIEG_RE = /^(einstieg|gesprächseinstieg|eröffnung|begrüßung|aufhänger)\b/i
 
 /**
  * Baut die Sprechkarte. Erkennt `##`-Abschnitte (Telefonleitfäden) und fällt
@@ -299,12 +491,12 @@ export function buildSpeakingCard(body: string): SpeakingCard {
       // Ein Abschnitt, der NUR Einwände enthielt, wird kein Schritt — sonst
       // stünde ein leerer Kasten im Ablauf.
       if (saetze.length === 0 && !hinweis) continue
-      // Kontingent je Satz (s. abschnittsStichworte): ein gemeinsamer Topf ließ
-      // den Anfang alles fressen — die Kernaussage im vierten Satz fiel weg.
+      const titel = kopf.trim()
+      const wortwoertlich = EINSTIEG_RE.test(titel)
       schritte.push({
-        titel: kopf.trim(),
-        stichworte: abschnittsStichworte(saetze, 14),
-        saetze: saetze.map(lueckenText),
+        titel,
+        zeilen: zeilenVon(saetze, wortwoertlich),
+        ...(wortwoertlich ? { wortwoertlich: true } : {}),
         ...(hinweis ? { hinweis } : {}),
       })
     }
@@ -315,6 +507,10 @@ export function buildSpeakingCard(body: string): SpeakingCard {
     )
     schritte.push(...schritteAusAbsaetzen(bloecke))
   }
+
+  // Sprungmarken erst jetzt: Sie hängen davon ab, welche Wörter in den ANDEREN
+  // Einwänden vorkommen.
+  setzeLabels(einwaende)
 
   // Die letzte Frage im Text ist der Abschluss — den einen Satz sagt man besser
   // wörtlich, damit die Bitte klar und knapp bleibt.

@@ -228,10 +228,16 @@ export default function TemplateCard({
             </motion.span>
           </AnimatePresence>
         </button>
-        <button onClick={() => onSpeak(t)} className={iconBtn}
-                title="Sprechkarte: Ablauf mit Stichworten" aria-label="Sprechkarte öffnen">
-          <Icon name="chat" size={17} />
-        </button>
+        {/* Sprechkarte NUR bei Telefon: Bei E-Mail und LinkedIn schreibt man den
+            Text, man spricht ihn nicht — eine Sprechhilfe hätte dort keinen Zweck
+            und stünde als toter Knopf in jeder Karte. */}
+        {t.channel === 'phone' && (
+          <button onClick={() => onSpeak(t)} className={iconBtn}
+                  title="Sprechkarte: Gesprächsablauf zum Sprechen"
+                  aria-label="Sprechkarte öffnen">
+            <Icon name="chat" size={17} />
+          </button>
+        )}
         {mayEdit && (
           <button onClick={() => setColorOpen((v) => !v)} className={iconBtn}
                   title="Farbe" aria-label="Farbe wählen">
@@ -241,7 +247,7 @@ export default function TemplateCard({
         {/* Verwaltung erscheint erst mit dem aufgeklappten Text. Sieben Knöpfe in
             jeder geschlossenen Karte waren das Gegenteil von aufgeräumt (im
             Browser gesehen) — und wer eine Vorlage sortiert oder bearbeitet, hat
-            sie ohnehin geöffnet. Kopieren und Sprechkarte bleiben immer da. */}
+            sie ohnehin geöffnet. Kopieren bleibt immer da. */}
         {mayEdit && open && (
           <>
             {onMoveBy && (
