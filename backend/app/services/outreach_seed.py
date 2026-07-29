@@ -12,7 +12,14 @@ Einwandbehandlung/Abschluss) — die UI rendert sie als einzeln kopierbare Absch
 `default_templates()` ist eine reine Funktion (ohne DB) → unit-testbar.
 """
 
-_SIG = "\n\nBeste Grüße\nMartin Pfeffer\ncelox.io · Berlin"
+from app.services.email_signature import SIGNATURE
+
+# Alle E-Mail-Vorlagen tragen dieselbe Signatur wie die KI-Entwürfe — eine
+# Quelle (`email_signature`), damit eine Adress-/Telefonänderung nicht an einer
+# Stelle vergessen wird. Achtung: Der Seed schreibt den Text in die
+# `body`-Spalte; bereits angelegte Vorlagen ändern sich dadurch NICHT
+# (s. `scripts/update_outreach_signature.py`).
+_SIG = f"\n\n{SIGNATURE}"
 
 
 def _t(channel, category, title, body, subject=None, notes=None):

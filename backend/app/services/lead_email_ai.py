@@ -7,6 +7,7 @@ Produkt. Nutzt dieselben Bausteine wie die KI-Lead-Suche (`ai_lead_agent`).
 """
 from app.services.ai_lead_agent import _structured
 from app.services.ai_pricing import Usage
+from app.services.email_signature import SIGNATURE as _SIGNATURE
 
 # Prompt-Version — bei JEDER inhaltlichen Änderung an _SYSTEM/_SCHEMA erhöhen.
 # Fließt in den Draft-Cache-Hash (lead_email_hash) → eine Prompt-Änderung
@@ -18,16 +19,11 @@ PROMPT_VERSION = "7"
 _SENDER = "Martin Pfeffer, celox.io (Berlin) — IT-Sicherheit, Datenschutz & Softwareentwicklung"
 
 # Feste Signatur — wird IMMER identisch angehängt (die KI generiert sie NICHT,
-# damit Adresse/Titel/Telefon nie halluziniert oder verändert werden).
-SIGNATURE = (
-    "Viele Grüße\n"
-    "Martin Pfeffer\n\n"
-    "celox.io — Softwareentwicklung, IT-Sicherheit & Datenschutz\n"
-    "Datenschutzbeauftragter (IHK) · IT-Sicherheitsbeauftragter (ISO 27001)\n\n"
-    "Flughafenstraße 24, 12053 Berlin\n"
-    "+49 151 590 824 65 · martin.pfeffer@celox.io\n"
-    "https://celox.io"
-)
+# damit Adresse/Titel/Telefon nie halluziniert oder verändert werden). Sie liegt
+# in `email_signature`, weil die Akquise-Vorlagen dieselbe brauchen; der
+# Re-Export hält bestehende Importe (`from ... lead_email_ai import SIGNATURE`)
+# am Leben.
+SIGNATURE = _SIGNATURE
 
 _SYSTEM = f"""Du bist {_SENDER} und schreibst eine kurze, seriöse deutsche
 Erstansprache (Kaltakquise) ODER — bei Bestands-/Empfehlungs-Targets — eine

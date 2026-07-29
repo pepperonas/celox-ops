@@ -35,6 +35,43 @@ def test_email_has_subject_and_signature_others_not():
             assert t["subject"] is None
 
 
+def test_templates_and_ai_share_one_signature():
+    """Vorlagen und KI-Entwürfe müssen dieselbe Signatur tragen — sonst schickt
+    derselbe Absender zwei verschiedene Visitenkarten, und eine Adressänderung
+    wird an einer Stelle vergessen."""
+    from app.services.email_signature import SIGNATURE
+    from app.services.lead_email_ai import SIGNATURE as AI_SIGNATURE
+
+    assert AI_SIGNATURE == SIGNATURE
+    for t in default_templates():
+        if t["channel"] == "email":
+            assert t["body"].endswith(SIGNATURE), f"'{t['title']}' ohne Signatur"
+        else:
+            # LinkedIn/Telefon tragen bewusst KEINE Signatur: dort ist der
+            # Absender aus dem Kontext klar, und ein Adressblock in einer
+            # Direktnachricht wirkt wie ein Serienbrief.
+            assert SIGNATURE not in t["body"]
+
+
+def test_signature_starts_with_the_greeting_the_html_builder_detects():
+    """`email_html.text_to_html_email` setzt den Signaturblock ab, indem es die
+    Grußzeile sucht. Beginnt die Signatur mit etwas anderem, landet sie im
+    Fließtext — ohne Trennlinie, mitten im Absatz."""
+    from app.services.email_html import _SIG_RE
+    from app.services.email_signature import SIGNATURE
+
+    assert _SIG_RE.search(SIGNATURE), "Grußzeile wird vom HTML-Bau nicht erkannt"
+
+
+def test_legacy_signature_is_no_longer_produced():
+    """Der Alt-Text bleibt als Suchmuster für das Migrationsskript erhalten —
+    aber kein neuer Seed darf ihn noch schreiben."""
+    from app.services.email_signature import LEGACY_TEMPLATE_SIGNATURE
+
+    for t in default_templates():
+        assert LEGACY_TEMPLATE_SIGNATURE not in t["body"]
+
+
 def test_phone_templates_have_all_four_sections():
     needed = ("## Einstieg", "## Nutzenargument", "## Einwandbehandlung", "## Abschluss")
     for t in default_templates():
