@@ -65,21 +65,6 @@ export const T = {
 } as const
 
 /**
- * Wie stark darf gestaffelt werden?
- *
- * 22 ms je Karte: bei zwölf Karten sind das 264 ms bis zur letzten — noch als
- * *eine* Bewegung wahrnehmbar. Ab etwa 40 ms zerfällt es in ein Abarbeiten, auf
- * das man wartet. Und gedeckelt, weil eine Rubrik auch 30 Karten haben kann.
- */
-export const STAGGER_STEP = 0.022
-export const STAGGER_MAX = 0.28
-
-/** Verzögerung für Karte Nummer `index` — gedeckelt, s. oben. */
-export function staggerDelay(index: number): number {
-  return Math.min(index * STAGGER_STEP, STAGGER_MAX)
-}
-
-/**
  * Harter Riegel: Will der Nutzer keine Bewegung, gibt es keine.
  *
  * `index.css` schaltet am Ende ALLE CSS-Animationen unter

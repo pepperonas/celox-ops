@@ -47,7 +47,7 @@ läuft als `pretest`).
 | Bewegung | Bibliothek | Warum dort |
 |---|---|---|
 | Umsortieren (Kanal + Favoriten) | motion `layout` + `LayoutGroup` | Layout-Messung; ersetzt handgeschriebenes FLIP |
-| Filterwechsel: Eintritt gestaffelt, Austritt sofort | motion `AnimatePresence` `mode="popLayout"` | hängt an React-Zustand |
+| Filterwechsel | keyed `motion.div`, nur Deckkraft | s. „Ein Filterwechsel ist ein Schnitt" |
 | Karte auf-/zuklappen | motion, Höhe 0 ↔ auto | hängt an React-Zustand |
 | Favoriten-Sektion auf-/zuklappen | motion, Höhe 0 ↔ auto | dito |
 | Kopier-Bestätigung (Knopf zeigt kurz „Kopiert") | motion `AnimatePresence` `mode="wait"` | hängt an React-Zustand |
@@ -58,5 +58,42 @@ Sekundentakt), Karten, die beim Scrollen einfliegen, und ein Umsortieren, dessen
 Gleiten man abwarten muss. Der Stern pulst nur beim SETZEN — eine Belohnung fürs
 Wegnehmen wäre eine widersprüchliche Rückmeldung.
 
-Staffelung: 22 ms je Karte, gedeckelt auf 280 ms (`staggerDelay`). Darüber
-zerfällt eine Bewegung in ein Abarbeiten, auf das man wartet.
+### Ein Filterwechsel ist ein Schnitt, kein Umzug
+
+Der erste Entwurf ließ `layout` über den Filterwechsel hinweg laufen und
+staffelte den Eintritt. Beides war falsch, und beides fiel erst beim Zusehen auf:
+
+- Karten, die in beiden Filtern vorkommen, behalten ihren `key`. motion hat also
+  eine „vorherige Position" gemessen — oft weit unten in einer 42er-Liste,
+  außerhalb des Bildes — und ist quer über die Seite dorthin geglitten.
+- Bei 42 Karten kam die letzte durch die Staffelung knapp 800 ms nach dem Klick.
+  Das ist Warten, nicht Rückmeldung.
+- Und wer weit unten stand, landete nach dem Filtern am **Ende** der neuen Liste.
+
+Jetzt: ein `key` aus Kanal + Rubrik tauscht den Teilbaum aus (keine vorherige
+Position ⇒ kein Flug), es bewegt sich nur die Deckkraft (200 ms, Effects-Token),
+und der Wechsel holt die Filterleiste mit `scrollIntoView({ block: 'nearest' })`
+zurück in den Blick. `nearest` ist der Punkt: Ist die Leiste schon sichtbar,
+passiert nichts. Kein `smooth` — animiertes Scrollen arbeitet gegen die
+einblendende Liste (dieselbe Lehre wie beim FLIP der To-do-Liste).
+
+Innerhalb **eines** Filters bleibt der Key gleich, dort gleiten die Karten beim
+Ziehen und bei den Pfeilen weiter.
+
+Nachgemessen (Prüfstand mit der echten Karte, 60 → 30 Karten, Chrome):
+
+| | vorher | nachher |
+|---|---|---|
+| Kartenwanderung beim Filtern | quer über die Seite | 0 px, Position über alle 700 ms konstant |
+| letzte Karte sichtbar | ~780 ms | 200 ms (alle gleichzeitig) |
+| `scrollTop` nach dem Filtern (vorher 2207, neues Maximum 712) | 712 = Ende der neuen Liste | 20 = Anfang |
+| Filtern, während die Leiste sichtbar ist (8) | — | 8, kein Sprung |
+
+Kosten der Bibliotheken: Der Vorlagen-Chunk wuchs 11,18 → 67,54 kB gzip. Das
+Startbündel bleibt bei 101 kB, weil die Seite `React.lazy` ist — beim Ausrollen
+auf die ganze App wären es +56 kB im gemeinsamen Bündel.
+
+Nebenbefund, gegen die Erwartung: Die Höhe der Favoriten-Sektion animiert mit 350
+ms, die Karten darunter rutschen mit dem 500-ms-Token nach — trotzdem endet beides
+9 ms auseinander (392 vs. 383 ms gemessen), weil motion die Layout-Projektion
+laufend nachzieht. Also kein Nachlaufen, also keine Änderung.

@@ -23,11 +23,6 @@ interface Props {
   onMoveBy?: (t: OutreachTemplate, delta: number) => void
   onDragStartCard?: () => void
   onDropOnCard?: () => void
-  /**
-   * Verzögerung des Eintritts in Sekunden (Staffelung). Kommt gedeckelt aus
-   * `staggerDelay` — bei 30 Karten dürfen die letzten nicht sekundenlang warten.
-   */
-  enterDelay?: number
 }
 
 /**
@@ -42,7 +37,6 @@ interface Props {
 export default function TemplateCard({
   template, showChannel, onCopy, onEdit, onToggleFavorite, onDelete, onSpeak,
   onColor, mayEdit = true, draggable, onMoveBy, onDragStartCard, onDropOnCard,
-  enterDelay = 0,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [colorOpen, setColorOpen] = useState(false)
@@ -87,12 +81,11 @@ export default function TemplateCard({
       // Umbau — genau das, was `utils/useFlipOrder.ts` von Hand tut; hier braucht
       // es keine Zeile davon.
       layout
-      // Eintritt gestaffelt, Austritt SOFORT: Wer einen Filter wegklickt, will
-      // die alten Karten nicht noch einmal einzeln verabschieden.
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.97, transition: T.effectFast }}
-      transition={{ ...T.spatialDefault, delay: enterDelay }}
+      // KEIN eigener Eintritt: Beim Filterwechsel blendet der Container als
+      // Ganzes ein (s. Outreach.tsx). Täte die Karte es zusätzlich, liefen zwei
+      // Animationen übereinander — Deckkraft vom Container, Versatz und Skalierung
+      // von der Karte. Genau das sah unruhig aus.
+      transition={T.spatialDefault}
       draggable={draggable}
       onDragStart={(e) => {
         // Nur der Ziehpunkt startet — sonst löst jeder Klick auf die Karte einen

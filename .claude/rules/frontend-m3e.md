@@ -49,6 +49,24 @@ auch mit `?raw`** (nachgemessen, Länge 0) — der Test wäre still grün gewese
 deckt motion ab; anime.js fragt selbst über `prefersReducedMotion()`. Die
 CSS-Regel am Ende von `index.css` erreicht JS-Animationen NICHT.
 
+**Ein Filterwechsel ist ein Schnitt, kein Umzug.** Wechselt eine Liste durch einen
+Filter, Tab oder Suchbegriff ihren *Inhalt*, dann ist das kein Umsortieren:
+- Den Container **keyen** (`key={`${achse1}|${achse2}`}`) und nur die **Deckkraft**
+  animieren (Effects-Token). Läuft `layout` über den Wechsel hinweg, messen die in
+  beiden Mengen enthaltenen Karten eine „vorherige Position" — oft außerhalb des
+  Bildes — und gleiten quer über die Seite. Genau das ist im Pilot passiert.
+- **Nicht staffeln**, wenn die Liste lang werden kann: bei 42 Karten kam die letzte
+  ~800 ms nach dem Klick. Eine Staffelung trägt nur bei etwa ≤ 12 Elementen.
+- Danach das Ergebnis **in den Blick holen**: `scrollIntoView({ block: 'nearest' })`
+  auf die Filterleiste. `nearest` heißt „nur wenn nötig" (kein Sprung bei jedem
+  Chip-Klick), und **kein `smooth`** — animiertes Scrollen arbeitet gegen die
+  einblendende Liste (Lehre aus dem To-do-FLIP).
+- Bewusste Folge des Keyens: lokaler Zustand der Karten (auf-/zugeklappt) fällt beim
+  Filterwechsel zurück. Das ist als „neue Liste" gewollt; wer ihn erhalten will,
+  hebt ihn in die Seite (Set von IDs) — nicht das Keyen aufgeben.
+
+Belege und Messwerte: `frontend/MOTION.md`.
+
 **Bundle (gemessen, 2026-07-29).** Der Outreach-Chunk wuchs von 11,18 auf
 67,52 kB gzip (+56 kB). Das **Start-Bundle blieb unverändert** (101 kB gzip), weil
 die Seite `React.lazy` ist. Bei einem Rollout in den geteilten Bundle wären es

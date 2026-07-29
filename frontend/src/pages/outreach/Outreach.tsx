@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, LayoutGroup, motion, MotionConfig } from 'motion/react'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
@@ -25,7 +25,7 @@ import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
 import Icon from '../../components/Icon'
-import { staggerDelay, T } from '../../utils/motionTokens'
+import { T } from '../../utils/motionTokens'
 import { useAuthStore } from '../../store/authStore'
 import { canEditOutreachTemplates } from '../../utils/permissions'
 
@@ -84,6 +84,28 @@ export default function Outreach() {
       setLoading(false)
     })()
   }, [])
+
+  /**
+   * Nach einem Filterwechsel muss das Ergebnis SICHTBAR sein.
+   *
+   * Wer in einer langen Rubrik weit unten stand und dann auf eine kurze filtert,
+   * schaute ins Leere: Die neue Liste ist oben, der Blick war unten, und der
+   * Browser behält die Scrollposition (bzw. klemmt sie, was zusätzlich springt).
+   * Deshalb holt der Wechsel die Filterleiste zurück in den Blick.
+   *
+   * `block: 'nearest'` ist der Punkt: Ist die Leiste schon sichtbar, passiert
+   * NICHTS — kein unmotiviertes Springen bei jedem Chip-Klick. Und ohne `smooth`,
+   * weil animiertes Scrollen gegen die einblendende Liste arbeitet (dieselbe
+   * Lehre wie beim FLIP der To-do-Liste).
+   *
+   * Nicht beim ersten Rendern: Da wäre es ein Sprung ohne Anlass.
+   */
+  const filterBarRef = useRef<HTMLDivElement>(null)
+  const ersterLauf = useRef(true)
+  useEffect(() => {
+    if (ersterLauf.current) { ersterLauf.current = false; return }
+    filterBarRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [channel, category])
 
   useEffect(() => { localStorage.setItem(CHANNEL_KEY, channel) }, [channel])
   useEffect(() => {
@@ -319,12 +341,15 @@ export default function Outreach() {
                   transition={T.spatialFast}
                   className="overflow-hidden"
                 >
+                {/* Eigene Gruppe mit festem Namen: Die Favoriten sind
+                    kanaluebergreifend, ihre Liste haengt NICHT am Filter. Ohne
+                    Gruppe lagen ihre Karten mit den Kanal-Karten in einem Topf. */}
+                <LayoutGroup id="favoriten">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                   {favorites.map((t, i) => (
                     <TemplateCard
                       key={t.id}
                       template={t}
-                      enterDelay={staggerDelay(i)}
                       showChannel
                       {...cardHandlers}
                       draggable={mayEdit}
@@ -344,14 +369,16 @@ export default function Outreach() {
                     />
                   ))}
                 </div>
+                </LayoutGroup>
                 </motion.div>
               )}
               </AnimatePresence>
             </section>
           )}
 
-          {/* Kanal-Tabs */}
-          <div className="mb-4 overflow-x-auto">
+          {/* Kanal-Tabs. Der Ref sitzt hier, weil der Wechsel diese Leiste in den
+              Blick holt — sie ist der Ort, an dem gerade geklickt wurde. */}
+          <div ref={filterBarRef} className="mb-4 overflow-x-auto">
             <SegmentedButtons
               options={CHANNELS.map((c) => ({ value: c.value, label: c.label }))}
               value={channel}
@@ -382,18 +409,29 @@ export default function Outreach() {
           {channelTemplates.length === 0 ? (
             <p className="text-center py-12 text-text-muted text-sm">Keine Vorlagen in dieser Rubrik.</p>
           ) : (
-            // `LayoutGroup` bündelt die Karten: motion messt sie GEMEINSAM, sodass
-            // beim Umsortieren alle betroffenen gleichzeitig gleiten statt jede
-            // für sich. `popLayout` lässt eine austretende Karte aus dem Fluss
-            // nehmen, damit die übrigen sofort nachrücken.
-            <LayoutGroup id="kanal">
-            <AnimatePresence mode="popLayout" initial={false}>
+            /* Filterwechsel ist ein SCHNITT, kein Umzug.
+             *
+             * Der `key` aus Kanal + Rubrik tauscht den Teilbaum aus. Damit gibt es
+             * für die Karten keine „vorherige Position" — vorher animierte `layout`
+             * über den Filterwechsel hinweg und ließ Karten quer über die Seite
+             * fliegen, teils von außerhalb des Bildes. Innerhalb desselben Filters
+             * (Ziehen, Pfeile) bleibt der Key gleich, also gleiten sie dort weiter.
+             *
+             * Nur Deckkraft, kein Versatz und keine Staffelung: Bei 42 Karten kam
+             * die letzte knapp 800 ms nach dem Klick — das ist Warten, nicht
+             * Rückmeldung. */
+            <motion.div
+              key={`${channel}|${category}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={T.effectDefault}
+            >
+            <LayoutGroup id={`kanal-${channel}-${category}`}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               {channelTemplates.map((t, i) => (
                 <TemplateCard
                   key={t.id}
                   template={t}
-                  enterDelay={staggerDelay(i)}
                   {...cardHandlers}
                   draggable={mayEdit}
                   onDragStartCard={() => setDragFrom(i)}
@@ -412,8 +450,8 @@ export default function Outreach() {
                 />
               ))}
             </div>
-            </AnimatePresence>
             </LayoutGroup>
+            </motion.div>
           )}
         </>
       )}

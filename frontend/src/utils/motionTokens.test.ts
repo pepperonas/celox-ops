@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  cubic, DUR, EASE, prefersReducedMotion, STAGGER_MAX, staggerDelay, T,
-} from './motionTokens'
+import { cubic, EASE, prefersReducedMotion, T } from './motionTokens'
 /**
  * Hier stehen nur die JS-Invarianten. Der Vergleich MIT der CSS-Datei läuft in
  * `scripts/check-motion-tokens.mjs` (als `pretest`, also bei jedem `npm test`):
@@ -41,21 +39,6 @@ describe('motion-Übergänge', () => {
     for (const name of ['spatialFast', 'spatialDefault', 'spatialSlow'] as const) {
       expect(EASE[name][1]).toBeGreaterThan(1)
     }
-  })
-})
-
-describe('staggerDelay', () => {
-  it('staffelt und ist gedeckelt', () => {
-    // Ohne Deckel wartet man bei einer Rubrik mit 30 Karten zwei Drittel einer
-    // Sekunde auf die letzte — dann zerfällt eine Bewegung in ein Abarbeiten.
-    expect(staggerDelay(0)).toBe(0)
-    expect(staggerDelay(1)).toBeGreaterThan(0)
-    expect(staggerDelay(5)).toBeGreaterThan(staggerDelay(4))
-    expect(staggerDelay(200)).toBe(STAGGER_MAX)
-  })
-
-  it('die letzte Karte kommt in unter 300 ms', () => {
-    expect(STAGGER_MAX).toBeLessThan(0.3)
   })
 })
 
