@@ -43,6 +43,21 @@ describe('constants Integrität', () => {
       expect(keys).toContain(k)
     }
   })
+  it('die Reihenfolge der Chip-Reihen ist festgelegt', () => {
+    // CATEGORIES ist die Anzeigereihenfolge, nicht bloß eine Menge. Bei den
+    // Angeboten stehen die drei eigenen Produkte vorn — wer eine Rubrik ergänzt,
+    // soll sie bewusst einsortieren und nicht versehentlich davorschieben.
+    const nach = (achse: 'anlass' | 'angebot') =>
+      CATEGORIES.filter((c) => CATEGORY_AXIS[c.value] === achse).map((c) => c.value)
+    expect(nach('anlass')).toEqual([
+      'kaltakquise', 'followup', 'reaktivierung', 'empfehlung', 'angebot_nachfassen',
+    ])
+    expect(nach('angebot')).toEqual([
+      'datenschutz_dsms', 'portal_assessment', 'bcsbook_zeit',
+      'ki_automatisierung', 'security_audit', 'security_upsell',
+    ])
+  })
+
   it('jede Rubrik liegt auf genau einer Achse — keine fällt aus der Leiste', () => {
     // Die Filterleiste rendert zwei Reihen, gefiltert nach CATEGORY_AXIS. Eine
     // Rubrik ohne Achse wäre unsichtbar: ihre Vorlagen ließen sich nicht mehr

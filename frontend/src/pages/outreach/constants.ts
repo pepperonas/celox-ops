@@ -13,18 +13,29 @@ export const CHANNEL_LABEL: Record<OutreachChannel, string> = {
 }
 
 // Reihenfolge = Anzeige-Reihenfolge der Rubriken.
+/**
+ * Diese Reihenfolge IST die Anzeigereihenfolge — der Filterleiste (beide Reihen
+ * filtern hieraus, s. CATEGORY_AXIS) und des Rubrik-Feldes im Vorlagen-Formular.
+ * Nicht alphabetisch sortieren.
+ *
+ * Nach Achse gruppiert, damit man am Quelltext sieht, was wo erscheint. Bei den
+ * Angeboten stehen die drei eigenen Produkte vorn — sie werden am häufigsten
+ * gebraucht; die Dienstleistungsthemen folgen.
+ */
 export const CATEGORIES: { value: OutreachCategory; label: string }[] = [
+  // Anlass — wann im Verkaufsprozess
   { value: 'kaltakquise', label: 'Kaltakquise' },
-  { value: 'ki_automatisierung', label: 'KI-Automatisierung' },
-  { value: 'security_audit', label: 'Security-Check / Audit' },
   { value: 'followup', label: 'Follow-up' },
   { value: 'reaktivierung', label: 'Reaktivierung' },
   { value: 'empfehlung', label: 'Empfehlung' },
   { value: 'angebot_nachfassen', label: 'Angebot nachfassen' },
-  { value: 'security_upsell', label: 'Security-Upsell' },
+  // Angebot — was verkauft wird: eigene Produkte zuerst
   { value: 'datenschutz_dsms', label: 'Datenschutz & DSB' },
   { value: 'portal_assessment', label: 'Assessments (Portal)' },
   { value: 'bcsbook_zeit', label: 'bcsbook (Zeiterfassung)' },
+  { value: 'ki_automatisierung', label: 'KI-Automatisierung' },
+  { value: 'security_audit', label: 'Security-Check / Audit' },
+  { value: 'security_upsell', label: 'Security-Upsell' },
 ]
 
 export const CATEGORY_LABEL: Record<OutreachCategory, string> = Object.fromEntries(
