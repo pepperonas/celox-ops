@@ -37,3 +37,26 @@ Kanon: `.claude/rules/frontend-m3e.md`. Tokens: `src/index.css`.
 `@media (prefers-reduced-motion: reduce)` (index.css-Ende) setzt alle
 animation/transition-durations auf ~0 und neutralisiert Tilt. Neue Animationen
 dürfen Sichtbarkeit nie von einem gelaufenen Keyframe abhängig machen.
+
+## Pilot: Bibliotheks-Animationen auf der Vorlagen-Seite (2026-07-29)
+
+Kanon und Arbeitsteilung: `.claude/rules/frontend-m3e.md`. JS-Token:
+`src/utils/motionTokens.ts` (Drift-Wächter: `scripts/check-motion-tokens.mjs`,
+läuft als `pretest`).
+
+| Bewegung | Bibliothek | Warum dort |
+|---|---|---|
+| Umsortieren (Kanal + Favoriten) | motion `layout` + `LayoutGroup` | Layout-Messung; ersetzt handgeschriebenes FLIP |
+| Filterwechsel: Eintritt gestaffelt, Austritt sofort | motion `AnimatePresence` `mode="popLayout"` | hängt an React-Zustand |
+| Karte auf-/zuklappen | motion, Höhe 0 ↔ auto | hängt an React-Zustand |
+| Favoriten-Sektion auf-/zuklappen | motion, Höhe 0 ↔ auto | dito |
+| Kopier-Bestätigung (Knopf zeigt kurz „Kopiert") | motion `AnimatePresence` `mode="wait"` | hängt an React-Zustand |
+| Stern-Puls beim Favorisieren | anime.js | ereignisgesteuerter Einmal-Effekt |
+
+Bewusst NICHT gebaut: Chip-Häkchen, die sich zeichnen (man klickt sie im
+Sekundentakt), Karten, die beim Scrollen einfliegen, und ein Umsortieren, dessen
+Gleiten man abwarten muss. Der Stern pulst nur beim SETZEN — eine Belohnung fürs
+Wegnehmen wäre eine widersprüchliche Rückmeldung.
+
+Staffelung: 22 ms je Karte, gedeckelt auf 280 ms (`staggerDelay`). Darüber
+zerfällt eine Bewegung in ein Abarbeiten, auf das man wartet.

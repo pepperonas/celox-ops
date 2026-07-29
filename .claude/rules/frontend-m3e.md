@@ -15,8 +15,45 @@ Abweichung: diese Datei im selben Task aktualisieren — Doku und Code driften n
 - **KEINE View Transitions API (bewusste Abweichung):** VT snapshottet die
   async-ladenden Chart.js-Views → Flicker/Jank. Stattdessen GPU-only Page-Reveal
   (`.page-enter`, `utils/transitions.ts::useAppNavigate` mit `data-nav`-Richtung).
-  Shared-Element-Transitions daher nicht via VT; Framer Motion bewusst nicht als
-  Dependency eingeführt.
+  Shared-Element-Transitions daher nicht via VT.
+
+## Animations-Bibliotheken: motion.dev + anime.js (seit 2026-07-29)
+
+Die frühere Regel lautete „Framer Motion bewusst nicht als Dependency
+eingeführt". Sie ist **aufgehoben** — motion.dev (= Framer Motion, umbenannt) und
+anime.js sind eingeführt, zunächst als **Pilot auf der Vorlagen-Seite**
+(`/akquise`). Vor einem Rollout auf die restliche App ist die Bundle-Frage unten
+zu klären.
+
+**Arbeitsteilung — verbindlich.** Beide Bibliotheken können Tweens, Springs,
+Timelines und Stagger; ohne scharfe Trennung überdecken sie sich fast vollständig
+und niemand weiß, womit die nächste Animation gebaut wird:
+
+- **motion.dev** — alles, was an **React-Zustand oder Layout** hängt: `layout`
+  (Umsortieren), `AnimatePresence` (Ein-/Austritt), `LayoutGroup`, `MotionConfig`.
+  Ersetzt handgeschriebenes FLIP.
+- **anime.js** — **ereignisgesteuerte Einmal-Effekte** auf dem DOM: Impulse
+  (Stern-Puls), Zahlen-Countup, SVG-Zeichnen.
+
+**Token statt eigener Physik.** `src/utils/motionTokens.ts` ist das JS-Pendant der
+CSS-Token-Matrix; motion bekommt `duration` + `ease` daraus, NICHT motions eigene
+Feder-Physik. Sonst sähe dieselbe Geste an CSS- und JS-Stellen unterschiedlich aus.
+Der Grund für die Kopie: Die Web Animations API akzeptiert keine
+CSS-Custom-Property als Easing (Repo-Regel, entstanden am disco-Bug).
+`frontend/scripts/check-motion-tokens.mjs` läuft als `pretest` und schlägt fehl,
+wenn CSS und JS auseinanderlaufen — per Mutationstest belegt. Bewusst ein Skript
+und kein vitest-Test: **Vitest ersetzt CSS-Importe durch einen leeren String,
+auch mit `?raw`** (nachgemessen, Länge 0) — der Test wäre still grün gewesen.
+
+**Reduced Motion ist doppelt zu bedienen.** `<MotionConfig reducedMotion="user">`
+deckt motion ab; anime.js fragt selbst über `prefersReducedMotion()`. Die
+CSS-Regel am Ende von `index.css` erreicht JS-Animationen NICHT.
+
+**Bundle (gemessen, 2026-07-29).** Der Outreach-Chunk wuchs von 11,18 auf
+67,52 kB gzip (+56 kB). Das **Start-Bundle blieb unverändert** (101 kB gzip), weil
+die Seite `React.lazy` ist. Bei einem Rollout in den geteilten Bundle wären es
++56 % auf die Startlast — dann sind `LazyMotion`/`m`-Komponenten oder der Verzicht
+auf motions Layout-Animationen zu prüfen.
 
 ## Tokens = Single Source of Truth
 

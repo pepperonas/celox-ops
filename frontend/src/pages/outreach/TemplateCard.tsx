@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { animate as anime } from 'animejs'
 import type { OutreachTemplate } from '../../types'
 import { CATEGORY_LABEL, CHANNEL_LABEL, isOfferCategory } from './constants'
 import { CARD_COLORS, cardColor, colorToStore } from './cardColors'
 import Icon from '../../components/Icon'
+import { cubic, DUR, EASE, prefersReducedMotion, T } from '../../utils/motionTokens'
 
 interface Props {
   template: OutreachTemplate
@@ -20,6 +23,11 @@ interface Props {
   onMoveBy?: (t: OutreachTemplate, delta: number) => void
   onDragStartCard?: () => void
   onDropOnCard?: () => void
+  /**
+   * Verzögerung des Eintritts in Sekunden (Staffelung). Kommt gedeckelt aus
+   * `staggerDelay` — bei 30 Karten dürfen die letzten nicht sekundenlang warten.
+   */
+  enterDelay?: number
 }
 
 /**
@@ -34,9 +42,37 @@ interface Props {
 export default function TemplateCard({
   template, showChannel, onCopy, onEdit, onToggleFavorite, onDelete, onSpeak,
   onColor, mayEdit = true, draggable, onMoveBy, onDragStartCard, onDropOnCard,
+  enterDelay = 0,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [colorOpen, setColorOpen] = useState(false)
+  // Kopier-Bestätigung: kurzer Zustand, den motion animiert (zustandsgebunden →
+  // motion, s. Arbeitsteilung in utils/motionTokens.ts).
+  const [copied, setCopied] = useState(false)
+  const sternRef = useRef<HTMLButtonElement>(null)
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Timer aufräumen: Wird die Karte weggefiltert, während die Bestätigung läuft,
+  // setzte der Timer sonst Zustand auf einer ausgehängten Komponente.
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current) }, [])
+
+  /**
+   * Stern-Puls — ereignisgesteuerter Einmal-Effekt, also anime.js.
+   *
+   * Bewusst nur beim SETZEN, nicht beim Entfernen: Eine Belohnung für das
+   * Wegnehmen wäre eine widersprüchliche Rückmeldung.
+   */
+  const pulseStar = (wirdFavorit: boolean) => {
+    if (!wirdFavorit || !sternRef.current || prefersReducedMotion()) return
+    anime(sternRef.current, {
+      scale: [1, 1.45, 1],
+      rotate: [0, -14, 0],
+      duration: DUR.spatialFast,
+      // Literale Kurve, nie eine CSS-Variable — die Web Animations API nimmt
+      // keine (Repo-Regel, s. motionTokens.ts).
+      ease: cubic(EASE.spatialFast),
+    })
+  }
   const t = template
   const farbe = cardColor(t.color)
   const text = t.body.replace(/^##\s+/gm, '').trim()
@@ -45,13 +81,30 @@ export default function TemplateCard({
     + 'text-text-muted hover:text-text shrink-0'
 
   return (
-    <div
+    <motion.div
+      // `layout` ist der Kern des Piloten: Wird umsortiert, GLEITET die Karte an
+      // ihren neuen Platz statt zu springen. motion misst dafür vor und nach dem
+      // Umbau — genau das, was `utils/useFlipOrder.ts` von Hand tut; hier braucht
+      // es keine Zeile davon.
+      layout
+      // Eintritt gestaffelt, Austritt SOFORT: Wer einen Filter wegklickt, will
+      // die alten Karten nicht noch einmal einzeln verabschieden.
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.97, transition: T.effectFast }}
+      transition={{ ...T.spatialDefault, delay: enterDelay }}
       draggable={draggable}
       onDragStart={(e) => {
         // Nur der Ziehpunkt startet — sonst löst jeder Klick auf die Karte einen
         // Drag aus und Textauswahl wird unmöglich.
         if (!draggable) return
-        e.dataTransfer.effectAllowed = 'move'
+        // `motion.div` überschreibt `onDragStart` mit dem Typ SEINER eigenen
+        // Zieh-Geste (die hier nicht benutzt wird — natives HTML5-Drag bleibt).
+        // Zur Laufzeit kommt trotzdem das DOM-Ereignis an; der Cast benennt das,
+        // statt es zu verstecken. Fällt weg, sobald das Ziehen auf motion umgestellt
+        // wird.
+        const de = e as unknown as React.DragEvent
+        de.dataTransfer.effectAllowed = 'move'
         onDragStartCard?.()
       }}
       onDragOver={(e) => { if (draggable) e.preventDefault() }}
@@ -102,7 +155,8 @@ export default function TemplateCard({
           )}
         </button>
         <button
-          onClick={() => onToggleFavorite(t)}
+          ref={sternRef}
+          onClick={() => { pulseStar(!t.is_favorite); onToggleFavorite(t) }}
           title={t.is_favorite ? 'Favorit entfernen' : 'Als Favorit markieren'}
           aria-label={t.is_favorite ? 'Favorit entfernen' : 'Als Favorit markieren'}
           className={iconBtn}
@@ -112,16 +166,31 @@ export default function TemplateCard({
         </button>
       </div>
 
-      {open && (
-        <div className="px-3 pb-2">
-          <p className="text-sm text-text-muted whitespace-pre-wrap break-words">{text}</p>
-          {t.notes && (
-            <p className="text-[11px] text-text-muted italic border-l-2 border-border pl-2 mt-2">
-              {t.notes}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Auf-/Zuklappen als Höhen-Animation. `AnimatePresence` braucht es, damit
+          das Zuklappen überhaupt sichtbar wird — ohne wäre das Element beim
+          nächsten Render einfach weg. `overflow-hidden` verhindert, dass der Text
+          während der Bewegung aus der Karte ragt. */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={T.spatialFast}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-2">
+              <p className="text-sm text-text-muted whitespace-pre-wrap break-words">{text}</p>
+              {t.notes && (
+                <p className="text-[11px] text-text-muted italic border-l-2 border-border pl-2 mt-2">
+                  {t.notes}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Farbauswahl — erscheint nur auf Anforderung, damit sieben Punkte nicht
           dauerhaft in jeder Karte sitzen. */}
@@ -142,8 +211,29 @@ export default function TemplateCard({
       )}
 
       <div className="flex items-center gap-1 px-3 py-2 mt-auto border-t border-border/60">
-        <button onClick={() => onCopy(t)} className="btn-primary !py-2 flex-1 justify-center">
-          Kopieren
+        {/* Kopier-Bestätigung: Der Knopf zeigt kurz einen Haken. Die Aktion läuft
+            sofort — die Animation hängt hinterher, nie davor. */}
+        <button
+          onClick={() => {
+            onCopy(t)
+            setCopied(true)
+            if (copyTimer.current) clearTimeout(copyTimer.current)
+            copyTimer.current = setTimeout(() => setCopied(false), 1100)
+          }}
+          className="btn-primary !py-2 flex-1 justify-center overflow-hidden"
+        >
+          <AnimatePresence initial={false} mode="wait">
+            <motion.span
+              key={copied ? 'ok' : 'label'}
+              initial={{ y: copied ? 14 : -14, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: copied ? -14 : 14, opacity: 0 }}
+              transition={T.effectFast}
+              className="flex items-center gap-1.5"
+            >
+              {copied ? <><Icon name="celebrate" size={16} /> Kopiert</> : 'Kopieren'}
+            </motion.span>
+          </AnimatePresence>
         </button>
         <button onClick={() => onSpeak(t)} className={iconBtn}
                 title="Sprechkarte: Ablauf mit Stichworten" aria-label="Sprechkarte öffnen">
@@ -187,6 +277,6 @@ export default function TemplateCard({
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

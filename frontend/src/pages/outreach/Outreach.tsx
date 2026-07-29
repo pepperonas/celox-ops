@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, LayoutGroup, motion, MotionConfig } from 'motion/react'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import Fab from '../../components/Fab'
@@ -24,6 +25,7 @@ import TemplateCard from './TemplateCard'
 import CopyModal from './CopyModal'
 import TemplateFormModal from './TemplateFormModal'
 import Icon from '../../components/Icon'
+import { staggerDelay, T } from '../../utils/motionTokens'
 import { useAuthStore } from '../../store/authStore'
 import { canEditOutreachTemplates } from '../../utils/permissions'
 
@@ -230,6 +232,13 @@ export default function Outreach() {
   }
 
   return (
+    // `reducedMotion="user"` ist der Riegel für ALLE motion-Animationen dieser
+    // Seite: Bei `prefers-reduced-motion` fallen Transform- und Layout-
+    // Animationen weg, Deckkraft bleibt. Ohne das wäre die neue Bewegung die
+    // einzige in der App, die sich über die Systemeinstellung hinwegsetzt —
+    // index.css schaltet CSS-Animationen dort global ab. anime.js fragt separat
+    // (s. prefersReducedMotion in TemplateCard).
+    <MotionConfig reducedMotion="user">
     <div className="pb-24">
       <PageHeader
         title="Nachrichten-Vorlagen"
@@ -300,12 +309,22 @@ export default function Outreach() {
                   {favorites.length}
                 </span>
               </button>
+              <AnimatePresence initial={false}>
               {favoritesOpen && (
+                <motion.div
+                  key="favgrid"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={T.spatialFast}
+                  className="overflow-hidden"
+                >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                   {favorites.map((t, i) => (
                     <TemplateCard
                       key={t.id}
                       template={t}
+                      enterDelay={staggerDelay(i)}
                       showChannel
                       {...cardHandlers}
                       draggable={mayEdit}
@@ -325,7 +344,9 @@ export default function Outreach() {
                     />
                   ))}
                 </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </section>
           )}
 
@@ -361,11 +382,18 @@ export default function Outreach() {
           {channelTemplates.length === 0 ? (
             <p className="text-center py-12 text-text-muted text-sm">Keine Vorlagen in dieser Rubrik.</p>
           ) : (
+            // `LayoutGroup` bündelt die Karten: motion messt sie GEMEINSAM, sodass
+            // beim Umsortieren alle betroffenen gleichzeitig gleiten statt jede
+            // für sich. `popLayout` lässt eine austretende Karte aus dem Fluss
+            // nehmen, damit die übrigen sofort nachrücken.
+            <LayoutGroup id="kanal">
+            <AnimatePresence mode="popLayout" initial={false}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               {channelTemplates.map((t, i) => (
                 <TemplateCard
                   key={t.id}
                   template={t}
+                  enterDelay={staggerDelay(i)}
                   {...cardHandlers}
                   draggable={mayEdit}
                   onDragStartCard={() => setDragFrom(i)}
@@ -384,6 +412,8 @@ export default function Outreach() {
                 />
               ))}
             </div>
+            </AnimatePresence>
+            </LayoutGroup>
           )}
         </>
       )}
@@ -408,5 +438,6 @@ export default function Outreach() {
         />
       )}
     </div>
+    </MotionConfig>
   )
 }
