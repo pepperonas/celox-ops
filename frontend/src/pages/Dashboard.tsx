@@ -532,14 +532,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Zahlungsgeschwindigkeit: Ø Tage Rechnung → bezahlt, langsamste zuerst */}
+      {/* Zahlungsgeschwindigkeit: Ø Tage Rechnung → bezahlt, schnellste zuerst */}
       {chartData && (
         <div className="bg-surface border border-border rounded-card p-5 mb-6">
           <div className="flex items-baseline justify-between gap-3 mb-1 flex-wrap">
             <h3 className="text-sm font-semibold text-text">Zahlungsgeschwindigkeit</h3>
             {paymentSpeed.length > 0 && (
               <p className="text-xs text-text-muted">
-                Ø Tage vom Rechnungsdatum bis „bezahlt“ · langsamste zuerst
+                Ø Tage vom Rechnungsdatum bis „bezahlt“ · schnellste zuerst
               </p>
             )}
           </div>

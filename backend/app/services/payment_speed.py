@@ -1,6 +1,6 @@
 """Zahlungsgeschwindigkeit: Tage von Rechnungsdatum bis Bezahlt-Markierung.
 
-Rein / ohne DB. Aggregation je Kunde; absteigend nach Ø-Tagen (langsamste zuerst).
+Rein / ohne DB. Aggregation je Kunde; aufsteigend nach Ø-Tagen (schnellste zuerst).
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def aggregate_by_customer(
     *,
     limit: int | None = 20,
 ) -> list[PaymentSpeedRow]:
-    """rows = (customer_id, customer_name, days). Sortiert Ø-Tage absteigend."""
+    """rows = (customer_id, customer_name, days). Sortiert Ø-Tage aufsteigend."""
     by_id: dict[str, list[tuple[str, int]]] = defaultdict(list)
     for cid, name, days in rows:
         by_id[cid].append((name, days))
@@ -55,7 +55,7 @@ def aggregate_by_customer(
             )
         )
 
-    out.sort(key=lambda r: (-r.avg_days, -r.invoices_count, r.customer_name.lower()))
+    out.sort(key=lambda r: (r.avg_days, -r.invoices_count, r.customer_name.lower()))
     if limit is not None:
         return out[:limit]
     return out

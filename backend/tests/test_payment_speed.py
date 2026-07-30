@@ -23,7 +23,7 @@ def test_days_clamps_negative():
     assert days_to_pay(date(2026, 7, 10), date(2026, 7, 1)) == 0
 
 
-def test_aggregate_sorts_slowest_first():
+def test_aggregate_sorts_fastest_first():
     rows = [
         ("a", "Alpha", 5),
         ("a", "Alpha", 15),  # Ø 10
@@ -32,9 +32,9 @@ def test_aggregate_sorts_slowest_first():
         ("c", "Gamma", 4),   # Ø 3
     ]
     out = aggregate_by_customer(rows, limit=None)
-    assert [r.customer_name for r in out] == ["Beta", "Alpha", "Gamma"]
-    assert out[0].avg_days == 30.0
-    assert out[0].invoices_count == 1
+    assert [r.customer_name for r in out] == ["Gamma", "Alpha", "Beta"]
+    assert out[0].avg_days == 3.0
+    assert out[0].invoices_count == 2
     assert out[1].avg_days == 10.0
     assert out[1].min_days == 5 and out[1].max_days == 15
 
