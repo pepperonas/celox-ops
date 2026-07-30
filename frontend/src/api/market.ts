@@ -289,6 +289,26 @@ export interface MarketReferenceSystem {
   source_url: string
   baustein_nr: number | null
   baustein_titel: string | null
+  /* Recherchefelder fürs Info-Fenster und den Anbieter-Link — kommen mit, damit der
+     Dialog beim Klick ohne Nachladen aufgeht. */
+  catalog_id: string | null
+  website: string | null
+  ref_url: string | null
+  kategorie: string | null
+  pains: string[]
+  ki: string[]
+  nutzen: string | null
+  integration: string | null
+  int_level: string | null
+  notiz: string | null
+  reg: string[]
+  marketplace: boolean
+  mp_evidence: string[]
+  self_compete: boolean
+  zielgruppe: string | null
+  nutzer: string[]
+  prozesse: string[]
+  refs: number
 }
 
 export interface MarketReferenceDetail {

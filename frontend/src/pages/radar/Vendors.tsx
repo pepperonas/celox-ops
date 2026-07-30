@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import Icon from '../../components/Icon'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import {
   getMarketKonzerne,
@@ -8,8 +9,11 @@ import {
   type MarketKonzern,
   type MarketProduct,
   type MarketVendor,
+  getMarketBausteine,
+  type MarketBaustein,
 } from '../../api/market'
 import ProductDialog from './ProductDialog'
+import SoftwareInfoDialog from './SoftwareInfoDialog'
 import RadarShell from './RadarShell'
 import { useRadarFilters } from './useRadarFilters'
 
@@ -21,6 +25,9 @@ export default function RadarVendors() {
   const [loading, setLoading] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
   const [dialog, setDialog] = useState<MarketProduct | null>(null)
+  // Verbesserungspotenzial je Software — eigener Dialog, eigene Frage.
+  const [info, setInfo] = useState<MarketProduct | null>(null)
+  const [bausteine, setBausteine] = useState<MarketBaustein[]>([])
 
   const key = JSON.stringify(query)
   const load = useCallback(async () => {
@@ -40,6 +47,8 @@ export default function RadarVendors() {
   }, [key])
 
   useEffect(() => { load() }, [load])
+  // Bausteine einmal laden — der Info-Dialog ordnet sie selbst zu.
+  useEffect(() => { getMarketBausteine().then(setBausteine).catch(() => undefined) }, [])
 
   const byCatalogId = new Map(products.map((p) => [p.catalog_id, p]))
   const onChanged = (next: MarketProduct) =>
@@ -109,14 +118,30 @@ export default function RadarVendors() {
                     const p = byCatalogId.get(cid)
                     if (!p) return null
                     return (
-                      <button
-                        key={cid}
-                        type="button"
-                        onClick={() => setDialog(p)}
-                        className="text-[11px] px-2 py-1 rounded-full bg-surface-low border border-outline-variant text-text-muted hover:text-text hover:border-outline transition-colors"
-                      >
-                        {p.produkt} · Score {p.score} · {p.refs} Ref.
-                      </button>
+                      // Zwei Ziele je Produkt: die Pille öffnet das Dossier, das
+                      // Info-Icon das Verbesserungspotenzial. Deshalb ein Paar statt
+                      // eines Knopfes mit zwei Bedeutungen.
+                      <span key={cid} className="inline-flex items-center gap-0.5 rounded-full
+                                                 bg-surface-low border border-outline-variant
+                                                 pr-0.5 hover:border-outline transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => setDialog(p)}
+                          className="text-[11px] px-2 py-1 text-text-muted hover:text-text"
+                        >
+                          {p.produkt} · Score {p.score} · {p.refs} Ref.
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInfo(p)}
+                          title="Was lässt sich an dieser Software verbessern?"
+                          aria-label={`Verbesserungspotenzial von ${p.produkt} ansehen`}
+                          className="md-state w-6 h-6 grid place-items-center rounded-full
+                                     text-text-muted hover:text-accent"
+                        >
+                          <Icon name="info" size={13} />
+                        </button>
+                      </span>
                     )
                   })}
                 </div>
@@ -127,6 +152,9 @@ export default function RadarVendors() {
       </div>
 
       {dialog && <ProductDialog product={dialog} onClose={() => setDialog(null)} onChanged={onChanged} />}
+      {info && (
+        <SoftwareInfoDialog info={info} bausteine={bausteine} onClose={() => setInfo(null)} />
+      )}
     </RadarShell>
   )
 }

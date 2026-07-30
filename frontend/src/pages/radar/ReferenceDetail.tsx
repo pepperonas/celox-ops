@@ -16,12 +16,16 @@ import Icon from '../../components/Icon'
 import LoadingIndicator from '../../components/LoadingIndicator'
 import { useAppNavigate } from '../../utils/transitions'
 import {
+  getMarketBausteine,
   getMarketReferenceCompany,
   referencesToPipeline,
   updateMarketReference,
+  type MarketBaustein,
   type MarketReferenceDetail,
+  type MarketReferenceSystem,
 } from '../../api/market'
 import RadarShell from './RadarShell'
+import SoftwareInfoDialog from './SoftwareInfoDialog'
 
 const TEIL_LABEL: Record<string, string> = {
   mehrfachnutzung: 'nutzt mehrere Systeme',
@@ -65,6 +69,8 @@ export default function ReferenceDetail() {
   const [d, setD] = useState<MarketReferenceDetail | null>(null)
   const [laedt, setLaedt] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [bausteine, setBausteine] = useState<MarketBaustein[]>([])
+  const [infoFuer, setInfoFuer] = useState<MarketReferenceSystem | null>(null)
 
   const laden = useCallback(async () => {
     setLaedt(true)
@@ -77,6 +83,8 @@ export default function ReferenceDetail() {
   }, [key])
 
   useEffect(() => { void laden() }, [laden])
+  // Bausteine einmal laden — der Info-Dialog ordnet sie selbst zu.
+  useEffect(() => { getMarketBausteine().then(setBausteine).catch(() => undefined) }, [])
 
   const uebernehmen = async () => {
     if (!d) return
@@ -180,8 +188,32 @@ export default function ReferenceDetail() {
             <ul className="space-y-2.5">
               {d.produkte.map((s) => (
                 <li key={s.reference_id} className="border-l-2 border-accent/40 pl-3">
-                  <p className="text-sm text-text">{s.produkt}</p>
-                  <p className="text-[11px] text-text-muted">{s.hersteller}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm text-text min-w-0 break-words">{s.produkt}</p>
+                    {/* Info-Fenster: was und wie sich an dieser Software verbessern
+                        lässt. Am System, nicht an der Firma — die Antwort hängt an der
+                        Software. */}
+                    <button
+                      type="button"
+                      onClick={() => setInfoFuer(s)}
+                      title="Was lässt sich an dieser Software verbessern?"
+                      aria-label={`Verbesserungspotenzial von ${s.produkt} ansehen`}
+                      className="md-state shrink-0 w-7 h-7 grid place-items-center rounded-lg
+                                 text-text-muted hover:text-accent"
+                    >
+                      <Icon name="info" size={15} />
+                    </button>
+                  </div>
+                  {/* Anbieter verlinkt, wenn die Website bekannt ist (137 von 142) —
+                      sonst nur der Name statt eines Links ins Leere. */}
+                  <p className="text-[11px] text-text-muted">
+                    {s.website ? (
+                      <a href={s.website} target="_blank" rel="noopener noreferrer"
+                         className="text-accent">
+                        {s.hersteller}
+                      </a>
+                    ) : s.hersteller}
+                  </p>
                   {s.baustein_titel && (
                     <p className="text-[11px] text-accent/90">
                       → Baustein {s.baustein_nr}: {s.baustein_titel}
@@ -189,7 +221,7 @@ export default function ReferenceDetail() {
                   )}
                   <a href={s.source_url} target="_blank" rel="noopener noreferrer"
                      className="text-[11px] text-accent inline-flex items-center gap-1 mt-0.5">
-                    <Icon name="globe" size={12} /> Beleg im Verzeichnis
+                    <Icon name="users" size={12} /> Beleg im Verzeichnis
                   </a>
                 </li>
               ))}
@@ -302,6 +334,10 @@ export default function ReferenceDetail() {
           </section>
         </div>
       </div>
+      {infoFuer && (
+        <SoftwareInfoDialog info={infoFuer} bausteine={bausteine}
+                            onClose={() => setInfoFuer(null)} />
+      )}
     </RadarShell>
   )
 }

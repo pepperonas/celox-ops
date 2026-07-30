@@ -246,7 +246,13 @@ class ReferencesToPipelineResponse(BaseModel):
 
 
 class MarketReferenceSystem(BaseModel):
-    """Ein System, das diese Firma einsetzt — mit der passenden Aufsatzlösung."""
+    """Ein System, das diese Firma einsetzt — mit der passenden Aufsatzlösung.
+
+    Trägt zusätzlich die Recherchefelder des Produkts, damit der Info-Dialog
+    („was kann ich wie verbessern") **ohne Nachladen** aufgeht. Der Dialog beantwortet
+    die Frage aus genau diesen Feldern — es wird nichts neu formuliert, was die
+    Recherche nicht hergibt.
+    """
 
     reference_id: uuid.UUID
     product_id: uuid.UUID
@@ -255,6 +261,26 @@ class MarketReferenceSystem(BaseModel):
     source_url: str
     baustein_nr: int | None = None
     baustein_titel: str | None = None
+
+    # --- Für den Info-Dialog + den Anbieter-Link ------------------------------
+    catalog_id: str | None = None
+    website: str | None = None          # Herstellerseite (137 von 142 vorhanden)
+    ref_url: str | None = None
+    kategorie: str | None = None
+    pains: list[str] = []               # was heute Handarbeit ist
+    ki: list[str] = []                  # was sich automatisieren lässt
+    nutzen: str | None = None
+    integration: str | None = None      # WIE man rankommt
+    int_level: str | None = None
+    notiz: str | None = None
+    reg: list[str] = []
+    marketplace: bool = False
+    mp_evidence: list[str] = []
+    self_compete: bool = False
+    zielgruppe: str | None = None
+    nutzer: list[str] = []
+    prozesse: list[str] = []
+    refs: int = 0
 
 
 class MarketReferenceDetail(BaseModel):

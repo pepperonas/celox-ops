@@ -602,6 +602,17 @@ async def reference_company_detail(
             "source_url": r.source_url,
             "baustein_nr": treffer[0].nr if treffer else None,
             "baustein_titel": treffer[0].titel if treffer else None,
+            # Recherchefelder für den Info-Dialog und den Anbieter-Link. Bewusst
+            # mitgeliefert statt nachgeladen: Der Dialog soll beim Klick sofort da sein.
+            **({
+                "catalog_id": p.catalog_id, "website": p.website, "ref_url": p.ref_url,
+                "kategorie": p.kategorie, "pains": p.pains or [], "ki": p.ki or [],
+                "nutzen": p.nutzen, "integration": p.integration,
+                "int_level": p.int_level, "notiz": p.notiz, "reg": p.reg or [],
+                "marketplace": p.marketplace, "mp_evidence": p.mp_evidence or [],
+                "self_compete": p.self_compete, "zielgruppe": p.zielgruppe,
+                "nutzer": p.nutzer or [], "prozesse": p.prozesse or [], "refs": p.refs,
+            } if p else {}),
         })
 
     # Kontaktdaten gehören der Firma: erster nicht-leerer Wert über alle Nennungen.
