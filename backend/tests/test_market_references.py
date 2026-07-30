@@ -43,6 +43,15 @@ class TestNamen:
         assert saeubere_namen("Spandauer Velours GmbH &amp; Co. KG") == "Spandauer Velours GmbH & Co. KG"
         assert saeubere_namen("Trinkwasser GmbH &quot;ETW&quot;") == 'Trinkwasser GmbH "ETW"'
 
+    def test_unsichtbare_zeichen_fallen_weg(self):
+        """Weiches Trennzeichen und Nullbreiten-Leerzeichen.
+
+        „Volks\u00adwagen Financial Services" stand so im Bestand — am Bildschirm nicht
+        zu sehen, aber jede Namensprüfung und jede Places-Abfrage scheiterte daran.
+        """
+        assert saeubere_namen("Volks\u00adwagen Financial Services") == "Volkswagen Financial Services"
+        assert saeubere_namen("Muster\u200bwerke GmbH") == "Musterwerke GmbH"
+
     def test_produktname_vor_dem_logo_faellt_weg(self):
         # HOPPE beschriftet jedes Kundenlogo mit „Wartungsplaner Logo <Firma>" —
         # der Produktname stand vor jedem der 1226 Namen.

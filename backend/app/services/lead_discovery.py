@@ -238,12 +238,21 @@ async def discover_osm(category: str, location: str, limit, client, *,
 _GOOGLE_OK = {"OK", "ZERO_RESULTS"}
 
 
+class PlacesQuotaExhausted(ValueError):
+    """Tageskontingent erschöpft.
+
+    Eigener Typ, damit ein Massenlauf sofort ABBRECHEN kann. Weiterzumachen wäre
+    schädlich: Jede weitere Abfrage läuft ins Leere und zählt bei Google trotzdem.
+    """
+
+
 def _google_status_guard(status: str | None) -> None:
     if status and status not in _GOOGLE_OK:
         if status == "REQUEST_DENIED":
             raise ValueError("Google Places lehnt den Key ab (Key/Places-API/Abrechnung prüfen)")
         if status == "OVER_QUERY_LIMIT":
-            raise ValueError("Google-Kontingent erschöpft")
+            raise PlacesQuotaExhausted(
+                "Google-Kontingent erschöpft (Tages- oder Minutenlimit des Schlüssels)")
         if status == "NOT_FOUND":       # nur bei Details relevant → kein harter Fehler
             return
         raise ValueError(f"Google Places: {status}")

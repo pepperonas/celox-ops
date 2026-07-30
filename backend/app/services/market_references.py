@@ -176,7 +176,13 @@ def saeubere_namen(roh: str) -> str | None:
         jedem der 1226 Namen.
     """
     import html as html_mod
-    name = " ".join(html_mod.unescape(roh or "").split())
+    # Unsichtbare Zeichen zuerst weg: Weiches Trennzeichen (U+00AD) und
+    # Nullbreiten-Leerzeichen stehen in Marketing-Überschriften („Volks\u00adwagen")
+    # und sind am Bildschirm nicht zu sehen — sie hätten jede Namensprüfung und jede
+    # Places-Abfrage zum Scheitern gebracht.
+    name = re.sub(r"[\u00ad\u200b\u200c\u200d\ufeff]", "",
+                  html_mod.unescape(roh or ""))
+    name = " ".join(name.split())
     # Alles vor einem eingebetteten Beiwort verwerfen — davor steht Linktext oder der
     # Produktname des Seitenbetreibers, danach der Kunde. Zwei Fälle, beide am echten
     # Bestand gefunden: „Wartungsplaner Logo BDL Untermain GmbH" (HOPPE) und

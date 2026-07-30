@@ -43,6 +43,7 @@ from app.models.user import User
 from app.services.business_time import now
 from app.services.email_verifier import verify_email
 from app.services.market_contacts import fetch_contacts
+from app.services.lead_discovery import PlacesQuotaExhausted
 from app.services.market_reference_enrich import resolve_website
 from app.services.market_reference_pipeline import bausteine_fuer
 from app.services.market_reference_scoring import bewerte
@@ -163,8 +164,15 @@ async def main() -> None:
                     if not website and not args.nur_impressum:
                         try:
                             treffer, calls = await resolve_website(x["name"], key, client)
+                        except PlacesQuotaExhausted:
+                            # Nicht weitermachen: Jede weitere Abfrage läuft ins Leere
+                            # und zählt bei Google trotzdem.
+                            raise
                         except Exception as exc:
-                            return x, None, calls, f"Places: {type(exc).__name__}"
+                            # Die MELDUNG, nicht der Klassenname — sonst steht 253-mal
+                            # „ValueError" da und man weiß nicht, was los ist (live
+                            # passiert: es war das erschöpfte Tageskontingent).
+                            return x, None, calls, f"Places: {exc}"
                         if treffer:
                             website, quelle = treffer["website"], "places"
                             telefon, adresse = treffer.get("phone"), treffer.get("address")
@@ -173,8 +181,21 @@ async def main() -> None:
                     fund = await fetch_contacts(website)
                     return x, (fund, website, quelle, telefon, adresse), calls, None
 
-            for coro in asyncio.as_completed([einer(x) for x in auswahl]):
-                x, ergebnis, calls, fehler = await coro
+            aufgaben = [asyncio.ensure_future(einer(x)) for x in auswahl]
+            kontingent_weg = False
+            for coro in asyncio.as_completed(aufgaben):
+                try:
+                    x, ergebnis, calls, fehler = await coro
+                except PlacesQuotaExhausted as exc:
+                    if not kontingent_weg:
+                        kontingent_weg = True
+                        print(f"\n  ⛔ {exc}\n     Lauf abgebrochen. Bereits Geprüftes ist "
+                              f"gespeichert; ein neuer Lauf macht dort weiter.")
+                        for a in aufgaben:
+                            a.cancel()
+                    continue
+                except asyncio.CancelledError:
+                    continue
                 places_calls += calls
                 if fehler:
                     fehler_liste.append(f"{x['name']}: {fehler}")
