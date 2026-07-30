@@ -29,6 +29,7 @@ from app.models.order import Order, OrderStatus
 from app.models.time_entry import TimeEntry
 from app.services.filenames import download_name
 from app.services.business_time import today as business_today
+from app.services.payment_speed import aggregate_by_customer, days_to_pay
 
 router = APIRouter(
     prefix="/api/dashboard",
@@ -427,12 +428,45 @@ async def get_chart_data(
         for act in act_result.scalars().unique().all()
     ]
 
+    # --- payment_speed_by_customer: Ø Tage invoice_date → paid_at ---
+    speed_result = await db.execute(
+        select(
+            Customer.id,
+            Customer.name,
+            Invoice.invoice_date,
+            Invoice.paid_at,
+        )
+        .join(Customer, Invoice.customer_id == Customer.id)
+        .where(
+            Invoice.status == InvoiceStatus.bezahlt,
+            Invoice.is_credit_note.is_(False),
+            Invoice.paid_at.is_not(None),
+        )
+    )
+    speed_rows: list[tuple[str, str, int]] = []
+    for cid, name, inv_date, paid in speed_result.all():
+        days = days_to_pay(inv_date, paid)
+        if days is not None:
+            speed_rows.append((str(cid), name, days))
+    payment_speed = [
+        {
+            "customer_id": r.customer_id,
+            "customer_name": r.customer_name,
+            "avg_days": r.avg_days,
+            "invoices_count": r.invoices_count,
+            "min_days": r.min_days,
+            "max_days": r.max_days,
+        }
+        for r in aggregate_by_customer(speed_rows)
+    ]
+
     result = {
         "revenue_by_period": revenue_by_period,
         "invoice_status_distribution": invoice_status_distribution,
         "top_customers": top_customers,
         "recent_invoices": recent_invoices,
         "recent_activities": recent_activities,
+        "payment_speed_by_customer": payment_speed,
     }
     _charts_cache[cache_key] = {"data": result, "expires": time.monotonic() + _STATS_CACHE_TTL}
     return result

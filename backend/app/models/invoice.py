@@ -90,6 +90,9 @@ class Invoice(OwnedMixin, Base):
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_pdf_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     amount_paid: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"), server_default="0")
+    # Tag der Bezahlt-Markierung (für Zahlungsgeschwindigkeit). Systemfeld —
+    # gesetzt in sync_paid_at, nicht über InvoiceUpdate.
+    paid_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     credit_note_for: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=True
     )

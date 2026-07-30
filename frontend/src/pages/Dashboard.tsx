@@ -69,6 +69,14 @@ interface ChartData {
     customer_name: string
     created_at: string
   }[]
+  payment_speed_by_customer?: {
+    customer_id: string
+    customer_name: string
+    avg_days: number
+    invoices_count: number
+    min_days: number
+    max_days: number
+  }[]
 }
 
 const statusColors: Record<string, string> = {
@@ -206,6 +214,8 @@ export default function Dashboard() {
   const maxCustomerRevenue = chartData?.top_customers?.length
     ? Math.max(...chartData.top_customers.map((c) => c.revenue))
     : 1
+
+  const paymentSpeed = chartData?.payment_speed_by_customer ?? []
 
   return (
     <div>
@@ -519,6 +529,92 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Zahlungsgeschwindigkeit: Ø Tage Rechnung → bezahlt, langsamste zuerst */}
+      {chartData && (
+        <div className="bg-surface border border-border rounded-card p-5 mb-6">
+          <div className="flex items-baseline justify-between gap-3 mb-1 flex-wrap">
+            <h3 className="text-sm font-semibold text-text">Zahlungsgeschwindigkeit</h3>
+            {paymentSpeed.length > 0 && (
+              <p className="text-xs text-text-muted">
+                Ø Tage vom Rechnungsdatum bis „bezahlt“ · langsamste zuerst
+              </p>
+            )}
+          </div>
+          {paymentSpeed.length === 0 ? (
+            <p className="text-text-muted text-sm mt-3">
+              Noch keine bezahlten Rechnungen mit Zahlungsdatum — nach dem nächsten
+              „Als bezahlt“ erscheint die Statistik hier.
+            </p>
+          ) : (
+            <div style={{ height: Math.max(180, paymentSpeed.length * 36 + 40) }}>
+              <Bar
+                data={{
+                  labels: paymentSpeed.map((d) => d.customer_name),
+                  datasets: [
+                    {
+                      label: 'Ø Tage',
+                      data: paymentSpeed.map((d) => d.avg_days),
+                      backgroundColor: colors.accent,
+                      borderRadius: 4,
+                      barPercentage: 0.75,
+                      categoryPercentage: 0.85,
+                    },
+                  ],
+                }}
+                options={{
+                  indexAxis: 'y',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: colors.surface,
+                      titleColor: colors.text,
+                      bodyColor: colors.muted,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      callbacks: {
+                        label: (ctx: { dataIndex: number; raw: unknown }) => {
+                          const row = paymentSpeed[ctx.dataIndex]
+                          const avg = Number(ctx.raw)
+                          const dayWord = avg === 1 ? 'Tag' : 'Tage'
+                          return [
+                            `Ø ${avg.toLocaleString('de-DE')} ${dayWord}`,
+                            `${row.invoices_count} Rechnung${row.invoices_count !== 1 ? 'en' : ''} · Min ${row.min_days} · Max ${row.max_days}`,
+                          ]
+                        },
+                      },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      grid: { color: colors.border },
+                      border: { display: false },
+                      ticks: {
+                        color: colors.muted,
+                        font: { size: 11 },
+                        precision: 0,
+                        callback: (v: string | number) => `${v} T`,
+                      },
+                    },
+                    y: {
+                      grid: { display: false },
+                      border: { display: false },
+                      ticks: {
+                        color: colors.text,
+                        font: { size: 12 },
+                        autoSkip: false,
+                      },
+                    },
+                  },
+                } as any}
+              />
+            </div>
+          )}
         </div>
       )}
 

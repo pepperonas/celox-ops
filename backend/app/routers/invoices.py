@@ -61,6 +61,7 @@ from app.services.invoice_service import (
 )
 from app.services.pdf_service import generate_invoice_pdf, generate_reminder_pdf
 from app.services.business_time import today as business_today
+from app.services.invoice_paid_at import sync_paid_at
 
 
 class EmailRequest(PydanticBaseModel):
@@ -405,6 +406,7 @@ async def update_invoice_status(
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
 
     invoice.status = data.status
+    sync_paid_at(invoice)
     await db.flush()
     await db.refresh(invoice)
 
@@ -1002,6 +1004,7 @@ async def record_payment(
 
     if invoice.amount_paid >= invoice.total:
         invoice.status = InvoiceStatus.bezahlt
+    sync_paid_at(invoice)
 
     await db.flush()
     await db.refresh(invoice)
@@ -1042,6 +1045,7 @@ async def restore_payment_state(
 
     invoice.amount_paid = data.amount_paid
     invoice.status = data.status
+    sync_paid_at(invoice)
     await db.flush()
     await db.refresh(invoice)
 
@@ -1156,6 +1160,8 @@ async def create_credit_note(
     # Das Original wird neutralisiert bzw. bleibt bezahlt (Netting) —
     # Begründung siehe credit_note_statuses().
     invoice.status = original_status
+    sync_paid_at(credit_note)
+    sync_paid_at(invoice)
     await db.flush()
     await db.refresh(credit_note)
 
@@ -1319,6 +1325,7 @@ async def bank_import_apply(
         invoice.amount_paid = previous_paid + row.amount
         if invoice.amount_paid >= invoice.total:
             invoice.status = InvoiceStatus.bezahlt
+        sync_paid_at(invoice, paid_on=row.booking_date)
         db.add(Activity(
             customer_id=invoice.customer_id,
             type="payment",

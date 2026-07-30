@@ -221,6 +221,7 @@ export interface Invoice {
   reminder_sent_at: string | null
   reminder_pdf_path: string | null
   amount_paid: number
+  paid_at: string | null
   is_credit_note: boolean
   credit_note_for: string | null
   /** Nummer der stornierten Originalrechnung (an der Gutschrift). */
