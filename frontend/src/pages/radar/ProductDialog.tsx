@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Icon from '../../components/Icon'
@@ -327,6 +328,15 @@ export default function ProductDialog({
           )}
 
           <div>
+            {/* Der Weg zu den Kunden. Ohne diesen Link ist die Produktansicht eine
+                Sackgasse: Man sieht, dass die Software interessant ist, kommt aber
+                nicht zu den Firmen, die sie einsetzen — und die sind das Ziel. */}
+            <Link
+              to={`/radar/kunden?produkt=${encodeURIComponent(p.id)}`}
+              className="btn-primary text-sm inline-flex items-center gap-1.5 mb-4"
+            >
+              Referenzkunden dieser Software ansehen
+            </Link>
             <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">Referenzverzeichnis</h4>
             <a href={p.ref_url} target="_blank" rel="noopener noreferrer" className="text-sm text-accent break-all">
               {p.ref_url}

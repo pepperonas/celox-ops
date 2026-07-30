@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom'
 import {
   getMarketFacets,
   type MarketFacets,
+  getMarketReferenceStats,
+  type MarketReferenceStats,
 } from '../../api/market'
 import { INT_ALL, PRIO_ALL, REF_ALL, useRadarFilters } from './useRadarFilters'
 
@@ -10,11 +12,13 @@ import { INT_ALL, PRIO_ALL, REF_ALL, useRadarFilters } from './useRadarFilters'
    Filterleiste. Bewusst eine Leiste über allem, was sie beeinflusst — Filter je
    Diagramm würden Trefferliste und Grafik auseinanderlaufen lassen. */
 
+// Reihenfolge = Wichtigkeit. Die Kunden sind das Ziel, alles ab „Software" ist das
+// Umfeld, in dem verkauft wird. „Top-Chancen" hieß vorher, was jetzt „Software" heißt:
+// Der Name behauptete, die beste Chance sei ein Produkt — die Chance ist ein Kunde.
 const TABS = [
   { to: '/radar', end: true, label: 'Übersicht' },
-  { to: '/radar/chancen', label: 'Top-Chancen' },
-  // Die Kunden der Hersteller — der eigentliche Lead-Weg, deshalb weit vorn.
   { to: '/radar/kunden', label: 'Referenzkunden' },
+  { to: '/radar/chancen', label: 'Software' },
   { to: '/radar/bausteine', label: 'Bausteine' },
   { to: '/radar/hersteller', label: 'Hersteller' },
   { to: '/radar/kategorien', label: 'Kategorien' },
@@ -54,10 +58,12 @@ function Seg({ on, onClick, children }: { on: boolean; onClick: () => void; chil
 export default function RadarShell({ children }: { children: ReactNode }) {
   const { filters, patch, toggle, reset, active } = useRadarFilters()
   const [facets, setFacets] = useState<MarketFacets | null>(null)
+  const [kunden, setKunden] = useState<MarketReferenceStats | null>(null)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     getMarketFacets().then(setFacets).catch(() => undefined)
+    getMarketReferenceStats().then(setKunden).catch(() => undefined)
   }, [])
 
   return (
@@ -65,10 +71,16 @@ export default function RadarShell({ children }: { children: ReactNode }) {
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
           <h2 className="text-2xl font-semibold text-text tracking-tight">Marktradar</h2>
+          {/* Kundenzentriert: Vorher stand hier „Softwareprodukte … als Lead-Quelle
+              · 142 Einträge" — die Überschrift bewarb das Mittel. Der Lead ist die
+              Firma, die die Software einsetzt. */}
           <p className="text-text-muted text-sm mt-1">
-            Softwareprodukte mit öffentlichem Referenzverzeichnis als Lead-Quelle
+            {kunden
+              ? `${kunden.firmen_distinkt.toLocaleString('de-DE')} Firmen, die Software `
+                + `von ${facets?.gesamt ?? '…'} Produkten einsetzen — nachweislich, `
+                + `laut den Referenzverzeichnissen der Hersteller`
+              : 'Referenzkunden der Katalog-Hersteller als Lead-Quelle'}
             {facets?.stand && ` · Katalogstand ${facets.stand}`}
-            {facets ? ` · ${facets.gesamt} Einträge` : ''}
           </p>
         </div>
       </div>

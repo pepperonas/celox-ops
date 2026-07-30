@@ -11,7 +11,14 @@ import ProductCard from './ProductCard'
 import ProductDialog from './ProductDialog'
 import RadarShell from './RadarShell'
 import { Link } from 'react-router-dom'
-import { getMarketReferenceStats, type MarketReferenceStats } from '../../api/market'
+import {
+  getMarketReferenceCompanies,
+  getMarketReferenceStats,
+  referencesToPipeline,
+  type MarketReferenceGroup,
+  type MarketReferenceStats,
+} from '../../api/market'
+import CustomerSuggestion from './CustomerSuggestion'
 import { Hist, OpportunityMap, RankBar } from './RadarCharts'
 import { useRadarFilters } from './useRadarFilters'
 
@@ -39,9 +46,14 @@ function Panel({ title, sub, children, wide }: { title: string; sub?: string; ch
 
 export default function RadarOverview() {
   const { query, patch } = useRadarFilters()
+  // Stabiler Schlüssel des Filters — als Abhängigkeit für das Nachladen.
+  const filterKey = JSON.stringify(query)
   const [stats, setStats] = useState<MarketStats | null>(null)
   // Kundensicht: Der Marktradar bewertet jetzt die Anwender, nicht die Hersteller.
   const [kunden, setKunden] = useState<MarketReferenceStats | null>(null)
+  // Die Vorschläge selbst — das, worum es im Marktradar geht.
+  const [vorschlaege, setVorschlaege] = useState<MarketReferenceGroup[]>([])
+  const [busy, setBusy] = useState(false)
   const [products, setProducts] = useState<MarketProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState<MarketProduct | null>(null)
@@ -64,6 +76,32 @@ export default function RadarOverview() {
   // Kundenkennzahlen einmal laden — sie hängen nicht am Katalogfilter, weil die
   // Systemzahl je Firma ein Aggregat über den GESAMTEN Bestand ist.
   useEffect(() => { getMarketReferenceStats().then(setKunden).catch(() => undefined) }, [])
+
+  // `key` hängt am Filter: Wechselt er, laden die Vorschläge neu.
+  const ladeVorschlaege = useCallback(async () => {
+    try {
+      // Folgt dem geteilten Filter: `getMarketReferenceCompanies` liest ihn aus der
+      // URL-Query, die der Client mitsendet — „Kategorie X" zeigt hier deren Kunden.
+      const r = await getMarketReferenceCompanies(
+        { status: 'neu', sort: 'score', page_size: 6 }, query)
+      setVorschlaege(r.items)
+    } catch {
+      setVorschlaege([])
+    }
+  }, [filterKey])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void ladeVorschlaege() }, [ladeVorschlaege])
+
+  const uebernehmen = async (k: MarketReferenceGroup) => {
+    setBusy(true)
+    try {
+      const r = await referencesToPipeline(k.reference_ids, true)
+      toast.success(r.created.length ? 'Als Lead angelegt.' : 'Mit vorhandenem Lead verknüpft.')
+      await Promise.all([ladeVorschlaege(), getMarketReferenceStats().then(setKunden)])
+    } catch {
+      toast.error('Übernahme fehlgeschlagen.')
+    }
+    setBusy(false)
+  }
 
   const onChanged = (next: MarketProduct) =>
     setProducts((prev) => prev.map((x) => (x.id === next.id ? next : x)))
@@ -123,20 +161,42 @@ export default function RadarOverview() {
               <Kpi value={stats.regulatorik} label="mit Regulatorik" hint="terminierter Anlass" />
               <Kpi value={stats.integration_leicht} label="Integration leicht" hint="schneller erster Proof" />
             </div>
-          </div>
-
-          <div>
-            <div className="flex items-baseline gap-3 mb-3">
-              <h3 className="text-sm font-medium text-text">Beste Einstiege</h3>
-              <span className="text-xs text-text-muted">
-                Software mit dem höchsten Opportunity Score — hier lohnt der Blick in die Kundenliste
-              </span>
-            </div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {/* Die Software mit dem höchsten Opportunity Score — nützlich, um zu
+                entscheiden, WESSEN Kundenliste sich lohnt. Deshalb hier im Umfeld,
+                nicht als Vorschlag. */}
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
               {products.slice(0, 3).map((p, i) => (
                 <ProductCard key={p.id} p={p} rank={i + 1} onOpen={setOpen} />
               ))}
             </div>
+          </div>
+
+          {/* DER VORSCHLAG. Vorher standen hier Produktkarten — „diese Software ist
+              interessant". Der Lead ist aber eine Firma: „diese nutzt X, biete ihr Y
+              an." Produkte stehen jetzt weiter unten im Umfeld-Block. */}
+          <div>
+            <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h3 className="text-sm font-medium text-text">Zuerst ansprechen</h3>
+                <span className="text-xs text-text-muted">
+                  Firmen, die eine der Katalog-Softwares einsetzen — mit der Aufsatzlösung,
+                  die darauf passt
+                </span>
+              </div>
+              <Link to="/radar/kunden" className="text-xs text-accent">alle ansehen →</Link>
+            </div>
+            {vorschlaege.length === 0 ? (
+              <p className="text-sm text-text-muted">
+                Keine offenen Referenzkunden für diesen Filter.
+              </p>
+            ) : (
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {vorschlaege.map((k, i) => (
+                  <CustomerSuggestion key={k.company_norm} k={k} rang={i + 1}
+                                      onPipeline={uebernehmen} busy={busy} />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid lg:grid-cols-2 gap-3">

@@ -453,6 +453,8 @@ def _bester_name(namen: list[str]) -> str:
 
 @router.get("/references/firmen", response_model=MarketReferenceGroupListe)
 async def list_reference_companies(
+    f: Filters = Depends(),
+    product_id: uuid.UUID | None = None,
     q: str | None = None,
     status: str | None = None,
     nur_mehrfach: bool = False,
@@ -477,11 +479,28 @@ async def list_reference_companies(
         raise HTTPException(status_code=422, detail=f"sort muss aus {SORTIERUNGEN} sein")
 
     alle = list((await db.execute(select(MarketReference))).scalars())
+    # **Der geteilte Filter wirkt auch hier.** Er filtert Produkte (Kategorie, Branche,
+    # Priorität, Integrationsaufwand, Baustein); die Kundensicht erbt das über den
+    # Hersteller. Genau das ist der Arbeitsablauf: „Kategorie Zeiterfassung" → deren
+    # Anwender. Vorher lief die Filterleiste auf dieser Seite ins Leere, obwohl sie
+    # sichtbar darüber stand.
+    #
+    # Nur wenn wirklich gefiltert wird: `f.aktiv` zu prüfen wäre hier falsch, denn ein
+    # leerer Filter liefert ohnehin alle Produkte — aber der Vergleich spart bei 4.000
+    # Zeilen einen Durchlauf.
+    erlaubte = {p.id for p in await _filtered(db, f)}
+    zeilen_gefiltert = [r for r in alle if r.product_id in erlaubte]
     produkte = await _produkt_map(db, {r.product_id for r in alle})
     bausteine = list((await db.execute(select(MarketBaustein))).scalars())
 
-    gruppen: dict[str, list[MarketReference]] = {}
+    # Systemzahl IMMER über den gesamten Bestand: Wer nach einem Hersteller filtert,
+    # soll trotzdem sehen, dass die Firma noch zwei andere Systeme einsetzt.
+    systeme_gesamt: dict[str, set] = {}
     for r in alle:
+        systeme_gesamt.setdefault(r.company_norm, set()).add(r.product_id)
+
+    gruppen: dict[str, list[MarketReference]] = {}
+    for r in zeilen_gefiltert:
         gruppen.setdefault(r.company_norm, []).append(r)
 
     items = []
@@ -507,8 +526,9 @@ async def list_reference_companies(
         # Ein Stand für die Firma: „in der Pipeline" gewinnt, weil der Lead existiert.
         stand = ("in_pipeline" if any(r.status == "in_pipeline" for r in zeilen)
                  else "neu" if any(r.status == "neu" for r in zeilen) else "verworfen")
-        # Die Systemzahl zählt VERSCHIEDENE Hersteller-Produkte, nicht Zeilen.
-        anzahl = len({r.product_id for r in zeilen})
+        # Die Systemzahl zählt VERSCHIEDENE Hersteller-Produkte über den ganzen
+        # Bestand — nicht die gefilterten Zeilen (s. oben).
+        anzahl = len(systeme_gesamt.get(schluessel, {r.product_id for r in zeilen}))
         b = bewerte(company=namen, systeme=anzahl, hat_baustein=hat_baustein,
                     produkt_score=best_score, hat_website=bool(website))
         items.append({
@@ -525,6 +545,10 @@ async def list_reference_companies(
             "_hat_baustein": hat_baustein,
         })
 
+    if product_id:
+        # Aus dem Produkt-Dossier heraus: nur die Anwender DIESER Software.
+        items = [i for i in items
+                 if any(p["product_id"] == product_id for p in i["produkte"])]
     if q:
         nadel = q.strip().lower()
         items = [i for i in items if nadel in i["company"].lower()]

@@ -340,17 +340,23 @@ export interface MarketReferenceGroupListe {
   pages: number
 }
 
-export const getMarketReferenceCompanies = (params: {
-  q?: string
-  status?: string
-  nur_mehrfach?: boolean
-  orgtyp?: string
-  mit_baustein?: boolean
-  sort?: string
-  page?: number
-  page_size?: number
-}) => api.get<MarketReferenceGroupListe>('/market/references/firmen', { params })
-  .then((r) => r.data)
+/** `filter` = der geteilte Radar-Filter (Kategorie, Branche, Priorität …). Er wirkt
+ *  über den Hersteller auf die Kunden: „Kategorie Zeiterfassung" zeigt deren Anwender. */
+export const getMarketReferenceCompanies = (
+  params: {
+    q?: string
+    status?: string
+    nur_mehrfach?: boolean
+    orgtyp?: string
+    mit_baustein?: boolean
+    sort?: string
+    page?: number
+    page_size?: number
+    product_id?: string
+  },
+  filter?: MarketQuery,
+) => api.get<MarketReferenceGroupListe>('/market/references/firmen',
+  { params: { ...(filter ?? {}), ...params } }).then((r) => r.data)
 
 export const getMarketReferenceCompany = (companyNorm: string) =>
   api.get<MarketReferenceDetail>(`/market/references/firmen/${encodeURIComponent(companyNorm)}`)

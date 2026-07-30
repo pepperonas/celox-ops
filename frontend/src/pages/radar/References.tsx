@@ -20,6 +20,8 @@ import {
   type MarketReferenceStats,
 } from '../../api/market'
 import RadarShell from './RadarShell'
+import { useRadarFilters } from './useRadarFilters'
+import { useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 50
 
@@ -46,6 +48,14 @@ const ORG_KLASSE: Record<string, string> = {
 }
 
 export default function References() {
+  // Der geteilte Radar-Filter wirkt auch hier — über den Hersteller. Vorher stand die
+  // Filterleiste sichtbar über dieser Seite und tat nichts.
+  const { query } = useRadarFilters()
+  const filterKey = JSON.stringify(query)
+  // `?produkt=<id>` kommt aus dem Produkt-Dossier („Referenzkunden dieser Software
+  // ansehen") — damit führt jede Herstellersicht zu ihren Anwendern.
+  const [sp] = useSearchParams()
+  const produktFilter = sp.get('produkt') || undefined
   const [items, setItems] = useState<MarketReferenceGroup[]>([])
   const [offen, setOffen] = useState<Set<string>>(new Set())
   const [total, setTotal] = useState(0)
@@ -73,14 +83,15 @@ export default function References() {
         nur_mehrfach: nurMehrfach || undefined,
         orgtyp: orgFilter === 'alle' ? undefined : orgFilter,
         sort,
-      })
+        product_id: produktFilter,
+      }, query)
       setItems(r.items)
       setTotal(r.total)
     } catch {
       toast.error('Referenzkunden konnten nicht geladen werden.')
     }
     setLaedt(false)
-  }, [page, q, status, webFilter, nurMehrfach, orgFilter, sort])
+  }, [page, q, status, webFilter, nurMehrfach, orgFilter, sort, filterKey, produktFilter])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { void laden() }, [laden])
   useEffect(() => { getMarketReferenceStats().then(setStats).catch(() => undefined) }, [])
