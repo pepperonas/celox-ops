@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlsplit
 
 # ---------------------------------------------------------------- robots.txt
 
@@ -125,8 +125,22 @@ def saeubere_namen(roh: str) -> str | None:
 
     Schneidet die üblichen Beiwörter ab („Logo Siemens" → „Siemens") und wirft alles
     weg, was nach Deko, Satz oder Fragment aussieht.
+
+    Zwei Dinge, die erst am echten Lauf auffielen:
+
+      · **Entities dekodieren.** Attributwerte kommen kodiert aus dem HTML — ohne
+        Dekodierung landete „Spandauer Velours GmbH &amp; Co. KG" so in der Datenbank.
+      · **„<Produkt> Logo <Firma>" abschneiden.** HOPPE beschriftet jedes Kundenlogo
+        mit „Wartungsplaner Logo BDL Untermain GmbH"; der Produktname stand damit vor
+        jedem der 1226 Namen.
     """
-    name = " ".join((roh or "").split())
+    import html as html_mod
+    name = " ".join(html_mod.unescape(roh or "").split())
+    # Alles vor einem eingebetteten „Logo" verwerfen — davor steht der Produkt- oder
+    # Herstellername des Seitenbetreibers, danach der Kunde.
+    m = re.search(r"\bLogos?\b[\s:_-]*(.+)$", name, re.I)
+    if m and len(m.group(1).strip()) >= 3:
+        name = m.group(1).strip()
     name = _ABSCHNEIDEN.sub("", name).strip(" ·–—-:|")
     if not 3 <= len(name) <= 70:
         return None
