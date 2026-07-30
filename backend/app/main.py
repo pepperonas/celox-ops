@@ -44,6 +44,7 @@ from app.models.customer_todo_suggestion import CustomerTodoSuggestion
 from app.models.lead_change_log import LeadChangeLog
 from app.models.market_product import MarketProduct
 from app.models.market_baustein import MarketBaustein
+from app.models.market_reference import MarketReference
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -60,7 +61,7 @@ set_owned_models([
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
     LeadWebsiteAnalysis, LeadAnalysisJob, LeadChatImport, HostingerDomainLink,
-    CustomerTodoSuggestion, LeadChangeLog, MarketProduct, MarketBaustein,
+    CustomerTodoSuggestion, LeadChangeLog, MarketProduct, MarketBaustein, MarketReference,
 ])
 install_tenancy_events()
 

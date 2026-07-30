@@ -378,3 +378,57 @@ def ernte_aus_html(
         e.roh_anzahl, e.form, e.verdikt = (
             beste_verworfen[0], beste_verworfen[1], f"verworfen: {beste_verworfen[2]}")
     return e
+
+
+# ------------------------------------------------------------ Netz-Lauf
+
+
+async def _hole(url: str) -> tuple[str | None, str]:
+    """Eine Seite holen. Rückgabe (HTML|None, Hinweis). Wirft nie."""
+    from app.services.website_analysis import _safe_get
+    try:
+        r = await _safe_get(url, verify=True)
+    except Exception as exc:                     # auch _Blocked (SSRF-Schutz)
+        return None, f"nicht erreichbar ({type(exc).__name__})"
+    if r.status_code >= 400:
+        return None, f"HTTP {r.status_code}"
+    return (r.text or ""), str(r.url)
+
+
+async def ernte_fuer_verzeichnis(ref_url: str, refs: int, vendor: str) -> Ernte:
+    """Ein Referenzverzeichnis ernten — robots, Startseite (Rauschen), dann die Liste.
+
+    Drei Abrufe je Hersteller: robots.txt, Startseite, Verzeichnis. Die Startseite ist
+    nicht optional — ohne sie fehlt der Rauschabzug, und der ist das tragende Signal
+    (s. `ohne_seitenrauschen`).
+
+    robots.txt wird respektiert, obwohl es hier um öffentliche Marketingseiten geht:
+    Ein Verbot ist eine Aussage des Betreibers, und ein Lead-Werkzeug, das sie
+    übergeht, wäre der falsche Start einer Geschäftsbeziehung.
+    """
+    e = Ernte()
+    teile = urlsplit(ref_url)
+    if not teile.netloc:
+        e.error = "keine Verzeichnis-URL"
+        return e
+    origin = f"{teile.scheme or 'https'}://{teile.netloc}"
+
+    robots, _ = await _hole(f"{origin}/robots.txt")
+    if not robots_erlaubt(robots, teile.path or "/"):
+        e.error = "robots.txt verbietet diesen Pfad"
+        return e
+
+    start_html, _ = await _hole(origin)
+    rauschen: set[str] = set()
+    if start_html:
+        rauschen = rauschschluessel(dedupe(
+            ernte_logowand(start_html)
+            + ernte_textliste(start_html)
+            + [n for n, _ in ernte_verlinkt(start_html, origin)]
+        ))
+
+    html, hinweis = await _hole(ref_url)
+    if html is None:
+        e.error = hinweis
+        return e
+    return ernte_aus_html(html, ref_url, refs, vendor, rauschen)
