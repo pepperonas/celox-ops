@@ -55,6 +55,9 @@ _UMLAUT = {"ae": "ä", "oe": "ö", "ue": "ü", "Ae": "Ä", "Oe": "Ö", "Ue": "Ü
 # Wort = Buchstaben, Ziffern, Binde- und Schrägstriche, Punkte im Wortinneren.
 _WORT = re.compile(r"[0-9A-Za-zÄÖÜäöüß][0-9A-Za-zÄÖÜäöüß.\-/]*")
 _PAAR = re.compile(r"[AaOoUu]e")
+# Sieht das Wort wie eine Adresse aus? Dann NICHTS anfassen: In `blueant.de` steckt ein
+# Name, kein Umlaut — beim Durchsehen der 623 Katalogwörter aufgefallen.
+_ADRESSE = re.compile(r"://|^www\.|\.[a-z]{2,6}(?:/|$)", re.I)
 
 
 def _geschuetzte_stellen(wort: str) -> set[int]:
@@ -78,8 +81,22 @@ def _geschuetzte_stellen(wort: str) -> set[int]:
 
 
 def wort_zurueck(wort: str) -> str:
-    """Ein Wort zurückverwandeln — Folge für Folge, Ausnahmen positionsgenau. Rein."""
+    """Ein Wort zurückverwandeln — Folge für Folge, Ausnahmen positionsgenau. Rein.
+
+    **Zwei Regeln schlagen jede Wortliste**, beide beim Durchsehen der echten Daten
+    gefunden:
+
+      · Nach `q` ist `ue` NIE ein Umlaut — „qu" ist im Deutschen immer ein Digraph
+        (`Frequenz`, `bequem`, `Sequenz`, `Konsequenz`, `äquivalent`). Ohne diese Regel
+        wurde daraus „Freqünz" und „beqümsten".
+      · Adressen bleiben unangetastet: In `blueant.de` steckt ein Name, kein Umlaut.
+
+    Eine Regel deckt eine ganze Wortklasse ab; eine Liste deckt nur ab, was man
+    vorher gesehen hat.
+    """
     if not _PAAR.search(wort):
+        return wort
+    if _ADRESSE.search(wort):
         return wort
     if wort.lower().strip(".,;:!?") in AUSNAHMEN_GANZ:
         return wort
@@ -88,7 +105,10 @@ def wort_zurueck(wort: str) -> str:
     i = 0
     while i < len(wort):
         paar = wort[i:i + 2]
-        if paar in _UMLAUT and i not in geschuetzt and i + 1 not in geschuetzt:
+        # „qu" + e: kein Umlaut (s. Regel oben).
+        nach_q = paar.lower() == "ue" and i > 0 and wort[i - 1] in "qQ"
+        if (paar in _UMLAUT and not nach_q
+                and i not in geschuetzt and i + 1 not in geschuetzt):
             aus.append(_UMLAUT[paar])
             i += 2
         else:

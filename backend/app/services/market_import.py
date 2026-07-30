@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market_baustein import MarketBaustein
 from app.models.market_product import MarketProduct
+from app.services.umlaut import entschluessele, entschluessele_liste
 
 # Katalogfeld (JSON) -> Spalte. Alles hier drin wird beim Re-Import überschrieben.
 _KATALOG_FELDER: dict[str, str] = {
@@ -70,6 +71,12 @@ _OPS_FELDER = (
 )
 
 
+# Spalten, die Adressen tragen — dort NICHT an den Buchstaben drehen. Der
+# Umlaut-Rückbau lässt Adressen ohnehin stehen (`_ADRESSE`), aber hier ist es
+# ausdrücklich: In einer URL hat eine Textkorrektur nichts zu suchen.
+_ADRESS_SPALTEN = ("ref_url", "website", "vendor_slug", "konzern_slug", "catalog_id")
+
+
 def _coerce(spalte: str, wert: Any) -> Any:
     if wert is None:
         return None
@@ -79,6 +86,16 @@ def _coerce(spalte: str, wert: Any) -> Any:
         return bool(wert)
     if spalte in ("refs", "lead", "business", "score"):
         return int(wert)
+    # **Umlaute beim Import zurückverwandeln.** Das Recherche-Repo schreibt
+    # `ae/oe/ue`; hier ist die einzige Stelle, an der Katalogtext in die Datenbank
+    # kommt. Würde die Korrektur nur nachträglich über den Bestand laufen, hätte der
+    # nächste Import sie wieder überschrieben (`_KATALOG_FELDER` gewinnt).
+    if spalte in _ADRESS_SPALTEN:
+        return wert
+    if isinstance(wert, str):
+        return entschluessele(wert)
+    if isinstance(wert, list):
+        return entschluessele_liste(wert)
     return wert
 
 
@@ -136,11 +153,13 @@ async def import_catalog(db: AsyncSession, catalog: dict) -> dict:
     for b in bausteine:
         db.add(MarketBaustein(
             nr=int(b.get("nr", 0)),
-            titel=b.get("titel", ""),
-            was=b.get("was"),
-            warum=b.get("warum"),
-            vorsicht=b.get("vorsicht"),
-            aufwand=b.get("aufwand"),
+            # Auch hier Umlaute zurückverwandeln: Fünf Bausteine tragen `ae/oe/ue`.
+            # `catalog_ids` bleibt unangetastet — das sind Schlüssel, kein Text.
+            titel=entschluessele(b.get("titel", "")) or "",
+            was=entschluessele(b.get("was")),
+            warum=entschluessele(b.get("warum")),
+            vorsicht=entschluessele(b.get("vorsicht")),
+            aufwand=entschluessele(b.get("aufwand")),
             catalog_ids=b.get("ids") or [],
         ))
 
