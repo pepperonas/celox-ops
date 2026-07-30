@@ -21,6 +21,7 @@ import {
 } from '../../api/market'
 import RadarShell from './RadarShell'
 import { useRadarFilters } from './useRadarFilters'
+import { httpHref } from '../../utils/safeHref'
 import { useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 50
@@ -404,11 +405,16 @@ export default function References() {
                   {(offen.has(r.company_norm) ? r.produkte : r.produkte.slice(0, 1))
                     .map((sys) => (
                       <div key={sys.reference_id} className="mb-0.5 last:mb-0">
-                        <a href={sys.source_url} target="_blank" rel="noopener noreferrer"
-                           title="Beleg: Referenzverzeichnis des Herstellers"
-                           className="text-text-muted hover:text-text">
-                          {sys.produkt}
-                        </a>
+                        {httpHref(sys.source_url) ? (
+                          <a href={httpHref(sys.source_url)} target="_blank"
+                             rel="noopener noreferrer"
+                             title="Beleg: Referenzverzeichnis des Herstellers"
+                             className="text-text-muted hover:text-text">
+                            {sys.produkt}
+                          </a>
+                        ) : (
+                          <span className="text-text-muted">{sys.produkt}</span>
+                        )}
                         {sys.baustein_titel && (
                           <span className="block text-[11px] text-accent/90"
                                 title="Aufsatzlösung, die auf diese Software passt">

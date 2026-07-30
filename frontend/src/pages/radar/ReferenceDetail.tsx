@@ -24,6 +24,7 @@ import {
   type MarketReferenceDetail,
   type MarketReferenceSystem,
 } from '../../api/market'
+import { httpHref } from '../../utils/safeHref'
 import RadarShell from './RadarShell'
 import SoftwareInfoDialog from './SoftwareInfoDialog'
 
@@ -206,9 +207,12 @@ export default function ReferenceDetail() {
                   </div>
                   {/* Anbieter verlinkt, wenn die Website bekannt ist (137 von 142) —
                       sonst nur der Name statt eines Links ins Leere. */}
+                  {/* Nur http(s) als href — die Website stammt aus der
+                      Hersteller-Anreicherung, `source_url` aus der Katalogdatei
+                      (s. utils/safeHref). */}
                   <p className="text-[11px] text-text-muted">
-                    {s.website ? (
-                      <a href={s.website} target="_blank" rel="noopener noreferrer"
+                    {httpHref(s.website) ? (
+                      <a href={httpHref(s.website)} target="_blank" rel="noopener noreferrer"
                          className="text-accent">
                         {s.hersteller}
                       </a>
@@ -219,10 +223,12 @@ export default function ReferenceDetail() {
                       → Baustein {s.baustein_nr}: {s.baustein_titel}
                     </p>
                   )}
-                  <a href={s.source_url} target="_blank" rel="noopener noreferrer"
-                     className="text-[11px] text-accent inline-flex items-center gap-1 mt-0.5">
-                    <Icon name="users" size={12} /> Beleg im Verzeichnis
-                  </a>
+                  {httpHref(s.source_url) && (
+                    <a href={httpHref(s.source_url)} target="_blank" rel="noopener noreferrer"
+                       className="text-[11px] text-accent inline-flex items-center gap-1 mt-0.5">
+                      <Icon name="users" size={12} /> Beleg im Verzeichnis
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -268,10 +274,16 @@ export default function ReferenceDetail() {
             <dl>
               {d.website && (
                 <Feld label="Website" hinweis={WEBSITE_HERKUNFT[d.website_source ?? '']}>
-                  <a href={d.website} target="_blank" rel="noopener noreferrer"
-                     className="text-accent">
-                    {d.website.replace(/^https?:\/\//, '')}
-                  </a>
+                  {httpHref(d.website) ? (
+                    <a href={httpHref(d.website)} target="_blank" rel="noopener noreferrer"
+                       className="text-accent">
+                      {d.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  ) : (
+                    // Wert anzeigen, aber nicht klickbar machen: Der Wert ist Information,
+                    // der Link wäre das Risiko.
+                    <span className="break-all">{d.website}</span>
+                  )}
                 </Feld>
               )}
               {d.email && (

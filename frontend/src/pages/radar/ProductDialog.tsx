@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { httpHref } from '../../utils/safeHref'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Icon from '../../components/Icon'
@@ -338,9 +339,16 @@ export default function ProductDialog({
               Referenzkunden dieser Software ansehen
             </Link>
             <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">Referenzverzeichnis</h4>
-            <a href={p.ref_url} target="_blank" rel="noopener noreferrer" className="text-sm text-accent break-all">
-              {p.ref_url}
-            </a>
+            {/* Dieselbe Klasse wie in den beiden gemeldeten Dateien — nur die
+                gemeldeten zu flicken hätte das identische Loch offen gelassen. */}
+            {httpHref(p.ref_url) ? (
+              <a href={httpHref(p.ref_url)} target="_blank" rel="noopener noreferrer"
+                 className="text-sm text-accent break-all">
+                {p.ref_url}
+              </a>
+            ) : (
+              <span className="text-sm text-text-muted break-all">{p.ref_url}</span>
+            )}
             <span className="text-xs text-text-muted"> — Live-Check: {p.url_ok ? 'erreichbar' : p.url_geprueft}</span>
           </div>
         </div>

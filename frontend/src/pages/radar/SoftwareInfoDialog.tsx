@@ -19,6 +19,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from '../../components/Icon'
 import type { MarketBaustein } from '../../api/market'
+import { httpHref } from '../../utils/safeHref'
 
 /** Was der Dialog braucht. Absichtlich strukturell: `MarketProduct` (Hersteller-Tab)
  *  und `MarketReferenceSystem` (Kundendetail) erfüllen das beide. */
@@ -89,6 +90,12 @@ export default function SoftwareInfoDialog({ info, bausteine, onClose }: Props) 
   // Zuordnung Produkt → Bausteine über `catalog_ids`. Eine Stelle im Frontend,
   // spiegelt `market_reference_pipeline.bausteine_fuer` im Backend — die Zuordnung
   // selbst kommt aus dem Recherchekatalog und wird hier nur gelesen.
+  // Adressen aus Katalog und Ernte gehen nur als http(s) in ein `href` (s.
+  // utils/safeHref): `ref_url` kommt unverändert aus der Katalogdatei, die Website
+  // teils aus dem HTML fremder Seiten.
+  const anbieter = httpHref(info.website)
+  const verzeichnis = httpHref(info.ref_url)
+
   const passend = info.catalog_id
     ? bausteine.filter((b) => (b.catalog_ids ?? []).includes(info.catalog_id!))
     : []
@@ -237,8 +244,8 @@ export default function SoftwareInfoDialog({ info, bausteine, onClose }: Props) 
           <div className="min-w-0">
             <h3 className="md-title-emph text-text break-words">{info.produkt}</h3>
             <p className="text-xs text-text-muted break-words">
-              {info.website ? (
-                <a href={info.website} target="_blank" rel="noopener noreferrer"
+              {anbieter ? (
+                <a href={anbieter} target="_blank" rel="noopener noreferrer"
                    className="text-accent">
                   {info.hersteller}
                 </a>
@@ -272,14 +279,14 @@ export default function SoftwareInfoDialog({ info, bausteine, onClose }: Props) 
 
         <div className="flex items-center justify-between gap-2 mt-4 flex-wrap">
           <div className="flex items-center gap-3 text-xs">
-            {info.website && (
-              <a href={info.website} target="_blank" rel="noopener noreferrer"
+            {anbieter && (
+              <a href={anbieter} target="_blank" rel="noopener noreferrer"
                  className="text-accent inline-flex items-center gap-1">
                 <Icon name="globe" size={13} /> Anbieter
               </a>
             )}
-            {info.ref_url && (
-              <a href={info.ref_url} target="_blank" rel="noopener noreferrer"
+            {verzeichnis && (
+              <a href={verzeichnis} target="_blank" rel="noopener noreferrer"
                  className="text-accent inline-flex items-center gap-1">
                 <Icon name="users" size={13} />
                 Referenzverzeichnis{info.refs ? ` (~${info.refs})` : ''}
