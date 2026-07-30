@@ -168,3 +168,51 @@ class MarketImportResult(BaseModel):
     unveraendert: int = 0
     bausteine: int = 0
     verwaist: list[str] = []   # in ops vorhanden, im Katalog nicht mehr
+
+
+# ---------------------------------------------------------- Referenzkunden
+
+
+class MarketReferenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    product_id: uuid.UUID
+    company: str
+    website: str | None = None
+    source_url: str
+    form: str
+    status: str
+    rainmaker_lead_id: uuid.UUID | None = None
+
+
+class MarketReferenceItem(MarketReferenceResponse):
+    """Mit den Herstellerangaben, die die Liste ohne Nachladen lesbar machen."""
+
+    produkt: str | None = None
+    hersteller: str | None = None
+    kategorie: str | None = None
+    score: int | None = None
+
+
+class MarketReferenceListe(BaseModel):
+    items: list[MarketReferenceItem]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class MarketReferenceUpdate(BaseModel):
+    status: str | None = None
+
+
+class ReferencesToPipelineRequest(BaseModel):
+    ids: list[uuid.UUID]
+    force: bool = False
+
+
+class ReferencesToPipelineResponse(BaseModel):
+    created: list[dict]
+    linked: list[dict]
+    failed: list[dict]

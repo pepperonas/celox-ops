@@ -52,6 +52,7 @@ const LeadSupervision = lazy(() => import('./pages/rainmaker/LeadSupervision'))
 const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
 const RadarOverview = lazy(() => import('./pages/radar/Overview'))
 const RadarOpportunities = lazy(() => import('./pages/radar/Opportunities'))
+const RadarReferences = lazy(() => import('./pages/radar/References'))
 const RadarBausteine = lazy(() => import('./pages/radar/Bausteine'))
 const RadarVendors = lazy(() => import('./pages/radar/Vendors'))
 const RadarCategories = lazy(() => import('./pages/radar/Categories'))
@@ -102,6 +103,8 @@ export default function App() {
           {/* Marktradar = Recherchekatalog, aus dem Leads in die Pipeline wandern */}
           <Route path="/radar" element={<RadarOverview />} />
           <Route path="/radar/chancen" element={<RadarOpportunities />} />
+          {/* Referenzkunden = die eigentlichen Leads (Hersteller-Kunden) */}
+          <Route path="/radar/kunden" element={<RadarReferences />} />
           <Route path="/radar/bausteine" element={<RadarBausteine />} />
           <Route path="/radar/hersteller" element={<RadarVendors />} />
           <Route path="/radar/kategorien" element={<RadarCategories />} />

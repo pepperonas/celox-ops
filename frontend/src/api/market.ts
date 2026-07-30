@@ -203,3 +203,52 @@ export const marketToPipeline = (
   id: string,
   body: { force?: boolean; priority?: string; note?: string } = {},
 ) => api.post<ToPipelineResult>(`/market/products/${id}/to-pipeline`, body).then((r) => r.data)
+
+/* ---------------------------------------------------------- Referenzkunden
+   Der eigentliche Lead-Weg: nicht der Hersteller, sondern wer seine Software
+   einsetzt. Paginiert, weil hier tausende Zeilen liegen (nicht 142 wie im Katalog). */
+
+export interface MarketReference {
+  id: string
+  product_id: string
+  company: string
+  website: string | null
+  source_url: string
+  form: string
+  status: string
+  rainmaker_lead_id: string | null
+  produkt: string | null
+  hersteller: string | null
+  kategorie: string | null
+  score: number | null
+}
+
+export interface MarketReferenceListe {
+  items: MarketReference[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export interface ReferencesToPipelineResult {
+  created: { company: string; lead_id: string }[]
+  linked: { company: string; lead_id: string }[]
+  failed: { company: string; reason: string }[]
+}
+
+export const getMarketReferences = (params: {
+  product_id?: string
+  status?: string
+  q?: string
+  mit_website?: boolean
+  page?: number
+  page_size?: number
+}) => api.get<MarketReferenceListe>('/market/references', { params }).then((r) => r.data)
+
+export const updateMarketReference = (id: string, data: { status?: string }) =>
+  api.patch<MarketReference>(`/market/references/${id}`, data).then((r) => r.data)
+
+export const referencesToPipeline = (ids: string[], force = false) =>
+  api.post<ReferencesToPipelineResult>('/market/references/to-pipeline', { ids, force })
+    .then((r) => r.data)

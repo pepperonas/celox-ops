@@ -13,6 +13,8 @@ import { INT_ALL, PRIO_ALL, REF_ALL, useRadarFilters } from './useRadarFilters'
 const TABS = [
   { to: '/radar', end: true, label: 'Übersicht' },
   { to: '/radar/chancen', label: 'Top-Chancen' },
+  // Die Kunden der Hersteller — der eigentliche Lead-Weg, deshalb weit vorn.
+  { to: '/radar/kunden', label: 'Referenzkunden' },
   { to: '/radar/bausteine', label: 'Bausteine' },
   { to: '/radar/hersteller', label: 'Hersteller' },
   { to: '/radar/kategorien', label: 'Kategorien' },

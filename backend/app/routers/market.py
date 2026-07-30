@@ -8,6 +8,9 @@ GET    /api/market/categories            → Kategorie-Rollup inkl. Risiken
 GET    /api/market/bausteine             → Lösungsbausteine mit Reichweite
 GET    /api/market/facets                → Auswahlwerte für die Filter
 PATCH  /api/market/products/{id}         → eigener Bearbeitungsstand (Status, Notiz)
+GET    /api/market/references             → Referenzkunden (die eigentlichen Leads)
+PATCH  /api/market/references/{id}        → Bearbeitungsstand (verwerfen/zurückholen)
+POST   /api/market/references/to-pipeline → ausgewählte Firmen als Leads anlegen
 POST   /api/market/products/{id}/to-pipeline → Hersteller als Rainmaker-Lead übernehmen
 
 **Kein Import-Endpunkt.** Den Katalog einspielen ist Wartung, keine Funktion der
@@ -24,14 +27,20 @@ Diagramm und Liste auseinander.
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.market_baustein import MarketBaustein
+from app.models.market_reference import MarketReference
 from app.models.market_product import MarketProduct, MarketStatus
 from app.schemas.market import (
+    MarketReferenceListe,
+    MarketReferenceResponse,
+    MarketReferenceUpdate,
+    ReferencesToPipelineRequest,
+    ReferencesToPipelineResponse,
     MarketBausteinResponse,
     MarketCategory,
     MarketProductResponse,
@@ -43,6 +52,7 @@ from app.schemas.market import (
 )
 from app.services import market_catalog as agg
 from app.services.market_pipeline import to_pipeline
+from app.services.market_reference_pipeline import reference_to_pipeline
 
 router = APIRouter(
     prefix="/api/market",
@@ -264,3 +274,133 @@ async def push_to_pipeline(
     return ToPipelineResponse(
         lead_id=lead.id, company=lead.company, created=neu, duplicate_reason=grund
     )
+
+
+# ---------------------------------------------------------- Referenzkunden
+#
+# Der eigentliche Lead-Weg: nicht der Hersteller, sondern wer seine Software einsetzt.
+
+
+@router.get("/references", response_model=MarketReferenceListe)
+async def list_references(
+    product_id: uuid.UUID | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    mit_website: bool | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Referenzkunden, gefiltert und paginiert.
+
+    Paginiert, weil hier tausende Zeilen liegen (3.712 nach dem ersten Lauf) — anders
+    als beim Katalog mit seinen 142, wo alles in den Speicher passt.
+    """
+    bedingungen = []
+    if product_id:
+        bedingungen.append(MarketReference.product_id == product_id)
+    if status:
+        bedingungen.append(MarketReference.status == status)
+    if mit_website is True:
+        bedingungen.append(MarketReference.website.isnot(None))
+    elif mit_website is False:
+        bedingungen.append(MarketReference.website.is_(None))
+    if q:
+        bedingungen.append(MarketReference.company.ilike(f"%{q.strip()}%"))
+
+    basis = select(MarketReference)
+    for b in bedingungen:
+        basis = basis.where(b)
+    gesamt = (await db.execute(
+        select(func.count()).select_from(basis.subquery())
+    )).scalar() or 0
+    zeilen = list((await db.execute(
+        basis.order_by(MarketReference.company)
+        .offset((page - 1) * page_size).limit(page_size)
+    )).scalars())
+
+    # Herstellernamen gebündelt nachladen (kein N+1).
+    ids = {r.product_id for r in zeilen}
+    produkte = {}
+    if ids:
+        produkte = {p.id: p for p in (await db.execute(
+            select(MarketProduct).where(MarketProduct.id.in_(ids)))).scalars()}
+    items = []
+    for r in zeilen:
+        p = produkte.get(r.product_id)
+        items.append({
+            "id": r.id, "company": r.company, "website": r.website,
+            "source_url": r.source_url, "form": r.form, "status": r.status,
+            "rainmaker_lead_id": r.rainmaker_lead_id,
+            "product_id": r.product_id,
+            "produkt": p.produkt if p else None,
+            "hersteller": p.hersteller if p else None,
+            "kategorie": p.kategorie if p else None,
+            "score": p.score if p else None,
+        })
+    return {"items": items, "total": gesamt, "page": page, "page_size": page_size,
+            "pages": (gesamt + page_size - 1) // page_size}
+
+
+@router.patch("/references/{reference_id}", response_model=MarketReferenceResponse)
+async def update_reference(
+    reference_id: uuid.UUID,
+    data: MarketReferenceUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> MarketReference:
+    r = (await db.execute(
+        select(MarketReference).where(MarketReference.id == reference_id)
+    )).scalar_one_or_none()
+    if r is None:
+        raise HTTPException(status_code=404, detail="Referenz nicht gefunden")
+    if data.status is not None:
+        r.status = data.status
+    await db.commit()
+    await db.refresh(r)
+    return r
+
+
+@router.post("/references/to-pipeline", response_model=ReferencesToPipelineResponse)
+async def push_references(
+    data: ReferencesToPipelineRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Ausgewählte Referenzkunden als Leads anlegen.
+
+    Mehrere auf einmal, weil das der Arbeitsablauf ist: Man sichtet eine Kundenliste
+    und nimmt daraus zwanzig mit. Jede Firma läuft im eigenen SAVEPOINT — eine
+    Kollision am Unique-Index stoppt die anderen nicht (Muster des Batch-Merge).
+
+    Ein bereits vorhandener Lead wird **verknüpft und ergänzt**, nie dupliziert; ohne
+    `force` erscheint er im Bericht als `verknuepft`.
+    """
+    if not data.ids:
+        raise HTTPException(status_code=422, detail="Keine Auswahl übergeben")
+    if len(data.ids) > 200:
+        raise HTTPException(status_code=422, detail="Höchstens 200 auf einmal")
+
+    referenzen = list((await db.execute(
+        select(MarketReference).where(MarketReference.id.in_(data.ids)))).scalars())
+    if not referenzen:
+        raise HTTPException(status_code=404, detail="Keine der Firmen gefunden")
+    produkte = {p.id: p for p in (await db.execute(
+        select(MarketProduct).where(
+            MarketProduct.id.in_({r.product_id for r in referenzen})))).scalars()}
+    bausteine = list((await db.execute(select(MarketBaustein))).scalars())
+
+    angelegt, verknuepft, fehler = [], [], []
+    for r in referenzen:
+        p = produkte.get(r.product_id)
+        if p is None:
+            fehler.append({"company": r.company, "reason": "Hersteller nicht gefunden"})
+            continue
+        try:
+            async with db.begin_nested():
+                lead, neu, grund = await reference_to_pipeline(
+                    db, r, p, bausteine, force=data.force)
+            eintrag = {"company": r.company, "lead_id": str(lead.id)}
+            (angelegt if neu else verknuepft).append(eintrag)
+        except Exception as exc:                    # eine Firma darf den Rest nicht kippen
+            fehler.append({"company": r.company, "reason": type(exc).__name__})
+    await db.commit()
+    return {"created": angelegt, "linked": verknuepft, "failed": fehler}
