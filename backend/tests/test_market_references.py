@@ -57,6 +57,19 @@ class TestNamen:
     def test_saetze_sind_keine_namen(self):
         assert saeubere_namen("Wir digitalisieren Ihre Prozesse von Anfang bis Ende.") is None
 
+    def test_gepunktete_rechtsformen_zaehlen_mit(self):
+        """Ein `\\b` hinter einem Punkt kann nicht greifen.
+
+        Nach dem Punkt in „S.A." steht kein Wortzeichen, also gibt es dort keine
+        Wortgrenze — das Muster lief nie an. Folge: Textlisten verloren diese Firmen,
+        und in `market_contacts` wäre „Vertreten durch: Muster S.A." als
+        Geschäftsführer durchgegangen. Beim Testen der Bewertung aufgefallen.
+        """
+        from app.services.market_references import ist_firmenname
+        for name in ["Air Liquide S.A.", "Meier e. K.", "Turnverein e. V.",
+                     "Philips B.V.", "Muster GmbH"]:
+            assert ist_firmenname(name, streng=True) is True, name
+
     def test_zu_kurz_und_ohne_buchstaben(self):
         assert saeubere_namen("AB") is None
         assert saeubere_namen("12345") is None

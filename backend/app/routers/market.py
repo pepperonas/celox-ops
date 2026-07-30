@@ -8,7 +8,8 @@ GET    /api/market/categories            → Kategorie-Rollup inkl. Risiken
 GET    /api/market/bausteine             → Lösungsbausteine mit Reichweite
 GET    /api/market/facets                → Auswahlwerte für die Filter
 PATCH  /api/market/products/{id}         → eigener Bearbeitungsstand (Status, Notiz)
-GET    /api/market/references             → Referenzkunden (die eigentlichen Leads)
+GET    /api/market/references             → Referenzkunden, bewertet + sortiert (HAUPTSICHT)
+GET    /api/market/references/stats       → Kennzahlen der Kundensicht
 PATCH  /api/market/references/{id}        → Bearbeitungsstand (verwerfen/zurückholen)
 POST   /api/market/references/to-pipeline → ausgewählte Firmen als Leads anlegen
 POST   /api/market/products/{id}/to-pipeline → Hersteller als Rainmaker-Lead übernehmen
@@ -27,7 +28,7 @@ Diagramm und Liste auseinander.
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -38,6 +39,7 @@ from app.models.market_product import MarketProduct, MarketStatus
 from app.schemas.market import (
     MarketReferenceListe,
     MarketReferenceResponse,
+    MarketReferenceStats,
     MarketReferenceUpdate,
     ReferencesToPipelineRequest,
     ReferencesToPipelineResponse,
@@ -52,7 +54,8 @@ from app.schemas.market import (
 )
 from app.services import market_catalog as agg
 from app.services.market_pipeline import to_pipeline
-from app.services.market_reference_pipeline import reference_to_pipeline
+from app.services.market_reference_pipeline import bausteine_fuer, reference_to_pipeline
+from app.services.market_reference_scoring import SORTIERUNGEN, bewerte, orgtyp, sortiere
 
 router = APIRouter(
     prefix="/api/market",
@@ -281,65 +284,156 @@ async def push_to_pipeline(
 # Der eigentliche Lead-Weg: nicht der Hersteller, sondern wer seine Software einsetzt.
 
 
+@router.get("/references/stats", response_model=MarketReferenceStats)
+async def reference_stats(db: AsyncSession = Depends(get_db)) -> dict:
+    """Kennzahlen der Kundensicht — das, was den Marktradar jetzt beschreibt.
+
+    Bewusst NICHT die Hersteller-Kennzahlen: Ziel sind die Anwender, der Katalog ist
+    das Mittel. Die Herstellerzahlen bleiben unter `/stats` erreichbar.
+    """
+    zeilen = list((await db.execute(select(MarketReference))).scalars())
+    systeme = _systeme_je_firma(zeilen)
+    produkte = await _produkt_map(db, {r.product_id for r in zeilen})
+    bausteine = list((await db.execute(select(MarketBaustein))).scalars())
+    mit_baustein_ids = {
+        p.id for p in produkte.values() if bausteine_fuer(p.catalog_id, bausteine)
+    }
+
+    typen: dict[str, int] = {}
+    mit_baustein = 0
+    for r in zeilen:
+        typen[orgtyp(r.company)] = typen.get(orgtyp(r.company), 0) + 1
+        if r.product_id in mit_baustein_ids:
+            mit_baustein += 1
+
+    top = sorted(
+        ({"label": p.hersteller, "value": n} for p, n in
+         _je_hersteller(zeilen, produkte).items()),
+        key=lambda x: -x["value"])[:8]
+
+    return {
+        "firmen": len(zeilen),
+        "firmen_distinkt": len(systeme),
+        "mehrfachnutzer": sum(1 for n in systeme.values() if n > 1),
+        "mit_baustein": mit_baustein,
+        "mit_website": sum(1 for r in zeilen if r.website),
+        "offen": sum(1 for r in zeilen if r.status == "neu"),
+        "in_pipeline": sum(1 for r in zeilen if r.status == "in_pipeline"),
+        "verworfen": sum(1 for r in zeilen if r.status == "verworfen"),
+        "verzeichnisse": len({r.product_id for r in zeilen}),
+        "orgtypen": [{"label": k, "value": v} for k, v in
+                     sorted(typen.items(), key=lambda x: -x[1])],
+        "top_hersteller": top,
+    }
+
+
+def _systeme_je_firma(zeilen: list[MarketReference]) -> dict[str, int]:
+    """Wie viele verschiedene Hersteller-Systeme nutzt jede Firma?
+
+    Das stärkste Pro-Kunde-Signal im ganzen Datensatz — und nur als Aggregat über den
+    GESAMTEN Bestand berechenbar, nicht über die gefilterte Seite: Wer nach einem
+    Hersteller filtert, würde sonst bei jeder Firma „1 System" sehen.
+    """
+    aus: dict[str, set] = {}
+    for r in zeilen:
+        aus.setdefault(r.company_norm, set()).add(r.product_id)
+    return {k: len(v) for k, v in aus.items()}
+
+
+async def _produkt_map(db: AsyncSession, ids: set) -> dict:
+    if not ids:
+        return {}
+    return {p.id: p for p in (await db.execute(
+        select(MarketProduct).where(MarketProduct.id.in_(ids)))).scalars()}
+
+
+def _je_hersteller(zeilen: list[MarketReference], produkte: dict) -> dict:
+    aus: dict = {}
+    for r in zeilen:
+        p = produkte.get(r.product_id)
+        if p is not None:
+            aus[p] = aus.get(p, 0) + 1
+    return aus
+
+
 @router.get("/references", response_model=MarketReferenceListe)
 async def list_references(
     product_id: uuid.UUID | None = None,
     status: str | None = None,
     q: str | None = None,
     mit_website: bool | None = None,
+    nur_mehrfach: bool = False,
+    orgtyp_filter: str | None = Query(None, alias="orgtyp"),
+    sort: str = Query("score"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Referenzkunden, gefiltert und paginiert.
+    """Referenzkunden, bewertet und sortiert — die Hauptsicht des Marktradars.
 
-    Paginiert, weil hier tausende Zeilen liegen (3.712 nach dem ersten Lauf) — anders
-    als beim Katalog mit seinen 142, wo alles in den Speicher passt.
+    **Der Score entsteht in Python, nicht in SQL** (`market_reference_scoring`): Er
+    hängt an einem Aggregat über den gesamten Bestand (Systemzahl je Firma) und ist
+    keine Spalte. Deshalb wird die gefilterte Menge vollständig geladen, bewertet,
+    sortiert und erst dann paginiert — dieselbe Entscheidung wie bei den
+    Katalog-Aggregaten und aus demselben Grund (Abweichungen zwischen Liste und
+    Kennzahl entstehen genau dort, wo beides getrennt gerechnet wird).
     """
-    bedingungen = []
+    if sort not in SORTIERUNGEN:
+        raise HTTPException(status_code=422, detail=f"sort muss aus {SORTIERUNGEN} sein")
+
+    # Systemzahl IMMER über den gesamten Bestand (s. _systeme_je_firma).
+    alle = list((await db.execute(select(MarketReference))).scalars())
+    systeme = _systeme_je_firma(alle)
+
+    zeilen = alle
     if product_id:
-        bedingungen.append(MarketReference.product_id == product_id)
+        zeilen = [r for r in zeilen if r.product_id == product_id]
     if status:
-        bedingungen.append(MarketReference.status == status)
+        zeilen = [r for r in zeilen if r.status == status]
     if mit_website is True:
-        bedingungen.append(MarketReference.website.isnot(None))
+        zeilen = [r for r in zeilen if r.website]
     elif mit_website is False:
-        bedingungen.append(MarketReference.website.is_(None))
+        zeilen = [r for r in zeilen if not r.website]
+    if nur_mehrfach:
+        zeilen = [r for r in zeilen if systeme.get(r.company_norm, 1) > 1]
     if q:
-        bedingungen.append(MarketReference.company.ilike(f"%{q.strip()}%"))
+        nadel = q.strip().lower()
+        zeilen = [r for r in zeilen if nadel in r.company.lower()]
+    if orgtyp_filter:
+        zeilen = [r for r in zeilen if orgtyp(r.company) == orgtyp_filter]
 
-    basis = select(MarketReference)
-    for b in bedingungen:
-        basis = basis.where(b)
-    gesamt = (await db.execute(
-        select(func.count()).select_from(basis.subquery())
-    )).scalar() or 0
-    zeilen = list((await db.execute(
-        basis.order_by(MarketReference.company)
-        .offset((page - 1) * page_size).limit(page_size)
-    )).scalars())
+    produkte = await _produkt_map(db, {r.product_id for r in zeilen})
+    bausteine = list((await db.execute(select(MarketBaustein))).scalars())
 
-    # Herstellernamen gebündelt nachladen (kein N+1).
-    ids = {r.product_id for r in zeilen}
-    produkte = {}
-    if ids:
-        produkte = {p.id: p for p in (await db.execute(
-            select(MarketProduct).where(MarketProduct.id.in_(ids)))).scalars()}
-    items = []
+    bewertet = []
     for r in zeilen:
         p = produkte.get(r.product_id)
-        items.append({
+        passend = bausteine_fuer(p.catalog_id, bausteine) if p else []
+        b = bewerte(
+            company=r.company,
+            systeme=systeme.get(r.company_norm, 1),
+            hat_baustein=bool(passend),
+            produkt_score=p.score if p else 0,
+            hat_website=bool(r.website),
+        )
+        bewertet.append({
             "id": r.id, "company": r.company, "website": r.website,
             "source_url": r.source_url, "form": r.form, "status": r.status,
-            "rainmaker_lead_id": r.rainmaker_lead_id,
-            "product_id": r.product_id,
+            "rainmaker_lead_id": r.rainmaker_lead_id, "product_id": r.product_id,
             "produkt": p.produkt if p else None,
             "hersteller": p.hersteller if p else None,
             "kategorie": p.kategorie if p else None,
-            "score": p.score if p else None,
+            "score": b["score"], "score_teile": b["score_teile"],
+            "orgtyp": b["orgtyp"], "systeme": b["systeme"],
+            "baustein_nr": passend[0].nr if passend else None,
+            "baustein_titel": passend[0].titel if passend else None,
         })
-    return {"items": items, "total": gesamt, "page": page, "page_size": page_size,
-            "pages": (gesamt + page_size - 1) // page_size}
+
+    bewertet = sortiere(bewertet, sort)
+    gesamt = len(bewertet)
+    start = (page - 1) * page_size
+    return {"items": bewertet[start:start + page_size], "total": gesamt, "page": page,
+            "page_size": page_size, "pages": max(1, (gesamt + page_size - 1) // page_size)}
 
 
 @router.patch("/references/{reference_id}", response_model=MarketReferenceResponse)

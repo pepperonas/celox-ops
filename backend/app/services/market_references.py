@@ -72,10 +72,16 @@ def robots_erlaubt(robots_txt: str | None, pfad: str) -> bool:
 
 # ------------------------------------------------------- Firmenname-Erkennung
 
+# **Kein `\b` hinter einem Punkt.** Eine Wortgrenze braucht ein Wortzeichen daneben;
+# nach dem Punkt in „S.A.", „e. K." oder „e. V." steht keines — das Muster griff dort
+# nie. Aufgefallen beim Testen der Bewertung, mit Folgen auch hier: Textlisten
+# verloren solche Firmen, und „Vertreten durch: Muster S.A." wäre als Geschäftsführer
+# durchgegangen (`market_contacts._GF_VERBOTEN` benutzt dieses Muster mit).
+# Deshalb Wortformen und gepunktete Formen getrennt.
 _RECHTSFORM = re.compile(
-    r"\b(?:GmbH|gGmbH|AG|KGaA|KG|OHG|GbR|mbH|SE|UG|Ltd|Inc|LLC|BV|B\.V\.|"
-    r"N\.V\.|S\.A\.|S\.p\.A\.|AB|A/S|Oy|Sp\.\s?z\s?o\.o\.|"
-    r"e\.\s?V\.|e\.\s?K\.|e\.\s?G\.|eG)\b",
+    r"\b(?:GmbH|gGmbH|AG|KGaA|KG|OHG|GbR|mbH|SE|UG|Ltd|Inc|LLC|BV|AB|A/S|Oy|eG)\b"
+    r"|B\.\s?V\.|N\.\s?V\.|S\.\s?A\.|S\.p\.A\.|Sp\.\s?z\s?o\.o\."
+    r"|e\.\s?V\.|e\.\s?K\.|e\.\s?G\.",
 )
 _OEFFENTLICH = re.compile(
     r"^(?:Stadt|Stadtwerke|Gemeinde|Samtgemeinde|Verbandsgemeinde|Landkreis|Kreis|"

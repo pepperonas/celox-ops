@@ -12,13 +12,37 @@ import Icon from '../../components/Icon'
 import Select from '../../components/Select'
 import {
   getMarketReferences,
+  getMarketReferenceStats,
   referencesToPipeline,
   updateMarketReference,
   type MarketReference,
+  type MarketReferenceStats,
 } from '../../api/market'
 import RadarShell from './RadarShell'
 
 const PAGE_SIZE = 100
+
+/** Was der Score bedeutet — im Kopf der Liste erklärt, nicht versteckt. */
+const TEIL_LABEL: Record<string, string> = {
+  mehrfachnutzung: 'nutzt mehrere Systeme',
+  baustein: 'Baustein passt',
+  umfeld: 'Umfeld (Produkt-Score)',
+  ansprechbar: 'Website bekannt',
+}
+
+const ORG_LABEL: Record<string, string> = {
+  oeffentlich: 'öffentlich',
+  konzern: 'Konzern',
+  mittelstand: 'Mittelstand',
+  unbekannt: 'Typ offen',
+}
+
+const ORG_KLASSE: Record<string, string> = {
+  oeffentlich: 'bg-accent/10 text-accent',
+  konzern: 'bg-purple/10 text-purple',
+  mittelstand: 'bg-surface-container text-text-muted',
+  unbekannt: 'bg-surface-container text-text-muted',
+}
 
 export default function References() {
   const [items, setItems] = useState<MarketReference[]>([])
@@ -27,6 +51,10 @@ export default function References() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('neu')
   const [webFilter, setWebFilter] = useState('alle')
+  const [sort, setSort] = useState('score')
+  const [nurMehrfach, setNurMehrfach] = useState(false)
+  const [orgFilter, setOrgFilter] = useState('alle')
+  const [stats, setStats] = useState<MarketReferenceStats | null>(null)
   const [gewaehlt, setGewaehlt] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [laedt, setLaedt] = useState(true)
@@ -40,6 +68,9 @@ export default function References() {
         q: q.trim() || undefined,
         status: status === 'alle' ? undefined : status,
         mit_website: webFilter === 'alle' ? undefined : webFilter === 'ja',
+        nur_mehrfach: nurMehrfach || undefined,
+        orgtyp: orgFilter === 'alle' ? undefined : orgFilter,
+        sort,
       })
       setItems(r.items)
       setTotal(r.total)
@@ -47,12 +78,15 @@ export default function References() {
       toast.error('Referenzkunden konnten nicht geladen werden.')
     }
     setLaedt(false)
-  }, [page, q, status, webFilter])
+  }, [page, q, status, webFilter, nurMehrfach, orgFilter, sort])
 
   useEffect(() => { void laden() }, [laden])
+  useEffect(() => { getMarketReferenceStats().then(setStats).catch(() => undefined) }, [])
   // Auswahl beim Filterwechsel leeren: Sie bezieht sich auf Zeilen, die nicht mehr
   // sichtbar sind — ein Übernehmen würde sonst Unerwartetes anlegen.
-  useEffect(() => { setGewaehlt(new Set()) }, [page, q, status, webFilter])
+  useEffect(() => {
+    setGewaehlt(new Set())
+  }, [page, q, status, webFilter, nurMehrfach, orgFilter, sort])
 
   const alleSichtbarGewaehlt = items.length > 0 && items.every((i) => gewaehlt.has(i.id))
 
@@ -110,6 +144,43 @@ export default function References() {
         </p>
       </div>
 
+      {/* Kennzahlen der Kundensicht. Die Mehrfachnutzer stehen bewusst vorn und sind
+          anklickbar: Es ist das einzige echte Pro-Kunde-Signal im Datensatz. */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <div className="border border-border rounded-card p-3">
+            <p className="md-title-emph text-text">{stats.firmen.toLocaleString('de-DE')}</p>
+            <p className="text-[11px] text-text-muted">Firmen geerntet</p>
+            <p className="text-[10px] text-text-muted">aus {stats.verzeichnisse} Verzeichnissen</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setNurMehrfach((v) => !v); setPage(1) }}
+            className={`border rounded-card p-3 text-left md-state ${
+              nurMehrfach ? 'border-accent bg-accent/5' : 'border-border'
+            }`}
+          >
+            <p className="md-title-emph text-accent">{stats.mehrfachnutzer}</p>
+            <p className="text-[11px] text-text-muted">nutzen mehrere Systeme</p>
+            <p className="text-[10px] text-text-muted">
+              {nurMehrfach ? 'Filter aktiv — klicken zum Lösen' : 'stärkstes Signal · filtern'}
+            </p>
+          </button>
+          <div className="border border-border rounded-card p-3">
+            <p className="md-title-emph text-text">
+              {stats.mit_baustein.toLocaleString('de-DE')}
+            </p>
+            <p className="text-[11px] text-text-muted">mit passendem Baustein</p>
+            <p className="text-[10px] text-text-muted">Aufsatzlösung liegt bereit</p>
+          </div>
+          <div className="border border-border rounded-card p-3">
+            <p className="md-title-emph text-text">{stats.in_pipeline}</p>
+            <p className="text-[11px] text-text-muted">als Lead übernommen</p>
+            <p className="text-[10px] text-text-muted">{stats.offen.toLocaleString('de-DE')} offen</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end gap-2 mb-3">
         <div className="min-w-[200px] flex-1">
           <label htmlFor="ref-suche" className="block text-[11px] text-text-muted mb-1">
@@ -156,6 +227,40 @@ export default function References() {
             ]}
           />
         </div>
+        <div className="w-44">
+          <label htmlFor="ref-sort" className="block text-[11px] text-text-muted mb-1">
+            Reihenfolge
+          </label>
+          <Select
+            id="ref-sort"
+            name="sort"
+            value={sort}
+            onChange={(e) => { setSort(e.target.value); setPage(1) }}
+            options={[
+              { value: 'score', label: 'Score (lohnendste)' },
+              { value: 'systeme', label: 'Anzahl Systeme' },
+              { value: 'company', label: 'Name' },
+            ]}
+          />
+        </div>
+        <div className="w-40">
+          <label htmlFor="ref-org" className="block text-[11px] text-text-muted mb-1">
+            Typ
+          </label>
+          <Select
+            id="ref-org"
+            name="orgtyp"
+            value={orgFilter}
+            onChange={(e) => { setOrgFilter(e.target.value); setPage(1) }}
+            options={[
+              { value: 'alle', label: 'alle' },
+              { value: 'oeffentlich', label: 'öffentlich' },
+              { value: 'konzern', label: 'Konzern' },
+              { value: 'mittelstand', label: 'Mittelstand' },
+              { value: 'unbekannt', label: 'Typ offen' },
+            ]}
+          />
+        </div>
         <button
           type="button"
           className="btn-primary text-sm"
@@ -183,6 +288,9 @@ export default function References() {
                   className="w-4 h-4"
                 />
               </th>
+              <th className="p-2 w-16" title="Aus Mehrfachnutzung, passendem Baustein, Umfeld und Ansprechbarkeit — Zusammensetzung je Zeile im Tooltip">
+                Score
+              </th>
               <th className="p-2">Firma</th>
               <th className="p-2">nutzt</th>
               <th className="p-2 w-24">Stand</th>
@@ -191,10 +299,10 @@ export default function References() {
           </thead>
           <tbody>
             {laedt && (
-              <tr><td colSpan={5} className="p-6 text-center text-text-muted">lädt…</td></tr>
+              <tr><td colSpan={6} className="p-6 text-center text-text-muted">lädt…</td></tr>
             )}
             {!laedt && items.length === 0 && (
-              <tr><td colSpan={5} className="p-6 text-center text-text-muted">
+              <tr><td colSpan={6} className="p-6 text-center text-text-muted">
                 Keine Firmen für diesen Filter.
               </td></tr>
             )}
@@ -210,7 +318,34 @@ export default function References() {
                   />
                 </td>
                 <td className="p-2">
+                  {/* Der Score mit seiner Zerlegung im Titel: Wer die Reihenfolge
+                      anzweifelt, muss sehen können, woraus sie entsteht. */}
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    title={Object.entries(r.score_teile)
+                      .filter(([, v]) => v > 0)
+                      .map(([k, v]) => `${TEIL_LABEL[k] ?? k}: +${v}`)
+                      .join('\n') || 'keine Signale'}
+                  >
+                    <span className="text-text font-semibold tabular-nums">{r.score}</span>
+                    <span className="w-8 h-1.5 rounded-full bg-surface-container overflow-hidden">
+                      <span className="block h-full bg-accent" style={{ width: `${r.score}%` }} />
+                    </span>
+                  </span>
+                </td>
+                <td className="p-2">
                   <span className="text-text">{r.company}</span>
+                  {r.systeme > 1 && (
+                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium"
+                          title="Diese Firma steht im Referenzverzeichnis mehrerer Hersteller">
+                      {r.systeme} Systeme
+                    </span>
+                  )}
+                  <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${
+                    ORG_KLASSE[r.orgtyp] ?? ORG_KLASSE.unbekannt
+                  }`}>
+                    {ORG_LABEL[r.orgtyp] ?? r.orgtyp}
+                  </span>
                   {r.website && (
                     <a
                       href={r.website}
@@ -225,6 +360,12 @@ export default function References() {
                 <td className="p-2 text-text-muted">
                   {r.produkt}
                   {r.hersteller && <span className="text-[11px]"> · {r.hersteller}</span>}
+                  {r.baustein_titel && (
+                    <span className="block text-[11px] text-accent/90"
+                          title="Aufsatzlösung, die auf diese Software passt">
+                      → Baustein {r.baustein_nr}: {r.baustein_titel}
+                    </span>
+                  )}
                 </td>
                 <td className="p-2">
                   {r.status === 'in_pipeline' ? (

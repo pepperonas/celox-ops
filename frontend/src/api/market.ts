@@ -220,7 +220,28 @@ export interface MarketReference {
   produkt: string | null
   hersteller: string | null
   kategorie: string | null
-  score: number | null
+  /* Bewertung. `score_teile` kommt bewusst mit: Eine Reihenfolge, deren
+     Zustandekommen man nicht sehen kann, ist im Vertrieb wertlos. */
+  score: number
+  score_teile: Record<string, number>
+  orgtyp: string
+  systeme: number
+  baustein_nr: number | null
+  baustein_titel: string | null
+}
+
+export interface MarketReferenceStats {
+  firmen: number
+  firmen_distinkt: number
+  mehrfachnutzer: number
+  mit_baustein: number
+  mit_website: number
+  offen: number
+  in_pipeline: number
+  verworfen: number
+  verzeichnisse: number
+  orgtypen: { label: string; value: number }[]
+  top_hersteller: { label: string; value: number }[]
 }
 
 export interface MarketReferenceListe {
@@ -242,9 +263,15 @@ export const getMarketReferences = (params: {
   status?: string
   q?: string
   mit_website?: boolean
+  nur_mehrfach?: boolean
+  orgtyp?: string
+  sort?: string
   page?: number
   page_size?: number
 }) => api.get<MarketReferenceListe>('/market/references', { params }).then((r) => r.data)
+
+export const getMarketReferenceStats = () =>
+  api.get<MarketReferenceStats>('/market/references/stats').then((r) => r.data)
 
 export const updateMarketReference = (id: string, data: { status?: string }) =>
   api.patch<MarketReference>(`/market/references/${id}`, data).then((r) => r.data)

@@ -187,12 +187,39 @@ class MarketReferenceResponse(BaseModel):
 
 
 class MarketReferenceItem(MarketReferenceResponse):
-    """Mit den Herstellerangaben, die die Liste ohne Nachladen lesbar machen."""
+    """Mit Herstellerangaben und Bewertung — beides, damit die Liste ohne Nachladen
+    lesbar UND sortierbar ist.
+
+    `score_teile` geht bewusst mit an die Oberfläche: Eine Reihenfolge, deren Zustande-
+    kommen man nicht sehen kann, ist im Vertrieb wertlos — man muss ihr widersprechen
+    können (s. `services/market_reference_scoring.py`).
+    """
 
     produkt: str | None = None
     hersteller: str | None = None
     kategorie: str | None = None
-    score: int | None = None
+    score: int = 0
+    score_teile: dict[str, int] = {}
+    orgtyp: str = "unbekannt"
+    systeme: int = 1
+    baustein_nr: int | None = None
+    baustein_titel: str | None = None
+
+
+class MarketReferenceStats(BaseModel):
+    """Kennzahlen der Kundensicht (nicht der Hersteller — die stehen in MarketStats)."""
+
+    firmen: int
+    firmen_distinkt: int
+    mehrfachnutzer: int
+    mit_baustein: int
+    mit_website: int
+    offen: int
+    in_pipeline: int
+    verworfen: int
+    verzeichnisse: int
+    orgtypen: list[dict] = []
+    top_hersteller: list[dict] = []
 
 
 class MarketReferenceListe(BaseModel):

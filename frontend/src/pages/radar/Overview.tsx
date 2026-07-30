@@ -10,6 +10,8 @@ import {
 import ProductCard from './ProductCard'
 import ProductDialog from './ProductDialog'
 import RadarShell from './RadarShell'
+import { Link } from 'react-router-dom'
+import { getMarketReferenceStats, type MarketReferenceStats } from '../../api/market'
 import { Hist, OpportunityMap, RankBar } from './RadarCharts'
 import { useRadarFilters } from './useRadarFilters'
 
@@ -38,6 +40,8 @@ function Panel({ title, sub, children, wide }: { title: string; sub?: string; ch
 export default function RadarOverview() {
   const { query, patch } = useRadarFilters()
   const [stats, setStats] = useState<MarketStats | null>(null)
+  // Kundensicht: Der Marktradar bewertet jetzt die Anwender, nicht die Hersteller.
+  const [kunden, setKunden] = useState<MarketReferenceStats | null>(null)
   const [products, setProducts] = useState<MarketProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState<MarketProduct | null>(null)
@@ -57,6 +61,9 @@ export default function RadarOverview() {
   }, [key])
 
   useEffect(() => { load() }, [load])
+  // Kundenkennzahlen einmal laden — sie hängen nicht am Katalogfilter, weil die
+  // Systemzahl je Firma ein Aggregat über den GESAMTEN Bestand ist.
+  useEffect(() => { getMarketReferenceStats().then(setKunden).catch(() => undefined) }, [])
 
   const onChanged = (next: MarketProduct) =>
     setProducts((prev) => prev.map((x) => (x.id === next.id ? next : x)))
@@ -72,23 +79,58 @@ export default function RadarOverview() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Kpi wide value={stats.referenzen.toLocaleString('de-DE')} label="erreichbare Referenzfirmen"
-                 hint={`über ${stats.produkte} Produkte · ${stats.verzeichnisse} mit öffentlichem Verzeichnis`} />
-            <Kpi value={stats.prio_a} label="Priorität A" hint={`${Math.round((stats.prio_a / stats.produkte) * 100)} % der Treffer`} />
-            <Kpi value={stats.hersteller} label="Hersteller" />
-            <Kpi value={stats.marketplace} label="mit Marktplatz" hint="skaliert ohne Direktvertrieb" />
-            <Kpi value={stats.regulatorik} label="mit Regulatorik" hint="terminierter Anlass" />
-            <Kpi value={stats.avg_lead} label="Ø Lead-Score" />
-            <Kpi value={stats.avg_business} label="Ø Business-Score" />
-            <Kpi value={stats.in_pipeline} label="in der Pipeline" hint={`${stats.offen} noch offen`} />
-            <Kpi value={stats.integration_leicht} label="Integration leicht" hint="schneller erster Proof" />
+          {/* KUNDENSICHT ZUERST. Ziel sind die Anwender der Software, nicht ihre
+              Hersteller — der Katalog ist das Mittel. Vorher stand hier „Priorität A",
+              „Ø Lead-Score" und „mit Marktplatz": Kennzahlen über das Mittel. */}
+          {kunden && (
+            <div>
+              <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
+                <h3 className="text-sm font-medium text-text">Kunden der Hersteller</h3>
+                <Link to="/radar/kunden" className="text-xs text-accent">
+                  alle {kunden.firmen.toLocaleString('de-DE')} ansehen →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <Kpi wide value={kunden.firmen.toLocaleString('de-DE')}
+                     label="Firmen als Lead-Kandidat"
+                     hint={`aus ${kunden.verzeichnisse} Referenzverzeichnissen · ${kunden.firmen_distinkt.toLocaleString('de-DE')} verschiedene`} />
+                <Kpi value={kunden.mehrfachnutzer} label="nutzen mehrere Systeme"
+                     hint="stärkstes Signal — zwei Gesprächseinstiege" />
+                <Kpi value={kunden.mit_baustein.toLocaleString('de-DE')} label="mit passendem Baustein"
+                     hint="Aufsatzlösung liegt bereit" />
+                <Kpi value={kunden.in_pipeline} label="als Lead übernommen"
+                     hint={`${kunden.offen.toLocaleString('de-DE')} offen`} />
+                <Kpi value={kunden.mit_website} label="mit bekannter Website"
+                     hint="Rest braucht Handrecherche" />
+              </div>
+            </div>
+          )}
+
+          {/* Herstellersicht als zweiter Block: das Umfeld, in dem verkauft wird. */}
+          <div>
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="text-sm font-medium text-text">Umfeld: die Hersteller</h3>
+              <span className="text-xs text-text-muted">
+                Kennzahlen des Katalogs — das Mittel, nicht das Ziel
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Kpi value={stats.produkte} label="Produkte" hint={`${stats.hersteller} Hersteller`} />
+              <Kpi value={stats.referenzen.toLocaleString('de-DE')} label="Referenzen laut Katalog"
+                   hint="Schätzung der Verzeichnisse" />
+              <Kpi value={stats.prio_a} label="Priorität A" hint={`${Math.round((stats.prio_a / stats.produkte) * 100)} % der Treffer`} />
+              <Kpi value={stats.marketplace} label="mit Marktplatz" hint="skaliert ohne Direktvertrieb" />
+              <Kpi value={stats.regulatorik} label="mit Regulatorik" hint="terminierter Anlass" />
+              <Kpi value={stats.integration_leicht} label="Integration leicht" hint="schneller erster Proof" />
+            </div>
           </div>
 
           <div>
             <div className="flex items-baseline gap-3 mb-3">
-              <h3 className="text-sm font-medium text-text">Zuerst ansehen</h3>
-              <span className="text-xs text-text-muted">höchster Opportunity Score im aktuellen Filter</span>
+              <h3 className="text-sm font-medium text-text">Beste Einstiege</h3>
+              <span className="text-xs text-text-muted">
+                Software mit dem höchsten Opportunity Score — hier lohnt der Blick in die Kundenliste
+              </span>
             </div>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
               {products.slice(0, 3).map((p, i) => (
