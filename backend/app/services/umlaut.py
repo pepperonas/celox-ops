@@ -47,40 +47,54 @@ AUSNAHMEN_ANFANG = (
     "praesidium",   # Eigenname-Schreibweise im Bestand belassen
 )
 
-# Zusammensetzungen, in denen die Folge über eine Wortgrenze läuft und die Regel
-# sonst zuschlagen würde. Ganzes Wort, kleingeschrieben.
-AUSNAHMEN_GANZ = {
-    "lead-quelle", "leadquelle", "co-autor",
-}
+# Ganze Wörter, bei denen die Folge über eine Wortgrenze läuft und keine
+# Positionsregel greift.
+AUSNAHMEN_GANZ = {"lead-quelle", "leadquelle", "co-autor"}
 
-_UMLAUT = (("Ae", "Ä"), ("Oe", "Ö"), ("Ue", "Ü"), ("ae", "ä"), ("oe", "ö"), ("ue", "ü"))
+_UMLAUT = {"ae": "ä", "oe": "ö", "ue": "ü", "Ae": "Ä", "Oe": "Ö", "Ue": "Ü"}
 # Wort = Buchstaben, Ziffern, Binde- und Schrägstriche, Punkte im Wortinneren.
 _WORT = re.compile(r"[0-9A-Za-zÄÖÜäöüß][0-9A-Za-zÄÖÜäöüß.\-/]*")
+_PAAR = re.compile(r"[AaOoUu]e")
 
 
-def ist_ausnahme(wort: str) -> bool:
-    """Trägt das Wort `ae/oe/ue` zu Recht? Rein."""
-    klein = wort.lower().strip(".,;:!?")
-    if klein in AUSNAHMEN_GANZ:
-        return True
-    # Teile einer Zusammensetzung getrennt prüfen: „Lead-Quelle" → „lead", „quelle".
-    teile = [t for t in re.split(r"[-/.]", klein) if t]
-    return any(
-        t.startswith(a) or a.startswith(t) and len(t) >= 4
-        for t in teile for a in AUSNAHMEN_ANFANG
-    ) or any(klein.startswith(a) for a in AUSNAHMEN_ANFANG)
+def _geschuetzte_stellen(wort: str) -> set[int]:
+    """Zeichenpositionen, die zu einem Ausnahme-Wortstamm gehören. Rein.
+
+    **Positionsgenau, nicht wortweise — und das ist der Kern.** Die erste Fassung
+    übersprang das GANZE Wort, sobald ein Ausnahmestamm passte. In einer
+    Zusammensetzung kann aber ein `ue` zu Recht stehen und ein `ae` später falsch
+    sein: `Betreuungskraefte` (→ Betreuungskräfte) und
+    `Aktualisierungsvorschlaege` (→ Aktualisierungsvorschläge) blieben dadurch
+    unkorrigiert. Beim Durchsehen der 623 echten Katalogwörter aufgefallen.
+    """
+    klein = wort.lower()
+    stellen: set[int] = set()
+    for stamm in AUSNAHMEN_ANFANG:
+        start = klein.find(stamm)
+        while start != -1:
+            stellen.update(range(start, start + len(stamm)))
+            start = klein.find(stamm, start + 1)
+    return stellen
 
 
 def wort_zurueck(wort: str) -> str:
-    """Ein Wort zurückverwandeln — oder unverändert lassen. Rein."""
-    if not re.search(r"[AaOoUu]e", wort):
+    """Ein Wort zurückverwandeln — Folge für Folge, Ausnahmen positionsgenau. Rein."""
+    if not _PAAR.search(wort):
         return wort
-    if ist_ausnahme(wort):
+    if wort.lower().strip(".,;:!?") in AUSNAHMEN_GANZ:
         return wort
-    out = wort
-    for von, nach in _UMLAUT:
-        out = out.replace(von, nach)
-    return out
+    geschuetzt = _geschuetzte_stellen(wort)
+    aus: list[str] = []
+    i = 0
+    while i < len(wort):
+        paar = wort[i:i + 2]
+        if paar in _UMLAUT and i not in geschuetzt and i + 1 not in geschuetzt:
+            aus.append(_UMLAUT[paar])
+            i += 2
+        else:
+            aus.append(wort[i])
+            i += 1
+    return "".join(aus)
 
 
 def entschluessele(text: str | None) -> str | None:
