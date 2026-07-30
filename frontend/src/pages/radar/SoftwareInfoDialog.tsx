@@ -51,6 +51,9 @@ const AUFWAND_LABEL: Record<string, string> = {
   schwer: 'schwer — Zugang ist der Engpass, nicht die Idee',
 }
 
+/** Ein Abschnitt. Die Nummer kommt von außen und wird über die TATSÄCHLICH
+ *  gerenderten Abschnitte gezählt — feste Nummern sprangen (bei Projektron BCS von
+ *  4 auf 6, weil „Worauf achten" dort nichts zu sagen hat). Im Browser gesehen. */
 function Abschnitt({ nr, titel, children }: {
   nr: number
   titel: string
@@ -90,6 +93,141 @@ export default function SoftwareInfoDialog({ info, bausteine, onClose }: Props) 
     ? bausteine.filter((b) => (b.catalog_ids ?? []).includes(info.catalog_id!))
     : []
 
+  // Abschnitte erst sammeln, dann numerieren: Ein leerer Abschnitt darf keine Lücke
+  // in der Zählung hinterlassen.
+  const abschnitte: { titel: string; inhalt: React.ReactNode }[] = []
+
+  if ((info.pains ?? []).length > 0) {
+    abschnitte.push({
+      titel: 'Heute Handarbeit',
+      inhalt: (
+        <ul className="text-sm text-text space-y-1">
+          {(info.pains ?? []).map((x, i) => (
+            <li key={i} className="border-l-2 border-warning/40 pl-2">{x}</li>
+          ))}
+        </ul>
+      ),
+    })
+  }
+
+  if ((info.ki ?? []).length > 0) {
+    abschnitte.push({
+      titel: 'Lässt sich automatisieren',
+      inhalt: (
+        <>
+          <ul className="text-sm text-text space-y-1">
+            {(info.ki ?? []).map((x, i) => (
+              <li key={i} className="border-l-2 border-accent/50 pl-2">{x}</li>
+            ))}
+          </ul>
+          {info.nutzen && (
+            <p className="text-xs text-text-muted mt-1.5">
+              <span className="text-text-muted/70">Was das bringt: </span>{info.nutzen}
+            </p>
+          )}
+        </>
+      ),
+    })
+  }
+
+  abschnitte.push({
+    titel: 'Aufsatzlösung',
+    inhalt: passend.length > 0 ? (
+      <ul className="space-y-3">
+        {passend.map((b) => (
+          <li key={b.nr}>
+            <p className="text-sm text-text">Baustein {b.nr}: {b.titel}</p>
+            {b.was && <p className="text-xs text-text-muted mt-0.5">{b.was}</p>}
+            {b.warum && (
+              <p className="text-[11px] text-text-muted mt-1">
+                <span className="text-accent/80">Warum jetzt: </span>{b.warum}
+              </p>
+            )}
+            {b.aufwand && <p className="text-[11px] text-text-muted">Aufwand: {b.aufwand}</p>}
+            {b.vorsicht && (
+              <p className="text-[11px] text-warning/90 mt-0.5">Vorsicht: {b.vorsicht}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      // 37 der 142 Produkte haben keinen zugeordneten Baustein. Das ehrlich sagen —
+      // die Idee aus den Abschnitten davor steht trotzdem.
+      <p className="text-xs text-text-muted">
+        Kein Baustein aus dem Katalog zugeordnet. Die Idee oben trägt trotzdem — sie ist
+        nur nicht als fertiger Baustein modelliert.
+      </p>
+    ),
+  })
+
+  if (info.integration) {
+    abschnitte.push({
+      titel: 'Wie man rankommt',
+      inhalt: (
+        <>
+          <p className="text-sm text-text">{info.integration}</p>
+          {info.int_level && (
+            <p className="text-[11px] text-text-muted mt-1">
+              Integrationsaufwand: {AUFWAND_LABEL[info.int_level] ?? info.int_level}
+            </p>
+          )}
+        </>
+      ),
+    })
+  }
+
+  if (info.self_compete || (info.reg ?? []).length > 0 || info.marketplace) {
+    abschnitte.push({
+      titel: 'Worauf achten',
+      inhalt: (
+        <>
+          {info.self_compete && (
+            <p className="text-sm text-warning/90 mb-1.5">
+              Der Hersteller besetzt diesen Use Case selbst — nur mit einer Nische oder
+              als Partner sinnvoll.
+            </p>
+          )}
+          {(info.reg ?? []).length > 0 && (
+            <p className="text-xs text-text-muted">
+              <span className="text-text-muted/70">Terminierter Anlass: </span>
+              {(info.reg ?? []).join(', ')}
+            </p>
+          )}
+          {info.marketplace && (
+            <p className="text-xs text-text-muted">
+              <span className="text-text-muted/70">Marktplatz/Partnerprogramm: </span>
+              {(info.mp_evidence ?? []).join(', ') || 'vorhanden'} — Listing statt
+              Einzelvertrieb prüfen.
+            </p>
+          )}
+        </>
+      ),
+    })
+  }
+
+  if (info.zielgruppe || (info.nutzer ?? []).length > 0 || (info.prozesse ?? []).length > 0) {
+    abschnitte.push({
+      titel: 'Wer damit arbeitet',
+      inhalt: (
+        <>
+          {info.zielgruppe && <p className="text-sm text-text">{info.zielgruppe}</p>}
+          {(info.nutzer ?? []).length > 0 && (
+            <p className="text-xs text-text-muted mt-1">
+              <span className="text-text-muted/70">Tägliche Nutzer: </span>
+              {(info.nutzer ?? []).join(', ')}
+            </p>
+          )}
+          {(info.prozesse ?? []).length > 0 && (
+            <p className="text-xs text-text-muted">
+              <span className="text-text-muted/70">Prozesse: </span>
+              {(info.prozesse ?? []).join(', ')}
+            </p>
+          )}
+        </>
+      ),
+    })
+  }
+
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-md-fade">
       <div className="fixed inset-0" onClick={onClose} />
@@ -120,117 +258,9 @@ export default function SoftwareInfoDialog({ info, bausteine, onClose }: Props) 
         </p>
 
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-          {(info.pains ?? []).length > 0 && (
-            <Abschnitt nr={1} titel="Heute Handarbeit">
-              <ul className="text-sm text-text space-y-1">
-                {(info.pains ?? []).map((x, i) => (
-                  <li key={i} className="border-l-2 border-warning/40 pl-2">{x}</li>
-                ))}
-              </ul>
-            </Abschnitt>
-          )}
-
-          {(info.ki ?? []).length > 0 && (
-            <Abschnitt nr={2} titel="Lässt sich automatisieren">
-              <ul className="text-sm text-text space-y-1">
-                {(info.ki ?? []).map((x, i) => (
-                  <li key={i} className="border-l-2 border-accent/50 pl-2">{x}</li>
-                ))}
-              </ul>
-              {info.nutzen && (
-                <p className="text-xs text-text-muted mt-1.5">
-                  <span className="text-text-muted/70">Was das bringt: </span>{info.nutzen}
-                </p>
-              )}
-            </Abschnitt>
-          )}
-
-          <Abschnitt nr={3} titel="Aufsatzlösung">
-            {passend.length > 0 ? (
-              <ul className="space-y-3">
-                {passend.map((b) => (
-                  <li key={b.nr}>
-                    <p className="text-sm text-text">Baustein {b.nr}: {b.titel}</p>
-                    {b.was && <p className="text-xs text-text-muted mt-0.5">{b.was}</p>}
-                    {b.warum && (
-                      <p className="text-[11px] text-text-muted mt-1">
-                        <span className="text-accent/80">Warum jetzt: </span>{b.warum}
-                      </p>
-                    )}
-                    {b.aufwand && (
-                      <p className="text-[11px] text-text-muted">Aufwand: {b.aufwand}</p>
-                    )}
-                    {b.vorsicht && (
-                      <p className="text-[11px] text-warning/90 mt-0.5">
-                        Vorsicht: {b.vorsicht}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              // 37 der 142 Produkte haben keinen zugeordneten Baustein. Das ehrlich
-              // sagen — die Idee aus 1 und 2 steht trotzdem.
-              <p className="text-xs text-text-muted">
-                Kein Baustein aus dem Katalog zugeordnet. Die Idee oben trägt trotzdem —
-                sie ist nur nicht als fertiger Baustein modelliert.
-              </p>
-            )}
-          </Abschnitt>
-
-          {info.integration && (
-            <Abschnitt nr={4} titel="Wie man rankommt">
-              <p className="text-sm text-text">{info.integration}</p>
-              {info.int_level && (
-                <p className="text-[11px] text-text-muted mt-1">
-                  Integrationsaufwand: {AUFWAND_LABEL[info.int_level] ?? info.int_level}
-                </p>
-              )}
-            </Abschnitt>
-          )}
-
-          {(info.self_compete || (info.reg ?? []).length > 0 || info.marketplace) && (
-            <Abschnitt nr={5} titel="Worauf achten">
-              {info.self_compete && (
-                <p className="text-sm text-warning/90 mb-1.5">
-                  Der Hersteller besetzt diesen Use Case selbst — nur mit einer Nische
-                  oder als Partner sinnvoll.
-                </p>
-              )}
-              {(info.reg ?? []).length > 0 && (
-                <p className="text-xs text-text-muted">
-                  <span className="text-text-muted/70">Terminierter Anlass: </span>
-                  {(info.reg ?? []).join(', ')}
-                </p>
-              )}
-              {info.marketplace && (
-                <p className="text-xs text-text-muted">
-                  <span className="text-text-muted/70">Marktplatz/Partnerprogramm: </span>
-                  {(info.mp_evidence ?? []).join(', ') || 'vorhanden'} — Listing statt
-                  Einzelvertrieb prüfen.
-                </p>
-              )}
-            </Abschnitt>
-          )}
-
-          {(info.zielgruppe || (info.nutzer ?? []).length > 0
-            || (info.prozesse ?? []).length > 0) && (
-            <Abschnitt nr={6} titel="Wer damit arbeitet">
-              {info.zielgruppe && <p className="text-sm text-text">{info.zielgruppe}</p>}
-              {(info.nutzer ?? []).length > 0 && (
-                <p className="text-xs text-text-muted mt-1">
-                  <span className="text-text-muted/70">Tägliche Nutzer: </span>
-                  {(info.nutzer ?? []).join(', ')}
-                </p>
-              )}
-              {(info.prozesse ?? []).length > 0 && (
-                <p className="text-xs text-text-muted">
-                  <span className="text-text-muted/70">Prozesse: </span>
-                  {(info.prozesse ?? []).join(', ')}
-                </p>
-              )}
-            </Abschnitt>
-          )}
+          {abschnitte.map((a, i) => (
+            <Abschnitt key={a.titel} nr={i + 1} titel={a.titel}>{a.inhalt}</Abschnitt>
+          ))}
 
           {info.notiz && (
             <div className="mt-2 pt-3 border-t border-border">

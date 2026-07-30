@@ -836,7 +836,7 @@ CO-2026-0001
 ## Projektumfang
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-67.810-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-68.226-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
 ![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.445_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)
 [![pytest](https://img.shields.io/badge/pytest-1024-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
 [![Vitest](https://img.shields.io/badge/Vitest-421-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
@@ -845,11 +845,11 @@ CO-2026-0001
 <!-- loc-table:begin -->
 | Bereich | Zeilen | Dateien |
 |---|---:|---:|
-| Backend (Python) | 30.705 | 164 |
-| Frontend (TS/TSX) | 34.860 | 196 |
+| Backend (Python) | 30.742 | 164 |
+| Frontend (TS/TSX) | 35.239 | 197 |
 | Betrieb (Shell/SQL) | 603 | 26 |
 | PDF-Vorlagen (Jinja) | 1.642 | 5 |
-| **Anwendungscode** | **67.810** | |
+| **Anwendungscode** | **68.226** | |
 | Tests (Backend) | 9.629 | 63 |
 | Tests (Frontend) | 3.355 | 46 |
 | **Testcode** | **12.984** | |
