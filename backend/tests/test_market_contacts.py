@@ -8,6 +8,7 @@ from app.services.market_contacts import (
     extract_decision_maker,
     extract_employee_count,
     extract_phone,
+    imprint_urls,
     vendor_origin,
 )
 
@@ -171,3 +172,38 @@ class TestGrundregel:
         assert tel.replace(" ", "") in html.replace(" ", "")
         assert str(anzahl) in html
         assert beleg in " ".join(html.split()).replace("<p>", "").replace("</p>", "")
+
+
+class TestImprintUrls:
+    """Die Reihenfolge der Kandidaten entscheidet über die Trefferquote.
+
+    Live gemessen: `lead_enrichment.contact_page_url` nimmt den ERSTEN Treffer auf
+    impressum|kontakt — Footer listen „Kontakt" meist vorher. Bei Projektron und
+    InLoox landete man dadurch auf `/kontakt/`, wo keine Vertretungsangabe steht,
+    und die Geschäftsführung blieb bei 0 %.
+    """
+
+    def test_impressum_kommt_vor_kontakt(self):
+        html = ('<a href="/kontakt/">Kontakt</a>'
+                '<a href="/impressum/">Impressum</a>')
+        urls = imprint_urls(html, "https://firma.de/")
+        assert urls[0] == "https://firma.de/impressum/"
+        assert "https://firma.de/kontakt/" in urls
+
+    def test_ohne_impressum_link_wird_der_standardpfad_geraten(self):
+        # Auf Seiten, deren Footer erst im Browser entsteht, steht im HTML kein Link.
+        # Ein geratener Pfad ist unkritisch: Er liefert eine echte Seite, aus der
+        # wörtlich gelesen wird, oder einen Fehlercode.
+        urls = imprint_urls('<a href="/kontakt/">Kontakt</a>', "https://firma.de/")
+        assert urls[0] == "https://firma.de/impressum"
+
+    def test_fremde_hosts_und_pseudolinks_bleiben_draussen(self):
+        html = ('<a href="https://andere.de/impressum">x</a>'
+                '<a href="mailto:a@b.de">m</a><a href="#imprint">a</a>'
+                '<a href="/imprint">y</a>')
+        urls = imprint_urls(html, "https://firma.de/")
+        assert urls == ["https://firma.de/imprint"]
+
+    def test_gedeckelt_auf_drei_versuche(self):
+        html = "".join(f'<a href="/impressum-{i}">x</a>' for i in range(9))
+        assert len(imprint_urls(html, "https://firma.de/")) == 3

@@ -93,6 +93,16 @@ async def main() -> None:
             if f.email:
                 pruefung = await verify_email(f.email, mx_cache=mx_cache)
                 status = pruefung.status.value if pruefung.status else None
+                # **Kaputte Adressen werden verworfen, nicht gespeichert.** Im
+                # Trockenlauf kam eine mit `invalid_syntax` zurück — ein Fragment aus
+                # minifiziertem Seitencode. Ohne MX ist eine Adresse ebenso kein
+                # Kontaktweg, sondern nur eine Zeichenkette. `role` (info@, kontakt@)
+                # bleibt: Das IST die Firmenadresse.
+                if status in ("invalid_syntax", "no_mx", "disposable"):
+                    print(f"    (E-Mail verworfen: {f.email} → {status})")
+                    f.email = None
+                    f.evidence.pop("email", None)
+                    status = None
 
             gefunden = [x for x in FELDER if getattr(f, x)]
             for x in gefunden:

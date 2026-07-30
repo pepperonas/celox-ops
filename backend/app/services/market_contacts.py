@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
-from app.services.lead_enrichment import contact_page_url, extract_emails, pick_email
+from app.services.lead_enrichment import contact_page_url, extract_emails, pick_email  # noqa: F401
 from app.services.website_ai_review import extract_text
 from app.services.website_analysis import _safe_get, _sanitize_url
 
@@ -45,6 +45,50 @@ def vendor_origin(ref_url: str | None) -> str | None:
     if not parts.netloc:
         return None
     return f"{parts.scheme or 'https'}://{parts.netloc}"
+
+
+# ---------------------------------------------------------------- Impressum
+
+_LINK_RE = re.compile(r"""href\s*=\s*["']([^"']+)["']""", re.I)
+_IMPRESSUM_HINT = re.compile(r"impressum|imprint|legal-?notice", re.I)
+_KONTAKT_HINT = re.compile(r"kontakt|contact", re.I)
+
+
+def imprint_urls(html: str, base_url: str) -> list[str]:
+    """Kandidaten-Seiten für Pflichtangaben, **Impressum zuerst**. Rein.
+
+    Das vorhandene `lead_enrichment.contact_page_url` nimmt den ERSTEN Treffer auf
+    impressum|imprint|kontakt|contact — und Footer listen „Kontakt" meist vor
+    „Impressum". Live gemessen: Bei Projektron und InLoox landete man dadurch auf
+    `/kontakt/`, wo keine Vertretungsangabe steht, und die Geschäftsführung blieb bei
+    0 %. Für Vertretung, Rufnummer und E-Mail ist das Impressum die Pflichtseite
+    (§ 5 DDG) und damit die verlässliche Quelle.
+
+    Zusätzlich der geratene Standardpfad `/impressum`: Auf Seiten, deren Footer erst
+    im Browser entsteht, ist im HTML kein Link zu finden. Ein geratener Pfad ist
+    unkritisch — er liefert entweder eine echte Seite, aus der wörtlich gelesen wird,
+    oder einen Fehlercode. Erfunden wird dabei nichts.
+    """
+    host = (urlsplit(base_url).hostname or "").lower()
+    impressum, kontakt = [], []
+    for href in _LINK_RE.findall(html or ""):
+        if href.lower().startswith(("mailto:", "tel:", "javascript:", "#")):
+            continue
+        absolut = urljoin(base_url, href)
+        if (urlsplit(absolut).hostname or "").lower() != host:
+            continue
+        if _IMPRESSUM_HINT.search(href):
+            impressum.append(absolut)
+        elif _KONTAKT_HINT.search(href):
+            kontakt.append(absolut)
+    geraten = [urljoin(base_url, "/impressum")] if not impressum else []
+    # Reihenfolge erhalten, Dubletten raus, auf drei Versuche deckeln.
+    gesehen, out = set(), []
+    for u in impressum + geraten + kontakt:
+        if u not in gesehen:
+            gesehen.add(u)
+            out.append(u)
+    return out[:3]
 
 
 # ---------------------------------------------------------------- Telefon
@@ -288,13 +332,20 @@ async def fetch_contacts(ref_url: str | None) -> ContactFinding:
 
     auslesen(start_html, start_url)
 
-    if not (f.email and f.phone and f.decision_maker):
-        seite = contact_page_url(start_html, start_url)
-        if seite:
-            try:
-                r2 = await _safe_get(seite, verify=True)
-                if r2.status_code < 400:
-                    auslesen(r2.text or "", str(r2.url))
-            except Exception:
-                pass                              # Zusatzabruf ist optional
+    # Pflichtangaben-Seiten der Reihe nach, solange etwas fehlt. Höchstens zwei
+    # Zusatzabrufe je Hersteller — das reicht, um Impressum ODER Kontakt zu treffen,
+    # ohne die Seite mit Anfragen zu belegen.
+    versuche = 0
+    for seite in imprint_urls(start_html, start_url):
+        if f.email and f.phone and f.decision_maker:
+            break
+        if versuche >= 2:
+            break
+        versuche += 1
+        try:
+            r2 = await _safe_get(seite, verify=True)
+            if r2.status_code < 400:
+                auslesen(r2.text or "", str(r2.url))
+        except Exception:
+            continue                              # Zusatzabruf ist optional
     return f
