@@ -49,6 +49,17 @@ class TestNamen:
         assert saeubere_namen("Wartungsplaner Logo BDL Untermain GmbH") == "BDL Untermain GmbH"
         assert saeubere_namen("Logo Siemens AG") == "Siemens AG"
 
+    def test_linktext_vor_dem_namen_faellt_weg(self):
+        """d.vinci beschriftet jeden Kundenlink mit „Zur Startseite <Firma>".
+
+        Wörtlich aus dem Bestand — 99 echte Firmen (AlbWerk, Stromnetz Hamburg,
+        Stadtwerke Kiel) trugen alle dieses Beiwerk. Gleiche Klasse wie „Logo X".
+        """
+        assert saeubere_namen("Zur Startseite Stadtwerke Kiel") == "Stadtwerke Kiel"
+        assert saeubere_namen("Zur Startseite MVV Energie") == "MVV Energie"
+        # Im Quelltext fehlte teils das Leerzeichen — die Suche holt den Namen trotzdem.
+        assert saeubere_namen("Zur Startseitenet group") == "net group"
+
     def test_deko_und_navigation_raus(self):
         for roh in ["Logo", "icon-arrow", "Pfeil nach rechts", "Lösungen", "Preise",
                     "CRM", "Übersicht", "Karriere", "Kontakt"]:

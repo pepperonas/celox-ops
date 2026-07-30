@@ -177,9 +177,18 @@ def saeubere_namen(roh: str) -> str | None:
     """
     import html as html_mod
     name = " ".join(html_mod.unescape(roh or "").split())
-    # Alles vor einem eingebetteten „Logo" verwerfen — davor steht der Produkt- oder
-    # Herstellername des Seitenbetreibers, danach der Kunde.
-    m = re.search(r"\bLogos?\b[\s:_-]*(.+)$", name, re.I)
+    # Alles vor einem eingebetteten Beiwort verwerfen — davor steht Linktext oder der
+    # Produktname des Seitenbetreibers, danach der Kunde. Zwei Fälle, beide am echten
+    # Bestand gefunden: „Wartungsplaner Logo BDL Untermain GmbH" (HOPPE) und
+    # „Zur Startseite Stadtwerke Kiel" (d.vinci — der Linktext jedes Kundenlogos).
+    #
+    # Gesucht, nicht verankert: Bei d.vinci fehlte im Quelltext teils das Leerzeichen
+    # („Zur Startseitenet group"), und nur die Suche holt daraus noch „net group".
+    m = re.search(
+        r"(?:\bLogos?\b|zur\s*Startseite|zur\s*Website|Website\s+von|"
+        r"zum\s*Profil|zur\s*Referenz|mehr\s+über|Anwenderbericht|Case\s?Study)"
+        r"[\s:_-]*(.+)$",
+        name, re.I)
     if m and len(m.group(1).strip()) >= 3:
         name = m.group(1).strip()
     name = _ABSCHNEIDEN.sub("", name).strip(" ·–—-:|")
