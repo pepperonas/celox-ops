@@ -42,6 +42,8 @@ from app.models.lead_website_analysis import LeadWebsiteAnalysis
 from app.models.hostinger_link import HostingerDomainLink
 from app.models.customer_todo_suggestion import CustomerTodoSuggestion
 from app.models.lead_change_log import LeadChangeLog
+from app.models.market_product import MarketProduct
+from app.models.market_baustein import MarketBaustein
 import app.models.audit_log  # noqa: F401 — register for create_all (global, not owned)
 import app.models.document_template  # noqa: F401 — register for create_all (global, not owned)
 import app.models.user  # noqa: F401 — register for create_all (global, not owned)
@@ -58,7 +60,7 @@ set_owned_models([
     RainmakerGoal, RainmakerTemplate, RainmakerSettings, RainmakerStreak, AppSettings,
     AiLeadRun, OutreachTemplate, Todo, RainmakerLeadDraft, ReferenceValue,
     LeadWebsiteAnalysis, LeadAnalysisJob, LeadChatImport, HostingerDomainLink,
-    CustomerTodoSuggestion, LeadChangeLog,
+    CustomerTodoSuggestion, LeadChangeLog, MarketProduct, MarketBaustein,
 ])
 install_tenancy_events()
 
@@ -310,6 +312,7 @@ from app.routers.users import router as users_router  # noqa: E402
 from app.routers.handoff import router as handoff_router  # noqa: E402
 from app.routers.todos import router as todos_router  # noqa: E402
 from app.routers.reference_values import router as reference_values_router  # noqa: E402
+from app.routers.market import router as market_router  # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(customers_router)
@@ -341,6 +344,7 @@ app.include_router(users_router)
 app.include_router(handoff_router)
 app.include_router(todos_router)
 app.include_router(reference_values_router)
+app.include_router(market_router)
 
 
 @app.get("/api/health")

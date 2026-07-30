@@ -313,6 +313,57 @@ Push eines Kunden an **portal.celox.io** (Assessments/Schulungen) und **datensch
 - Orphan file cleanup: Upload writes file to disk first, then DB insert in try/except — file removed on DB failure.
 - Files stored at `/data/attachments/` in Docker volume.
 
+### Marktradar (2026-07-30)
+Eigene Sektion `/radar` (Nav-Gruppe „Leads & Akquise") mit dem Recherchekatalog aus dem
+**privaten** Repo `pepperonas/business-opportunities`: DACH-Softwareprodukte, deren
+öffentliches Referenzverzeichnis eine scrapebare Firmenliste ist. Aus einem Eintrag wird
+per Knopfdruck ein Rainmaker-Lead — der Katalog ist **keine** Lead-Quelle im Sinne eines
+Massenimports, sondern eine Recherchefläche, aus der gezielt einzelne Einträge in die
+Pipeline wandern.
+
+- **Warum zwei Repos:** ops ist öffentlich, der Katalog ist Wettbewerbsstrategie (Scores,
+  Priorisierung, Angebots-Bausteine). Code liegt hier, Daten im privaten Repo und in der
+  ops-DB — genau wie Kunden, Rechnungen und Leads auch nicht im Repo liegen. Verbunden
+  über einen **Import**, nicht über einen Service-Vertrag (anders als ops↔portal): 142
+  Datensätze, die sich alle paar Wochen ändern, sind ein Import.
+- **Der Score wird NICHT hier gerechnet.** `dashboard.py` im Recherche-Repo berechnet ihn
+  (gewichtete Summe aus Business, Lead, Reichweite, Priorität, Integration, Marktplatz,
+  Regulatorik × Faktor für die Belastbarkeit des Referenzverzeichnisses) und liefert ihn
+  samt Aufschlüsselung mit. Eine zweite Implementierung hier würde zwangsläufig driften.
+  Dasselbe gilt für die abgeleiteten Flags `marketplace`, `reg`, `self_compete`.
+- **Import ist idempotent und schützt den eigenen Arbeitsstand** (`services/market_import.py`):
+  Upsert über `catalog_id`; `_KATALOG_FELDER` wird überschrieben, `_OPS_FELDER`
+  (`status`, `ops_note`, `rainmaker_lead_id`, `reviewed_at`, `pushed_at`) **nie**. Sonst
+  wäre jede Katalog-Aktualisierung ein Rücksetzen der eigenen Arbeit — als Regressionstest
+  festgenagelt (`test_reimport_erhaelt_bearbeitungsstand`). Einträge, die im Katalog
+  wegfallen, werden **gemeldet, nicht gelöscht** (an ihnen kann ein Lead hängen).
+  Wege: `POST /api/market/import` (Datei-Upload in der Oberfläche) oder
+  `python -m app.scripts.import_market_catalog <datei> --owner <benutzername>`.
+- **Aggregate in Python, nicht in SQL** (`services/market_catalog.py`): Der Katalog hat rund
+  150 Zeilen, und **jedes** Aggregat muss demselben Filter folgen wie die Trefferliste. Mit
+  SQL-Aggregaten müsste jede Filterbedingung an sechs Stellen wiederholt werden — genau dort
+  entstehen Abweichungen zwischen Diagramm und Liste. `Filters` ist deshalb eine
+  FastAPI-Abhängigkeit, die alle Radar-Endpunkte teilen.
+- **Übernahme in die Pipeline** (`services/market_pipeline.py`): Zum Lead wird der
+  **Hersteller** (Partner-/Marktplatz-Spiel), nicht das Produkt. Firmenwebsite = Origin der
+  Referenz-URL (die zeigt immer auf eine Unterseite der Herstellerdomain), `notes` = Briefing
+  aus KI-Idee, Pain, Nutzen, Referenzverzeichnis und Marktplatz-Beleg, `source` =
+  „Marktradar". Dedup **nur über die Website** — ein Katalogeintrag trägt weder E-Mail noch
+  Ansprechpartner, die volle Dreifachprüfung liefe ins Leere. Vorhandener Lead → **409 mit
+  Rückfrage**, `force=true` verknüpft statt zu duplizieren.
+  **⚠️ Werte vor dem `rollback()` auslesen** — danach sind die Attribute abgelaufen und der
+  Zugriff löst einen Nachladeversuch auf der toten Transaktion aus (war ein 500 statt 409).
+- **Filterzustand liegt in der URL** (`useRadarFilters`), nicht im Komponentenstate: Die fünf
+  Radar-Seiten teilen sich den Filter, und der Wechsel zwischen ihnen IST der Arbeitsablauf.
+  Nebeneffekt: ein Blick lässt sich als Link ablegen.
+- **Die Chancen-Landkarte ist handgezeichnetes SVG**, der Rest Chart.js: Für ein
+  Blasendiagramm müsste `BubbleController` in der von allen Seiten geteilten
+  `utils/charts.ts` registriert werden — ein Eingriff für genau eine Grafik.
+  Prioritäten sind eine **Ordinal-Rampe einer Farbe** (hell = dringlichste Stufe), keine drei
+  kategorialen Farben; das ist die korrekte Kodierung für eine geordnete Größe.
+- Tests: `test_market.py` (18, DB-frei — Import-Idempotenz, Schutz des Arbeitsstands,
+  Aggregate, Briefing, Origin-Ableitung).
+
 ## Key Gotchas
 - **Wartungsskripte brauchen `from app.models import registry` (2026-07-29)**: Ein Skript in `app/scripts/`, das nur seine eigenen Modelle importiert, lässt das Fremdschlüssel-Ziel **`users`** unregistriert (`OwnedMixin.owner_id` zeigt dorthin). Der **Trockenlauf läuft dann noch durch** (nur SELECT) und erst der schreibende Lauf stirbt mit `NoReferencedTableError` — also genau dann, wenn man das Skript braucht (live passiert mit `update_outreach_signature`). `app/models/registry.py` importiert **alle 32** Modell-Module; eine Zeile statt einer wachsenden Liste. Bewusst **nicht** `app/models/__init__.py` (das ist mit 11 von 32 Modulen veraltet) — dort würde jeder Modell-Import im ganzen Projekt alle 32 Module laden. **Zwei Wächter in `test_smoke.py`**, beide per Mutationstest belegt: `test_each_script_resolves_its_foreign_keys_alone` prüft **jedes Skript in einem eigenen Interpreter** — die erste Fassung war zweifach falsch grün (`configure_mappers()` ist die falsche Zwangsfunktion, Fremdschlüssel lösen erst beim Zugriff auf `ForeignKey.column` auf; und alle Skripte in EINEM Prozess zu importieren macht den Test blind, weil ein beliebiges anderes Skript `User` importiert und die globale Registry füllt). Der Test fand dabei `report_lead_duplicates` mit derselben latenten Falle. `test_model_registry_is_complete` hält die Registry vollständig. **Regel: neues Skript → Registry-Zeile; neues Modell → Registry-Eintrag.**
 - **Download-Dateinamen sind zentralisiert (2026-07)**: ALLE Downloads/Mail-Anhänge benennen über `services/filenames.py` — `download_name(*teile, ext=)` baut `Typ_Kunde_Kennung_Datum.ext` (Teile einzeln geslugt via `slug_name`: Umlaute→ae/oe/ue/ss, nur ASCII `[A-Za-z0-9.-]`, header-sicher — ein rohes `"` im Firmennamen brach früher den Content-Disposition-Header in documents.py); `customer_label(customer)` = company‖name. Beispiele: `Rechnung_Beispiel-GmbH_CO-2026-0001.pdf`, `Angebot_…`, `Zahlungserinnerung_…`, `Stundennachweis_…_{von}_{bis}.pdf`, `Vertragsdokumente_….zip`, `DSGVO-Export_…_{datum}.json`, `PageSpeed_{domain}_…`, `Monatsbericht_2026-07.pdf`, `EUeR_2026.csv`. `send_email(..., attachment_name=)` überschreibt den internen Speichernamen im Mail-Anhang (Speicherpfade/`{invoice_number}.pdf` blieben unverändert; nur der Angebots-SPEICHERname ist jetzt auch geslugt — ein `/` im Auftragstitel brach den Pfad). Frontend liest den Namen aus dem Header via `utils/downloadName.ts::filenameFromDisposition` (inkl. RFC-5987 `filename*=`) statt eigene Namen zu erfinden — `api/invoices.ts` `downloadPdf`/`downloadReminderPdf` geben `{blob, filename}` zurück. Neue Downloads: IMMER `download_name` + Header-Auslesen nutzen. Tests: `test_filenames.py` + `downloadName.test.ts`.
@@ -366,8 +417,8 @@ Push eines Kunden an **portal.celox.io** (Assessments/Schulungen) und **datensch
 - **.env is NEVER committed**. All personal data (address, bank, tax, tokens) only in `.env` on the server.
 - **.claude/ directory**: Added to `.gitignore` — contains local settings with server IPs, never commit.
 
-## Database Tables (34)
-customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings, compliance_records, users, ai_lead_runs, outreach_templates, todos, rainmaker_lead_drafts, reference_values, lead_website_analyses, lead_analysis_jobs, lead_chat_imports, hostinger_domain_links, customer_todo_suggestions, lead_change_log
+## Database Tables (36)
+customers, orders, contracts, invoices, leads, time_entries, expenses, activities, attachments, email_templates, document_templates, pagespeed_results, audit_log, rainmaker_leads, rainmaker_activities, rainmaker_settings, rainmaker_streak, rainmaker_templates, rainmaker_goal, app_settings, compliance_records, users, ai_lead_runs, outreach_templates, todos, rainmaker_lead_drafts, reference_values, lead_website_analyses, lead_analysis_jobs, lead_chat_imports, hostinger_domain_links, customer_todo_suggestions, lead_change_log, market_products, market_bausteine
 
 **Rollen & geteilter Arbeitsbereich (2026-07):** vier Rollen — `admin` (alles inkl. Benutzerverwaltung/Akquise-Vorlagen/Backup), `user` (eigener, isolierter Arbeitsbereich, darf dort alles inkl. Löschen), **`mitarbeiter`** (arbeitet IM Bereich eines anderen, **ohne destruktive Rechte**). Kern ist `users.works_for_id` (FK→users, `SET NULL`, Migration `scripts/add_user_workspace.sql`, **vor Deploy** — sonst bricht der Login): `models/user.py::workspace_owner_id(user)` = `works_for_id or id` ist die **einzige** Stelle, die den Mandanten auflöst, benutzt von `get_current_user` und dem iCal-Feed. **Der Cron läuft nur für Bereichs-Inhaber** (`works_for_id IS NULL`) — sonst würden Reminder und Vertragsrechnungen pro Bereich doppelt ausgelöst. **Löschsperre serverseitig in `middleware/permissions.py`** (nicht pro Route, damit keine vergessen wird): jedes `DELETE /api/*` + Denylist destruktiver POSTs (`duplicates/merge`, `merge-batch`) → 403. Die Rolle wird **gegen die DB** geprüft, nicht gegen einen JWT-Claim (sonst würde eine Herabstufung erst nach Token-Ablauf greifen). Frontend blendet **alle** Lösch-Aktionen über `utils/permissions.ts::canDelete` aus (Lead, To-do, Kunde, Aktivität, Auftrag, Rechnung, Vertrag, Ausgabe, Anhang, Zeiteintrag, E-Mail-/Rainmaker-Vorlage, Ziel, Duplikate-Merge). Zusätzlich zeigt ein **globaler 403-Interceptor** in `api/client.ts` die Klartext-Begründung des Servers als Toast (feste id `forbidden`) — so läuft auch ein handgebauter Request nicht in eine generische Fehlermeldung. Tests: `test_permissions.py` + `permissions.test.ts`.
 
