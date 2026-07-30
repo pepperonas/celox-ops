@@ -12,16 +12,21 @@ import toast from 'react-hot-toast'
 import Icon from '../../components/Icon'
 import Select from '../../components/Select'
 import {
+  getMarketBausteine,
+  getMarketProducts,
   getMarketReferenceCompanies,
   getMarketReferenceStats,
   referencesToPipeline,
   updateMarketReference,
+  type MarketBaustein,
+  type MarketProduct,
   type MarketReferenceGroup,
   type MarketReferenceStats,
 } from '../../api/market'
 import RadarShell from './RadarShell'
 import { useRadarFilters } from './useRadarFilters'
 import { httpHref } from '../../utils/safeHref'
+import SoftwareInfoDialog from './SoftwareInfoDialog'
 import { useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 50
@@ -68,6 +73,14 @@ export default function References() {
   const [nurMehrfach, setNurMehrfach] = useState(false)
   const [orgFilter, setOrgFilter] = useState('alle')
   const [stats, setStats] = useState<MarketReferenceStats | null>(null)
+  // Produkte und Bausteine EINMAL laden, nicht je Zeile: Der Info-Dialog braucht die
+  // Recherchefelder, und 142 Produkte in einem Abruf sind billiger als sie in jede
+  // paginierte Antwort zu packen (der Hersteller-Tab macht es genauso). Bewusst OHNE
+  // den geteilten Filter — sonst fehlte das Produkt im Nachschlagewerk, sobald
+  // gefiltert wird, und das Icon verschwände.
+  const [produkte, setProdukte] = useState<Map<string, MarketProduct>>(new Map())
+  const [bausteine, setBausteine] = useState<MarketBaustein[]>([])
+  const [info, setInfo] = useState<MarketProduct | null>(null)
   const [gewaehlt, setGewaehlt] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [laedt, setLaedt] = useState(true)
@@ -96,6 +109,11 @@ export default function References() {
 
   useEffect(() => { void laden() }, [laden])
   useEffect(() => { getMarketReferenceStats().then(setStats).catch(() => undefined) }, [])
+  useEffect(() => {
+    getMarketProducts({}).then((ps) => setProdukte(new Map(ps.map((p) => [p.id, p]))))
+      .catch(() => undefined)
+    getMarketBausteine().then(setBausteine).catch(() => undefined)
+  }, [])
   // Auswahl beim Filterwechsel leeren: Sie bezieht sich auf Zeilen, die nicht mehr
   // sichtbar sind — ein Übernehmen würde sonst Unerwartetes anlegen.
   useEffect(() => {
@@ -415,6 +433,22 @@ export default function References() {
                         ) : (
                           <span className="text-text-muted">{sys.produkt}</span>
                         )}
+                        {/* Verbesserungspotenzial je Software — dieselbe Frage und
+                            derselbe Dialog wie im Kundendetail und im Hersteller-Tab.
+                            Nur wenn das Produkt im Nachschlagewerk steht, sonst wäre
+                            der Dialog leer. */}
+                        {produkte.get(sys.product_id) && (
+                          <button
+                            type="button"
+                            onClick={() => setInfo(produkte.get(sys.product_id) ?? null)}
+                            title="Was lässt sich an dieser Software verbessern?"
+                            aria-label={`Verbesserungspotenzial von ${sys.produkt} ansehen`}
+                            className="md-state ml-1 w-5 h-5 inline-grid place-items-center
+                                       rounded align-text-bottom text-text-muted hover:text-accent"
+                          >
+                            <Icon name="info" size={12} />
+                          </button>
+                        )}
                         {sys.baustein_titel && (
                           <span className="block text-[11px] text-accent/90"
                                 title="Aufsatzlösung, die auf diese Software passt">
@@ -492,6 +526,9 @@ export default function References() {
             weiter
           </button>
         </div>
+      )}
+      {info && (
+        <SoftwareInfoDialog info={info} bausteine={bausteine} onClose={() => setInfo(null)} />
       )}
     </RadarShell>
   )
