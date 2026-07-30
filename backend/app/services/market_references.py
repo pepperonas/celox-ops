@@ -114,6 +114,24 @@ _NAVIGATION = re.compile(
     r"anmelden|login|demo|testen|jetzt\s+\w+|mehr\s+erfahren|home|startseite)$",
     re.I,
 )
+# Deutsche Dienstleistungs- und Themenbegriffe. Am echten Fall gelernt: Die
+# Ehrhardt-Ernte bestand aus „Beratung", „Lageroptimierung", „KI-Beratung für
+# Intralogistik", „Transportation Management System (TMS)", „Neueste Blogartikel" —
+# Substantivphrasen, keine Firmen. Sie fielen durch alle bisherigen Filter, weil sie
+# großgeschrieben sind und nicht auf der Startseite standen.
+#
+# Greift nur OHNE Rechtsform: „Müller Management GmbH" ist eine Firma, „Management
+# System" nicht. Die Endung ist das Signal — ein Firmenname endet nicht auf
+# „-optimierung".
+_DIENSTLEISTUNG = re.compile(
+    r"(?:beratung|optimierung|planung|lösungen|loesungen|schulung|betreuung|"
+    r"wartung|entwicklung|einführung|einfuehrung|migration|analyse|auswertung|"
+    r"verwaltung|steuerung|erfassung|management|monitoring|reporting|"
+    r"blogartikel|blogbeitrag|whitepaper|fallstudie|referenzbericht|"
+    r"anwenderbericht|erfolgsgeschichte|pressemitteilung|stellenangebot)\b\s*$",
+    re.I,
+)
+
 # „Logo Siemens", „Siemens Logo", „Referenz: Stadt X" → der Name bleibt übrig.
 _ABSCHNEIDEN = re.compile(
     r"^(?:logo|logos|referenz|referenzen|kunde|kunden|kundenlogo|partner|bild)"
@@ -145,6 +163,9 @@ def saeubere_namen(roh: str) -> str | None:
     if not 3 <= len(name) <= 70:
         return None
     if _NUR_DEKO_WORT.match(name) or _DEKO.match(name) or _NAVIGATION.match(name):
+        return None
+    # Dienstleistungsphrase ohne Rechtsform ist keine Firma (s. _DIENSTLEISTUNG).
+    if _DIENSTLEISTUNG.search(name) and not _RECHTSFORM.search(name):
         return None
     if "@" in name or "http" in name.lower():
         return None
@@ -276,7 +297,15 @@ def hat_firmen_marker(name: str) -> bool:
 
 
 def marker_anteil(namen: list[str]) -> float:
-    """Anteil der Namen mit hartem Firmenbeleg. Rein."""
+    """Anteil der Namen mit hartem Firmenbeleg. Rein.
+
+    **Kein Qualitätsmaß.** Am vollen Lauf belegt: MPDV kam auf 0 % und lieferte
+    lauter echte Firmen (Allgaier, Ammeraal Beltech, ERNI, Greiner Bio One), OTRS auf
+    7 % mit Airbus, BASF, Deutsche Bahn, Edeka — Markennamen tragen keine Rechtsform.
+    Ehrhardt Partner kam ebenfalls auf 0 %, war aber reine Navigation. Die Zahl ist
+    eine Beschreibung der Ernte, keine Bewertung; wer sie als Schwelle benutzt,
+    verwirft die besten Listen.
+    """
     if not namen:
         return 0.0
     return sum(1 for n in namen if hat_firmen_marker(n)) / len(namen)
