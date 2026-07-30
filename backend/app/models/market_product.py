@@ -105,6 +105,21 @@ class MarketProduct(OwnedMixin, Base):
         Enum(MarketStatus, name="marketstatus"), default=MarketStatus.neu, nullable=False
     )
     ops_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # --- Kontaktdaten (angereichert, NICHT aus dem Katalog) -------------------
+    # Holt `services/market_contacts.py` von der Herstellerseite. Deterministisch
+    # und mit Beleg je Feld in `contact_evidence` — jeder Wert ist eine wörtliche
+    # Teilzeichenfolge der abgerufenen Seite, damit hier nichts Erfundenes landet.
+    # Ebenfalls OPS-Felder: ein Katalog-Import darf sie nicht überschreiben.
+    website: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    decision_maker: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employee_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contact_evidence: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    contact_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
     rainmaker_lead_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rainmaker_leads.id", ondelete="SET NULL"),
         nullable=True, index=True,

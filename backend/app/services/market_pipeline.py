@@ -117,7 +117,9 @@ async def to_pipeline(
     Ein bereits vorhandener Lead auf derselben Website wird **verknüpft statt
     dupliziert** — ohne `force` gibt der Router das als 409 an die Oberfläche.
     """
-    website = vendor_website(product.ref_url)
+    # Die angereicherte Website ist die geprüfte (die Seite hat geantwortet); die
+    # Ableitung aus der Referenz-URL bleibt der Rückfall.
+    website = product.website or vendor_website(product.ref_url)
 
     vorhanden = await find_existing_lead(db, website)
     if vorhanden is not None and not force:
@@ -126,6 +128,13 @@ async def to_pipeline(
     if vorhanden is not None:
         lead = vorhanden
         neu = False
+        # Vorhandenen Lead nur ERGÄNZEN: Was dort steht, ist gepflegt oder aus einer
+        # verlässlicheren Quelle — ein Seiten-Scrape darf das nicht verdrängen.
+        for feld in ("email", "phone", "decision_maker", "employee_count"):
+            if not getattr(lead, feld, None) and getattr(product, feld, None):
+                setattr(lead, feld, getattr(product, feld))
+        if product.email and not lead.email_status:
+            lead.email_status = product.email_status
     else:
         lead = RainmakerLead(
             company=product.vendor,
@@ -137,6 +146,14 @@ async def to_pipeline(
             tags=lead_tags(product),
             notes=briefing(product) + (f"\n\n{note}" if note else ""),
             value_estimate=Decimal(0),
+            # Angereicherte Kontaktdaten mitgeben — nur, was da ist (die Anreicherung
+            # lässt im Zweifel leer, und ein leeres Feld ist hier ein gültiges
+            # Ergebnis, kein Grund für einen Platzhalter).
+            email=product.email,
+            email_status=product.email_status,
+            phone=product.phone,
+            decision_maker=product.decision_maker,
+            employee_count=product.employee_count,
         )
         db.add(lead)
         try:

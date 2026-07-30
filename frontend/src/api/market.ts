@@ -41,6 +41,16 @@ export interface MarketProduct {
   mp_evidence: string[]
   reg: string[]
   self_compete: boolean
+  /* Angereichert von der Herstellerseite (nicht aus dem Katalog). Fehlt ein Wert,
+     wurde er nicht sicher gefunden — dann steht hier null, kein Platzhalter. */
+  website: string | null
+  email: string | null
+  email_status: string | null
+  phone: string | null
+  decision_maker: string | null
+  employee_count: number | null
+  contact_evidence: Record<string, { quelle: string; zitat?: string }> | null
+  contact_checked_at: string | null
   status: MarketStatus
   ops_note: string | null
   rainmaker_lead_id: string | null

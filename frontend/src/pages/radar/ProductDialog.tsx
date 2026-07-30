@@ -274,6 +274,58 @@ export default function ProductDialog({
             </div>
           )}
 
+          {/* Kontaktdaten — angereichert von der Herstellerseite, NICHT aus dem
+              Katalog. Jeder Wert ist eine wörtliche Teilzeichenfolge der
+              abgerufenen Seite; der Beleg (Quelle + Zitat) steht im Titel-Text, damit
+              man jeden Wert nachprüfen kann, ohne die Datenbank zu öffnen.
+              Fehlt ein Feld, wird es weggelassen statt mit „unbekannt" gefüllt. */}
+          {(p.website || p.email || p.phone || p.decision_maker || p.employee_count) && (
+            <div>
+              <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">
+                Kontakt
+                {p.contact_checked_at && (
+                  <span className="normal-case tracking-normal">
+                    {' '}· geprüft {new Date(p.contact_checked_at).toLocaleDateString('de-DE')}
+                  </span>
+                )}
+              </h4>
+              <dl className="text-sm space-y-0.5">
+                {([
+                  ['website', 'Website', p.website],
+                  ['email', 'E-Mail', p.email],
+                  ['phone', 'Telefon', p.phone],
+                  ['decision_maker', 'Geschäftsführung', p.decision_maker],
+                  ['employee_count', 'Mitarbeitende', p.employee_count?.toString()],
+                ] as const).filter(([, , v]) => v).map(([key, label, wert]) => {
+                  const beleg = p.contact_evidence?.[key]
+                  const titel = beleg
+                    ? `Quelle: ${beleg.quelle}${beleg.zitat ? `\n„${beleg.zitat}"` : ''}`
+                    : undefined
+                  return (
+                    <div key={key} className="flex gap-2">
+                      <dt className="text-text-muted shrink-0 w-36">{label}</dt>
+                      <dd className="text-text break-all" title={titel}>
+                        {key === 'website' || key === 'email' ? (
+                          <a
+                            href={key === 'email' ? `mailto:${wert}` : (wert ?? undefined)}
+                            target={key === 'website' ? '_blank' : undefined}
+                            rel="noopener noreferrer"
+                            className="text-accent"
+                          >
+                            {wert}
+                          </a>
+                        ) : wert}
+                        {key === 'email' && p.email_status && p.email_status !== 'valid' && (
+                          <span className="text-xs text-warning"> · {p.email_status}</span>
+                        )}
+                      </dd>
+                    </div>
+                  )
+                })}
+              </dl>
+            </div>
+          )}
+
           <div>
             <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">Referenzverzeichnis</h4>
             <a href={p.ref_url} target="_blank" rel="noopener noreferrer" className="text-sm text-accent break-all">

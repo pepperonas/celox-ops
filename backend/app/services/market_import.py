@@ -6,9 +6,10 @@ ein **Upsert über `catalog_id`**: derselbe Katalog zweimal eingespielt erzeugt
 keine Dubletten.
 
 Die entscheidende Regel steht in `_KATALOG_FELDER` / `_OPS_FELDER`: Nur
-Katalogfelder werden überschrieben. `status`, `ops_note`, `rainmaker_lead_id`,
-`reviewed_at` und `pushed_at` gehören ops und bleiben unangetastet — sonst würde
-eine Katalog-Aktualisierung den eigenen Bearbeitungsstand löschen.
+Katalogfelder werden überschrieben. Bearbeitungsstand (`status`, `ops_note`, `rainmaker_lead_id`, `reviewed_at`,
+`pushed_at`) UND die angereicherten Kontaktdaten (`website`, `email`, `phone`,
+`decision_maker`, `employee_count`, …) gehören ops und bleiben unangetastet —
+sonst würde eine Katalog-Aktualisierung eigene Arbeit löschen.
 """
 from __future__ import annotations
 
@@ -60,7 +61,13 @@ _KATALOG_FELDER: dict[str, str] = {
 }
 
 # Gehört ops, nicht dem Katalog — hier fasst der Import nichts an.
-_OPS_FELDER = ("status", "ops_note", "rainmaker_lead_id", "reviewed_at", "pushed_at")
+# Ops-Felder: Bearbeitungsstand UND angereicherte Kontaktdaten. Beides ist Arbeit,
+# die nicht im Katalog steht — ein Re-Import darf sie nicht löschen.
+_OPS_FELDER = (
+    "status", "ops_note", "rainmaker_lead_id", "reviewed_at", "pushed_at",
+    "website", "email", "email_status", "phone", "decision_maker",
+    "employee_count", "contact_evidence", "contact_checked_at",
+)
 
 
 def _coerce(spalte: str, wert: Any) -> Any:

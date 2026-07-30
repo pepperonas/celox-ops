@@ -49,6 +49,18 @@ class MarketProductResponse(BaseModel):
     reg: list[str] = []
     self_compete: bool
 
+    # Angereicherte Kontaktdaten. `contact_evidence` trägt Quelle + Zitat je Feld —
+    # ohne Beleg wäre „korrekt" keine überprüfbare Aussage, deshalb geht der Beleg
+    # mit an die Oberfläche und nicht nur in die Datenbank.
+    website: str | None = None
+    email: str | None = None
+    email_status: str | None = None
+    phone: str | None = None
+    decision_maker: str | None = None
+    employee_count: int | None = None
+    contact_evidence: dict | None = None
+    contact_checked_at: datetime | None = None
+
     status: MarketStatus
     ops_note: str | None = None
     rainmaker_lead_id: uuid.UUID | None = None
