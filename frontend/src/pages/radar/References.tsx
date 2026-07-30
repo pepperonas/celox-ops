@@ -11,16 +11,16 @@ import toast from 'react-hot-toast'
 import Icon from '../../components/Icon'
 import Select from '../../components/Select'
 import {
-  getMarketReferences,
+  getMarketReferenceCompanies,
   getMarketReferenceStats,
   referencesToPipeline,
   updateMarketReference,
-  type MarketReference,
+  type MarketReferenceGroup,
   type MarketReferenceStats,
 } from '../../api/market'
 import RadarShell from './RadarShell'
 
-const PAGE_SIZE = 100
+const PAGE_SIZE = 50
 
 /** Was der Score bedeutet — im Kopf der Liste erklärt, nicht versteckt. */
 const TEIL_LABEL: Record<string, string> = {
@@ -45,7 +45,8 @@ const ORG_KLASSE: Record<string, string> = {
 }
 
 export default function References() {
-  const [items, setItems] = useState<MarketReference[]>([])
+  const [items, setItems] = useState<MarketReferenceGroup[]>([])
+  const [offen, setOffen] = useState<Set<string>>(new Set())
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [q, setQ] = useState('')
@@ -62,12 +63,12 @@ export default function References() {
   const laden = useCallback(async () => {
     setLaedt(true)
     try {
-      const r = await getMarketReferences({
+      const r = await getMarketReferenceCompanies({
         page,
         page_size: PAGE_SIZE,
         q: q.trim() || undefined,
         status: status === 'alle' ? undefined : status,
-        mit_website: webFilter === 'alle' ? undefined : webFilter === 'ja',
+        mit_baustein: webFilter === 'alle' ? undefined : webFilter === 'ja',
         nur_mehrfach: nurMehrfach || undefined,
         orgtyp: orgFilter === 'alle' ? undefined : orgFilter,
         sort,
@@ -88,7 +89,8 @@ export default function References() {
     setGewaehlt(new Set())
   }, [page, q, status, webFilter, nurMehrfach, orgFilter, sort])
 
-  const alleSichtbarGewaehlt = items.length > 0 && items.every((i) => gewaehlt.has(i.id))
+  const alleSichtbarGewaehlt = items.length > 0
+    && items.every((i) => gewaehlt.has(i.company_norm))
 
   const umschalten = (id: string) => {
     setGewaehlt((v) => {
@@ -100,7 +102,11 @@ export default function References() {
   }
 
   const uebernehmen = async () => {
-    const ids = [...gewaehlt]
+    // Pro ausgewählter FIRMA alle ihre Referenz-IDs mitgeben: Die Namens-Dedup in
+    // reference_to_pipeline legt EINEN Lead an und hängt die Briefings der weiteren
+    // Systeme an — genau das, was man im Gespräch braucht.
+    const ids = items.filter((i) => gewaehlt.has(i.company_norm))
+      .flatMap((i) => i.reference_ids)
     if (!ids.length) return
     setBusy(true)
     try {
@@ -117,11 +123,13 @@ export default function References() {
     setBusy(false)
   }
 
-  const verwerfen = async (r: MarketReference) => {
-    // Optimistisch: Die Zeile verschwindet sofort aus der „neu"-Ansicht.
-    setItems((v) => v.filter((x) => x.id !== r.id))
+  const verwerfen = async (g: MarketReferenceGroup) => {
+    // Optimistisch: Die Zeile verschwindet sofort aus der „offen"-Ansicht. Verworfen
+    // wird die ganze Firma, also alle ihre Referenz-Zeilen.
+    setItems((v) => v.filter((x) => x.company_norm !== g.company_norm))
     try {
-      await updateMarketReference(r.id, { status: 'verworfen' })
+      await Promise.all(g.reference_ids.map(
+        (id) => updateMarketReference(id, { status: 'verworfen' })))
     } catch {
       toast.error('Konnte nicht verworfen werden.')
       await laden()
@@ -138,9 +146,11 @@ export default function References() {
     <RadarShell>
       <div className="mb-4">
         <p className="text-sm text-text-muted">
-          Firmen, die die Software eines Katalog-Herstellers nachweislich einsetzen —
-          laut seinem eigenen Referenzverzeichnis. Der Verkaufswinkel steht nach der
-          Übernahme in den Lead-Notizen: welche Software, welcher Baustein, welcher Beleg.
+          Eine Zeile je Firma, sortiert nach dem, was die Daten hergeben. Firmen mit
+          mehreren Systemen stehen oben — mehr Systeme heißt mehr Integrationsschmerz
+          und zwei Gesprächseinstiege. Der Score ist keine Umsatzprognose: Zusammensetzung
+          per Maus über der Zahl. Nach der Übernahme steht der Verkaufswinkel in den
+          Lead-Notizen (Software, Baustein, Beleg).
         </p>
       </div>
 
@@ -211,19 +221,19 @@ export default function References() {
             ]}
           />
         </div>
-        <div className="w-40">
+        <div className="w-44">
           <label htmlFor="ref-web" className="block text-[11px] text-text-muted mb-1">
-            Website
+            Aufsatzlösung
           </label>
           <Select
             id="ref-web"
-            name="mit_website"
+            name="mit_baustein"
             value={webFilter}
             onChange={(e) => { setWebFilter(e.target.value); setPage(1) }}
             options={[
               { value: 'alle', label: 'egal' },
-              { value: 'ja', label: 'vorhanden' },
-              { value: 'nein', label: 'fehlt' },
+              { value: 'ja', label: 'Baustein passt' },
+              { value: 'nein', label: 'kein Baustein' },
             ]}
           />
         </div>
@@ -283,7 +293,7 @@ export default function References() {
                   aria-label="Alle sichtbaren auswählen"
                   checked={alleSichtbarGewaehlt}
                   onChange={() => setGewaehlt(
-                    alleSichtbarGewaehlt ? new Set() : new Set(items.map((i) => i.id)),
+                    alleSichtbarGewaehlt ? new Set() : new Set(items.map((i) => i.company_norm)),
                   )}
                   className="w-4 h-4"
                 />
@@ -307,13 +317,13 @@ export default function References() {
               </td></tr>
             )}
             {!laedt && items.map((r) => (
-              <tr key={r.id} className="border-b border-border/50 last:border-0">
+              <tr key={r.company_norm} className="border-b border-border/50 last:border-0">
                 <td className="p-2">
                   <input
                     type="checkbox"
                     aria-label={`${r.company} auswählen`}
-                    checked={gewaehlt.has(r.id)}
-                    onChange={() => umschalten(r.id)}
+                    checked={gewaehlt.has(r.company_norm)}
+                    onChange={() => umschalten(r.company_norm)}
                     className="w-4 h-4"
                   />
                 </td>
@@ -357,14 +367,41 @@ export default function References() {
                     </a>
                   )}
                 </td>
-                <td className="p-2 text-text-muted">
-                  {r.produkt}
-                  {r.hersteller && <span className="text-[11px]"> · {r.hersteller}</span>}
-                  {r.baustein_titel && (
-                    <span className="block text-[11px] text-accent/90"
-                          title="Aufsatzlösung, die auf diese Software passt">
-                      → Baustein {r.baustein_nr}: {r.baustein_titel}
-                    </span>
+                <td className="p-2 text-text-muted align-top">
+                  {/* Alle Systeme der Firma. Mehr als eines wird eingeklappt: Bei
+                      50 Zeilen zählt Dichte, und das erste System reicht meist zum
+                      Erkennen. */}
+                  {(offen.has(r.company_norm) ? r.produkte : r.produkte.slice(0, 1))
+                    .map((sys) => (
+                      <div key={sys.reference_id} className="mb-0.5 last:mb-0">
+                        <a href={sys.source_url} target="_blank" rel="noopener noreferrer"
+                           title="Beleg: Referenzverzeichnis des Herstellers"
+                           className="text-text-muted hover:text-text">
+                          {sys.produkt}
+                        </a>
+                        {sys.baustein_titel && (
+                          <span className="block text-[11px] text-accent/90"
+                                title="Aufsatzlösung, die auf diese Software passt">
+                            → Baustein {sys.baustein_nr}: {sys.baustein_titel}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  {r.produkte.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setOffen((v) => {
+                        const n = new Set(v)
+                        if (n.has(r.company_norm)) n.delete(r.company_norm)
+                        else n.add(r.company_norm)
+                        return n
+                      })}
+                      className="text-[11px] text-accent"
+                    >
+                      {offen.has(r.company_norm)
+                        ? 'weniger'
+                        : `+ ${r.produkte.length - 1} weitere${r.produkte.length > 2 ? '' : 's'} System`}
+                    </button>
                   )}
                 </td>
                 <td className="p-2">
@@ -378,16 +415,7 @@ export default function References() {
                     <span className="text-[11px] text-text-muted">offen</span>
                   )}
                 </td>
-                <td className="p-2 text-right">
-                  <a
-                    href={r.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Beleg: Referenzverzeichnis des Herstellers"
-                    className="md-state inline-grid place-items-center w-8 h-8 rounded-lg text-text-muted"
-                  >
-                    <Icon name="globe" size={15} />
-                  </a>
+                <td className="p-2 text-right align-top">
                   {r.status === 'neu' && (
                     <button
                       type="button"

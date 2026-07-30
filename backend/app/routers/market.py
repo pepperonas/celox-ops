@@ -8,7 +8,8 @@ GET    /api/market/categories            → Kategorie-Rollup inkl. Risiken
 GET    /api/market/bausteine             → Lösungsbausteine mit Reichweite
 GET    /api/market/facets                → Auswahlwerte für die Filter
 PATCH  /api/market/products/{id}         → eigener Bearbeitungsstand (Status, Notiz)
-GET    /api/market/references             → Referenzkunden, bewertet + sortiert (HAUPTSICHT)
+GET    /api/market/references             → Referenzkunden je (Firma, Hersteller), bewertet
+GET    /api/market/references/firmen      → EINE Zeile je Firma mit allen Systemen (HAUPTSICHT)
 GET    /api/market/references/stats       → Kennzahlen der Kundensicht
 PATCH  /api/market/references/{id}        → Bearbeitungsstand (verwerfen/zurückholen)
 POST   /api/market/references/to-pipeline → ausgewählte Firmen als Leads anlegen
@@ -37,6 +38,7 @@ from app.models.market_baustein import MarketBaustein
 from app.models.market_reference import MarketReference
 from app.models.market_product import MarketProduct, MarketStatus
 from app.schemas.market import (
+    MarketReferenceGroupListe,
     MarketReferenceListe,
     MarketReferenceResponse,
     MarketReferenceStats,
@@ -433,6 +435,107 @@ async def list_references(
     gesamt = len(bewertet)
     start = (page - 1) * page_size
     return {"items": bewertet[start:start + page_size], "total": gesamt, "page": page,
+            "page_size": page_size, "pages": max(1, (gesamt + page_size - 1) // page_size)}
+
+
+def _bester_name(namen: list[str]) -> str:
+    """Aus mehreren Schreibweisen derselben Firma die vollständigste wählen. Rein.
+
+    „Edeka" und „EDEKA" sind dieselbe Firma (gleicher `company_norm`), stehen aber in
+    verschiedenen Verzeichnissen verschieden da. Genommen wird die längste Fassung —
+    sie trägt meist die Rechtsform mit („Würth GmbH & Co. KG" statt „Würth"). Bei
+    gleicher Länge alphabetisch, damit die Anzeige nicht zwischen zwei Aufrufen wechselt.
+    """
+    return sorted(namen, key=lambda n: (-len(n), n))[0]
+
+
+@router.get("/references/firmen", response_model=MarketReferenceGroupListe)
+async def list_reference_companies(
+    q: str | None = None,
+    status: str | None = None,
+    nur_mehrfach: bool = False,
+    orgtyp_filter: str | None = Query(None, alias="orgtyp"),
+    mit_baustein: bool | None = None,
+    sort: str = Query("score"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """**Die Hauptsicht: eine Zeile je Firma, mit allen Systemen, nach Score sortiert.**
+
+    Ungruppiert erschien eine Firma mit drei Systemen dreimal und belegte die Spitze
+    mehrfach (live gesehen: Edeka, August Storck, DAW SE). Für die Frage „welche Kunden
+    lohnen sich" ist die Firma die Einheit.
+
+    Ein Push nimmt **alle** Referenz-IDs der Firma mit: Die Namens-Dedup in
+    `reference_to_pipeline` legt dann EINEN Lead an und hängt die Briefings der
+    weiteren Systeme an — genau das, was man im Gespräch braucht.
+    """
+    if sort not in SORTIERUNGEN:
+        raise HTTPException(status_code=422, detail=f"sort muss aus {SORTIERUNGEN} sein")
+
+    alle = list((await db.execute(select(MarketReference))).scalars())
+    produkte = await _produkt_map(db, {r.product_id for r in alle})
+    bausteine = list((await db.execute(select(MarketBaustein))).scalars())
+
+    gruppen: dict[str, list[MarketReference]] = {}
+    for r in alle:
+        gruppen.setdefault(r.company_norm, []).append(r)
+
+    items = []
+    for schluessel, zeilen in gruppen.items():
+        namen = _bester_name([r.company for r in zeilen])
+        systeme_liste = []
+        hat_baustein = False
+        best_score = 0
+        for r in sorted(zeilen, key=lambda x: x.company):
+            p = produkte.get(r.product_id)
+            passend = bausteine_fuer(p.catalog_id, bausteine) if p else []
+            hat_baustein = hat_baustein or bool(passend)
+            best_score = max(best_score, p.score if p else 0)
+            systeme_liste.append({
+                "reference_id": r.id, "product_id": r.product_id,
+                "produkt": p.produkt if p else None,
+                "hersteller": p.hersteller if p else None,
+                "source_url": r.source_url,
+                "baustein_nr": passend[0].nr if passend else None,
+                "baustein_titel": passend[0].titel if passend else None,
+            })
+        website = next((r.website for r in zeilen if r.website), None)
+        # Ein Stand für die Firma: „in der Pipeline" gewinnt, weil der Lead existiert.
+        stand = ("in_pipeline" if any(r.status == "in_pipeline" for r in zeilen)
+                 else "neu" if any(r.status == "neu" for r in zeilen) else "verworfen")
+        # Die Systemzahl zählt VERSCHIEDENE Hersteller-Produkte, nicht Zeilen.
+        anzahl = len({r.product_id for r in zeilen})
+        b = bewerte(company=namen, systeme=anzahl, hat_baustein=hat_baustein,
+                    produkt_score=best_score, hat_website=bool(website))
+        items.append({
+            "company": namen, "company_norm": schluessel, "website": website,
+            "status": stand, "score": b["score"], "score_teile": b["score_teile"],
+            "orgtyp": b["orgtyp"], "systeme": anzahl,
+            "reference_ids": [r.id for r in zeilen],
+            "produkte": systeme_liste,
+            "_hat_baustein": hat_baustein,
+        })
+
+    if q:
+        nadel = q.strip().lower()
+        items = [i for i in items if nadel in i["company"].lower()]
+    if status:
+        items = [i for i in items if i["status"] == status]
+    if nur_mehrfach:
+        items = [i for i in items if i["systeme"] > 1]
+    if orgtyp_filter:
+        items = [i for i in items if i["orgtyp"] == orgtyp_filter]
+    if mit_baustein is not None:
+        items = [i for i in items if i["_hat_baustein"] is mit_baustein]
+    for i in items:
+        i.pop("_hat_baustein", None)
+
+    items = sortiere(items, sort)
+    gesamt = len(items)
+    start = (page - 1) * page_size
+    return {"items": items[start:start + page_size], "total": gesamt, "page": page,
             "page_size": page_size, "pages": max(1, (gesamt + page_size - 1) // page_size)}
 
 

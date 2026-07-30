@@ -279,3 +279,47 @@ export const updateMarketReference = (id: string, data: { status?: string }) =>
 export const referencesToPipeline = (ids: string[], force = false) =>
   api.post<ReferencesToPipelineResult>('/market/references/to-pipeline', { ids, force })
     .then((r) => r.data)
+
+/** EINE Zeile je Firma mit allen ihren Systemen — die Hauptsicht der Kundenliste. */
+export interface MarketReferenceSystem {
+  reference_id: string
+  product_id: string
+  produkt: string | null
+  hersteller: string | null
+  source_url: string
+  baustein_nr: number | null
+  baustein_titel: string | null
+}
+
+export interface MarketReferenceGroup {
+  company: string
+  company_norm: string
+  website: string | null
+  status: string
+  score: number
+  score_teile: Record<string, number>
+  orgtyp: string
+  systeme: number
+  reference_ids: string[]
+  produkte: MarketReferenceSystem[]
+}
+
+export interface MarketReferenceGroupListe {
+  items: MarketReferenceGroup[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export const getMarketReferenceCompanies = (params: {
+  q?: string
+  status?: string
+  nur_mehrfach?: boolean
+  orgtyp?: string
+  mit_baustein?: boolean
+  sort?: string
+  page?: number
+  page_size?: number
+}) => api.get<MarketReferenceGroupListe>('/market/references/firmen', { params })
+  .then((r) => r.data)

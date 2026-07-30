@@ -243,3 +243,43 @@ class ReferencesToPipelineResponse(BaseModel):
     created: list[dict]
     linked: list[dict]
     failed: list[dict]
+
+
+class MarketReferenceSystem(BaseModel):
+    """Ein System, das diese Firma einsetzt — mit der passenden Aufsatzlösung."""
+
+    reference_id: uuid.UUID
+    product_id: uuid.UUID
+    produkt: str | None = None
+    hersteller: str | None = None
+    source_url: str
+    baustein_nr: int | None = None
+    baustein_titel: str | None = None
+
+
+class MarketReferenceGroup(BaseModel):
+    """EINE Firma mit allen ihren Systemen — die eigentliche Kundensicht.
+
+    Die Tabelle speichert ein Paar (Firma, Hersteller); ungruppiert erschien eine Firma
+    mit drei Systemen dreimal in der Liste und belegte die Spitze mehrfach. Für die
+    Frage „welche Kunden lohnen sich" ist die Firma die Einheit, nicht das Paar.
+    """
+
+    company: str
+    company_norm: str
+    website: str | None = None
+    status: str
+    score: int
+    score_teile: dict[str, int] = {}
+    orgtyp: str
+    systeme: int
+    reference_ids: list[uuid.UUID] = []
+    produkte: list[MarketReferenceSystem] = []
+
+
+class MarketReferenceGroupListe(BaseModel):
+    items: list[MarketReferenceGroup]
+    total: int
+    page: int
+    page_size: int
+    pages: int

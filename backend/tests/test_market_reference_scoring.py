@@ -137,3 +137,27 @@ class TestSortierung:
         vorher = [z["company"] for z in self.ZEILEN]
         sortiere(self.ZEILEN, "score")
         assert [z["company"] for z in self.ZEILEN] == vorher
+
+
+class TestBesterName:
+    """Aus mehreren Schreibweisen derselben Firma die vollständigste wählen.
+
+    „Edeka" und „EDEKA" haben denselben `company_norm`, stehen aber in verschiedenen
+    Verzeichnissen verschieden da. Ohne festen Zweitschlüssel wechselte die Anzeige
+    zwischen zwei Seitenaufrufen.
+    """
+
+    def test_laengste_fassung_gewinnt(self):
+        from app.routers.market import _bester_name
+        # Die längere trägt meist die Rechtsform mit — im Gespräch die brauchbarere.
+        assert _bester_name(["Würth", "Würth GmbH & Co. KG"]) == "Würth GmbH & Co. KG"
+
+    def test_bei_gleicher_laenge_alphabetisch(self):
+        from app.routers.market import _bester_name
+        assert _bester_name(["EDEKA", "Edeka"]) == "EDEKA"
+        # Stabil, egal in welcher Reihenfolge die Zeilen kommen.
+        assert _bester_name(["Edeka", "EDEKA"]) == "EDEKA"
+
+    def test_einzelner_name(self):
+        from app.routers.market import _bester_name
+        assert _bester_name(["Solo GmbH"]) == "Solo GmbH"
