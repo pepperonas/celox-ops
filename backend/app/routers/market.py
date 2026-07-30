@@ -10,6 +10,7 @@ GET    /api/market/facets                → Auswahlwerte für die Filter
 PATCH  /api/market/products/{id}         → eigener Bearbeitungsstand (Status, Notiz)
 GET    /api/market/references             → Referenzkunden je (Firma, Hersteller), bewertet
 GET    /api/market/references/firmen      → EINE Zeile je Firma mit allen Systemen (HAUPTSICHT)
+GET    /api/market/references/firmen/{key} → eine Firma in ganzer Tiefe (Detail-Seite)
 GET    /api/market/references/stats       → Kennzahlen der Kundensicht
 PATCH  /api/market/references/{id}        → Bearbeitungsstand (verwerfen/zurückholen)
 POST   /api/market/references/to-pipeline → ausgewählte Firmen als Leads anlegen
@@ -38,6 +39,7 @@ from app.models.market_baustein import MarketBaustein
 from app.models.market_reference import MarketReference
 from app.models.market_product import MarketProduct, MarketStatus
 from app.schemas.market import (
+    MarketReferenceDetail,
     MarketReferenceGroupListe,
     MarketReferenceListe,
     MarketReferenceResponse,
@@ -515,6 +517,11 @@ async def list_reference_companies(
             "orgtyp": b["orgtyp"], "systeme": anzahl,
             "reference_ids": [r.id for r in zeilen],
             "produkte": systeme_liste,
+            # Angereicherte Werte: erster nicht-leerer über die Nennungen — sie gehören
+            # der Firma, nicht dem Paar.
+            "email": next((r.email for r in zeilen if r.email), None),
+            "phone": next((r.phone for r in zeilen if r.phone), None),
+            "decision_maker": next((r.decision_maker for r in zeilen if r.decision_maker), None),
             "_hat_baustein": hat_baustein,
         })
 
@@ -537,6 +544,74 @@ async def list_reference_companies(
     start = (page - 1) * page_size
     return {"items": items[start:start + page_size], "total": gesamt, "page": page,
             "page_size": page_size, "pages": max(1, (gesamt + page_size - 1) // page_size)}
+
+
+@router.get("/references/firmen/{company_norm}", response_model=MarketReferenceDetail)
+async def reference_company_detail(
+    company_norm: str, db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Eine Firma in ganzer Tiefe.
+
+    Angesprochen über `company_norm` und nicht über eine ID: Die Firma ist hier keine
+    Zeile, sondern eine Gruppe von Zeilen (eine je Hersteller). Der normalisierte Name
+    IST ihr Schlüssel — genau der, über den auch die Eindeutigkeit läuft.
+    """
+    zeilen = list((await db.execute(
+        select(MarketReference).where(MarketReference.company_norm == company_norm)
+    )).scalars())
+    if not zeilen:
+        raise HTTPException(status_code=404, detail="Firma nicht gefunden")
+
+    produkte = await _produkt_map(db, {r.product_id for r in zeilen})
+    alle_bausteine = list((await db.execute(select(MarketBaustein))).scalars())
+
+    systeme_liste, passende = [], {}
+    for r in sorted(zeilen, key=lambda x: x.company):
+        p = produkte.get(r.product_id)
+        treffer = bausteine_fuer(p.catalog_id, alle_bausteine) if p else []
+        for b in treffer:
+            passende[b.nr] = b
+        systeme_liste.append({
+            "reference_id": r.id, "product_id": r.product_id,
+            "produkt": p.produkt if p else None,
+            "hersteller": p.hersteller if p else None,
+            "source_url": r.source_url,
+            "baustein_nr": treffer[0].nr if treffer else None,
+            "baustein_titel": treffer[0].titel if treffer else None,
+        })
+
+    # Kontaktdaten gehören der Firma: erster nicht-leerer Wert über alle Nennungen.
+    def zuerst(feld: str):
+        return next((getattr(r, feld) for r in zeilen if getattr(r, feld, None)), None)
+
+    anzahl = len({r.product_id for r in zeilen})
+    beleg: dict = {}
+    for r in zeilen:
+        beleg.update(r.contact_evidence or {})
+    b = bewerte(company=_bester_name([r.company for r in zeilen]), systeme=anzahl,
+                hat_baustein=bool(passende),
+                produkt_score=max((p.score for p in produkte.values()), default=0),
+                hat_website=bool(zuerst("website")))
+    return {
+        "company": _bester_name([r.company for r in zeilen]),
+        "company_norm": company_norm,
+        "website": zuerst("website"), "website_source": zuerst("website_source"),
+        "email": zuerst("email"), "email_status": zuerst("email_status"),
+        "phone": zuerst("phone"), "decision_maker": zuerst("decision_maker"),
+        "employee_count": zuerst("employee_count"), "address": zuerst("address"),
+        "contact_evidence": beleg or None,
+        "contact_checked_at": zuerst("contact_checked_at"),
+        "status": ("in_pipeline" if any(r.status == "in_pipeline" for r in zeilen)
+                   else "neu" if any(r.status == "neu" for r in zeilen) else "verworfen"),
+        "score": b["score"], "score_teile": b["score_teile"], "orgtyp": b["orgtyp"],
+        "systeme": anzahl,
+        "reference_ids": [r.id for r in zeilen],
+        "rainmaker_lead_id": zuerst("rainmaker_lead_id"),
+        "produkte": systeme_liste,
+        "bausteine": [{"nr": b2.nr, "titel": b2.titel, "was": b2.was,
+                       "warum": b2.warum, "aufwand": b2.aufwand}
+                      for b2 in sorted(passende.values(), key=lambda x: x.nr)],
+    }
 
 
 @router.patch("/references/{reference_id}", response_model=MarketReferenceResponse)

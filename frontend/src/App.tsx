@@ -53,6 +53,7 @@ const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
 const RadarOverview = lazy(() => import('./pages/radar/Overview'))
 const RadarOpportunities = lazy(() => import('./pages/radar/Opportunities'))
 const RadarReferences = lazy(() => import('./pages/radar/References'))
+const RadarReferenceDetail = lazy(() => import('./pages/radar/ReferenceDetail'))
 const RadarBausteine = lazy(() => import('./pages/radar/Bausteine'))
 const RadarVendors = lazy(() => import('./pages/radar/Vendors'))
 const RadarCategories = lazy(() => import('./pages/radar/Categories'))
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="/radar/chancen" element={<RadarOpportunities />} />
           {/* Referenzkunden = die eigentlichen Leads (Hersteller-Kunden) */}
           <Route path="/radar/kunden" element={<RadarReferences />} />
+          <Route path="/radar/kunden/:key" element={<RadarReferenceDetail />} />
           <Route path="/radar/bausteine" element={<RadarBausteine />} />
           <Route path="/radar/hersteller" element={<RadarVendors />} />
           <Route path="/radar/kategorien" element={<RadarCategories />} />

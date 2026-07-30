@@ -138,6 +138,23 @@ _DIENSTLEISTUNG = re.compile(
     re.I,
 )
 
+# Auszeichnungen und Bewertungssiegel. Am Bestand gefunden: `"Android Enterprise
+# Silver Partner" Badge`, `Badge: Capterra Reviews`, `Badge: GetApp Reviews`,
+# `IP Insider Award PLATIN 2023` — Siegel-Logos, die als Kundenlogo durchgingen.
+#
+# **Präzise, nicht breit.** „Partner" allein darf NICHT filtern: `Fink & Partner GmbH`,
+# `Eblinger & Partner` und `Auto Partner SA` sind echte Firmen. Gefiltert wird nur, wo
+# ein Siegel-Wort steht (Badge, Award, Testsieger, Reviews …) — bei „Partner" nur in
+# Verbindung mit einem Programmnamen in Anführungszeichen oder einem Metall/Rang.
+_AUSZEICHNUNG = re.compile(
+    r"\b(?:badge|award|awards|testsieger|winner|gewinner|siegel|zertifikat|"
+    r"zertifiziert|auszeichnung|bewertung|reviews?|rating|sterne|"
+    r"top\s?\d{1,3}|platin|leader\s+\d{4}|best\s+of)\b"
+    r"|^[\"„”].*[\"„”]\s*(?:badge|partner|award)"
+    r"|\b(?:silver|gold|bronze|platinum|premium)\s+partner\b",
+    re.I,
+)
+
 # „Logo Siemens", „Siemens Logo", „Referenz: Stadt X" → der Name bleibt übrig.
 _ABSCHNEIDEN = re.compile(
     r"^(?:logo|logos|referenz|referenzen|kunde|kunden|kundenlogo|partner|bild)"
@@ -172,6 +189,9 @@ def saeubere_namen(roh: str) -> str | None:
         return None
     # Dienstleistungsphrase ohne Rechtsform ist keine Firma (s. _DIENSTLEISTUNG).
     if _DIENSTLEISTUNG.search(name) and not _RECHTSFORM.search(name):
+        return None
+    # Auszeichnungs-/Bewertungssiegel sind keine Kunden (s. _AUSZEICHNUNG).
+    if _AUSZEICHNUNG.search(name):
         return None
     if "@" in name or "http" in name.lower():
         return None

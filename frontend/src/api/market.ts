@@ -291,6 +291,31 @@ export interface MarketReferenceSystem {
   baustein_titel: string | null
 }
 
+export interface MarketReferenceDetail {
+  company: string
+  company_norm: string
+  website: string | null
+  website_source: string | null
+  email: string | null
+  email_status: string | null
+  phone: string | null
+  decision_maker: string | null
+  employee_count: number | null
+  address: string | null
+  /* Beleg je Feld (Quelle + ggf. Zitat) — damit jeder Wert nachprüfbar ist. */
+  contact_evidence: Record<string, { quelle: string; zitat?: string }> | null
+  contact_checked_at: string | null
+  status: string
+  score: number
+  score_teile: Record<string, number>
+  orgtyp: string
+  systeme: number
+  reference_ids: string[]
+  rainmaker_lead_id: string | null
+  produkte: MarketReferenceSystem[]
+  bausteine: { nr: number; titel: string; was: string | null; warum: string | null; aufwand: string | null }[]
+}
+
 export interface MarketReferenceGroup {
   company: string
   company_norm: string
@@ -302,6 +327,9 @@ export interface MarketReferenceGroup {
   systeme: number
   reference_ids: string[]
   produkte: MarketReferenceSystem[]
+  email: string | null
+  phone: string | null
+  decision_maker: string | null
 }
 
 export interface MarketReferenceGroupListe {
@@ -323,3 +351,7 @@ export const getMarketReferenceCompanies = (params: {
   page_size?: number
 }) => api.get<MarketReferenceGroupListe>('/market/references/firmen', { params })
   .then((r) => r.data)
+
+export const getMarketReferenceCompany = (companyNorm: string) =>
+  api.get<MarketReferenceDetail>(`/market/references/firmen/${encodeURIComponent(companyNorm)}`)
+    .then((r) => r.data)

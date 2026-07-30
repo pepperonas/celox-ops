@@ -57,6 +57,27 @@ class TestNamen:
     def test_saetze_sind_keine_namen(self):
         assert saeubere_namen("Wir digitalisieren Ihre Prozesse von Anfang bis Ende.") is None
 
+    def test_auszeichnungen_sind_keine_kunden(self):
+        """Siegel-Logos, die im Bestand als Kundenlogo durchgingen.
+
+        Wörtlich aus `market_references` in Prod — sie standen in der Kundenliste
+        neben echten Firmen.
+        """
+        for roh in ['"Android Enterprise Silver Partner" Badge',
+                    "Badge: Capterra Reviews", "Badge: GetApp Reviews",
+                    "Badge: Google Reviews", "IP Insider Award PLATIN 2023",
+                    "Testsieger 2024", "Top 100 Innovator", "Gold Partner"]:
+            assert saeubere_namen(roh) is None, roh
+
+    def test_partner_im_firmennamen_bleibt(self):
+        """Gegenprobe — und der Grund, warum der Filter präzise sein muss.
+
+        „Partner" allein darf nicht filtern: Diese drei stehen echt im Bestand.
+        """
+        for roh in ["Fink & Partner GmbH", "Eblinger & Partner", "Auto Partner SA",
+                    "BÄUMLER, BÄUMLER & PARTNER", "ISP und Partner AG"]:
+            assert saeubere_namen(roh) == roh, roh
+
     def test_gepunktete_rechtsformen_zaehlen_mit(self):
         """Ein `\\b` hinter einem Punkt kann nicht greifen.
 

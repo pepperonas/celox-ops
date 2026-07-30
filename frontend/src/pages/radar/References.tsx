@@ -7,6 +7,7 @@
 // Bewusst eine schlichte Arbeitsliste, keine Kacheln: Der Ablauf ist sichten,
 // ankreuzen, übernehmen — bei tausenden Zeilen zählt Dichte, nicht Gestaltung.
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Icon from '../../components/Icon'
 import Select from '../../components/Select'
@@ -353,7 +354,10 @@ export default function References() {
                   </span>
                 </td>
                 <td className="p-2">
-                  <span className="text-text">{r.company}</span>
+                  <Link to={`/radar/kunden/${encodeURIComponent(r.company_norm)}`}
+                        className="text-text hover:text-accent">
+                    {r.company}
+                  </Link>
                   {r.systeme > 1 && (
                     <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium"
                           title="Diese Firma steht im Referenzverzeichnis mehrerer Hersteller">
@@ -365,15 +369,21 @@ export default function References() {
                   }`}>
                     {ORG_LABEL[r.orgtyp] ?? r.orgtyp}
                   </span>
-                  {r.website && (
-                    <a
-                      href={r.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent ml-2 text-xs"
-                    >
-                      {r.website.replace(/^https?:\/\//, '')}
-                    </a>
+                  {/* Kennzeichen, was schon angereichert ist — ohne die Detailseite
+                      zu öffnen. Reihenfolge = Nützlichkeit im Gespräch. */}
+                  {(r.decision_maker || r.phone || r.email || r.website) && (
+                    <span className="ml-2 inline-flex items-center gap-1 align-middle"
+                          title={[r.decision_maker && `Geschäftsführung: ${r.decision_maker}`,
+                                  r.phone && `Telefon: ${r.phone}`,
+                                  r.email && `E-Mail: ${r.email}`,
+                                  r.website].filter(Boolean).join('\n')}>
+                      {r.decision_maker && <Icon name="user" size={12} className="text-success" />}
+                      {r.phone && <Icon name="phone" size={12} className="text-success" />}
+                      {r.email && <Icon name="mail" size={12} className="text-success" />}
+                      {r.website && !r.email && !r.phone && (
+                        <Icon name="globe" size={12} className="text-text-muted" />
+                      )}
+                    </span>
                   )}
                 </td>
                 <td className="p-2 text-text-muted align-top">

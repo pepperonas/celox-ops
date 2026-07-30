@@ -257,6 +257,37 @@ class MarketReferenceSystem(BaseModel):
     baustein_titel: str | None = None
 
 
+class MarketReferenceDetail(BaseModel):
+    """Eine Firma in ganzer Tiefe — für die Detail-Seite.
+
+    Enthält alles, was für die Ansprache gebraucht wird: welche Systeme mit Beleg,
+    welche Bausteine passen, Kontaktdaten mit Herkunft, Score-Zerlegung. `contact_evidence`
+    geht mit, damit jeder Wert am Bildschirm nachprüfbar ist statt nur behauptet.
+    """
+
+    company: str
+    company_norm: str
+    website: str | None = None
+    website_source: str | None = None
+    email: str | None = None
+    email_status: str | None = None
+    phone: str | None = None
+    decision_maker: str | None = None
+    employee_count: int | None = None
+    address: str | None = None
+    contact_evidence: dict | None = None
+    contact_checked_at: datetime | None = None
+    status: str
+    score: int
+    score_teile: dict[str, int] = {}
+    orgtyp: str
+    systeme: int
+    reference_ids: list[uuid.UUID] = []
+    rainmaker_lead_id: uuid.UUID | None = None
+    produkte: list["MarketReferenceSystem"] = []
+    bausteine: list[dict] = []
+
+
 class MarketReferenceGroup(BaseModel):
     """EINE Firma mit allen ihren Systemen — die eigentliche Kundensicht.
 
@@ -275,6 +306,10 @@ class MarketReferenceGroup(BaseModel):
     systeme: int
     reference_ids: list[uuid.UUID] = []
     produkte: list[MarketReferenceSystem] = []
+    # Angereichert? Die Liste zeigt es als Kennzeichen, ohne die Detailseite zu öffnen.
+    email: str | None = None
+    phone: str | None = None
+    decision_maker: str | None = None
 
 
 class MarketReferenceGroupListe(BaseModel):

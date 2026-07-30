@@ -22,7 +22,10 @@ import re
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func,
+)
+from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -72,3 +75,20 @@ class MarketReference(OwnedMixin, Base):
 
     harvested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # --- Kontaktdaten (angereichert) ------------------------------------------
+    # Gleiche Struktur wie bei den Herstellern: Werte plus Beleg je Feld. Die Website
+    # stammt hier meist NICHT aus dem Verzeichnis, sondern aus einer Namensauflösung
+    # über Google Places — `website_source` hält fest, woher: „verlinkt" (im
+    # Verzeichnis verlinkt, sicher) oder „places" (aufgelöst, mit Namensprüfung).
+    # Ohne diese Unterscheidung wäre nicht mehr erkennbar, welcher Wert wie belegt ist.
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    decision_maker: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employee_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    website_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    contact_evidence: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    contact_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)
