@@ -205,18 +205,38 @@ _MA_MUSTER = [
     re.compile(r"Team\s+(?:aus|von)\s+(?:über|rund|ca\.|etwa)?\s*(\d{1,5})", re.I),
 ]
 
-# **Der Negativfilter ist hier der eigentliche Schutz.** In diesem Datensatz sind
-# ALLE 142 `kunden`-Werte Reichweiten-Angaben („~2.800 Unternehmen", „60.000+
-# Anwender", „5.500 Installationen"). Genau solche Sätze stehen auch auf den
-# Startseiten, und „betreut 2.800 Mitarbeiter unserer Kunden" wäre sonst eine
-# Mitarbeiterzahl. Passt der Satz auf eines dieser Wörter, wird verworfen.
+# **Der Negativfilter — und warum er allein nicht genügt.**
+#
+# Erste Fassung filterte auf Reichweiten-Wörter (Kunden, Anwender, Installationen),
+# weil in diesem Datensatz ALLE 142 `kunden`-Werte solche Angaben sind. Der Lauf über
+# alle 142 Hersteller zeigte dann: **13 von 25 Funden waren trotzdem falsch.** Nicht
+# zufällig, sondern strukturell — diese Firmen wurden ausgewählt, WEIL sie
+# Referenzkunden bewerben, also stehen auf ihren Seiten laufend fremde Firmengrößen:
+#
+#   „Stadt Wuppertal … 5600 Mitarbeitende … profitieren von der Digitalisierung"
+#   „GESUNDHEITSWESEN · 1.800 MITARBEITENDE"        (Referenz-Kachel)
+#   „Ideal für 50 bis 500 Mitarbeiter"              (Zielgruppe des Produkts)
+#   „11-50 Mitarbeiter"                             (Preisstaffel)
+#   „P&I Seminar3 Mitarbeiterportal"                (Ziffer aus Fließtext)
+#
+# Die Muster unten fangen diese Formen ab; die Erfahrung sagt aber, dass eine
+# Blockliste hier nicht auf „immer korrekt" kommt. Deshalb ist die Mitarbeiterzahl
+# **nicht mehr Teil des Standardlaufs** (s. `fetch_contacts(with_employee_count=…)`):
+# Sie wird nur auf ausdrückliche Anforderung ermittelt und gehört dann vor dem
+# Speichern über ihr Zitat geprüft. Ein Feld, das in der Hälfte der Fälle falsch ist,
+# ist schlimmer als ein leeres.
 _MA_KONTEXT_VERBOTEN = re.compile(
+    # Reichweite / fremde Firmen
     r"Kunden|Kundinnen|Nutzer|Anwender|Installationen|Lizenzen|Mandanten|"
     r"Unternehmen\s+(?:vertrauen|setzen)|Verwaltungen|Organisationen|"
-    r"betreu\w+|verwalt\w+|abrechn\w+|erfass\w+",
+    r"betreu\w+|verwalt\w+|abrechn\w+|erfass\w+|profitier\w+|"
+    r"\bStadt\b|\bGemeinde\b|\bLandkreis\b|\bKlinik\w*|\bzählt\b|"
+    r"arbeiten\s+(?:regelmäßig\s+)?mit|beschäftigt\b|"
+    # Zielgruppe / Preisstaffel statt Selbstbeschreibung
+    r"Ideal\s+für|geeignet\s+für|\bfür\s+Unternehmen|Egal\s+ob|\bab\s+\d|"
+    r"\bbis\s+\d|\d\s*[-–]\s*\d|Kategorie|Seminar|Preis|Tarif|Paket",
     re.I,
 )
-
 
 def _satz_um(text: str, start: int, ende: int) -> str:
     """Der Satz, in dem ein Treffer steht — Kontext für den Negativfilter und Beleg."""
@@ -273,7 +293,9 @@ def _beleg(evidence: dict, feld: str, url: str, zitat: str | None) -> None:
     evidence[feld] = {"quelle": url, "zitat": zitat} if zitat else {"quelle": url}
 
 
-async def fetch_contacts(ref_url: str | None) -> ContactFinding:
+async def fetch_contacts(
+    ref_url: str | None, *, with_employee_count: bool = False,
+) -> ContactFinding:
     """Startseite (+ Impressum) einer Herstellerdomain abrufen und auslesen.
 
     Zwei Abrufe höchstens: Startseite immer, Impressum nur wenn dort etwas fehlt.
@@ -282,6 +304,12 @@ async def fetch_contacts(ref_url: str | None) -> ContactFinding:
 
     Fehler sind normal — 5 der 142 Referenz-URLs waren schon beim Katalogbau nicht
     erreichbar. Ein Fehlschlag liefert `error`, nie einen geratenen Wert.
+
+    **`with_employee_count` ist standardmäßig AUS.** Am vollen Lauf gemessen waren
+    13 von 25 Funden falsch (Referenzkunden, Zielgruppen, Preisstaffeln — s. Kommentar
+    bei `_MA_KONTEXT_VERBOTEN`). Auf Herstellerseiten, die fremde Firmengrößen
+    bewerben, erreicht diese Extraktion die Zusage „immer korrekt" nicht. Wer sie
+    anfordert, muss die Funde über ihr Zitat prüfen.
     """
     f = ContactFinding()
     origin = vendor_origin(ref_url)
@@ -324,7 +352,7 @@ async def fetch_contacts(ref_url: str | None) -> ContactFinding:
             if gf:
                 f.decision_maker = gf
                 _beleg(f.evidence, "decision_maker", quelle, beleg)
-        if not f.employee_count:
+        if with_employee_count and not f.employee_count:
             anzahl, beleg = extract_employee_count(html)
             if anzahl:
                 f.employee_count = anzahl

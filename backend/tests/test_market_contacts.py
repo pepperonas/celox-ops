@@ -144,6 +144,47 @@ class TestEmployeeCount:
         ]:
             assert extract_employee_count(f"<p>{satz}</p>") == (None, None), satz
 
+    def test_echte_fehlfunde_aus_dem_vollen_lauf(self):
+        """Die 13 Falschfunde aus dem Lauf über alle 142 Hersteller.
+
+        Wörtlich aus `contact_evidence` übernommen — echte Negativbeispiele sind
+        wertvoller als erfundene. Der verschärfte Filter fängt 11 davon, ohne einen
+        der 12 richtigen Funde zu verwerfen (gemessen).
+
+        Die zwei Durchrutscher stehen bewusst mit `xfail`-Kommentar darunter: Sie sind
+        bare Kacheln ohne Satzstruktur („GESUNDHEITSWESEN · 1.800 MITARBEITENDE") und
+        damit strukturell nicht von einer richtigen Angabe („460+ Mitarbeitende")
+        unterscheidbar. Genau deshalb ist das Feld nicht Teil des Standardlaufs.
+        """
+        for zitat in [
+            "Stadt Wuppertal 5600 Mitarbeitende bei der Stadt Wuppertal profitieren von der Digitalisierung",
+            "Egal ob kleine Bäckerei oder große Franchise-Kette mit 500 Mitarbeitern",
+            "Ideal für 50 bis 500 Mitarbeiter",
+            "Elektro Heikes aus Münster zählt mit rund 170 Mitarbeitenden zu den führenden",
+            "Der bayerische Eisen- und Sanitärgroßhandel Hans Bohner beschäftigt 110 Mitarbeitende",
+            "Ideal für Unternehmen aus Handel und Produktion bis 100 Mitarbeiter:innen",
+            "55 Mitarbeitende arbeiten regelmäßig mit der Amagno Business Cloud",
+            "führende cloudbasierte ERP-Software für mittelständische Dienstleister ab 50 Mitarbeitern",
+            "11-50 Mitarbeiter",
+            "Platz in der Kategorie Kleine Unternehmen (20 bis 49 Mitarbeitende) sichern",
+            "P&I Seminar3 Mitarbeiterportal und Employee Self-Services",
+        ]:
+            assert extract_employee_count(f"<p>{zitat}</p>") == (None, None), zitat
+
+    def test_echte_richtige_funde_bleiben(self):
+        """Gegenprobe: Der verschärfte Filter darf die 12 echten Funde nicht fressen."""
+        for zitat, erwartet in [
+            ("Als inhabergeführtes Unternehmen mit 14 Geschäftsstellen und einem "
+             "engagierten Team von 750 Mitarbeitern", 750),
+            ("Heute arbeiten mehr als 450 Mitarbeiter in ganz Deutschland für unser "
+             "Familienunternehmen", 450),
+            ("über 45 Mitarbeitende an vier Standorten in Deutschland", 45),
+            ("Mit 120 Mitarbeitenden an 7 Standorten begleiten wir", 120),
+            ("Rund 25 Mitarbeiter", 25),
+            ("Mehr als 300 Mitarbeiter", 300),
+        ]:
+            assert extract_employee_count(f"<p>{zitat}</p>")[0] == erwartet, zitat
+
     def test_unplausible_groesse_wird_verworfen(self):
         assert extract_employee_count("<p>900000 Mitarbeitende</p>") == (None, None)
 
