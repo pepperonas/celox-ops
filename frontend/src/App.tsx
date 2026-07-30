@@ -50,6 +50,11 @@ const RainmakerStatistics = lazy(() => import('./pages/rainmaker/Statistics'))
 const RainmakerDuplicates = lazy(() => import('./pages/rainmaker/Duplicates'))
 const LeadSupervision = lazy(() => import('./pages/rainmaker/LeadSupervision'))
 const RainmakerSettingsPage = lazy(() => import('./pages/rainmaker/Settings'))
+const RadarOverview = lazy(() => import('./pages/radar/Overview'))
+const RadarOpportunities = lazy(() => import('./pages/radar/Opportunities'))
+const RadarBausteine = lazy(() => import('./pages/radar/Bausteine'))
+const RadarVendors = lazy(() => import('./pages/radar/Vendors'))
+const RadarCategories = lazy(() => import('./pages/radar/Categories'))
 
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
@@ -94,6 +99,12 @@ export default function App() {
           {/* „Vorgemerkt" abgelöst durch die Pipeline */}
           <Route path="/vorgemerkt" element={<Navigate to="/pipeline" replace />} />
           <Route path="/vorgemerkt/neu" element={<Navigate to="/pipeline/leads/neu" replace />} />
+          {/* Marktradar = Recherchekatalog, aus dem Leads in die Pipeline wandern */}
+          <Route path="/radar" element={<RadarOverview />} />
+          <Route path="/radar/chancen" element={<RadarOpportunities />} />
+          <Route path="/radar/bausteine" element={<RadarBausteine />} />
+          <Route path="/radar/hersteller" element={<RadarVendors />} />
+          <Route path="/radar/kategorien" element={<RadarCategories />} />
           <Route path="/aufgaben" element={<Tasks />} />
           <Route path="/kalender" element={<Calendar />} />
           <Route path="/zeiterfassung" element={<TimeTracking />} />

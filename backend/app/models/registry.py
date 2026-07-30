@@ -32,6 +32,8 @@ from app.models import expense  # noqa: F401
 from app.models import hostinger_link  # noqa: F401
 from app.models import invoice  # noqa: F401
 from app.models import lead  # noqa: F401
+from app.models import market_baustein  # noqa: F401
+from app.models import market_product  # noqa: F401
 from app.models import lead_analysis_job  # noqa: F401
 from app.models import lead_change_log  # noqa: F401
 from app.models import lead_chat_import  # noqa: F401

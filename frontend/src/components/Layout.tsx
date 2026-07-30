@@ -38,6 +38,15 @@ const navItems = [
     ),
   },
   {
+    to: '/radar',
+    label: 'Marktradar',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-4.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm0-3a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21" />
+      </svg>
+    ),
+  },
+  {
     to: '/aufgaben',
     label: 'Aufgaben',
     icon: (
@@ -189,7 +198,7 @@ const navItems = [
 // Thematische, einklappbare Gruppen (Dashboard bleibt einzeln oben). Reihenfolge
 // nach Business-Flow: gewinnen → liefern → abrechnen → planen → Ablage → System.
 const NAV_GROUPS_META: NavGroupMeta[] = [
-  { title: 'Leads & Akquise', paths: ['/rainmaker', '/pipeline', '/akquise'] },
+  { title: 'Leads & Akquise', paths: ['/rainmaker', '/pipeline', '/akquise', '/radar'] },
   { title: 'Kunden & Aufträge', paths: ['/kunden', '/auftraege', '/kanban', '/vertraege'] },
   { title: 'Finanzen', paths: ['/rechnungen', '/ausgaben', '/euer', '/analyse'] },
   { title: 'Organisation', paths: ['/aufgaben', '/kalender', '/zeiterfassung'] },
