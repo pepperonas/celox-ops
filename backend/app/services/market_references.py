@@ -268,34 +268,47 @@ def marker_anteil(namen: list[str]) -> float:
     return sum(1 for n in namen if hat_firmen_marker(n)) / len(namen)
 
 
-# Ab welchem Anteil gilt eine Ernte als Kundenliste?
-# 0,25 ist bewusst niedrig: In einer echten Liste stehen neben „Deutsche Bahn AG"
-# auch „GLS", „Helvetia", „Randstad" ohne Rechtsform. Bei reiner Navigation liegt der
-# Anteil dagegen bei 0 — die Trennung ist scharf, nicht knapp.
-MARKER_SCHWELLE = 0.25
+MIN_NAMEN = 8
+
+
+def ohne_seitenrauschen(namen: list[str], rauschen: set[str]) -> list[str]:
+    """Alles abziehen, was auch auf einer ANDEREN Seite derselben Domain steht. Rein.
+
+    **Das ist das tragende Signal.** Navigation, Produktnamen und Auszeichnungslogos
+    stehen auf jeder Seite der Domain; Kundenlogos nur im Referenzverzeichnis. Die
+    Differenz zur Startseite trennt beides strukturell — ohne Blockliste, ohne
+    Wörterbuch, ohne DOM-Analyse.
+
+    Nötig wurde es, weil ein inhaltliches Tor allein in eine Richtung falsch lag:
+    Der Anteil an Namen mit Rechtsform trennt Mittelstands-Listen gut von Navigation,
+    bestraft aber gerade die hochwertigste Sorte Liste — große Marken tragen keine
+    Rechtsform („GLS", „Helvetia", „Randstad", „Eli Lilly", „DHL Express"). Die
+    SER-Group-Ernte mit 173 echten Konzernen kam damit auf 24 % und wäre verworfen
+    worden.
+    """
+    return [n for n in namen if re.sub(r"[^a-z0-9]", "", n.lower()) not in rauschen]
+
+
+def rauschschluessel(namen: list[str]) -> set[str]:
+    """Namen zu Vergleichsschlüsseln — für `ohne_seitenrauschen`. Rein."""
+    return {re.sub(r"[^a-z0-9]", "", n.lower()) for n in namen if n}
 
 
 def ist_kundenliste(namen: list[str]) -> tuple[bool, str]:
     """Ist die Ernte AS GANZES eine Kundenliste? Rein.
 
-    **Warum nicht über die Menge.** Die erste Fassung verglich die Erntemenge mit
-    `refs` aus dem Katalog. Am echten Lauf fiel das in beide Richtungen um:
+    Nach dem Abzug des Seitenrauschens ist die Menge wieder ein brauchbares Kriterium:
+    Was übrig bleibt, ist per Konstruktion seitenspezifischer Inhalt — auf einer
+    Referenzseite also die Kunden. Der Anteil an Rechtsformen wird nur noch **berichtet**,
+    nicht mehr als Tor benutzt (s. `ohne_seitenrauschen`, warum er als Tor scheitert).
 
-      · ADITO: 49 Funde bei 100 erwarteten — „plausibel" durchgelassen, dabei waren
-        ALLE 49 Menüpunkte („Kontaktmanagement", „Vertrieb", „Preise").
-      · SER Group: 173 Funde bei 100 erwarteten — als „unplausibel viele" verworfen,
-        dabei waren es echte Konzerne (Deutsche Bahn, Allianz, Eli Lilly, Würth, DHL).
-
-    Die Menge sagt nichts darüber, OB es Firmen sind. Deshalb entscheidet jetzt der
-    Inhalt: der Anteil an Namen mit Rechtsform oder öffentlichem Träger. `refs` bleibt
-    als Angabe zur Abdeckung nützlich, ist aber kein Tor mehr.
+    Die frühere Zähl-Prüfung gegen `refs` aus dem Katalog ist ebenfalls weg: Sie ließ
+    ADITOs 49 Menüpunkte durch („plausibel bei 100 erwarteten") und verwarf SERs 173
+    Konzerne („unplausibel viele").
     """
-    if len(namen) < 5:
+    if len(namen) < MIN_NAMEN:
         return False, f"zu wenig ({len(namen)})"
-    anteil = marker_anteil(namen)
-    if anteil < MARKER_SCHWELLE:
-        return False, f"keine Kundenliste (nur {anteil:.0%} mit Rechtsform)"
-    return True, f"Kundenliste ({anteil:.0%} mit Rechtsform)"
+    return True, f"{len(namen)} Namen, {marker_anteil(namen):.0%} mit Rechtsform"
 
 
 def ohne_eigenen_namen(namen: list[str], vendor: str) -> list[str]:
@@ -312,7 +325,10 @@ def ohne_eigenen_namen(namen: list[str], vendor: str) -> list[str]:
             if kern not in re.sub(r"[^a-z0-9]", "", n.lower())]
 
 
-def ernte_aus_html(html: str, basis: str, refs: int, vendor: str = "") -> Ernte:
+def ernte_aus_html(
+    html: str, basis: str, refs: int, vendor: str = "",
+    rauschen: set[str] | None = None,
+) -> Ernte:
     """Form erkennen, ernten, inhaltlich prüfen. Rein — kein Netz.
 
     Reihenfolge der Formen ist Absicht: Verlinkte Logos zuerst (Name UND Website),
@@ -330,6 +346,8 @@ def ernte_aus_html(html: str, basis: str, refs: int, vendor: str = "") -> Ernte:
     treffer, beste_verworfen = [], None
     for form, namen, websites in versuche:
         sauber = ohne_eigenen_namen(dedupe(namen), vendor)
+        if rauschen:
+            sauber = ohne_seitenrauschen(sauber, rauschen)
         ok, grund = ist_kundenliste(sauber)
         if ok:
             treffer.append((len(sauber), form, sauber, websites, grund))
