@@ -108,7 +108,11 @@ export default function RadarShell({ children }: { children: ReactNode }) {
             className="input-field text-sm"
           >
             <option value="">alle Kategorien</option>
-            {facets?.kategorien.map((k) => (
+            {/* `?? []` statt nur `?.`: Das Fragezeichen schützt gegen ein fehlendes
+                `facets`, NICHT gegen ein fehlendes Feld darin. Eine unvollständige
+                Antwort riss sonst die ganze Radar-Seite mit (im Prüfstand
+                aufgefallen); Zeile mit `bearbeitung` machte es schon richtig. */}
+            {(facets?.kategorien ?? []).map((k) => (
               <option key={k} value={k}>{k}</option>
             ))}
           </select>
@@ -118,7 +122,7 @@ export default function RadarShell({ children }: { children: ReactNode }) {
             className="input-field text-sm"
           >
             <option value="">alle Branchen</option>
-            {facets?.branchen.map((b) => (
+            {(facets?.branchen ?? []).map((b) => (
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
@@ -185,7 +189,7 @@ export default function RadarShell({ children }: { children: ReactNode }) {
                 className="input-field text-sm w-full"
               >
                 <option value="">alle</option>
-                {facets?.regulatorik.map((r) => (
+                {(facets?.regulatorik ?? []).map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>

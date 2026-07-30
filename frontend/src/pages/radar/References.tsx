@@ -159,9 +159,16 @@ export default function References() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
           <div className="border border-border rounded-card p-3">
-            <p className="md-title-emph text-text">{stats.firmen.toLocaleString('de-DE')}</p>
-            <p className="text-[11px] text-text-muted">Firmen geerntet</p>
-            <p className="text-[10px] text-text-muted">aus {stats.verzeichnisse} Verzeichnissen</p>
+            {/* Die distinkten FIRMEN, nicht die Zeilen: Diese Seite zeigt eine Zeile je
+                Firma, und 3.712 wären die Nennungen (Firma × Hersteller). Die falsche
+                Zahl oben hätte der Liste darunter widersprochen. */}
+            <p className="md-title-emph text-text">
+              {stats.firmen_distinkt.toLocaleString('de-DE')}
+            </p>
+            <p className="text-[11px] text-text-muted">Firmen</p>
+            <p className="text-[10px] text-text-muted">
+              {stats.firmen.toLocaleString('de-DE')} Nennungen · {stats.verzeichnisse} Verzeichnisse
+            </p>
           </div>
           <button
             type="button"
@@ -180,13 +187,15 @@ export default function References() {
             <p className="md-title-emph text-text">
               {stats.mit_baustein.toLocaleString('de-DE')}
             </p>
-            <p className="text-[11px] text-text-muted">mit passendem Baustein</p>
+            <p className="text-[11px] text-text-muted">Nennungen mit Baustein</p>
             <p className="text-[10px] text-text-muted">Aufsatzlösung liegt bereit</p>
           </div>
           <div className="border border-border rounded-card p-3">
             <p className="md-title-emph text-text">{stats.in_pipeline}</p>
-            <p className="text-[11px] text-text-muted">als Lead übernommen</p>
-            <p className="text-[10px] text-text-muted">{stats.offen.toLocaleString('de-DE')} offen</p>
+            <p className="text-[11px] text-text-muted">Nennungen als Lead übernommen</p>
+            <p className="text-[10px] text-text-muted">
+              {stats.mit_website} mit bekannter Website
+            </p>
           </div>
         </div>
       )}
@@ -400,7 +409,9 @@ export default function References() {
                     >
                       {offen.has(r.company_norm)
                         ? 'weniger'
-                        : `+ ${r.produkte.length - 1} weitere${r.produkte.length > 2 ? '' : 's'} System`}
+                        : r.produkte.length === 2
+                          ? '+ 1 weiteres System'
+                          : `+ ${r.produkte.length - 1} weitere Systeme`}
                     </button>
                   )}
                 </td>
