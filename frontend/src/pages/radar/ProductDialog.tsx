@@ -10,6 +10,7 @@ import {
   updateMarketProduct,
   type MarketProduct,
   type MarketStatus,
+  type MarketBaustein,
 } from '../../api/market'
 
 /* Dossier eines Katalogeintrags — und der eine Knopf, um den Hersteller als Lead
@@ -53,19 +54,54 @@ function List({ title, items }: { title: string; items: string[] }) {
   )
 }
 
+/**
+ * Das Dossier einer Software — **der einzige Dialog dafür.**
+ *
+ * Es gab zeitweise einen zweiten (`SoftwareInfoDialog`) für die Frage „was kann ich
+ * hier verbessern". Der war eine echte **Teilmenge** dieses Dialogs: Dieselben Felder
+ * (`pains`, `ki`, `nutzen`, `integration`, `notiz`, `reg`, `self_compete`, …), nur
+ * anders sortiert. Zwei Dialoge für einen Gegenstand heißen zwei Stellen zum Ändern
+ * und eine Entscheidung, die der Nutzer treffen muss, ohne den Unterschied zu kennen.
+ * Deshalb zusammengeführt.
+ *
+ * Zwei Dinge aus dem alten Dialog sind hierher gewandert, weil sie hier fehlten:
+ *   · der **passende Baustein** — der wurde nirgends gezeigt, obwohl er das Angebot IST;
+ *   · die **Leserichtung als Argument** (Handarbeit → automatisierbar → Baustein → wie
+ *     rankommen), jetzt als Block „Verbesserungspotenzial" ganz oben. Score und
+ *     Bearbeitungsstand stehen darunter: Die Substanz kommt zuerst.
+ */
 export default function ProductDialog({
   product,
   onClose,
   onChanged,
+  bausteine = [],
+  kontext = 'hersteller',
 }: {
   product: MarketProduct
   onClose: () => void
   onChanged: (p: MarketProduct) => void
+  /** Alle Bausteine — die Zuordnung passiert hier über `catalog_ids`. */
+  bausteine?: MarketBaustein[]
+  /**
+   * Woher der Dialog geöffnet wurde. Eine Regel, ein Unterschied:
+   * **im Kundenkontext liest man, im Herstellerkontext arbeitet man.**
+   *
+   * `kunde` blendet den ganzen Arbeitsstand-Block aus (Status, eigene Notiz,
+   * Hersteller-Übernahme). Alle drei ändern den **Hersteller**-Eintrag, während man
+   * einen einzelnen Kunden ansieht — und zwei „in die Pipeline"-Knöpfe mit
+   * verschiedener Bedeutung (Kunde vs. Hersteller) auf einer Seite sind genau die
+   * Verwechslung, die die Kundensicht vermeiden soll. Der Inhalt bleibt identisch;
+   * mehr Divergenz würde die zwei Dialoge durch die Hintertür zurückholen.
+   */
+  kontext?: 'hersteller' | 'kunde'
 }) {
   const nav = useNavigate()
   const [p, setP] = useState(product)
   const [note, setNote] = useState(product.ops_note ?? '')
   const [busy, setBusy] = useState(false)
+  // Zuordnung Produkt → Baustein über `catalog_ids` (kommt aus dem Recherchekatalog
+  // und wird hier nur gelesen — spiegelt `bausteine_fuer` im Backend).
+  const passend = bausteine.filter((b) => (b.catalog_ids ?? []).includes(p.catalog_id))
 
   const maxPoints = Math.max(1, ...p.breakdown.map((b) => b.points))
 
@@ -153,7 +189,88 @@ export default function ProductDialog({
             </span>
           </div>
 
-          {/* Arbeitsstand + Übernahme */}
+          {/* WAS LÄSST SICH HIER VERBESSERN — die Leserichtung des Gesprächs, und
+              damit der Grund, warum man dieses Dossier öffnet. Stand vorher als
+              gleichrangige Kästen im Raster weiter unten, hinter Score und
+              Bearbeitungsstand. */}
+          <div className="rounded-card border border-accent/25 bg-accent/5 p-4 space-y-3">
+            <h4 className="text-xs uppercase tracking-wide text-accent/90">
+              Verbesserungspotenzial
+            </h4>
+
+            {p.pains.length > 0 && (
+              <div>
+                <p className="text-[11px] text-text-muted mb-1">Heute Handarbeit</p>
+                <ul className="text-sm text-text space-y-0.5">
+                  {p.pains.map((x, i) => (
+                    <li key={i} className="border-l-2 border-warning/40 pl-2">{x}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {p.ki.length > 0 && (
+              <div>
+                <p className="text-[11px] text-text-muted mb-1">Lässt sich automatisieren</p>
+                <ul className="text-sm text-text space-y-0.5">
+                  {p.ki.map((x, i) => (
+                    <li key={i} className="border-l-2 border-accent/50 pl-2">{x}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[11px] text-text-muted mb-1">Aufsatzlösung</p>
+              {passend.length > 0 ? (
+                <ul className="space-y-2">
+                  {passend.map((b) => (
+                    <li key={b.nr}>
+                      <p className="text-sm text-text">Baustein {b.nr}: {b.titel}</p>
+                      {b.was && <p className="text-xs text-text-muted">{b.was}</p>}
+                      {b.warum && (
+                        <p className="text-[11px] text-text-muted">
+                          <span className="text-accent/80">Warum jetzt: </span>{b.warum}
+                        </p>
+                      )}
+                      {b.aufwand && (
+                        <p className="text-[11px] text-text-muted">Aufwand: {b.aufwand}</p>
+                      )}
+                      {b.vorsicht && (
+                        <p className="text-[11px] text-warning/90">Vorsicht: {b.vorsicht}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                // 37 der 142 Produkte haben keinen zugeordneten Baustein. Das ehrlich
+                // sagen — die Idee darüber trägt trotzdem.
+                <p className="text-xs text-text-muted">
+                  Kein Baustein aus dem Katalog zugeordnet. Die Idee darüber trägt
+                  trotzdem — sie ist nur nicht als fertiger Baustein modelliert.
+                </p>
+              )}
+            </div>
+
+            {p.integration && (
+              <div>
+                <p className="text-[11px] text-text-muted mb-1">Wie man rankommt</p>
+                <p className="text-sm text-text">{p.integration}</p>
+                <p className="text-[11px] text-text-muted">
+                  Integrationsaufwand: {p.int_level}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Arbeitsstand + Übernahme — NUR im Herstellerkontext.
+              Die Regel dahinter: Im Kundenkontext ist dieser Dialog ein Steckbrief der
+              Software (ein Kunde von 3.915 nutzt sie); Bearbeitungsstand und Notiz
+              gehören dagegen dem **Hersteller-Eintrag**. Ein Klick auf „verworfen"
+              würde dort global den Hersteller wegsortieren, während man einen
+              einzelnen Kunden ansieht — dasselbe Bedienelement, zwei verschiedene
+              Bedeutungen. Also: im Kundenkontext lesen, im Herstellerkontext arbeiten. */}
+          {kontext === 'hersteller' && (
           <div className="rounded-card border border-outline-variant p-4 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-text-muted">Bearbeitungsstand</span>
@@ -205,6 +322,7 @@ export default function ProductDialog({
               </span>
             </div>
           </div>
+          )}
 
           <div>
             <h4 className="text-xs uppercase tracking-wide text-text-muted mb-2">Score-Aufschlüsselung</h4>
@@ -238,8 +356,6 @@ export default function ProductDialog({
           <div className="grid sm:grid-cols-2 gap-5">
             <List title="Unterstützte Geschäftsprozesse" items={p.prozesse} />
             <List title="Wer arbeitet täglich damit" items={p.nutzer} />
-            <List title="Manuelle Tätigkeiten — der Ansatzpunkt" items={p.pains} />
-            <List title="Denkbare KI-/Automatisierungslösungen" items={p.ki} />
             <List title="Branchen" items={p.branchen} />
             <div className="space-y-3 text-sm">
               {p.nutzen && (
@@ -263,12 +379,9 @@ export default function ProductDialog({
             </div>
           </div>
 
-          {p.integration && (
-            <div>
-              <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">Integration</h4>
-              <p className="text-sm text-text-muted">{p.integration}</p>
-            </div>
-          )}
+          {/* `p.integration` steht bewusst NICHT mehr hier: Es ist oben der Abschnitt
+              „Wie man rankommt" im Verbesserungspotenzial — dieselbe Zeichenkette an
+              zwei Stellen las sich wie zwei verschiedene Aussagen. */}
           {p.notiz && (
             <div>
               <h4 className="text-xs uppercase tracking-wide text-text-muted mb-1">Notiz aus der Recherche</h4>

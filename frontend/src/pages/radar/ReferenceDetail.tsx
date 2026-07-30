@@ -17,16 +17,17 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import { useAppNavigate } from '../../utils/transitions'
 import {
   getMarketBausteine,
+  getMarketProducts,
   getMarketReferenceCompany,
   referencesToPipeline,
   updateMarketReference,
   type MarketBaustein,
+  type MarketProduct,
   type MarketReferenceDetail,
-  type MarketReferenceSystem,
 } from '../../api/market'
 import { httpHref } from '../../utils/safeHref'
 import RadarShell from './RadarShell'
-import SoftwareInfoDialog from './SoftwareInfoDialog'
+import ProductDialog from './ProductDialog'
 
 const TEIL_LABEL: Record<string, string> = {
   mehrfachnutzung: 'nutzt mehrere Systeme',
@@ -71,7 +72,10 @@ export default function ReferenceDetail() {
   const [laedt, setLaedt] = useState(true)
   const [busy, setBusy] = useState(false)
   const [bausteine, setBausteine] = useState<MarketBaustein[]>([])
-  const [infoFuer, setInfoFuer] = useState<MarketReferenceSystem | null>(null)
+  // Der Dialog braucht das ganze Produkt. Einmal laden, nicht je System — dieselbe
+  // Entscheidung wie in der Kundenliste.
+  const [produkte, setProdukte] = useState<Map<string, MarketProduct>>(new Map())
+  const [info, setInfo] = useState<MarketProduct | null>(null)
 
   const laden = useCallback(async () => {
     setLaedt(true)
@@ -85,7 +89,11 @@ export default function ReferenceDetail() {
 
   useEffect(() => { void laden() }, [laden])
   // Bausteine einmal laden — der Info-Dialog ordnet sie selbst zu.
-  useEffect(() => { getMarketBausteine().then(setBausteine).catch(() => undefined) }, [])
+  useEffect(() => {
+    getMarketBausteine().then(setBausteine).catch(() => undefined)
+    getMarketProducts({}).then((ps) => setProdukte(new Map(ps.map((x) => [x.id, x]))))
+      .catch(() => undefined)
+  }, [])
 
   const uebernehmen = async () => {
     if (!d) return
@@ -194,16 +202,18 @@ export default function ReferenceDetail() {
                     {/* Info-Fenster: was und wie sich an dieser Software verbessern
                         lässt. Am System, nicht an der Firma — die Antwort hängt an der
                         Software. */}
-                    <button
-                      type="button"
-                      onClick={() => setInfoFuer(s)}
-                      title="Was lässt sich an dieser Software verbessern?"
-                      aria-label={`Verbesserungspotenzial von ${s.produkt} ansehen`}
-                      className="md-state shrink-0 w-7 h-7 grid place-items-center rounded-lg
-                                 text-text-muted hover:text-accent"
-                    >
-                      <Icon name="info" size={15} />
-                    </button>
+                    {produkte.get(s.product_id) && (
+                      <button
+                        type="button"
+                        onClick={() => setInfo(produkte.get(s.product_id) ?? null)}
+                        title="Dossier: Verbesserungspotenzial, Baustein, Score"
+                        aria-label={`Dossier zu ${s.produkt} öffnen`}
+                        className="md-state shrink-0 w-7 h-7 grid place-items-center rounded-lg
+                                   text-text-muted hover:text-accent"
+                      >
+                        <Icon name="info" size={15} />
+                      </button>
+                    )}
                   </div>
                   {/* Anbieter verlinkt, wenn die Website bekannt ist (137 von 142) —
                       sonst nur der Name statt eines Links ins Leere. */}
@@ -346,9 +356,17 @@ export default function ReferenceDetail() {
           </section>
         </div>
       </div>
-      {infoFuer && (
-        <SoftwareInfoDialog info={infoFuer} bausteine={bausteine}
-                            onClose={() => setInfoFuer(null)} />
+      {info && (
+        <ProductDialog
+          product={info}
+          bausteine={bausteine}
+          kontext="kunde"
+          onClose={() => setInfo(null)}
+          onChanged={(next) => {
+            setProdukte((m) => new Map(m).set(next.id, next))
+            setInfo(next)
+          }}
+        />
       )}
     </RadarShell>
   )

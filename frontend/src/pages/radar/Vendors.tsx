@@ -13,7 +13,6 @@ import {
   type MarketBaustein,
 } from '../../api/market'
 import ProductDialog from './ProductDialog'
-import SoftwareInfoDialog from './SoftwareInfoDialog'
 import RadarShell from './RadarShell'
 import { useRadarFilters } from './useRadarFilters'
 
@@ -25,8 +24,6 @@ export default function RadarVendors() {
   const [loading, setLoading] = useState(true)
   const [offen, setOffen] = useState<string | null>(null)
   const [dialog, setDialog] = useState<MarketProduct | null>(null)
-  // Verbesserungspotenzial je Software — eigener Dialog, eigene Frage.
-  const [info, setInfo] = useState<MarketProduct | null>(null)
   const [bausteine, setBausteine] = useState<MarketBaustein[]>([])
 
   const key = JSON.stringify(query)
@@ -133,8 +130,8 @@ export default function RadarVendors() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setInfo(p)}
-                          title="Was lässt sich an dieser Software verbessern?"
+                          onClick={() => setDialog(p)}
+                          title="Dossier öffnen: Verbesserungspotenzial, Baustein, Score"
                           aria-label={`Verbesserungspotenzial von ${p.produkt} ansehen`}
                           className="md-state w-6 h-6 grid place-items-center rounded-full
                                      text-text-muted hover:text-accent"
@@ -151,9 +148,11 @@ export default function RadarVendors() {
         })}
       </div>
 
-      {dialog && <ProductDialog product={dialog} onClose={() => setDialog(null)} onChanged={onChanged} />}
-      {info && (
-        <SoftwareInfoDialog info={info} bausteine={bausteine} onClose={() => setInfo(null)} />
+      {/* EIN Dialog. Pille und Info-Icon öffnen dasselbe — das Icon macht nur
+          sichtbar, dass die Pille anklickbar ist. */}
+      {dialog && (
+        <ProductDialog product={dialog} onClose={() => setDialog(null)} onChanged={onChanged}
+                       bausteine={bausteine} kontext="hersteller" />
       )}
     </RadarShell>
   )

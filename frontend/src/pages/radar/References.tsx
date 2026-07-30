@@ -26,7 +26,7 @@ import {
 import RadarShell from './RadarShell'
 import { useRadarFilters } from './useRadarFilters'
 import { httpHref } from '../../utils/safeHref'
-import SoftwareInfoDialog from './SoftwareInfoDialog'
+import ProductDialog from './ProductDialog'
 import { useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 50
@@ -441,7 +441,7 @@ export default function References() {
                           <button
                             type="button"
                             onClick={() => setInfo(produkte.get(sys.product_id) ?? null)}
-                            title="Was lässt sich an dieser Software verbessern?"
+                            title="Dossier: Verbesserungspotenzial, Baustein, Score"
                             aria-label={`Verbesserungspotenzial von ${sys.produkt} ansehen`}
                             className="md-state ml-1 w-5 h-5 inline-grid place-items-center
                                        rounded align-text-bottom text-text-muted hover:text-accent"
@@ -528,7 +528,19 @@ export default function References() {
         </div>
       )}
       {info && (
-        <SoftwareInfoDialog info={info} bausteine={bausteine} onClose={() => setInfo(null)} />
+        // Derselbe Dialog wie im Hersteller-Tab — `kontext="kunde"` macht ihn zum
+        // Steckbrief: kein Arbeitsstand des Herstellers, keine Hersteller-Übernahme
+        // (sonst stünden hier zwei „in die Pipeline"-Knöpfe mit anderer Bedeutung).
+        <ProductDialog
+          product={info}
+          bausteine={bausteine}
+          kontext="kunde"
+          onClose={() => setInfo(null)}
+          onChanged={(next) => {
+            setProdukte((m) => new Map(m).set(next.id, next))
+            setInfo(next)
+          }}
+        />
       )}
     </RadarShell>
   )
