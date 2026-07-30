@@ -128,48 +128,23 @@ export default function RadarOverview() {
                   alle {kunden.firmen.toLocaleString('de-DE')} ansehen →
                 </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                <Kpi wide value={kunden.firmen.toLocaleString('de-DE')}
+              {/* Sechs Spalten, weil die erste Kachel zwei belegt (`wide`): Mit fünf
+                  fiel die letzte allein in eine neue Zeile und ließ eine Lücke. */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <Kpi wide value={kunden.firmen_distinkt.toLocaleString('de-DE')}
                      label="Firmen als Lead-Kandidat"
-                     hint={`aus ${kunden.verzeichnisse} Referenzverzeichnissen · ${kunden.firmen_distinkt.toLocaleString('de-DE')} verschiedene`} />
+                     hint={`${kunden.firmen.toLocaleString('de-DE')} Nennungen aus ${kunden.verzeichnisse} Referenzverzeichnissen`} />
                 <Kpi value={kunden.mehrfachnutzer} label="nutzen mehrere Systeme"
                      hint="stärkstes Signal — zwei Gesprächseinstiege" />
-                <Kpi value={kunden.mit_baustein.toLocaleString('de-DE')} label="mit passendem Baustein"
+                <Kpi value={kunden.mit_baustein.toLocaleString('de-DE')} label="Nennungen mit Baustein"
                      hint="Aufsatzlösung liegt bereit" />
-                <Kpi value={kunden.in_pipeline} label="als Lead übernommen"
+                <Kpi value={kunden.in_pipeline} label="Nennungen als Lead übernommen"
                      hint={`${kunden.offen.toLocaleString('de-DE')} offen`} />
                 <Kpi value={kunden.mit_website} label="mit bekannter Website"
                      hint="Rest braucht Handrecherche" />
               </div>
             </div>
           )}
-
-          {/* Herstellersicht als zweiter Block: das Umfeld, in dem verkauft wird. */}
-          <div>
-            <div className="flex items-baseline gap-3 mb-2">
-              <h3 className="text-sm font-medium text-text">Umfeld: die Hersteller</h3>
-              <span className="text-xs text-text-muted">
-                Kennzahlen des Katalogs — das Mittel, nicht das Ziel
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Kpi value={stats.produkte} label="Produkte" hint={`${stats.hersteller} Hersteller`} />
-              <Kpi value={stats.referenzen.toLocaleString('de-DE')} label="Referenzen laut Katalog"
-                   hint="Schätzung der Verzeichnisse" />
-              <Kpi value={stats.prio_a} label="Priorität A" hint={`${Math.round((stats.prio_a / stats.produkte) * 100)} % der Treffer`} />
-              <Kpi value={stats.marketplace} label="mit Marktplatz" hint="skaliert ohne Direktvertrieb" />
-              <Kpi value={stats.regulatorik} label="mit Regulatorik" hint="terminierter Anlass" />
-              <Kpi value={stats.integration_leicht} label="Integration leicht" hint="schneller erster Proof" />
-            </div>
-            {/* Die Software mit dem höchsten Opportunity Score — nützlich, um zu
-                entscheiden, WESSEN Kundenliste sich lohnt. Deshalb hier im Umfeld,
-                nicht als Vorschlag. */}
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-              {products.slice(0, 3).map((p, i) => (
-                <ProductCard key={p.id} p={p} rank={i + 1} onOpen={setOpen} />
-              ))}
-            </div>
-          </div>
 
           {/* DER VORSCHLAG. Vorher standen hier Produktkarten — „diese Software ist
               interessant". Der Lead ist aber eine Firma: „diese nutzt X, biete ihr Y
@@ -197,6 +172,33 @@ export default function RadarOverview() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Herstellersicht als zweiter Block: das Umfeld, in dem verkauft wird. */}
+          <div>
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="text-sm font-medium text-text">Umfeld: die Hersteller</h3>
+              <span className="text-xs text-text-muted">
+                Kennzahlen des Katalogs — das Mittel, nicht das Ziel
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Kpi value={stats.produkte} label="Produkte" hint={`${stats.hersteller} Hersteller`} />
+              <Kpi value={stats.referenzen.toLocaleString('de-DE')} label="Referenzen laut Katalog"
+                   hint="Schätzung der Verzeichnisse" />
+              <Kpi value={stats.prio_a} label="Priorität A" hint={`${Math.round((stats.prio_a / stats.produkte) * 100)} % der Treffer`} />
+              <Kpi value={stats.marketplace} label="mit Marktplatz" hint="skaliert ohne Direktvertrieb" />
+              <Kpi value={stats.regulatorik} label="mit Regulatorik" hint="terminierter Anlass" />
+              <Kpi value={stats.integration_leicht} label="Integration leicht" hint="schneller erster Proof" />
+            </div>
+            {/* Die Software mit dem höchsten Opportunity Score — nützlich, um zu
+                entscheiden, WESSEN Kundenliste sich lohnt. Deshalb hier im Umfeld,
+                nicht als Vorschlag. */}
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
+              {products.slice(0, 3).map((p, i) => (
+                <ProductCard key={p.id} p={p} rank={i + 1} onOpen={setOpen} />
+              ))}
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-3">

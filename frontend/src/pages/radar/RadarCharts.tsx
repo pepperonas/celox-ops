@@ -23,7 +23,12 @@ const baseOpts = {
   plugins: { legend: { display: false } },
 } as const
 
-export function RankBar({ rows, onPick }: { rows: MarketBucket[]; onPick?: (key: string) => void }) {
+export function RankBar(
+  // `rows = []` statt nur `rows`: Fehlt das Feld in der Antwort, ist `rows` undefined
+  // und `rows.length` reißt die GANZE Radar-Seite mit — nicht nur dieses Diagramm.
+  // Zweimal im Prüfstand passiert; dieselbe Klasse wie `facets?.kategorien.map`.
+  { rows = [], onPick }: { rows?: MarketBucket[]; onPick?: (key: string) => void },
+) {
   if (!rows.length) return <div className="text-text-muted text-sm">keine Daten</div>
   return (
     <div style={{ height: Math.max(120, rows.length * 26 + 20) }}>
@@ -48,7 +53,9 @@ export function RankBar({ rows, onPick }: { rows: MarketBucket[]; onPick?: (key:
   )
 }
 
-export function Hist({ rows, height = 150 }: { rows: MarketBucket[]; height?: number }) {
+export function Hist(
+  { rows = [], height = 150 }: { rows?: MarketBucket[]; height?: number },
+) {
   if (!rows.length) return <div className="text-text-muted text-sm">keine Daten</div>
   return (
     <div style={{ height }}>
