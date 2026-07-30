@@ -13,6 +13,7 @@ import { toastWithUndo } from '../../utils/undoToast'
 import { canDelete } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
 import { formatCurrency, formatDate } from '../../utils/formatters'
+import { recurrenceLabel } from '../../utils/expenseRecurrence'
 import toast from 'react-hot-toast'
 import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
 import Select from '../../components/Select'
@@ -122,6 +123,7 @@ export default function ExpenseList() {
     date: e.date,
     vendor: e.vendor || undefined,
     recurring: e.recurring,
+    recurrence: e.recurrence ?? (e.recurring ? 'monthly' : null),
     notes: e.notes || undefined,
     external_ref: e.external_ref,
   })
@@ -279,12 +281,15 @@ export default function ExpenseList() {
       },
       {
         key: 'recurring',
-        label: 'Wiederkehrend',
-        render: (e) => (
-          <span className={e.recurring ? 'text-accent' : 'text-text-muted'}>
-            {e.recurring ? 'Ja' : 'Nein'}
-          </span>
-        ),
+        label: 'Turnus',
+        render: (e) => {
+          const label = recurrenceLabel(e.recurrence) || (e.recurring ? 'monatlich' : '')
+          return label ? (
+            <span className="text-accent">{label}</span>
+          ) : (
+            <span className="text-text-muted">—</span>
+          )
+        },
       },
       ...(mayDelete ? [{
         key: 'actions',

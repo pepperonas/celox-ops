@@ -12,6 +12,7 @@ export interface HostingerDraft {
   date: string
   vendor: string | null
   recurring: boolean
+  recurrence?: string | null
   notes: string | null
   external_ref: string
   subscription_id: string | null

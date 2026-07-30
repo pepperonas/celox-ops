@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.expense import Expense, ExpenseCategory
+from app.models.expense import Expense, ExpenseCategory, ExpenseRecurrence
 from app.schemas.expense import (
     ExpenseCreate,
     ExpenseResponse,
@@ -20,6 +20,7 @@ from app.schemas.expense import (
     HostingerRelabelChange,
     HostingerRelabelResult,
 )
+from app.services.expense_recurrence import normalize_recurrence_fields
 
 router = APIRouter(
     prefix="/api/expenses",
@@ -179,6 +180,16 @@ async def update_expense(
         raise HTTPException(status_code=404, detail="Ausgabe nicht gefunden")
 
     update_data = data.model_dump(exclude_unset=True)
+    fields_set = data.model_fields_set
+    if "recurrence" in fields_set or "recurring" in fields_set:
+        rec, flag = normalize_recurrence_fields(
+            recurrence=update_data.get("recurrence", expense.recurrence),
+            recurring=update_data.get("recurring", expense.recurring),
+            recurrence_provided="recurrence" in fields_set,
+            recurring_provided="recurring" in fields_set and "recurrence" not in fields_set,
+        )
+        update_data["recurrence"] = rec
+        update_data["recurring"] = flag
     for key, value in update_data.items():
         setattr(expense, key, value)
 
@@ -354,13 +365,15 @@ async def hostinger_import(
         if draft["duplicate"]:
             skipped += 1
             continue
+        rec_raw = draft.get("recurrence")
         expense = Expense(
             description=draft["description"],
             category=ExpenseCategory(draft["category"]),
             amount=Decimal(draft["amount"]),
             date=date.fromisoformat(draft["date"]),
             vendor=draft["vendor"],
-            recurring=draft["recurring"],
+            recurring=True,
+            recurrence=ExpenseRecurrence(rec_raw) if rec_raw else ExpenseRecurrence.monthly,
             notes=draft["notes"],
             external_ref=draft["external_ref"],
         )

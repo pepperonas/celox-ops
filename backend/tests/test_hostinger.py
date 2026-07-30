@@ -442,6 +442,8 @@ class TestBuildDrafts:
         assert by_cat["hosting"]["amount"] == "29.99"
         assert by_cat["domain"]["amount"] == "11.99"
         assert all(d["vendor"] == VENDOR and d["recurring"] is True for d in out["drafts"])
+        assert by_cat["domain"]["recurrence"] == "yearly"   # DOMAIN_SUB billing year
+        assert by_cat["hosting"]["recurrence"] == "monthly"  # VPS_SUB billing month
 
     def test_domain_portfolio_is_grouped_by_tld(self):
         """Ohne Zeitstempel im Portfolio ist keine Zuordnung belegbar — dann steht

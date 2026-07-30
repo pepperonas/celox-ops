@@ -35,6 +35,18 @@ class ExpenseCategory(str, enum.Enum):
     sonstige = "sonstige"
 
 
+class ExpenseRecurrence(str, enum.Enum):
+    """Turnus einer wiederkehrenden Ausgabe. NULL am Model = einmalig."""
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+    quarterly = "quarterly"
+    semiannual = "semiannual"
+    yearly = "yearly"
+    biennial = "biennial"
+    quadrennial = "quadrennial"
+
+
 class Expense(OwnedMixin, Base):
     __tablename__ = "expenses"
     # ACHTUNG: EIN __table_args__ pro Klasse — eine zweite Zuweisung würde die
@@ -58,7 +70,14 @@ class Expense(OwnedMixin, Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Abgeleitet aus recurrence (True ⇔ recurrence IS NOT NULL). Bleibt für
+    # Hostinger/ältere Clients; beim Speichern immer mitgezogen.
     recurring: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Turnus; NULL = einmalig. native_enum=False → VARCHAR (kein ALTER TYPE).
+    recurrence: Mapped[ExpenseRecurrence | None] = mapped_column(
+        Enum(ExpenseRecurrence, native_enum=False, length=20),
+        nullable=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Herkunftsschlüssel für Importe (z. B. "hostinger:<abo-id>:<datum>"). Macht
     # den Import idempotent: derselbe Abrechnungszeitraum desselben Abos kann

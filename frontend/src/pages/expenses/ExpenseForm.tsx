@@ -1,6 +1,6 @@
 import { useAuthStore } from '../../store/authStore'
 import { canDelete } from '../../utils/permissions'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
@@ -8,9 +8,15 @@ import AutocompleteInput from '../../components/AutocompleteInput'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
-import type { ExpenseCreate } from '../../types'
+import type { ExpenseCreate, ExpenseRecurrence } from '../../types'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import { toastWithUndo } from '../../utils/undoToast'
+import { formatCurrency } from '../../utils/formatters'
+import {
+  RECURRENCE_OPTIONS,
+  monthlyEquivalent,
+  yearlyEquivalent,
+} from '../../utils/expenseRecurrence'
 
 const categoryOptions = [
   { value: 'hosting', label: 'Hosting' },
@@ -25,6 +31,11 @@ const categoryOptions = [
   { value: 'sonstige', label: 'Sonstige' },
 ]
 
+const recurrenceSelectOptions = [
+  { value: '', label: 'Einmalig' },
+  ...RECURRENCE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+]
+
 const emptyForm: ExpenseCreate = {
   description: '',
   category: 'sonstige',
@@ -32,6 +43,7 @@ const emptyForm: ExpenseCreate = {
   date: new Date().toISOString().split('T')[0],
   vendor: '',
   recurring: false,
+  recurrence: null,
   notes: '',
 }
 
@@ -54,6 +66,7 @@ export default function ExpenseForm() {
           date: e.date,
           vendor: e.vendor || '',
           recurring: e.recurring,
+          recurrence: e.recurrence ?? (e.recurring ? 'monthly' : null),
           notes: e.notes || '',
         }),
       )
@@ -64,14 +77,25 @@ export default function ExpenseForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const target = e.target
-    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
-      setForm({ ...form, [target.name]: target.checked })
-    } else if (target.name === 'amount') {
+    if (target.name === 'amount') {
       setForm({ ...form, amount: parseFloat(target.value) || 0 })
+    } else if (target.name === 'recurrence') {
+      const value = (target.value || null) as ExpenseRecurrence | null
+      setForm({
+        ...form,
+        recurrence: value,
+        recurring: value != null,
+      })
     } else {
       setForm({ ...form, [target.name]: target.value })
     }
   }
+
+  const equiv = useMemo(() => {
+    const monthly = monthlyEquivalent(Number(form.amount) || 0, form.recurrence ?? null)
+    const yearly = yearlyEquivalent(Number(form.amount) || 0, form.recurrence ?? null)
+    return { monthly, yearly }
+  }, [form.amount, form.recurrence])
 
   useFormShortcuts({
     onSubmit: () => {
@@ -86,11 +110,16 @@ export default function ExpenseForm() {
     e.preventDefault()
     setLoading(true)
     try {
+      const payload: ExpenseCreate = {
+        ...form,
+        recurrence: form.recurrence || null,
+        recurring: Boolean(form.recurrence),
+      }
       if (isEdit) {
-        await updateExpense(id!, form)
+        await updateExpense(id!, payload)
         toast.success('Ausgabe aktualisiert.')
       } else {
-        await createExpense(form)
+        await createExpense(payload)
         toast.success('Ausgabe erstellt.')
       }
       navigate('/ausgaben')
@@ -182,13 +211,21 @@ export default function ExpenseForm() {
           />
         </div>
 
-        <FormField
-          label="Wiederkehrend"
-          name="recurring"
-          type="checkbox"
-          value={form.recurring || false}
-          onChange={handleChange}
-        />
+        <div>
+          <FormField
+            label="Turnus"
+            name="recurrence"
+            type="select"
+            value={form.recurrence || ''}
+            onChange={handleChange}
+            options={recurrenceSelectOptions}
+          />
+          {equiv.monthly != null && equiv.yearly != null && (
+            <p className="text-xs text-text-muted mt-1.5">
+              ≈ {formatCurrency(equiv.monthly)}/Monat · {formatCurrency(equiv.yearly)}/Jahr
+            </p>
+          )}
+        </div>
 
         <FormField
           label="Notizen"

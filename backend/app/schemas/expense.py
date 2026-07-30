@@ -3,9 +3,9 @@ from datetime import date as DateType
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
-from app.models.expense import ExpenseCategory
+from app.models.expense import ExpenseCategory, ExpenseRecurrence
 
 
 class ExpenseBase(BaseModel):
@@ -14,8 +14,22 @@ class ExpenseBase(BaseModel):
     amount: Decimal
     date: DateType
     vendor: str | None = None
+    # Turnus; None = einmalig. `recurring` wird daraus abgeleitet.
+    recurrence: ExpenseRecurrence | None = None
     recurring: bool = False
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def _sync_recurrence(self):
+        if self.recurrence is not None:
+            self.recurring = True
+        elif self.recurring:
+            self.recurrence = ExpenseRecurrence.monthly
+            self.recurring = True
+        else:
+            self.recurrence = None
+            self.recurring = False
+        return self
 
 
 class ExpenseCreate(ExpenseBase):
@@ -32,14 +46,23 @@ class ExpenseUpdate(BaseModel):
     amount: Decimal | None = None
     date: DateType | None = None
     vendor: str | None = None
+    recurrence: ExpenseRecurrence | None = None
     recurring: bool | None = None
     notes: str | None = None
 
 
-class ExpenseResponse(ExpenseBase):
+class ExpenseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    description: str
+    category: ExpenseCategory
+    amount: Decimal
+    date: DateType
+    vendor: str | None = None
+    recurrence: ExpenseRecurrence | None = None
+    recurring: bool = False
+    notes: str | None = None
     created_at: datetime
     # Nötig, damit die Liste beim Wiederherstellen einer gelöschten Ausgabe die
     # Herkunft mitgeben kann (siehe ExpenseCreate).
@@ -57,6 +80,7 @@ class HostingerDraft(BaseModel):
     date: DateType
     vendor: str | None = None
     recurring: bool = True
+    recurrence: ExpenseRecurrence | None = ExpenseRecurrence.monthly
     notes: str | None = None
     external_ref: str
     subscription_id: str | None = None

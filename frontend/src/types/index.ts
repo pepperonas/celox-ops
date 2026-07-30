@@ -387,6 +387,16 @@ export type ExpenseCategory =
   | 'reise'
   | 'sonstige'
 
+export type ExpenseRecurrence =
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'semiannual'
+  | 'yearly'
+  | 'biennial'
+  | 'quadrennial'
+
 export interface Expense {
   id: string
   description: string
@@ -395,6 +405,8 @@ export interface Expense {
   date: string
   vendor: string | null
   recurring: boolean
+  /** Turnus; null = einmalig. */
+  recurrence: ExpenseRecurrence | null
   notes: string | null
   created_at: string
   /** Herkunft importierter Ausgaben (z. B. „hostinger:<abo>:<datum>"). */
@@ -408,6 +420,7 @@ export interface ExpenseCreate {
   date: string
   vendor?: string
   recurring?: boolean
+  recurrence?: ExpenseRecurrence | null
   notes?: string
   /** Nur beim Wiederherstellen einer gelöschten importierten Ausgabe setzen —
    *  sonst gilt ihr Zeitraum als nicht importiert und würde erneut gebucht. */

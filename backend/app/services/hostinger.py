@@ -38,6 +38,7 @@ from decimal import Decimal
 import httpx
 
 from app.models.expense import ExpenseCategory
+from app.services.expense_recurrence import recurrence_from_billing_period
 
 API_BASE = "https://developers.hostinger.com"
 VENDOR = "Hostinger"
@@ -431,6 +432,9 @@ def to_expense(sub: dict, *, today: date,
         return None
     match = dict(match or {})
     domain = confirmed_domain or match.get("domain")
+    recurrence = recurrence_from_billing_period(
+        sub.get("billing_period"), sub.get("billing_period_unit"),
+    )
     return {
         "description": describe(sub, vps_by_subscription, domain=domain)[:500],
         "category": category_for(sub.get("name") or "").value,
@@ -438,6 +442,7 @@ def to_expense(sub: dict, *, today: date,
         "date": billed_on.isoformat(),
         "vendor": VENDOR,
         "recurring": True,
+        "recurrence": recurrence.value,
         "notes": build_notes(sub, domains_by_tld=domains_by_tld,
                              vps_by_subscription=vps_by_subscription,
                              match={**match, "domain": domain},
