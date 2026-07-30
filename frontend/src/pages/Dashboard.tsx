@@ -76,6 +76,8 @@ interface ChartData {
     invoices_count: number
     min_days: number
     max_days: number
+    has_overdue?: boolean
+    overdue_count?: number
   }[]
 }
 
@@ -532,32 +534,36 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Zahlungsgeschwindigkeit: Ø Tage Rechnung → bezahlt, schnellste zuerst */}
+      {/* Zahlungsgeschwindigkeit: Ø Tage Rechnung → bezahlt; Überfällige ans Ende + rot */}
       {chartData && (
         <div className="bg-surface border border-border rounded-card p-5 mb-6">
           <div className="flex items-baseline justify-between gap-3 mb-1 flex-wrap">
             <h3 className="text-sm font-semibold text-text">Zahlungsgeschwindigkeit</h3>
             {paymentSpeed.length > 0 && (
               <p className="text-xs text-text-muted">
-                Ø Tage vom Rechnungsdatum bis „bezahlt“ · schnellste zuerst
+                Ø Tage vom Rechnungsdatum bis „bezahlt“ · Überfällige unten (rot)
               </p>
             )}
           </div>
           {paymentSpeed.length === 0 ? (
             <p className="text-text-muted text-sm mt-3">
-              Noch keine bezahlten Rechnungen mit Zahlungsdatum — nach dem nächsten
+              Noch keine bezahlten oder überfälligen Rechnungen — nach dem nächsten
               „Als bezahlt“ erscheint die Statistik hier.
             </p>
           ) : (
             <div style={{ height: Math.max(180, paymentSpeed.length * 36 + 40) }}>
               <Bar
                 data={{
-                  labels: paymentSpeed.map((d) => d.customer_name),
+                  labels: paymentSpeed.map((d) =>
+                    d.has_overdue ? `${d.customer_name} · überfällig` : d.customer_name,
+                  ),
                   datasets: [
                     {
                       label: 'Ø Tage',
                       data: paymentSpeed.map((d) => d.avg_days),
-                      backgroundColor: colors.accent,
+                      backgroundColor: paymentSpeed.map((d) =>
+                        d.has_overdue ? colors.red : colors.accent,
+                      ),
                       borderRadius: 4,
                       barPercentage: 0.75,
                       categoryPercentage: 0.85,
@@ -581,10 +587,16 @@ export default function Dashboard() {
                           const row = paymentSpeed[ctx.dataIndex]
                           const avg = Number(ctx.raw)
                           const dayWord = avg === 1 ? 'Tag' : 'Tage'
-                          return [
+                          const lines = [
                             `Ø ${avg.toLocaleString('de-DE')} ${dayWord}`,
                             `${row.invoices_count} Rechnung${row.invoices_count !== 1 ? 'en' : ''} · Min ${row.min_days} · Max ${row.max_days}`,
                           ]
+                          if (row.has_overdue) {
+                            lines.push(
+                              `${row.overdue_count ?? 1} überfällige Rechnung${(row.overdue_count ?? 1) !== 1 ? 'en' : ''}`,
+                            )
+                          }
+                          return lines
                         },
                       },
                     },
@@ -605,7 +617,8 @@ export default function Dashboard() {
                       grid: { display: false },
                       border: { display: false },
                       ticks: {
-                        color: colors.text,
+                        color: (ctx: { index: number }) =>
+                          paymentSpeed[ctx.index]?.has_overdue ? colors.red : colors.text,
                         font: { size: 12 },
                         autoSkip: false,
                       },

@@ -2,7 +2,7 @@
 from datetime import date
 
 from app.services.invoice_paid_at import sync_paid_at
-from app.services.payment_speed import aggregate_by_customer, days_to_pay
+from app.services.payment_speed import aggregate_by_customer, days_to_pay, open_days
 from app.models.invoice import InvoiceStatus
 
 
@@ -23,6 +23,10 @@ def test_days_clamps_negative():
     assert days_to_pay(date(2026, 7, 10), date(2026, 7, 1)) == 0
 
 
+def test_open_days():
+    assert open_days(date(2026, 7, 10), date(2026, 7, 31)) == 21
+
+
 def test_aggregate_sorts_fastest_first():
     rows = [
         ("a", "Alpha", 5),
@@ -37,6 +41,41 @@ def test_aggregate_sorts_fastest_first():
     assert out[0].invoices_count == 2
     assert out[1].avg_days == 10.0
     assert out[1].min_days == 5 and out[1].max_days == 15
+
+
+def test_aggregate_overdue_pinned_last_and_uses_worst_open():
+    # jpaulo: 1 Tag bezahlt + 21 Tage überfällig → Anzeige 21, ganz unten, rot
+    paid = [
+        ("jp", "Joao Paulo", 1),
+        ("a", "Alpha", 5),
+        ("b", "Beta", 10),
+    ]
+    overdue = [("jp", "Joao Paulo", 21)]
+    out = aggregate_by_customer(paid, overdue_rows=overdue, limit=None)
+    assert [r.customer_name for r in out] == ["Alpha", "Beta", "Joao Paulo"]
+    jp = out[-1]
+    assert jp.has_overdue is True
+    assert jp.overdue_count == 1
+    assert jp.avg_days == 21.0
+
+
+def test_aggregate_overdue_only_customer_appears():
+    out = aggregate_by_customer(
+        [],
+        overdue_rows=[("x", "Nur Überfällig", 40)],
+        limit=None,
+    )
+    assert len(out) == 1
+    assert out[0].has_overdue and out[0].avg_days == 40.0
+
+
+def test_aggregate_limit_keeps_overdue_visible():
+    paid = [(str(i), f"C{i}", i) for i in range(5)]
+    overdue = [("over", "Überfällig", 99)]
+    out = aggregate_by_customer(paid, overdue_rows=overdue, limit=2)
+    assert len(out) == 3  # 2 clean + 1 overdue
+    assert out[-1].customer_name == "Überfällig"
+    assert out[-1].has_overdue
 
 
 def test_aggregate_respects_limit():

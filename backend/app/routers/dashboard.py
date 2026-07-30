@@ -29,7 +29,7 @@ from app.models.order import Order, OrderStatus
 from app.models.time_entry import TimeEntry
 from app.services.filenames import download_name
 from app.services.business_time import today as business_today
-from app.services.payment_speed import aggregate_by_customer, days_to_pay
+from app.services.payment_speed import aggregate_by_customer, days_to_pay, open_days
 
 router = APIRouter(
     prefix="/api/dashboard",
@@ -429,6 +429,7 @@ async def get_chart_data(
     ]
 
     # --- payment_speed_by_customer: Ø Tage invoice_date → paid_at ---
+    # Plus überfällige offene Rechnungen (ans Ende, has_overdue für Rot-Highlight).
     speed_result = await db.execute(
         select(
             Customer.id,
@@ -448,6 +449,25 @@ async def get_chart_data(
         days = days_to_pay(inv_date, paid)
         if days is not None:
             speed_rows.append((str(cid), name, days))
+
+    overdue_result = await db.execute(
+        select(
+            Customer.id,
+            Customer.name,
+            Invoice.invoice_date,
+        )
+        .join(Customer, Invoice.customer_id == Customer.id)
+        .where(
+            Invoice.is_credit_note.is_(False),
+            Invoice.status.in_([InvoiceStatus.ueberfaellig, InvoiceStatus.gestellt]),
+            Invoice.due_date < today,
+        )
+    )
+    overdue_rows: list[tuple[str, str, int]] = [
+        (str(cid), name, open_days(inv_date, today))
+        for cid, name, inv_date in overdue_result.all()
+    ]
+
     payment_speed = [
         {
             "customer_id": r.customer_id,
@@ -456,8 +476,10 @@ async def get_chart_data(
             "invoices_count": r.invoices_count,
             "min_days": r.min_days,
             "max_days": r.max_days,
+            "has_overdue": r.has_overdue,
+            "overdue_count": r.overdue_count,
         }
-        for r in aggregate_by_customer(speed_rows)
+        for r in aggregate_by_customer(speed_rows, overdue_rows=overdue_rows)
     ]
 
     result = {
