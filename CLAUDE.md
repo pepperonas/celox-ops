@@ -337,8 +337,15 @@ Pipeline wandern.
   wäre jede Katalog-Aktualisierung ein Rücksetzen der eigenen Arbeit — als Regressionstest
   festgenagelt (`test_reimport_erhaelt_bearbeitungsstand`). Einträge, die im Katalog
   wegfallen, werden **gemeldet, nicht gelöscht** (an ihnen kann ein Lead hängen).
-  Wege: `POST /api/market/import` (Datei-Upload in der Oberfläche) oder
-  `python -m app.scripts.import_market_catalog <datei> --owner <benutzername>`.
+- **Einspielen ist Wartung, keine Funktion der Anwendung (2026-07-30).** Der einzige Weg ist
+  `python -m app.scripts.import_market_catalog <datei> --owner <benutzername>` auf dem Server
+  (`--dry-run` als Trockenlauf). Den früheren **HTTP-Upload `POST /api/market/import` samt
+  Knopf „Katalog aktualisieren" gibt es nicht mehr**: Der Radar-Router hängt nur an
+  `get_current_user`, also hätte **jede** Rolle mit Radar-Zugriff — auch `mitarbeiter` —
+  alle 142 Einträge überschreiben können, und der Gegenwert war eine Datei, die alle paar
+  Wochen einmal wechselt. `services/market_import.py` bleibt: Es trägt das CLI-Skript und
+  die Idempotenz-Tests. **Wer den Katalog also aktualisieren will, braucht SSH auf den VPS** —
+  bewusst so.
 - **Aggregate in Python, nicht in SQL** (`services/market_catalog.py`): Der Katalog hat rund
   150 Zeilen, und **jedes** Aggregat muss demselben Filter folgen wie die Trefferliste. Mit
   SQL-Aggregaten müsste jede Filterbedingung an sechs Stellen wiederholt werden — genau dort
@@ -353,6 +360,14 @@ Pipeline wandern.
   Rückfrage**, `force=true` verknüpft statt zu duplizieren.
   **⚠️ Werte vor dem `rollback()` auslesen** — danach sind die Attribute abgelaufen und der
   Zugriff löst einen Nachladeversuch auf der toten Transaktion aus (war ein 500 statt 409).
+- **Sichtbarkeit je Rolle:** `admin`, `user` und **`mitarbeiter`** sehen den Marktradar voll
+  (Nav-Eintrag ohne `adminOnly`, `mitarbeiter` unterliegt nur der Löschsperre — und
+  DELETE-Endpunkte hat der Radar keine). **`verkaeufer` nicht**: weder in der Nav
+  (`SCOPED_NAV`) noch über die API (`role_scope.py` hat keine `/api/market`-Regel, und die
+  Liste ist deny-by-default). Genau der Fall, für den die Erlaubnisliste gebaut wurde — eine
+  neue Sektion ist für zugeschnittene Rollen im Zweifel unsichtbar statt versehentlich offen.
+  **Restlücke:** `App.tsx` hat keinen Routen-Wächter, ein direkter Aufruf von `/radar` rendert
+  die Seite und läuft dann in 403s (kein Datenleck, aber eine Fassade).
 - **Filterzustand liegt in der URL** (`useRadarFilters`), nicht im Komponentenstate: Die fünf
   Radar-Seiten teilen sich den Filter, und der Wechsel zwischen ihnen IST der Arbeitsablauf.
   Nebeneffekt: ein Blick lässt sich als Link ablegen.
@@ -361,6 +376,28 @@ Pipeline wandern.
   `utils/charts.ts` registriert werden — ein Eingriff für genau eine Grafik.
   Prioritäten sind eine **Ordinal-Rampe einer Farbe** (hell = dringlichste Stufe), keine drei
   kategorialen Farben; das ist die korrekte Kodierung für eine geordnete Größe.
+- **142 Einträge, aber 8.664 Firmen — zwei Ebenen, nicht ein Widerspruch.** Der Katalog hat
+  142 Zeilen = 142 **Hersteller** (je ein Produkt, `count(distinct vendor_slug)` = 142). Die
+  8.664 sind die Summe von `refs`, also die **Referenzfirmen in deren Verzeichnissen**
+  (7.418 hinter einem vollständig öffentlichen, 1.131 teilweise, 80 unklar, 35 auf Anfrage).
+  Diese Firmen liegen **nicht** in der DB — `refs` ist nur ihre gezählte Menge. Der Katalog
+  ist die Recherche-Ebene, die 8.664 sind der Ertrag, der noch geholt werden muss.
+- **Offen: der Referenzfirmen-Weg** (der eigentliche Hebel). Zwei Bausteine liegen bereit —
+  das Scraping-Muster in `../projektron-referenzen` und in ops `services/lead_csv_import.py`,
+  das die Projektron-Referenz-CSV genau versteht (beliebige Firmen-CSV → stabile Lead-Felder,
+  läuft durch `DedupIndex` + `verify_email`, `--owner` Pflicht, Trockenlauf als Default). Das
+  Datenmodell ist so gebaut, dass dieser Weg **ohne Umbau danebenpasst**:
+  `market_pipeline.to_pipeline` nimmt heute den Hersteller (Partner-/Marktplatz-Spiel), die
+  Referenzfirmen kommen als zweiter Weg daneben.
+- **Ein übernommener Lead hat Firma und Website — sonst nichts.** Der Katalog trägt keine
+  E-Mail, kein Telefon, keine Geschäftsführung, keine Mitarbeiterzahl und keine Adresse (nur
+  `vendor`/`konzern`, die aus der Referenz-URL abgeleitete Website und den Freitext `kunden`).
+  Und der Push löst **weder Website-Analyse noch Anreicherung** aus: kein
+  `enqueue_company_websites`, kein `lead_enrichment` in `market.py`/`market_pipeline.py` —
+  beides hängt heute nur am Discovery-/KI-Weg und am manuellen Lead-Anlegen. Anschließen wäre
+  ein kleiner Eingriff und kostenlos (keine KI); bis dahin bleiben Kontaktdaten Handarbeit
+  über „Aus Chat/Screenshot" (`lead_intake` holt Startseite **und** Impressum) oder das
+  Lead-Formular.
 - Tests: `test_market.py` (18, DB-frei — Import-Idempotenz, Schutz des Arbeitsstands,
   Aggregate, Briefing, Origin-Ableitung).
 
@@ -450,4 +487,4 @@ Stellt sicher, dass jeder Kunde die Pflicht-Rechtsdokumente (Default **AGB + AVV
 - **`compliance_records`** (auto-erstellt via `create_all`): eine Zeile pro (Kunde, Vorlage), unique. `signed_at` gesetzt = erfüllt; `method` = `upload`|`manual`; `attachment_id` verweist auf die hochgeladene Datei. „Erfüllt" wird daraus berechnet — Anhänge bleiben die Single Source of Truth für die Datei.
 - **Frontend**: Nav-Seite **Rechtsdokumente** (`/rechtsdokumente`, `pages/Compliance.tsx`) mit Summary + Pro-Kunde-Karten (PDF erstellen / Hochladen / Abhaken) + Pflicht-Konfiguration. Im Kundendetail: Header-Badge „Legal" + `CustomerComplianceCard` im Dokumente-Tab. PDF-Erstellung nutzt die bestehenden `routers/documents.py`-Endpoints.
 
-Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. Backup auto-discovers all tables via `Base.registry.mappers`.
+Tables are auto-created on startup via `Base.metadata.create_all`. New columns on existing tables require manual `ALTER TABLE` on the running DB container. **Bekannte Folge: Entwicklungs-Datenbanken driften.** Weil `create_all` neue Spalten NICHT nachzieht, fehlten in einer lokalen DB zuletzt 18 Spalten, während die Produktion korrekt war (die Migrationen wurden dort ja gefahren). Beim Aufsetzen einer frischen Entwicklungs-DB oder nach längerer Pause die `backend/scripts/*.sql` durchlaufen — oder die DB wegwerfen und neu anlegen, dann baut `create_all` das vollständige Schema. Backup auto-discovers all tables via `Base.registry.mappers`.

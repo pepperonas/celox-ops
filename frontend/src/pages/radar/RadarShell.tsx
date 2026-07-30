@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import {
   getMarketFacets,
-  importMarketCatalog,
   type MarketFacets,
 } from '../../api/market'
 import { INT_ALL, PRIO_ALL, REF_ALL, useRadarFilters } from './useRadarFilters'
@@ -55,29 +53,10 @@ export default function RadarShell({ children }: { children: ReactNode }) {
   const { filters, patch, toggle, reset, active } = useRadarFilters()
   const [facets, setFacets] = useState<MarketFacets | null>(null)
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getMarketFacets().then(setFacets).catch(() => undefined)
   }, [])
-
-  const onImport = async (file: File) => {
-    setBusy(true)
-    try {
-      const r = await importMarketCatalog(file)
-      toast.success(
-        `Katalog ${r.stand ?? ''} eingespielt: ${r.angelegt} neu, ${r.aktualisiert} aktualisiert.` +
-          (r.verwaist.length ? ` ${r.verwaist.length} verwaist.` : ''),
-      )
-      setFacets(await getMarketFacets())
-      // Seiten laden über den Filter neu — ein Wechsel der Query reicht als Auslöser.
-      patch({ _r: String(Date.now()) })
-    } catch {
-      toast.error('Import fehlgeschlagen — ist das die ops-catalog.json?')
-    }
-    setBusy(false)
-  }
 
   return (
     <div className="max-w-content">
@@ -89,28 +68,6 @@ export default function RadarShell({ children }: { children: ReactNode }) {
             {facets?.stand && ` · Katalogstand ${facets.stand}`}
             {facets ? ` · ${facets.gesamt} Einträge` : ''}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) onImport(f)
-              e.target.value = ''
-            }}
-          />
-          <button
-            type="button"
-            className="btn-secondary text-sm"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            title="ops-catalog.json aus dem Recherche-Repo einspielen"
-          >
-            {busy ? 'Importiere…' : 'Katalog aktualisieren'}
-          </button>
         </div>
       </div>
 

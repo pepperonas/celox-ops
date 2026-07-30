@@ -138,15 +138,6 @@ export interface MarketFacets {
   gesamt: number
 }
 
-export interface MarketImportResult {
-  stand: string | null
-  angelegt: number
-  aktualisiert: number
-  unveraendert: number
-  bausteine: number
-  verwaist: string[]
-}
-
 export interface ToPipelineResult {
   lead_id: string
   company: string
@@ -202,11 +193,3 @@ export const marketToPipeline = (
   id: string,
   body: { force?: boolean; priority?: string; note?: string } = {},
 ) => api.post<ToPipelineResult>(`/market/products/${id}/to-pipeline`, body).then((r) => r.data)
-
-export const importMarketCatalog = (file: File) => {
-  const form = new FormData()
-  form.append('file', file)
-  return api
-    .post<MarketImportResult>('/market/import', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-    .then((r) => r.data)
-}

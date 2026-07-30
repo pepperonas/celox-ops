@@ -9,16 +9,21 @@ GET    /api/market/bausteine             → Lösungsbausteine mit Reichweite
 GET    /api/market/facets                → Auswahlwerte für die Filter
 PATCH  /api/market/products/{id}         → eigener Bearbeitungsstand (Status, Notiz)
 POST   /api/market/products/{id}/to-pipeline → Hersteller als Rainmaker-Lead übernehmen
-POST   /api/market/import                → Katalogdatei einspielen (idempotent)
+
+**Kein Import-Endpunkt.** Den Katalog einspielen ist Wartung, keine Funktion der
+Anwendung — der Weg ist `python -m app.scripts.import_market_catalog` auf dem
+Server. Ein HTTP-Upload hätte bedeutet, dass jede Rolle mit Radar-Zugriff
+(auch `mitarbeiter`) alle 142 Einträge überschreiben kann; der Nutzen dafür war
+eine Datei, die alle paar Wochen einmal wechselt. `services/market_import.py`
+bleibt — es trägt das CLI-Skript und dessen Idempotenz-Tests.
 
 Alle Endpunkte sind owner-scoped (Tenancy). Der Filter wird **einmal** in
 `_filtered()` angewandt und von allen Aggregaten wiederverwendet — sonst driften
 Diagramm und Liste auseinander.
 """
-import json
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +34,6 @@ from app.models.market_product import MarketProduct, MarketStatus
 from app.schemas.market import (
     MarketBausteinResponse,
     MarketCategory,
-    MarketImportResult,
     MarketProductResponse,
     MarketProductUpdate,
     MarketStats,
@@ -38,7 +42,6 @@ from app.schemas.market import (
     ToPipelineResponse,
 )
 from app.services import market_catalog as agg
-from app.services.market_import import import_catalog
 from app.services.market_pipeline import to_pipeline
 
 router = APIRouter(
@@ -47,7 +50,6 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 
-_IMPORT_MAX_BYTES = 8 * 1024 * 1024
 _SORTABLE = {"score", "lead", "business", "refs", "produkt", "vendor", "kategorie", "prio"}
 
 
@@ -262,24 +264,3 @@ async def push_to_pipeline(
     return ToPipelineResponse(
         lead_id=lead.id, company=lead.company, created=neu, duplicate_reason=grund
     )
-
-
-@router.post("/import", response_model=MarketImportResult, status_code=status.HTTP_201_CREATED)
-async def import_file(
-    file: UploadFile = File(..., description="ops-catalog.json aus dem Recherche-Repo"),
-    db: AsyncSession = Depends(get_db),
-) -> MarketImportResult:
-    raw = await file.read()
-    if len(raw) > _IMPORT_MAX_BYTES:
-        raise HTTPException(status_code=413, detail="Datei zu groß (max. 8 MB)")
-    try:
-        catalog = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=422, detail=f"Keine gültige JSON-Datei: {exc}") from exc
-
-    try:
-        result = await import_catalog(db, catalog)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    await db.commit()
-    return MarketImportResult(**result)
