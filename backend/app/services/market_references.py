@@ -14,11 +14,17 @@ Assistent, auf Projektron BCS). Die 142 Einträge zeigen auf 8.664 solche Firmen
     Projektron   refs=267    49 img-alt      → Übersicht verlinkt Fallstudien
     DocuWare     refs=245                    → Referenz-URL leitet um, Liste weg
 
-Deshalb: Form erkennen, dann die passende Ernte — und **jede Ernte gegen `refs`
-prüfen**. Dieser Prüfstein ist das Besondere an diesem Datensatz: Der Katalog sagt,
-wie viele Firmen dort stehen sollen. 259 gefunden bei 200 erwartet ist plausibel,
-1575 bei 200 ist Rauschen. Ohne dieses Tor wäre „keine erfundenen Daten" nicht zu
-halten, weil eine Seite beliebig viel Deko enthalten kann.
+Deshalb: Form erkennen, ernten, und die Ernte **inhaltlich** prüfen.
+
+**Nicht über die Menge.** Der erste Entwurf verglich die Erntemenge mit `refs` aus
+dem Katalog — und fiel am echten Lauf in beide Richtungen um: Bei ADITO gingen 49
+Funde als „plausibel" durch, obwohl ALLE Menüpunkte waren („Kontaktmanagement",
+„Vertrieb", „Preise"); bei SER Group wurden 173 als „unplausibel viele" verworfen,
+obwohl es echte Konzerne waren (Deutsche Bahn, Allianz, Eli Lilly, Würth, DHL).
+Die Menge sagt nichts darüber, OB es Firmen sind. Entscheidend ist der Anteil an
+Namen mit **Rechtsform oder öffentlichem Träger** (s. `ist_kundenliste`): bei einer
+Kundenliste hoch, bei Navigation null — die Trennung ist scharf, nicht knapp.
+`refs` bleibt als Angabe zur Abdeckung nützlich, ist aber kein Tor mehr.
 
 Gelesen werden **nur Firmennamen und -Websites** — keine Personendaten.
 """
@@ -92,6 +98,22 @@ _DEKO = re.compile(
     re.I,
 )
 _NUR_DEKO_WORT = re.compile(r"^(?:logo|referenz|kunde|kundenlogo|partner)$", re.I)
+# Menü- und Produktbegriffe. Am echten Fall gelernt: Auf der ADITO-Seite waren ALLE
+# 49 „Namen" Navigation („Kontaktmanagement", „Vertrieb", „Preise", „CRM"), und die
+# baramundi-Ernte begann mit sieben Menüpunkten.
+_NAVIGATION = re.compile(
+    r"^(?:lösungen|loesungen|lÖsungen|produkte|leistungen|services?|service|"
+    r"branchen|referenzen|kunden|über\s?uns|ueber\s?uns|unternehmen|team|"
+    r"karriere|jobs|kontakt|support|downloads?|preise|pricing|tarife|blog|news|"
+    r"events?|webinare?|schulungen|seminare|academy|akademie|übersicht|uebersicht|"
+    r"vertrieb|marketing|collaboration|crm|srm|erp|dms|ecm|cloud|schnittstellen|"
+    r"customizing|vorteile|funktionen|features|module|integration|api|"
+    r"künstliche\s+intelligenz|kuenstliche\s+intelligenz|ki|datenschutz|"
+    r"impressum|agb|newsletter|mediathek|presse|partner|partnerprogramm|"
+    r"healthcare|industrie|handel|banken|versicherungen|öffentlicher\s+dienst|"
+    r"anmelden|login|demo|testen|jetzt\s+\w+|mehr\s+erfahren|home|startseite)$",
+    re.I,
+)
 # „Logo Siemens", „Siemens Logo", „Referenz: Stadt X" → der Name bleibt übrig.
 _ABSCHNEIDEN = re.compile(
     r"^(?:logo|logos|referenz|referenzen|kunde|kunden|kundenlogo|partner|bild)"
@@ -108,7 +130,7 @@ def saeubere_namen(roh: str) -> str | None:
     name = _ABSCHNEIDEN.sub("", name).strip(" ·–—-:|")
     if not 3 <= len(name) <= 70:
         return None
-    if _NUR_DEKO_WORT.match(name) or _DEKO.match(name):
+    if _NUR_DEKO_WORT.match(name) or _DEKO.match(name) or _NAVIGATION.match(name):
         return None
     if "@" in name or "http" in name.lower():
         return None
@@ -230,53 +252,97 @@ class Ernte:
     error: str | None = None
 
 
-def plausibel(gefunden: int, refs: int) -> tuple[bool, str]:
-    """Passt die Erntemenge zur erwarteten Zahl aus dem Katalog? Rein.
+def hat_firmen_marker(name: str) -> bool:
+    """Trägt der Name einen HARTEN Firmenbeleg — Rechtsform oder öffentlicher Träger?
 
-    **Das Tor, das die Zusage „keine erfundenen Daten" trägt.** Eine Marketingseite
-    enthält beliebig viel Deko; ohne Erwartungswert wäre nicht entscheidbar, ob 1575
-    Funde eine reiche Liste oder Müll sind. `refs` liefert den Erwartungswert.
-
-    Untergrenze 30 %: Teil-Listen (erste Seite einer Paginierung) sind brauchbar.
-    Obergrenze 160 %: etwas Luft für Logos, die mehrfach im Markup stehen.
+    Das ist das einzige inhaltliche Merkmal, an dem sich eine Kundenliste von einer
+    Navigationsleiste unterscheiden lässt.
     """
-    if gefunden < 3:
-        return False, f"zu wenig ({gefunden})"
-    if refs <= 0:
-        return False, "keine Erwartung im Katalog"
-    if gefunden > refs * 1.6:
-        return False, f"unplausibel viele ({gefunden} bei erwarteten {refs})"
-    if gefunden < refs * 0.3:
-        return True, f"Teilmenge ({gefunden} von erwarteten {refs})"
-    return True, f"plausibel ({gefunden} von erwarteten {refs})"
+    return bool(_RECHTSFORM.search(name) or _OEFFENTLICH.match(name))
 
 
-def ernte_aus_html(html: str, basis: str, refs: int) -> Ernte:
-    """Form erkennen, ernten, gegen `refs` prüfen. Rein — kein Netz.
+def marker_anteil(namen: list[str]) -> float:
+    """Anteil der Namen mit hartem Firmenbeleg. Rein."""
+    if not namen:
+        return 0.0
+    return sum(1 for n in namen if hat_firmen_marker(n)) / len(namen)
+
+
+# Ab welchem Anteil gilt eine Ernte als Kundenliste?
+# 0,25 ist bewusst niedrig: In einer echten Liste stehen neben „Deutsche Bahn AG"
+# auch „GLS", „Helvetia", „Randstad" ohne Rechtsform. Bei reiner Navigation liegt der
+# Anteil dagegen bei 0 — die Trennung ist scharf, nicht knapp.
+MARKER_SCHWELLE = 0.25
+
+
+def ist_kundenliste(namen: list[str]) -> tuple[bool, str]:
+    """Ist die Ernte AS GANZES eine Kundenliste? Rein.
+
+    **Warum nicht über die Menge.** Die erste Fassung verglich die Erntemenge mit
+    `refs` aus dem Katalog. Am echten Lauf fiel das in beide Richtungen um:
+
+      · ADITO: 49 Funde bei 100 erwarteten — „plausibel" durchgelassen, dabei waren
+        ALLE 49 Menüpunkte („Kontaktmanagement", „Vertrieb", „Preise").
+      · SER Group: 173 Funde bei 100 erwarteten — als „unplausibel viele" verworfen,
+        dabei waren es echte Konzerne (Deutsche Bahn, Allianz, Eli Lilly, Würth, DHL).
+
+    Die Menge sagt nichts darüber, OB es Firmen sind. Deshalb entscheidet jetzt der
+    Inhalt: der Anteil an Namen mit Rechtsform oder öffentlichem Träger. `refs` bleibt
+    als Angabe zur Abdeckung nützlich, ist aber kein Tor mehr.
+    """
+    if len(namen) < 5:
+        return False, f"zu wenig ({len(namen)})"
+    anteil = marker_anteil(namen)
+    if anteil < MARKER_SCHWELLE:
+        return False, f"keine Kundenliste (nur {anteil:.0%} mit Rechtsform)"
+    return True, f"Kundenliste ({anteil:.0%} mit Rechtsform)"
+
+
+def ohne_eigenen_namen(namen: list[str], vendor: str) -> list[str]:
+    """Den Hersteller selbst aus seiner Kundenliste nehmen. Rein.
+
+    Auf der Vertec-Seite stand „Vertec Gruppe" als erster „Kunde" — das eigene Logo
+    in derselben Wand. Verglichen wird über das erste Namenswort, damit auch
+    „Vertec AG" und „Vertec Gruppe" fallen.
+    """
+    kern = re.sub(r"[^a-z0-9]", "", (vendor or "").split()[0].lower()) if vendor.strip() else ""
+    if not kern or len(kern) < 4:
+        return namen
+    return [n for n in namen
+            if kern not in re.sub(r"[^a-z0-9]", "", n.lower())]
+
+
+def ernte_aus_html(html: str, basis: str, refs: int, vendor: str = "") -> Ernte:
+    """Form erkennen, ernten, inhaltlich prüfen. Rein — kein Netz.
 
     Reihenfolge der Formen ist Absicht: Verlinkte Logos zuerst (Name UND Website),
-    dann die Logo-Wand, dann die Textliste. Genommen wird die erste Form, die das
-    Plausibilitätstor besteht.
+    dann die Logo-Wand, dann die Textliste. Genommen wird die **größte** Ernte, die
+    als Kundenliste durchgeht — nicht die erste: Eine Seite kann fünf verlinkte
+    Partnerlogos UND eine Wand mit 200 Kunden tragen.
     """
     e = Ernte()
+    verlinkt = ernte_verlinkt(html, basis)
     versuche = [
-        ("verlinkt", [n for n, _ in ernte_verlinkt(html, basis)],
-         {n: w for n, w in ernte_verlinkt(html, basis) if w}),
+        ("verlinkt", [n for n, _ in verlinkt], {n: w for n, w in verlinkt if w}),
         ("logowand", ernte_logowand(html), {}),
         ("textliste", ernte_textliste(html), {}),
     ]
-    beste = None
+    treffer, beste_verworfen = [], None
     for form, namen, websites in versuche:
-        sauber = dedupe(namen)
-        ok, grund = plausibel(len(sauber), refs)
+        sauber = ohne_eigenen_namen(dedupe(namen), vendor)
+        ok, grund = ist_kundenliste(sauber)
         if ok:
-            e.form, e.namen, e.websites = form, sauber, websites
-            e.roh_anzahl = len(namen)
-            e.verdikt = grund
-            return e
-        if beste is None or len(sauber) > len(beste[1]):
-            beste = (form, sauber, grund)
-    if beste:
-        e.form, e.namen, e.verdikt = beste[0], [], f"verworfen: {beste[2]}"
-        e.roh_anzahl = len(beste[1])
+            treffer.append((len(sauber), form, sauber, websites, grund))
+        elif beste_verworfen is None or len(sauber) > beste_verworfen[0]:
+            beste_verworfen = (len(sauber), form, grund)
+    if treffer:
+        treffer.sort(reverse=True)
+        _, e.form, e.namen, e.websites, e.verdikt = treffer[0]
+        e.roh_anzahl = len(e.namen)
+        if refs > 0:
+            e.verdikt += f" · {len(e.namen)} von erwarteten {refs}"
+        return e
+    if beste_verworfen:
+        e.roh_anzahl, e.form, e.verdikt = (
+            beste_verworfen[0], beste_verworfen[1], f"verworfen: {beste_verworfen[2]}")
     return e
