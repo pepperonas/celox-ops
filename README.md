@@ -14,10 +14,10 @@
 <p align="center">
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-68.464-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.462_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-1035-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
-[![Vitest](https://img.shields.io/badge/Vitest-427-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-72.432-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.587_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-1141-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Vitest](https://img.shields.io/badge/Vitest-446-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
 </p>
@@ -111,14 +111,14 @@ System verlässt, ist als Test festgenagelt — nicht als Kommentar.
 <!-- loc-table:begin -->
 | Bereich | Zeilen | Dateien |
 |---|---:|---:|
-| Backend (Python) | 31.028 | 166 |
-| Frontend (TS/TSX) | 35.191 | 197 |
-| Betrieb (Shell/SQL) | 603 | 26 |
+| Backend (Python) | 34.463 | 174 |
+| Frontend (TS/TSX) | 35.680 | 199 |
+| Betrieb (Shell/SQL) | 647 | 30 |
 | PDF-Vorlagen (Jinja) | 1.642 | 5 |
-| **Anwendungscode** | **68.464** | |
-| Tests (Backend) | 9.720 | 64 |
-| Tests (Frontend) | 3.405 | 47 |
-| **Testcode** | **13.125** | |
+| **Anwendungscode** | **72.432** | |
+| Tests (Backend) | 10.352 | 68 |
+| Tests (Frontend) | 3.551 | 49 |
+| **Testcode** | **13.903** | |
 <!-- loc-table:end -->
 
 Die Zahlen in dieser Tabelle und in den Badges oben sind **gemessen, nicht
@@ -283,6 +283,13 @@ Einnahmen-Überschuss-Rechnung mit CSV-Export und Monatsbericht-PDF, Live-Wechse
 (EZB-Referenzkurs über die Frankfurter-API, mit Cache und Plausibilitätsgrenzen), sowie
 ein iCal-Feed für Fristen und Termine.
 
+- **Ausgaben bezahlt / offen**: jede Ausgabe trägt `paid` + `paid_at`. EÜR und
+  Jahresübersicht zählen nur bezahlte Ausgaben (Cash-Monat = Zahlungsdatum, sonst
+  Buchungsdatum). In der Liste umschaltbar inkl. Rückgängig; beim Anlegen Default
+  „bezahlt". Offene Posten bleiben sichtbar, belasten die Steueraufstellung aber nicht.
+- **Beschreibungs-Autocomplete**: ~345 kuratierte IT-/Software-Buchungstexte
+  (Hosting, Domains, Lizenzen, KI/API, Hardware, Büro, Reise, …) plus eigene Werte;
+  passende Kategorie wird mitgesetzt — freier Text bleibt erlaubt.
 - **Hostinger-Kostenimport**: laufende Kosten für VPS und Domains per API-Key
   übernehmen — Vorschau, Auswahl, dann schreiben. Die API liefert Verträge, keine
   Belege, also wird der Ist-Stand je aktivem Abo übernommen und auf die letzte
@@ -382,10 +389,10 @@ werden — und prüft die Rolle gegen die Datenbank, nicht gegen einen JWT-Claim
 ## Qualitätssicherung
 
 <!-- badges:begin -->
-[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-68.464-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
-[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.462_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
-[![pytest](https://img.shields.io/badge/pytest-1035-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
-[![Vitest](https://img.shields.io/badge/Vitest-427-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
+[![Lines of Code](https://img.shields.io/badge/Lines_of_Code-72.432-1f6feb?style=for-the-badge&logo=files&logoColor=white)](#projektumfang)
+[![Unit Tests](https://img.shields.io/badge/Unit_Tests-1.587_passing-2ea043?style=for-the-badge&logo=checkmarx&logoColor=white)](#qualitätssicherung)
+[![pytest](https://img.shields.io/badge/pytest-1141-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
+[![Vitest](https://img.shields.io/badge/Vitest-446-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](frontend/src)
 <!-- badges:end -->
 
 ```bash

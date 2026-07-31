@@ -19,6 +19,7 @@ import {
   monthlyEquivalent,
   yearlyEquivalent,
 } from '../../utils/expenseRecurrence'
+import { categoryFromDescriptionMap } from '../../utils/expensePayment'
 
 const categoryOptions = [
   { value: 'hosting', label: 'Hosting' },
@@ -90,10 +91,7 @@ export default function ExpenseForm() {
   }, [id])
 
   const applyDescription = (description: string) => {
-    const mapped = categoryByDesc[description]
-      ?? Object.entries(categoryByDesc).find(
-        ([k]) => k.toLowerCase() === description.toLowerCase(),
-      )?.[1]
+    const mapped = categoryFromDescriptionMap(description, categoryByDesc)
     setForm((prev) => ({
       ...prev,
       description,
