@@ -68,6 +68,7 @@ _OPS_FELDER = (
     "status", "ops_note", "rainmaker_lead_id", "reviewed_at", "pushed_at",
     "website", "email", "email_status", "phone", "decision_maker",
     "employee_count", "contact_evidence", "contact_checked_at",
+    "forum_pains", "vendor_gaps", "remedies", "gap_researched_at",
 )
 
 

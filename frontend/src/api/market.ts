@@ -55,6 +55,13 @@ export interface MarketProduct {
   ops_note: string | null
   rainmaker_lead_id: string | null
   pushed_at: string | null
+  /** Forum-/Community: wo Nutzer sich schwertun */
+  forum_pains: string[]
+  /** Was der Hersteller nicht löst */
+  vendor_gaps: string[]
+  /** Wie man die Lücke beheben kann */
+  remedies: string[]
+  gap_researched_at: string | null
 }
 
 export interface MarketBucket { label: string; value: number; key?: string }

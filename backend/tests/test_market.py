@@ -122,6 +122,9 @@ def test_reimport_erhaelt_bearbeitungsstand():
         catalog_id="dvelop", score=10, produkt="alter Name",
         status=MarketStatus.in_pipeline, ops_note="angeschrieben am 12.",
         rainmaker_lead_id=lead_id,
+        forum_pains=["Forum-Punkt"],
+        vendor_gaps=["Lücke"],
+        remedies=["Lösung"],
     )
     db = FakeSession(products=[bestehend])
     asyncio.run(import_catalog(db, {"stand": "2026-08-01", "produkte": [katalog_eintrag()],
@@ -134,6 +137,9 @@ def test_reimport_erhaelt_bearbeitungsstand():
     assert bestehend.status is MarketStatus.in_pipeline
     assert bestehend.ops_note == "angeschrieben am 12."
     assert bestehend.rainmaker_lead_id == lead_id
+    assert bestehend.forum_pains == ["Forum-Punkt"]
+    assert bestehend.vendor_gaps == ["Lücke"]
+    assert bestehend.remedies == ["Lösung"]
 
 
 def test_import_meldet_verwaiste_eintraege_ohne_zu_loeschen():

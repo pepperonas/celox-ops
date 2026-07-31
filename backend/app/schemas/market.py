@@ -1,10 +1,15 @@
 """Schemas des Marktradars."""
 import uuid
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.market_product import MarketStatus
+
+
+def _list_or_empty(v: Any) -> list:
+    return list(v or [])
 
 
 class MarketProductResponse(BaseModel):
@@ -65,6 +70,21 @@ class MarketProductResponse(BaseModel):
     ops_note: str | None = None
     rainmaker_lead_id: uuid.UUID | None = None
     pushed_at: datetime | None = None
+
+    # Forum-Recherche (ops): Nutzer-Reibung · Hersteller-Lücke · Behebung
+    forum_pains: list[str] = []
+    vendor_gaps: list[str] = []
+    remedies: list[str] = []
+    gap_researched_at: datetime | None = None
+
+    @field_validator(
+        "branchen", "prozesse", "nutzer", "pains", "ki", "breakdown",
+        "mp_evidence", "reg", "forum_pains", "vendor_gaps", "remedies",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_lists(cls, v: Any) -> list:
+        return _list_or_empty(v)
 
 
 class MarketProductUpdate(BaseModel):

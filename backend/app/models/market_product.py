@@ -106,6 +106,16 @@ class MarketProduct(OwnedMixin, Base):
     )
     ops_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Forum-/Community-Recherche (ops-eigen, nicht Katalog): wo Nutzer sich
+    # schwertun, was der Hersteller nicht löst, und wie man es beheben kann.
+    # Quelle: `app.data.market_gap_research` + Apply-Skript — Re-Import lässt sie.
+    forum_pains: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    vendor_gaps: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    remedies: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    gap_researched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
     # --- Kontaktdaten (angereichert, NICHT aus dem Katalog) -------------------
     # Holt `services/market_contacts.py` von der Herstellerseite. Deterministisch
     # und mit Beleg je Feld in `contact_evidence` — jeder Wert ist eine wörtliche

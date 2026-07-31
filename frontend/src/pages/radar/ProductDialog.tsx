@@ -263,6 +263,63 @@ export default function ProductDialog({
             )}
           </div>
 
+          {/* Forum-/Community-Recherche: wo Nutzer sich schwertun, was der
+              Hersteller nicht löst, und wie man es beheben kann. Ops-eigen —
+              überlebt den Katalog-Import. Beide Kontexte (Hersteller + Info-Icon
+              beim Kunden) sehen denselben Block. */}
+          {(p.forum_pains?.length > 0 || p.vendor_gaps?.length > 0 || p.remedies?.length > 0) && (
+            <div className="rounded-card border border-warning/30 bg-warning/5 p-4 space-y-3">
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <h4 className="text-xs uppercase tracking-wide text-warning/90">
+                  Nutzer-Reibung &amp; Hersteller-Lücken
+                </h4>
+                {p.gap_researched_at && (
+                  <span className="text-[10px] text-text-muted">
+                    Recherche {new Date(p.gap_researched_at).toLocaleDateString('de-DE')}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Aus Foren, Bewertungsportalen und Community-Threads — ergänzt die
+                Katalog-Handarbeit oben um das, was Nutzer konkret kritisieren und
+                was der Hersteller offen lässt.
+              </p>
+
+              {p.forum_pains?.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-text-muted mb-1">Wo Nutzer sich schwertun</p>
+                  <ul className="text-sm text-text space-y-0.5">
+                    {p.forum_pains.map((x, i) => (
+                      <li key={i} className="border-l-2 border-warning/50 pl-2">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {p.vendor_gaps?.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-text-muted mb-1">Was der Hersteller nicht löst</p>
+                  <ul className="text-sm text-text space-y-0.5">
+                    {p.vendor_gaps.map((x, i) => (
+                      <li key={i} className="border-l-2 border-danger/40 pl-2">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {p.remedies?.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-text-muted mb-1">So lässt sich&apos;s beheben</p>
+                  <ul className="text-sm text-text space-y-0.5">
+                    {p.remedies.map((x, i) => (
+                      <li key={i} className="border-l-2 border-success/50 pl-2">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Arbeitsstand + Übernahme — NUR im Herstellerkontext.
               Die Regel dahinter: Im Kundenkontext ist dieser Dialog ein Steckbrief der
               Software (ein Kunde von 3.915 nutzt sie); Bearbeitungsstand und Notiz
