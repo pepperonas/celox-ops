@@ -8,16 +8,21 @@ import PageHeader from '../../components/PageHeader'
 import HostingerImportModal from './HostingerImportModal'
 import Fab from '../../components/Fab'
 import LoadingIndicator from '../../components/LoadingIndicator'
-import { getExpenses, getExpenseSummary, deleteExpense, createExpense } from '../../api/expenses'
+import {
+  getExpenses, getExpenseSummary, deleteExpense, createExpense, setExpensePayment,
+} from '../../api/expenses'
 import { toastWithUndo } from '../../utils/undoToast'
 import { canDelete } from '../../utils/permissions'
 import { useAuthStore } from '../../store/authStore'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { recurrenceLabel } from '../../utils/expenseRecurrence'
 import toast from 'react-hot-toast'
-import type { Expense, ExpenseCategory, ExpenseSummary } from '../../types'
+import type { Expense, ExpenseSummary } from '../../types'
 import Select from '../../components/Select'
+import SegmentedButtons from '../../components/SegmentedButtons'
 import Icon from '../../components/Icon'
+
+type PaidFilter = 'all' | 'paid' | 'open'
 
 const categoryOptions: { value: string; label: string }[] = [
   { value: '', label: 'Alle Kategorien' },
@@ -39,6 +44,7 @@ export default function ExpenseList() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [paidFilter, setPaidFilter] = useState<PaidFilter>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(1)
@@ -66,6 +72,7 @@ export default function ExpenseList() {
         page,
         search: search || undefined,
         category: categoryFilter || undefined,
+        paid: paidFilter === 'all' ? undefined : paidFilter === 'paid',
         from: dateFrom || undefined,
         to: dateTo || undefined,
       })
@@ -75,7 +82,7 @@ export default function ExpenseList() {
       // error handled globally
     }
     setLoading(false)
-  }, [page, search, categoryFilter, dateFrom, dateTo])
+  }, [page, search, categoryFilter, paidFilter, dateFrom, dateTo])
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -125,10 +132,40 @@ export default function ExpenseList() {
     recurring: e.recurring,
     recurrence: e.recurrence ?? (e.recurring ? 'monthly' : null),
     notes: e.notes || undefined,
+    paid: e.paid,
+    paid_at: e.paid_at,
     external_ref: e.external_ref,
   })
 
   const refresh = () => { fetchData(); fetchSummary() }
+
+  const togglePaid = async (e: Expense) => {
+    const prev = { paid: e.paid, paid_at: e.paid_at }
+    const nextPaid = !e.paid
+    const next = {
+      paid: nextPaid,
+      paid_at: nextPaid ? (e.paid_at || e.date) : null,
+    }
+    setExpenses((list) =>
+      list.map((row) => (row.id === e.id ? { ...row, ...next } : row)),
+    )
+    try {
+      await setExpensePayment(e.id, next)
+      refresh()
+      toastWithUndo(
+        nextPaid ? 'Als bezahlt markiert.' : 'Als offen markiert.',
+        async () => {
+          await setExpensePayment(e.id, prev)
+          refresh()
+        },
+      )
+    } catch {
+      setExpenses((list) =>
+        list.map((row) => (row.id === e.id ? { ...row, ...prev } : row)),
+      )
+      toast.error('Zahlungsstand konnte nicht geändert werden.')
+    }
+  }
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -210,6 +247,7 @@ export default function ExpenseList() {
         page: 1, page_size: 1000,
         search: search || undefined,
         category: categoryFilter || undefined,
+        paid: paidFilter === 'all' ? undefined : paidFilter === 'paid',
         from: dateFrom || undefined,
         to: dateTo || undefined,
       })
@@ -280,6 +318,27 @@ export default function ExpenseList() {
         ),
       },
       {
+        key: 'paid',
+        label: 'Status',
+        render: (e) => (
+          <button
+            type="button"
+            title={e.paid ? 'Als offen markieren' : 'Als bezahlt markieren'}
+            aria-label={e.paid
+              ? `${e.description}: bezahlt — klicken zum Zurücksetzen`
+              : `${e.description}: offen — klicken zum Bezahlen`}
+            onClick={(ev) => { ev.stopPropagation(); void togglePaid(e) }}
+            className={`md-state text-xs rounded-full px-2.5 py-1 font-medium ${
+              e.paid
+                ? 'bg-success/15 text-success'
+                : 'bg-warning/15 text-warning'
+            }`}
+          >
+            {e.paid ? 'Bezahlt' : 'Offen'}
+          </button>
+        ),
+      },
+      {
         key: 'recurring',
         label: 'Turnus',
         render: (e) => {
@@ -332,7 +391,7 @@ export default function ExpenseList() {
       <div className="md-stagger grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-card p-4">
           <div className="text-xs text-text-muted mb-1">
-            Gesamt {currentYear}
+            Bezahlt {currentYear}
           </div>
           <div className="text-xl font-semibold text-text tabular-nums">
             {formatCurrency(summary?.total || 0)}
@@ -381,6 +440,16 @@ export default function ExpenseList() {
           }}
           className="w-auto"
           options={categoryOptions}
+        />
+        <SegmentedButtons
+          dense
+          value={paidFilter}
+          onChange={(v) => { setPaidFilter(v); setPage(1) }}
+          options={[
+            { value: 'all', label: 'Alle' },
+            { value: 'paid', label: 'Bezahlt' },
+            { value: 'open', label: 'Offen' },
+          ]}
         />
         <input
           type="date"

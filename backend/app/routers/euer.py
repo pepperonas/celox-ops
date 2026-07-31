@@ -52,14 +52,16 @@ async def _build_overview(year: int, db: AsyncSession) -> dict:
     rev_result = await db.execute(rev_query)
     rev_by_month_raw = {int(row.month): float(row.total) for row in rev_result.all()}
 
-    # Expenses by month
+    # Expenses by month (nur bezahlte; Cash-Monat = paid_at oder date)
+    cash_date = func.coalesce(Expense.paid_at, Expense.date)
     exp_query = (
         select(
-            extract("month", Expense.date).label("month"),
+            extract("month", cash_date).label("month"),
             func.sum(Expense.amount).label("total"),
         )
-        .where(extract("year", Expense.date) == year)
-        .group_by(extract("month", Expense.date))
+        .where(Expense.paid.is_(True))
+        .where(extract("year", cash_date) == year)
+        .group_by(extract("month", cash_date))
     )
     exp_result = await db.execute(exp_query)
     exp_by_month_raw = {int(row.month): float(row.total) for row in exp_result.all()}
@@ -70,7 +72,8 @@ async def _build_overview(year: int, db: AsyncSession) -> dict:
             Expense.category,
             func.sum(Expense.amount).label("total"),
         )
-        .where(extract("year", Expense.date) == year)
+        .where(Expense.paid.is_(True))
+        .where(extract("year", cash_date) == year)
         .group_by(Expense.category)
         .order_by(func.sum(Expense.amount).desc())
     )
@@ -200,10 +203,12 @@ async def tax_forecast(
     )
     revenue_ytd = float(res.scalar_one() or 0)
 
-    # YTD expenses
+    # YTD expenses (nur bezahlt, Cash-Datum)
+    cash_date = func.coalesce(Expense.paid_at, Expense.date)
     res = await db.execute(
         select(func.coalesce(func.sum(Expense.amount), 0)).where(
-            extract("year", Expense.date) == year,
+            Expense.paid.is_(True),
+            extract("year", cash_date) == year,
         )
     )
     expenses_ytd = float(res.scalar_one() or 0)

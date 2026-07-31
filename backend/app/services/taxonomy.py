@@ -879,6 +879,11 @@ TAXONOMIES: dict[str, list[str]] = {
     "taetigkeit": list(dict.fromkeys(_TAETIGKEIT)),
 }
 
+# Ausgaben-Beschreibungen: eigene Datei (≥300), hier nur einhängen.
+from app.data.expense_descriptions import all_descriptions  # noqa: E402
+
+TAXONOMIES["expense_description"] = all_descriptions()
+
 # Synonym → kanonische Schreibweise (Keys werden gefoldet verglichen).
 SYNONYMS: dict[str, str] = {
     # Rollen

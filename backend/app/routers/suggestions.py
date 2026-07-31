@@ -51,6 +51,9 @@ async def _own_counts(field: str, db: AsyncSession) -> dict[str, int]:
     elif field == "vendor":
         rows = (await db.execute(select(Expense.vendor))).scalars().all()
         counts.update(r.strip() for r in rows if r and r.strip())
+    elif field == "expense_description":
+        rows = (await db.execute(select(Expense.description))).scalars().all()
+        counts.update(r.strip() for r in rows if r and r.strip())
     elif field == "taetigkeit":
         rows = (await db.execute(select(TimeEntry.description))).scalars().all()
         counts.update(r.strip() for r in rows if r and r.strip())
@@ -66,16 +69,20 @@ async def _own_counts(field: str, db: AsyncSession) -> dict[str, int]:
 
 @router.get("")
 async def get_suggestions(
-    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit/todo/target"),
+    field: str = Query(..., description="Feld-Key, z. B. role/source/tag/branche/zielsystem/vendor/taetigkeit/todo/target/expense_description"),
     q: str = Query("", max_length=100),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     if field not in TAXONOMIES:
         raise HTTPException(status_code=422, detail=f"Unbekanntes Feld '{field}'.")
     own = await _own_counts(field, db)
-    return {
+    out: dict = {
         "field": field,
         "values": merge_suggestions(field, own, q=q, limit=limit),
         "synonyms": SYNONYMS,
     }
+    if field == "expense_description":
+        from app.data.expense_descriptions import EXPENSE_DESCRIPTION_CATEGORY
+        out["categories"] = EXPENSE_DESCRIPTION_CATEGORY
+    return out

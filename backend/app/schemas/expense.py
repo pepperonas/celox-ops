@@ -6,6 +6,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.models.expense import ExpenseCategory, ExpenseRecurrence
+from app.services.expense_payment import normalize_payment
 
 
 class ExpenseBase(BaseModel):
@@ -18,9 +19,12 @@ class ExpenseBase(BaseModel):
     recurrence: ExpenseRecurrence | None = None
     recurring: bool = False
     notes: str | None = None
+    # Default bezahlt — typisch nach Kartenzahlung / Import.
+    paid: bool = True
+    paid_at: DateType | None = None
 
     @model_validator(mode="after")
-    def _sync_recurrence(self):
+    def _sync_recurrence_and_payment(self):
         if self.recurrence is not None:
             self.recurring = True
         elif self.recurring:
@@ -29,6 +33,9 @@ class ExpenseBase(BaseModel):
         else:
             self.recurrence = None
             self.recurring = False
+        self.paid, self.paid_at = normalize_payment(
+            paid=self.paid, paid_at=self.paid_at, expense_date=self.date,
+        )
         return self
 
 
@@ -43,12 +50,20 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseUpdate(BaseModel):
     description: str | None = None
     category: ExpenseCategory | None = None
-    amount: Decimal | None = None
     date: DateType | None = None
+    amount: Decimal | None = None
     vendor: str | None = None
     recurrence: ExpenseRecurrence | None = None
     recurring: bool | None = None
     notes: str | None = None
+    paid: bool | None = None
+    paid_at: DateType | None = None
+
+
+class ExpensePaymentUpdate(BaseModel):
+    """Gezieltes Kennzeichnen / Rückgängig — Liste & Undo-Toast."""
+    paid: bool
+    paid_at: DateType | None = None
 
 
 class ExpenseResponse(BaseModel):
@@ -63,6 +78,8 @@ class ExpenseResponse(BaseModel):
     recurrence: ExpenseRecurrence | None = None
     recurring: bool = False
     notes: str | None = None
+    paid: bool = True
+    paid_at: DateType | None = None
     created_at: datetime
     # Nötig, damit die Liste beim Wiederherstellen einer gelöschten Ausgabe die
     # Herkunft mitgeben kann (siehe ExpenseCreate).
@@ -95,6 +112,8 @@ class HostingerDraft(BaseModel):
     # Bei `duplicate`: die Beschreibung, die schon in der Buchung steht. Weicht sie
     # ab (z. B. noch „Domain .de"), kann sie nachgezogen werden.
     imported_description: str | None = None
+    paid: bool = True
+    paid_at: DateType | None = None
 
 
 class HostingerPreview(BaseModel):

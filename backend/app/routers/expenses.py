@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models.expense import Expense, ExpenseCategory, ExpenseRecurrence
 from app.schemas.expense import (
     ExpenseCreate,
+    ExpensePaymentUpdate,
     ExpenseResponse,
     ExpenseUpdate,
     HostingerImportRequest,
@@ -20,7 +21,9 @@ from app.schemas.expense import (
     HostingerRelabelChange,
     HostingerRelabelResult,
 )
+from app.services.expense_payment import normalize_payment
 from app.services.expense_recurrence import normalize_recurrence_fields
+from app.services.business_time import today as business_today
 
 router = APIRouter(
     prefix="/api/expenses",
@@ -33,6 +36,7 @@ router = APIRouter(
 async def list_expenses(
     search: str | None = Query(None),
     category: str | None = Query(None),
+    paid: bool | None = Query(None, description="True=bezahlt, False=offen, None=alle"),
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
     page: int = Query(1, ge=1),
@@ -57,6 +61,10 @@ async def list_expenses(
     if category:
         query = query.where(Expense.category == category)
         count_query = count_query.where(Expense.category == category)
+
+    if paid is not None:
+        query = query.where(Expense.paid.is_(paid))
+        count_query = count_query.where(Expense.paid.is_(paid))
 
     if date_from:
         query = query.where(Expense.date >= date_from)
@@ -92,11 +100,13 @@ async def expense_summary(
     year: int = Query(...),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Totals grouped by category and month for a given year."""
+    """Totals grouped by category and month for a given year (nur bezahlte)."""
+    paid_year = extract("year", func.coalesce(Expense.paid_at, Expense.date)) == year
+    paid_only = Expense.paid.is_(True)
     # By category
     cat_query = (
         select(Expense.category, func.sum(Expense.amount).label("total"))
-        .where(extract("year", Expense.date) == year)
+        .where(paid_only, paid_year)
         .group_by(Expense.category)
     )
     cat_result = await db.execute(cat_query)
@@ -105,15 +115,16 @@ async def expense_summary(
         for row in cat_result.all()
     ]
 
+    cash_month = extract("month", func.coalesce(Expense.paid_at, Expense.date))
     # By month
     month_query = (
         select(
-            extract("month", Expense.date).label("month"),
+            cash_month.label("month"),
             func.sum(Expense.amount).label("total"),
         )
-        .where(extract("year", Expense.date) == year)
-        .group_by(extract("month", Expense.date))
-        .order_by(extract("month", Expense.date))
+        .where(paid_only, paid_year)
+        .group_by(cash_month)
+        .order_by(cash_month)
     )
     month_result = await db.execute(month_query)
     by_month = [
@@ -122,9 +133,7 @@ async def expense_summary(
     ]
 
     # Grand total
-    total_query = select(func.sum(Expense.amount)).where(
-        extract("year", Expense.date) == year
-    )
+    total_query = select(func.sum(Expense.amount)).where(paid_only, paid_year)
     total_result = await db.execute(total_query)
     grand_total = total_result.scalar_one_or_none() or 0
 
@@ -193,6 +202,35 @@ async def update_expense(
     for key, value in update_data.items():
         setattr(expense, key, value)
 
+    if "paid" in fields_set or "paid_at" in fields_set or "date" in fields_set:
+        expense.paid, expense.paid_at = normalize_payment(
+            paid=expense.paid,
+            paid_at=expense.paid_at,
+            expense_date=expense.date,
+        )
+
+    await db.flush()
+    await db.refresh(expense)
+    return ExpenseResponse.model_validate(expense)
+
+
+@router.put("/{expense_id}/payment", response_model=ExpenseResponse)
+async def set_expense_payment(
+    expense_id: uuid.UUID,
+    data: ExpensePaymentUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> ExpenseResponse:
+    """Ausgabe als bezahlt kennzeichnen oder wieder öffnen (Undo)."""
+    result = await db.execute(select(Expense).where(Expense.id == expense_id))
+    expense = result.scalar_one_or_none()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Ausgabe nicht gefunden")
+    paid_at = data.paid_at
+    if data.paid and paid_at is None:
+        paid_at = expense.date or business_today()
+    expense.paid, expense.paid_at = normalize_payment(
+        paid=data.paid, paid_at=paid_at, expense_date=expense.date,
+    )
     await db.flush()
     await db.refresh(expense)
     return ExpenseResponse.model_validate(expense)
@@ -366,16 +404,19 @@ async def hostinger_import(
             skipped += 1
             continue
         rec_raw = draft.get("recurrence")
+        billed = date.fromisoformat(draft["date"])
         expense = Expense(
             description=draft["description"],
             category=ExpenseCategory(draft["category"]),
             amount=Decimal(draft["amount"]),
-            date=date.fromisoformat(draft["date"]),
+            date=billed,
             vendor=draft["vendor"],
             recurring=True,
             recurrence=ExpenseRecurrence(rec_raw) if rec_raw else ExpenseRecurrence.monthly,
             notes=draft["notes"],
             external_ref=draft["external_ref"],
+            paid=True,
+            paid_at=billed,
         )
         db.add(expense)
         try:

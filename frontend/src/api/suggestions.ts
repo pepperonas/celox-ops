@@ -4,6 +4,8 @@ export interface SuggestionSet {
   field: string
   values: string[]
   synonyms: Record<string, string>
+  /** Nur bei expense_description: Beschreibung → Kategorie. */
+  categories?: Record<string, string>
 }
 
 // Ein Fetch pro Feld und Session (Listen sind klein; Filterung passiert lokal).
@@ -13,7 +15,8 @@ const cache = new Map<string, Promise<SuggestionSet>>()
 export function getSuggestions(field: string): Promise<SuggestionSet> {
   let p = cache.get(field)
   if (!p) {
-    p = api.get('/suggestions', { params: { field, limit: 200 } }).then((r) => r.data)
+    const limit = field === 'expense_description' ? 500 : 200
+    p = api.get('/suggestions', { params: { field, limit } }).then((r) => r.data)
     p.catch(() => cache.delete(field))
     cache.set(field, p)
   }

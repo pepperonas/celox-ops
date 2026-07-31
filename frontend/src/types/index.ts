@@ -408,6 +408,9 @@ export interface Expense {
   /** Turnus; null = einmalig. */
   recurrence: ExpenseRecurrence | null
   notes: string | null
+  /** Cash-/EÜR: nur bezahlte Ausgaben zählen. */
+  paid: boolean
+  paid_at: string | null
   created_at: string
   /** Herkunft importierter Ausgaben (z. B. „hostinger:<abo>:<datum>"). */
   external_ref: string | null
@@ -422,6 +425,8 @@ export interface ExpenseCreate {
   recurring?: boolean
   recurrence?: ExpenseRecurrence | null
   notes?: string
+  paid?: boolean
+  paid_at?: string | null
   /** Nur beim Wiederherstellen einer gelöschten importierten Ausgabe setzen —
    *  sonst gilt ihr Zeitraum als nicht importiert und würde erneut gebucht. */
   external_ref?: string | null

@@ -6,6 +6,7 @@ export async function getExpenses(params?: {
   page_size?: number
   search?: string
   category?: string
+  paid?: boolean
   from?: string
   to?: string
 }): Promise<PaginatedResponse<Expense>> {
@@ -25,6 +26,14 @@ export async function createExpense(data: ExpenseCreate): Promise<Expense> {
 
 export async function updateExpense(id: string, data: ExpenseUpdate): Promise<Expense> {
   const response = await api.put(`/expenses/${id}`, data)
+  return response.data
+}
+
+export async function setExpensePayment(
+  id: string,
+  data: { paid: boolean; paid_at?: string | null },
+): Promise<Expense> {
+  const response = await api.put(`/expenses/${id}/payment`, data)
   return response.data
 }
 

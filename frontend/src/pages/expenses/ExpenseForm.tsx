@@ -5,10 +5,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import FormField from '../../components/FormField'
 import AutocompleteInput from '../../components/AutocompleteInput'
+import Toggle from '../../components/Toggle'
 import DeleteDialog from '../../components/DeleteDialog'
 import FileAttachments from '../../components/FileAttachments'
 import { getExpense, createExpense, updateExpense, deleteExpense } from '../../api/expenses'
-import type { ExpenseCreate, ExpenseRecurrence } from '../../types'
+import { getSuggestions } from '../../api/suggestions'
+import type { ExpenseCategory, ExpenseCreate, ExpenseRecurrence } from '../../types'
 import { useFormShortcuts } from '../../hooks/useFormShortcuts'
 import { toastWithUndo } from '../../utils/undoToast'
 import { formatCurrency } from '../../utils/formatters'
@@ -36,15 +38,19 @@ const recurrenceSelectOptions = [
   ...RECURRENCE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
 ]
 
+const today = () => new Date().toISOString().split('T')[0]
+
 const emptyForm: ExpenseCreate = {
   description: '',
   category: 'sonstige',
   amount: 0,
-  date: new Date().toISOString().split('T')[0],
+  date: today(),
   vendor: '',
   recurring: false,
   recurrence: null,
   notes: '',
+  paid: true,
+  paid_at: today(),
 }
 
 export default function ExpenseForm() {
@@ -55,6 +61,13 @@ export default function ExpenseForm() {
   const [form, setForm] = useState<ExpenseCreate>(emptyForm)
   const [loading, setLoading] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [categoryByDesc, setCategoryByDesc] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    getSuggestions('expense_description')
+      .then((s) => setCategoryByDesc(s.categories || {}))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (id) {
@@ -68,10 +81,25 @@ export default function ExpenseForm() {
           recurring: e.recurring,
           recurrence: e.recurrence ?? (e.recurring ? 'monthly' : null),
           notes: e.notes || '',
+          paid: e.paid,
+          paid_at: e.paid_at,
+          external_ref: e.external_ref,
         }),
       )
     }
   }, [id])
+
+  const applyDescription = (description: string) => {
+    const mapped = categoryByDesc[description]
+      ?? Object.entries(categoryByDesc).find(
+        ([k]) => k.toLowerCase() === description.toLowerCase(),
+      )?.[1]
+    setForm((prev) => ({
+      ...prev,
+      description,
+      ...(mapped ? { category: mapped as ExpenseCategory } : {}),
+    }))
+  }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -86,9 +114,29 @@ export default function ExpenseForm() {
         recurrence: value,
         recurring: value != null,
       })
+    } else if (target.name === 'description') {
+      applyDescription(target.value)
+    } else if (target.name === 'date') {
+      setForm({
+        ...form,
+        date: target.value,
+        // Wenn bezahlt und Zahlungsdatum noch dem alten Buchungsdatum folgt → mitziehen.
+        paid_at:
+          form.paid && (form.paid_at === form.date || !form.paid_at)
+            ? target.value
+            : form.paid_at,
+      })
     } else {
       setForm({ ...form, [target.name]: target.value })
     }
+  }
+
+  const setPaid = (paid: boolean) => {
+    setForm({
+      ...form,
+      paid,
+      paid_at: paid ? form.paid_at || form.date : null,
+    })
   }
 
   const equiv = useMemo(() => {
@@ -114,6 +162,8 @@ export default function ExpenseForm() {
         ...form,
         recurrence: form.recurrence || null,
         recurring: Boolean(form.recurrence),
+        paid: form.paid !== false,
+        paid_at: form.paid === false ? null : form.paid_at || form.date,
       }
       if (isEdit) {
         await updateExpense(id!, payload)
@@ -160,13 +210,14 @@ export default function ExpenseForm() {
         onSubmit={handleSubmit}
         className="bg-surface border border-border rounded-card p-6 space-y-5"
       >
-        <FormField
+        <AutocompleteInput
           label="Beschreibung"
           name="description"
+          field="expense_description"
           value={form.description}
           onChange={handleChange}
           required
-          placeholder="z.B. Hetzner Cloud Server"
+          placeholder="z.B. Hetzner Cloud VPS, Anthropic API, Domain .de"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -209,6 +260,24 @@ export default function ExpenseForm() {
             onChange={handleChange}
             placeholder="z.B. Hetzner, AWS, Google"
           />
+        </div>
+
+        <div className="space-y-3">
+          <Toggle
+            checked={form.paid !== false}
+            onChange={setPaid}
+            label="Bezahlt"
+            hint="Nur bezahlte Ausgaben fließen in EÜR und Jahresübersicht ein."
+          />
+          {form.paid !== false && (
+            <FormField
+              label="Zahlungsdatum"
+              name="paid_at"
+              type="date"
+              value={form.paid_at || form.date}
+              onChange={handleChange}
+            />
+          )}
         </div>
 
         <div>

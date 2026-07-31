@@ -79,6 +79,11 @@ class Expense(OwnedMixin, Base):
         nullable=True,
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Zahlungsstand (Cash-/EÜR-Sicht): nur bezahlte Ausgaben zählen in der EÜR.
+    # Default True — die meisten Einträge entstehen nach der Zahlung (Karte/Lastschrift/
+    # Hostinger). Bestand wird per Migration auf bezahlt + paid_at=date gesetzt.
+    paid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    paid_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     # Herkunftsschlüssel für Importe (z. B. "hostinger:<abo-id>:<datum>"). Macht
     # den Import idempotent: derselbe Abrechnungszeitraum desselben Abos kann
     # nicht zweimal als Ausgabe landen. NULL bei handgepflegten Ausgaben.
