@@ -156,6 +156,38 @@ darf nicht doppelt vorgelesen werden. Ist das Icon die **einzige** Information
 Icon. Beim Ersetzen eines Emojis prüfen, ob dessen Bedeutung vorher der einzige
 Hinweis war — sonst verschlechtert der Umbau die Zugänglichkeit.
 
+## Tabellen mit Aktionsspalte: auf dem Telefon eine Falle
+
+`overflow-x-auto` ist die Repo-Regel für breite Inhalte, aber sie rettet nur den
+*Seiten*-Umbruch, nicht die Bedienbarkeit. Eine Tabelle mit Aktionsspalte rechts
+schiebt genau die Knöpfe aus dem Bild, und ein seitlich scrollender Kasten hat
+auf Touch **keinen sichtbaren Hinweis**, dass dort noch etwas ist. Live passiert
+in `FileAttachments`: Tabelle 724 px in einer 356 px breiten Inhaltsspalte, der
+Download-Knopf lag 335 px außerhalb, ein Tap auf seine Mitte traf nichts.
+
+- **Ist die Aktion der EINZIGE Weg zum Ziel** (Download, Bearbeiten), dann
+  braucht die schmale Breite ein anderes Layout: **eine Karte je Datensatz**, mit
+  **beschrifteten** Knöpfen statt 16-px-Symbolen. Vorbild: `FileAttachments`.
+- Ist die Zeile dagegen **navigierend** (`DataTable` mit `onRowClick`), kostet
+  eine abgeschnittene Spalte nur eine Abkürzung — dort bleibt die Tabelle.
+- **Den Umschaltpunkt ausrechnen, nicht raten.** `sm` (640) war hier falsch: die
+  Tabelle braucht 724 px, bei 640 px standen 590 zur Verfügung → der Knopf war
+  wieder weg, nur weniger weit. Maßgeblich ist die **Inhaltsbreite**, also
+  Viewport − Navigationsleiste (`md:w-60` = 240) − Padding (`sm:p-6` = 48).
+  Für 724 px reicht erst `lg`: 1024 − 240 − 48 = 736. Nachgemessen: passt.
+- Danach im Browser gegenzählen, dass jeder sichtbare Knopf ≥ 44 px hoch, im
+  Viewport und per `elementFromPoint` in seiner Mitte wirklich getroffen wird.
+
+## Dateien speichern: `utils/saveBlob.ts`, nirgends von Hand
+
+Ein Download ist immer `saveBlob(blob, dateiname)`. Nicht selbst `<a download>`
+bauen: die zwölf handgeschriebenen Fassungen davor hatten alle dieselben zwei
+Fehler (Anker nicht im Dokument, `revokeObjectURL` im selben Tick wie der Klick)
+und teils wurde der Content-Type des Servers durch ein `new Blob([res.data])`
+weggeworfen. Begründung und Messwerte stehen im Kopf der Datei,
+`saveBlob.test.ts` hält es fest. **Zum Anzeigen** (`window.open`) bleibt die
+Objekt-URL bewusst am Leben — das ist der andere Fall, nicht derselbe.
+
 ## Pflicht-Komponenten (kein natives Äquivalent verwenden)
 
 - **Icon = `components/Icon.tsx`** mit einem Namen aus `icons/catalog.ts` — **nie ein Emoji** (Begründung und Raster oben).

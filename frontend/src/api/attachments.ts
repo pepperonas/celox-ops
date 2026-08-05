@@ -1,4 +1,5 @@
 import { api } from './client'
+import { saveBlob } from '../utils/saveBlob'
 import type { Attachment } from '../types'
 
 export async function uploadAttachment(
@@ -39,14 +40,9 @@ export async function listAttachments(params: {
 
 export async function downloadAttachment(id: string, filename: string): Promise<void> {
   const res = await api.get(`/attachments/${id}/download`, { responseType: 'blob' })
-  const url = window.URL.createObjectURL(new Blob([res.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', filename)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  // `res.data` ist bereits ein Blob mit dem Content-Type des Servers — nicht
+  // neu verpacken, sonst geht der Typ verloren (s. saveBlob).
+  saveBlob(res.data, filename)
 }
 
 export async function deleteAttachment(id: string): Promise<void> {

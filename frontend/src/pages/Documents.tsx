@@ -7,6 +7,7 @@ import { getCustomers } from '../api/customers'
 import { filenameFromDisposition } from '../utils/downloadName'
 import type { Customer } from '../types'
 import Select from '../components/Select'
+import { saveBlob } from '../utils/saveBlob'
 
 const categoryColors: Record<string, string> = {
   datenschutz: 'bg-accent/10 text-accent border border-accent/30',
@@ -166,12 +167,7 @@ export default function Documents() {
                         setGenerating(true)
                         try {
                           const resp = await api.post(`/documents/generate-all?customer_id=${selectedCustomerId}`, {}, { responseType: 'blob' })
-                          const url = URL.createObjectURL(resp.data)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = filenameFromDisposition(resp.headers['content-disposition'], 'Vertragsdokumente.zip')
-                          a.click()
-                          URL.revokeObjectURL(url)
+                          saveBlob(resp.data, filenameFromDisposition(resp.headers['content-disposition'], 'Vertragsdokumente.zip'))
                           toast.success('ZIP mit allen Dokumenten heruntergeladen.')
                         } catch {
                           toast.error('Fehler beim Generieren.')

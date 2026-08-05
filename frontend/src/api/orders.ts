@@ -1,4 +1,5 @@
 import { api } from './client'
+import { saveBlob } from '../utils/saveBlob'
 import type { Order, OrderCreate, OrderUpdate, PaginatedResponse } from '../types'
 
 export async function getOrders(params?: {
@@ -45,14 +46,7 @@ export async function sendQuoteEmail(
 
 export async function downloadQuotePdf(id: string): Promise<void> {
   const response = await api.get(`/orders/${id}/quote-pdf`, { responseType: 'blob' })
-  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `Angebot-${id}.pdf`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  saveBlob(response.data, `Angebot-${id}.pdf`)
 }
 
 export async function viewQuotePdf(id: string): Promise<void> {

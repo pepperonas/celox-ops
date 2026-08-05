@@ -13,6 +13,13 @@ interface Props {
   onChanged: () => void
 }
 
+/**
+ * Gemeinsame Form der Zeilen-Aktionen. Vollständige Klassenketten, weil Tailwind
+ * den Quelltext statisch liest und zusammengesetzte Namen nicht findet.
+ */
+const act =
+  'text-xs px-3 py-2.5 min-h-11 sm:px-2.5 sm:py-1 sm:min-h-0 rounded-lg inline-flex items-center transition-colors'
+
 /** Kompakter Compliance-Block (Pflichtdokumente) für die Kundendetailansicht. */
 export default function CustomerComplianceCard({ data, onChanged }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
@@ -83,9 +90,14 @@ export default function CustomerComplianceCard({ data, onChanged }: Props) {
             key={item.template_id}
             className="flex items-center justify-between gap-3 py-2 border-t border-border first:border-t-0 flex-wrap"
           >
-            <div className="flex items-center gap-2 min-w-0">
+            {/* Umbrechend, damit die „hochgeladen · Datum"-Notiz auf dem Telefon
+                unter den Namen rutscht statt ihn in einen Wortbruch zu drängen. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.signed ? 'bg-success' : 'bg-danger'}`} />
-              <span className="text-sm text-text truncate">{item.name}</span>
+              {/* Auf dem Telefon umbrechen statt abschneiden: „Auftragsverarbeitungs…"
+                  benennt das Dokument nicht mehr, und genau das ist hier die
+                  Information. Am Schreibtisch bleibt die Zeile kompakt. */}
+              <span className="text-sm text-text break-words min-w-0 sm:truncate">{item.name}</span>
               {item.signed && (
                 <span className="text-[11px] text-text-muted shrink-0">
                   {item.method === 'upload' ? 'hochgeladen' : 'manuell'}
@@ -93,21 +105,25 @@ export default function CustomerComplianceCard({ data, onChanged }: Props) {
                 </span>
               )}
             </div>
+            {/* `act` gibt jedem Knopf auf dem Telefon 44 px Höhe (M3E-Regel für
+                Touch) und behält die kompakte Optik am Schreibtisch. Vorher
+                waren alle 24 px hoch — gemessen —, also gerade beim Download
+                schwer zu treffen. */}
             <div className="flex items-center gap-1.5 flex-wrap">
               {item.signed ? (
                 <>
                   {item.attachment_id && (
                     <button
                       onClick={() => downloadAttachment(item.attachment_id!, `${item.name}.pdf`)}
-                      className="text-xs px-2 py-1 rounded-lg text-accent hover:bg-accent/10"
+                      className={`${act} text-accent hover:bg-accent/10`}
                     >
-                      Anzeigen
+                      Herunterladen
                     </button>
                   )}
                   <button
                     onClick={() => handleMark(item.template_id, false)}
                     disabled={busy === item.template_id}
-                    className="text-xs px-2 py-1 rounded-lg text-text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                    className={`${act} text-text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50`}
                   >
                     Zurücksetzen
                   </button>
@@ -117,21 +133,21 @@ export default function CustomerComplianceCard({ data, onChanged }: Props) {
                   <button
                     onClick={() => handleGenerate(item.template_id, item.name)}
                     disabled={busy === item.template_id}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50"
+                    className={`${act} bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50`}
                   >
                     {busy === item.template_id ? '…' : 'PDF erstellen'}
                   </button>
                   <button
                     onClick={() => pickAndUpload(item.template_id)}
                     disabled={busy === item.template_id}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-surface-2 text-text hover:bg-border disabled:opacity-50"
+                    className={`${act} bg-surface-2 text-text hover:bg-border disabled:opacity-50`}
                   >
                     Hochladen
                   </button>
                   <button
                     onClick={() => handleMark(item.template_id, true)}
                     disabled={busy === item.template_id}
-                    className="text-xs px-2.5 py-1 rounded-lg text-success hover:bg-success/10 disabled:opacity-50"
+                    className={`${act} text-success hover:bg-success/10 disabled:opacity-50`}
                   >
                     Abhaken
                   </button>

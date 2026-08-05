@@ -29,6 +29,7 @@ import LoadingIndicator from '../../components/LoadingIndicator'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice, InvoiceStatus } from '../../types'
 import Select from '../../components/Select'
+import { saveBlob } from '../../utils/saveBlob'
 
 export default function InvoiceDetail() {
   const mayDelete = canDelete(useAuthStore((st) => st.role))
@@ -85,12 +86,7 @@ export default function InvoiceDetail() {
   const handleDownloadPdf = async () => {
     try {
       const { blob, filename } = await downloadPdf(id!)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
+      saveBlob(blob, filename)
     } catch {
       toast.error('Fehler beim Herunterladen der PDF.')
     }
@@ -198,12 +194,7 @@ export default function InvoiceDetail() {
   const handleDownloadReminderPdf = async () => {
     try {
       const { blob, filename } = await downloadReminderPdf(id!)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
+      saveBlob(blob, filename)
     } catch {
       toast.error('Fehler beim Herunterladen der Mahnungs-PDF.')
     }

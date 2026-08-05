@@ -1,4 +1,5 @@
 import { api } from './client'
+import { saveBlob } from '../utils/saveBlob'
 
 export interface EuerOverview {
   year: number
@@ -21,14 +22,7 @@ export async function downloadMonthlyReport(year: number, month: number): Promis
     params: { year, month },
     responseType: 'blob',
   })
-  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `Monatsbericht_${year}_${String(month).padStart(2, '0')}.pdf`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  saveBlob(response.data, `Monatsbericht_${year}_${String(month).padStart(2, '0')}.pdf`)
 }
 
 export async function exportEuerCsv(year: number): Promise<void> {
@@ -36,12 +30,5 @@ export async function exportEuerCsv(year: number): Promise<void> {
     params: { year, format: 'csv' },
     responseType: 'blob',
   })
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `euer_${year}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  saveBlob(response.data, `euer_${year}.csv`)
 }

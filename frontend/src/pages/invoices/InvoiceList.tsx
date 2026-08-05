@@ -14,6 +14,7 @@ import { getInvoices, updateInvoiceStatus, downloadPdf, recordPayment, restorePa
 import { toastWithUndo } from '../../utils/undoToast'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import type { Invoice } from '../../types'
+import { saveBlob } from '../../utils/saveBlob'
 
 const statusOptions = [
   { value: '', label: 'Alle Status' },
@@ -122,12 +123,7 @@ export default function InvoiceList() {
       if (!inv?.pdf_path) continue
       try {
         const { blob, filename } = await downloadPdf(id)
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        a.click()
-        URL.revokeObjectURL(url)
+        saveBlob(blob, filename)
         count++
         await new Promise((r) => setTimeout(r, 200))
       } catch { /* skip */ }

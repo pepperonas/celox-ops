@@ -1,4 +1,5 @@
 import { api } from './client'
+import { saveBlob } from '../utils/saveBlob'
 import type { Customer, CustomerCreate, CustomerUpdate, PaginatedResponse } from '../types'
 
 export async function getCustomers(params?: {
@@ -32,12 +33,5 @@ export async function deleteCustomer(id: string): Promise<void> {
 export async function downloadDsgvoExport(id: string, customerName: string): Promise<void> {
   const res = await api.get(`/customers/${id}/dsgvo-export`, { responseType: 'blob' })
   const safeName = customerName.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, '_')
-  const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `dsgvo-export-${safeName}.json`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  saveBlob(res.data, `dsgvo-export-${safeName}.json`)
 }

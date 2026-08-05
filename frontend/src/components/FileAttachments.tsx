@@ -3,6 +3,7 @@ import { canDelete } from '../utils/permissions'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { listAttachments, uploadAttachment, downloadAttachment, deleteAttachment, updateAttachment } from '../api/attachments'
+import Icon from './Icon'
 import type { Attachment } from '../types'
 
 interface Props {
@@ -148,10 +149,118 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
     }
   }
 
+  /**
+   * Beschreibung + Notizen bearbeiten. Einmal geschrieben, in Karte und Tabelle
+   * benutzt — sonst hätte dasselbe Formular zwei Fassungen, die auseinanderlaufen.
+   */
+  const editFields = (a: Attachment) => (
+    <div className="space-y-2">
+      <input
+        type="text"
+        value={editForm.description}
+        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+        placeholder="Beschreibung..."
+        className="text-sm py-1 px-2 w-full"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleSaveEdit(a)
+          if (e.key === 'Escape') setEditingId(null)
+        }}
+      />
+      <textarea
+        value={editForm.notes}
+        onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+        placeholder="Notizen..."
+        className="text-sm py-1 px-2 w-full"
+        rows={2}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setEditingId(null)
+        }}
+      />
+    </div>
+  )
+
   return (
     <div>
-      {/* File list */}
-      <div className="overflow-x-auto bg-surface border border-border rounded-card">
+      {/* Handy: eine Karte je Dokument.
+          Die Tabelle unten braucht 724 px; in der 356 px breiten Inhaltsspalte
+          eines 390-px-Telefons lag die Aktionsspalte — und damit der
+          Download-Knopf — 335 px außerhalb des Sichtbaren, ohne jeden Hinweis,
+          dass der Kasten seitlich scrollt. Gemessen, nicht vermutet.
+          Die Aktionen tragen hier Beschriftungen statt 16-px-Symbolen: auf dem
+          Telefon ist „Herunterladen" sowohl treffbar als auch eindeutig. */}
+      <div className="lg:hidden space-y-3">
+        {attachments.length === 0 ? (
+          <div className="bg-surface border border-border rounded-card px-4 py-8 text-center text-text-muted">
+            Keine Dokumente vorhanden.
+          </div>
+        ) : (
+          attachments.map((a) => (
+            <div key={a.id} className="bg-surface border border-border rounded-card p-4">
+              <div className="flex items-start gap-2 min-w-0">
+                <Icon name="document" size={16} className="mt-0.5 text-text-muted" />
+                <p className="text-sm text-text break-words min-w-0">{a.original_name}</p>
+              </div>
+
+              {editingId === a.id ? (
+                <div className="mt-3 space-y-3">
+                  {editFields(a)}
+                  <div className="flex gap-2">
+                    <button onClick={() => handleSaveEdit(a)} className="btn-primary text-sm flex-1 sm:flex-none">
+                      Speichern
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm flex-1 sm:flex-none">
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {a.description ? (
+                    <p className="text-sm text-text mt-2">{a.description}</p>
+                  ) : (
+                    <p className="text-sm text-text-muted italic mt-2">Keine Beschreibung</p>
+                  )}
+                  {a.notes && <p className="text-xs text-text-muted mt-0.5 break-words">{a.notes}</p>}
+                  <p className="text-xs text-text-muted mt-2">
+                    {formatFileSize(a.size)} · {formatDate(a.created_at)}
+                  </p>
+                  {/* Bewusst zwei Zeilen statt drei umbrechender Knöpfe: die
+                      Hauptsache breit oben, die Nebensachen teilen sich die
+                      Zeile darunter. Bei freiem Umbruch fiel „Löschen" allein
+                      in eine dritte Zeile und las sich wie ein Versehen. */}
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button onClick={() => handleDownload(a)} className="btn-primary text-sm w-full sm:w-auto">
+                      Herunterladen
+                    </button>
+                    {/* `sm:contents` löst diese Hülle ab sm auf, sodass alle drei
+                        Knöpfe in EINER Zeile stehen; darunter teilen sich die
+                        beiden Nebensachen die Zeile unter der Hauptsache. */}
+                    <div className="flex gap-2 sm:contents">
+                      <button onClick={() => startEdit(a)} className="btn-secondary text-sm flex-1 sm:flex-none">
+                        <Icon name="pencil" size={16} />
+                        Bearbeiten
+                      </button>
+                      {mayDelete && (
+                        <button
+                          onClick={() => handleDelete(a)}
+                          className="btn-secondary text-sm text-danger flex-1 sm:flex-none"
+                        >
+                          <Icon name="trash" size={16} />
+                          Löschen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Ab sm: Tabelle wie gehabt — dort ist genug Platz für alle Spalten. */}
+      <div className="hidden lg:block overflow-x-auto bg-surface border border-border rounded-card">
         <table className="w-full">
           <thead>
             <tr className="bg-surface-2 border-b border-border">
@@ -179,28 +288,7 @@ export default function FileAttachments({ customer_id, order_id, contract_id, ex
                   <td className="px-4 py-3">
                     {editingId === a.id ? (
                       <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editForm.description}
-                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                          placeholder="Beschreibung..."
-                          className="text-sm py-1 px-2 w-full"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit(a)
-                            if (e.key === 'Escape') setEditingId(null)
-                          }}
-                        />
-                        <textarea
-                          value={editForm.notes}
-                          onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                          placeholder="Notizen..."
-                          className="text-sm py-1 px-2 w-full"
-                          rows={2}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Escape') setEditingId(null)
-                          }}
-                        />
+                        {editFields(a)}
                         <div className="flex gap-1">
                           <button onClick={() => handleSaveEdit(a)} className="text-accent hover:text-accent-hover text-xs" title="Speichern">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

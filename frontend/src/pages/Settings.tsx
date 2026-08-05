@@ -19,6 +19,7 @@ import type { EmailTemplate, EmailTemplateCreate, AiUsageResponse, RainmakerSett
 import Select from '../components/Select'
 import ReferenceDataManager from './settings/ReferenceDataManager'
 import Icon from '../components/Icon'
+import { saveBlob } from '../utils/saveBlob'
 
 interface TrackerConfig {
   base_url: string
@@ -407,12 +408,7 @@ export default function Settings() {
     setExporting(true)
     try {
       const response = await api.get('/backup/export', { responseType: 'blob' })
-      const url = URL.createObjectURL(response.data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filenameFromDisposition(response.headers['content-disposition'], 'celox-ops-backup.json')
-      a.click()
-      URL.revokeObjectURL(url)
+      saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], 'celox-ops-backup.json'))
       toast.success('Datenbank-Backup heruntergeladen.')
     } catch {
       toast.error('Fehler beim Exportieren.')

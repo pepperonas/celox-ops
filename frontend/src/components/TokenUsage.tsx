@@ -5,6 +5,7 @@ import axios from 'axios'
 import { formatDate, formatCurrency } from '../utils/formatters'
 import { useUsdEurRate } from '../utils/exchangeRate'
 import type { TokenTrackerData } from '../types'
+import { saveBlob } from '../utils/saveBlob'
 
 const CHART_COLORS = {
   accent: '#7cb0ff',
@@ -336,12 +337,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
 </html>`
 
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ki-nutzungsbericht-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.html`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(blob, `ki-nutzungsbericht-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.html`)
   }
 
   const exportCSV = () => {
@@ -355,12 +351,7 @@ ${data.daily.filter(d => d.messages > 0).length > 0 ? `
     ).join('\n')
     const bom = '\uFEFF'
     const blob = new Blob([bom + header + rows + sessHeader + sessRows], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ki-nutzung-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(blob, `ki-nutzung-${projectSlug}-${from || 'gesamt'}-${to || 'heute'}.csv`)
   }
 
   return (

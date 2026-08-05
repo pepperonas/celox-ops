@@ -1,5 +1,6 @@
 import { api } from './client'
 import { filenameFromDisposition } from '../utils/downloadName'
+import { saveBlob } from '../utils/saveBlob'
 
 export interface DocumentTemplate {
   id: string
@@ -23,12 +24,7 @@ export async function seedDocumentTemplates(): Promise<{ created: number; total:
 
 export async function generateDocument(templateId: string, customerId: string): Promise<void> {
   const response = await api.post('/documents/generate', { template_id: templateId, customer_id: customerId }, { responseType: 'blob' })
-  const url = URL.createObjectURL(response.data)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filenameFromDisposition(response.headers['content-disposition'], 'dokument.pdf')
-  a.click()
-  URL.revokeObjectURL(url)
+  saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], 'dokument.pdf'))
 }
 
 export async function previewDocument(templateId: string, customerId: string): Promise<string> {

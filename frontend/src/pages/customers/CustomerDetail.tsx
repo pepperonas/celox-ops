@@ -30,6 +30,7 @@ import { filenameFromDisposition } from '../../utils/downloadName'
 import type { Customer, Order, Contract, Invoice, Activity, ActivityCreate, PagespeedResult } from '../../types'
 import Select from '../../components/Select'
 import Icon from '../../components/Icon'
+import { saveBlob } from '../../utils/saveBlob'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -670,14 +671,7 @@ export default function CustomerDetail() {
                                   const mode = r.strategy === 'mobile' ? 'Mobile' : 'Desktop'
                                   const datum = new Date(r.created_at).toISOString().slice(0, 10)
                                   const filename = filenameFromDisposition(resp.headers['content-disposition'], `PageSpeed_${domain}_${mode}_${datum}.pdf`)
-                                  const blobUrl = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
-                                  const link = document.createElement('a')
-                                  link.href = blobUrl
-                                  link.download = filename
-                                  document.body.appendChild(link)
-                                  link.click()
-                                  link.remove()
-                                  URL.revokeObjectURL(blobUrl)
+                                  saveBlob(resp.data, filename)
                                 } catch {
                                   toast.error('Download fehlgeschlagen.')
                                 }
